@@ -1,0 +1,89 @@
+
+### sources
+### Definitions for use with WINDDK build.exe.
+### 
+### Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+### This source code is available under the terms of the Affero General Public
+### License v3.
+###
+### Please see LICENSE.txt for full license terms, including the availability of
+### proprietary exceptions.
+### Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+###
+
+
+TARGETNAME=phdskmnt
+TARGETTYPE=DRIVER
+
+# Set warning level.
+MSC_WARNING_LEVEL=/W4 /WX
+# /wd4214 /wd4201
+
+# no optimization, to ease debugging.
+##MSC_OPTIMIZATION=$(MSC_OPTIMIZATION) /Odi
+
+##The next causes DriverEntry to use an inline copy of the driver global stucture.
+C_DEFINES=$(C_DEFINES) -DMP_DrvInfo_Inline
+
+##Propagate _NT_TARGET_VERSION macro to compiler
+C_DEFINES=$(C_DEFINES) -D_NT_TARGET_VERSION=$(_NT_TARGET_VERSION)
+
+!IF $(_NT_TARGET_VERSION) >= 0x0502
+
+TARGETLIBS=$(DDK_LIB_PATH)\storport.lib
+C_DEFINES=$(C_DEFINES) -DUSE_STORPORT
+
+!ELSE
+
+TARGETLIBS=$(DDK_LIB_PATH)\scsiport.lib
+C_DEFINES=$(C_DEFINES) -DUSE_SCSIPORT
+
+!IF $(_NT_TARGET_VERSION) <= 0x0500
+
+C_DEFINES=$(C_DEFINES) -wd4214 -wd4201
+
+!ENDIF
+
+!ENDIF
+
+##!if !defined(_NT_TARGET_VERSION_LONGHORN)
+##_NT_TARGET_VERSION_LONGHORN =0x600
+##!endif
+
+##!if !defined(_NT_TARGET_VERSION_WIN7)
+##_NT_TARGET_VERSION_WIN7 =0x601
+##!endif
+
+TARGETLIBS=$(TARGETLIBS)                                                                    \
+           $(DDK_LIB_PATH)\hal.lib                                                          \
+           $(DDK_LIB_PATH)\ntoskrnl.lib                                                     \
+           $(DDK_LIB_PATH)\wdm.lib
+
+INCLUDES=.\inc;                 \
+         $(PUBLIC_ROOT)\ddk\inc;\
+
+
+DRIVERTYPE=WDM
+
+SOURCES = phdskmnt.c     \
+          scsi.c       \
+          utils.c      \
+          phdskmnt.rc    \
+          iodisp.c     \
+	  srbioctl.c   \
+	  proxy.c
+
+RUN_WPP=$(SOURCES)                      \
+        -km                             \
+        -gen:{km-w2k.tpl}*.tmh          \
+        -scan:inc\trace.h               \
+        -ini:.\inc\trcphdskmnt.ini
+
+#INF_NAME=phdskmnt
+
+#NTTARGETFILE1=$(OBJ_PATH)\$(O)\$(INF_NAME).inf
+
+#PASS1_BINPLACE=$(NTTARGETFILE1)
+
+# Ensure a .bmf is built and a resulting header file as well as HTML to test paths.  
+#NTTARGETFILE0=$(OBJ_PATH)\$(O)\hbaapi.mof

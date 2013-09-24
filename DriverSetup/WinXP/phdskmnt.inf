@@ -1,0 +1,66 @@
+
+; LEGACY.INF
+; Installs "legacy", scsiport based, non-pnp version of Arsenal Image Mounter
+; miniport driver.
+; Intended for use on 32 bit editions of Windows XP, which lacks support for
+; storport based miniports.
+; 
+; Copyright: (c) Arsenal Recon.  All Rights Reserved.
+; 
+; This computer program is protected by copyright law and international
+; treaties. Unauthorized reproduction or distribution of this program, or any
+; portion of it, may result in severe civil and criminal penalties, and will
+; be prosecuted to the maximum extent possible under the law.
+
+[Version]
+signature = "$Windows NT$"
+Provider = "ARSENALRECON"
+DriverVer = 03/03/2013,1.0.0004.00004
+
+
+[SourceDisksNames]
+1 = "Arsenal Image Mounter Setup disk"
+
+
+[SourceDisksFiles.x86]
+phdskmnt.sys = 1, i386
+
+
+[DestinationDirs]
+PhDskMntSysFiles = 12
+ 
+
+[DefaultInstall.ntx86]
+CopyFiles = PhDskMntSysFiles
+
+
+[DefaultUninstall.ntx86]
+DelFiles = PhDskMntSysFiles
+
+
+[PhDskMntSysFiles]
+phdskmnt.sys
+
+
+[DefaultInstall.ntx86.Services]
+AddService = PhDskMnt, , PhDskMntDrv
+
+
+[DefaultUninstall.ntx86.Services]
+DelService = PhDskMnt
+
+
+[PhDskMntDrv]
+DisplayName = "Arsenal Image Mounter Miniport"
+Description = "SCSI emulation miniport"
+ServiceType = 1
+StartType = 3
+ErrorControl = 0
+ServiceBinary = %12%\phdskmnt.sys
+LoadOrderGroup = SCSI Miniport
+AddReg         = legacy_addreg
+
+[legacy_addreg]
+HKR, "Parameters", "NumberOfBuses",  0x00010001,  0x00000001
+
+

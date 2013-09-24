@@ -10,7 +10,7 @@
     <ProjectGuid>{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>Arsenal.ImageMounter</RootNamespace>
-    <AssemblyName>ArsenalImageMounterSetup</AssemblyName>
+    <AssemblyName>ArsenalImageMounterGUISetup</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <MyType>WindowsForms</MyType>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
@@ -22,7 +22,7 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Debug\</OutputPath>
-    <DocumentationFile>ArsenalImageMounterSetup.xml</DocumentationFile>
+    <DocumentationFile>ArsenalImageMounterGUISetup.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <IntermediateOutputPath>S:\Temp\vs9D3B.tmp\Debug\</IntermediateOutputPath>
   </PropertyGroup>
@@ -32,7 +32,7 @@
     <DefineTrace>true</DefineTrace>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>ArsenalImageMounterSetup.xml</DocumentationFile>
+    <DocumentationFile>ArsenalImageMounterGUISetup.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <IntermediateOutputPath>S:\Temp\vs9D3B.tmp\Release\</IntermediateOutputPath>
   </PropertyGroup>
