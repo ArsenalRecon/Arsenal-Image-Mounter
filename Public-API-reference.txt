@@ -1,0 +1,9 @@
+
+API reference for .NET libraries Arsenal.ImageMounter.dll and Arsenal.ImageMounter.Devio.dll is available online here:
+
+http://www.ltr-data.se/library/ArsenalImageMounter/
+
+It is also possible to download the API reference as a .chm help file:
+
+http://www.ltr-data.se/library/ArsenalImageMounter/Arsenal%20Image%20Mounter%20API.chm
+
