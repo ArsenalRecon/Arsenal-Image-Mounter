@@ -693,10 +693,6 @@ MpHwStartIo(
     pSrb->SrbStatus = SRB_STATUS_PENDING;
     pSrb->ScsiStatus = SCSISTAT_GOOD;
 
-    DoStorageTraceEtw(DbgLvlLoud, MpDemoDebug04,
-                      "MpHwStartIo:  SCSI Request Block = %!SRB!\n",
-                      pSrb);
-
     ImScsiCompletePendingSrbs(pHBAExt);
 
     _InterlockedExchangeAdd((volatile LONG *)&pHBAExt->SRBsSeen, 1);   // Bump count of SRBs encountered.
