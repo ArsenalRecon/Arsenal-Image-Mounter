@@ -1,7 +1,7 @@
 Dual Licensing
 --------------
 
-Arsenal Image Mounter is available under a dual licensing [1] scheme whereby use of Arsenal Image Mounter in projects that are licensed so as to be compatible with Affero General Public License v3 (http://www.fsf.org/licensing/licenses/agpl-3.0.html) may use Arsenal Image Mounter under the terms of the compatible license.              
+Arsenal Image Mounter is available under a dual licensing [1] scheme whereby use of Arsenal Image Mounter in projects that are licensed so as to be compatible with terms of Affero General Public License v3 (http://www.fsf.org/licensing/licenses/agpl-3.0.html) may use Arsenal Image Mounter under the terms of the compatible license.              
 
 However, if AGPL v3 terms are incompatible with your use of Arsenal Image Mounter, alternative license terms are available -- please direct inquiries about Arsenal Image Mounter licensing to http://ArsenalRecon.com/contact/.                                                            
 
