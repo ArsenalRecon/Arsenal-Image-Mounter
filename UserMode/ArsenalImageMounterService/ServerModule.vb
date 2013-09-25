@@ -11,6 +11,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Reflection
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.Devio.Server.Services
@@ -88,18 +89,20 @@ Module ServerModule
           ShowHelp OrElse
           String.IsNullOrEmpty(DeviceName) Then
 
-            Console.WriteLine("DiscUtilsDevio." & Environment.NewLine &
+            Dim asmname = Assembly.GetExecutingAssembly().GetName().Name
+
+            Console.WriteLine(asmname & "." & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, automatically select object name and mount:" & Environment.NewLine &
-                              "DiscUtilsDevio /mount [/readonly] [/buffersize=bytes] /filename=imagefilename" & Environment.NewLine &
+                              asmname & " /mount [/readonly] [/buffersize=bytes] /filename=imagefilename" & Environment.NewLine &
                               "    [/provider=DiscUtils|LibEwf]" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, start shared memory service mode, for mounting from other applications:" & Environment.NewLine &
-                              "DiscUtilsDevio /name=objectname [/mount] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
+                              asmname & " /name=objectname [/mount] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
                               "    /filename=imagefilename [/provider=DiscUtils|LibEwf]" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, start TCP/IP service mode, for mounting from other computers:" & Environment.NewLine &
-                              "DiscUtilsDevio [/ipaddress=address] /port=tcpport [/mount] [/readonly]" & Environment.NewLine &
+                              asmname & " [/ipaddress=address] /port=tcpport [/mount] [/readonly]" & Environment.NewLine &
                               "    /filename=imagefilename [/provider=DiscUtils|LibEwf]")
 
             Return

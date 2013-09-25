@@ -14,6 +14,7 @@
 
 Imports System.Net
 Imports System.IO
+Imports System.Reflection
 
 Enum OpMode
     None
@@ -113,8 +114,16 @@ Module MainModule
             End If
         Next
 
-        If ShowHelp Then
+        If ShowHelp Or Mode = Nothing Then
             Console.WriteLine("Invalid command line syntax.")
+            Console.WriteLine()
+            Dim asmname = Assembly.GetExecutingAssembly().GetName().Name
+
+            Console.WriteLine(asmname & "." & Environment.NewLine &
+                              Environment.NewLine &
+                              "Syntax:" & Environment.NewLine &
+                              asmname & " /add|/rescan|/remove|/query|/list [/trace] [/device=nnnnnn] [/filename=path] [/disksize=nnn]" & Environment.NewLine &
+                              "    [/offset=nnn] [/sectorsize=nnn] [/getdevicenumber=path] [/proxy=shm] [/vm] [/sparse] [/readonly]")
             Return
         End If
 
