@@ -14,20 +14,16 @@ However, if your software is not licensed under an open source compatible licens
 
 In short,
 
-* If you derive a commercial advantage by using Arsenal Image Mounter with a closed source 
-  solution, you must arrange alternative license terms for your use of        
-  Arsenal Image Mounter which will, at a minimum, remove the need to publish your source    
-  code.
+* If you derive a commercial advantage by using Arsenal Image Mounter with a closed source solution, you must arrange alternative license terms for your use of Arsenal Image Mounter which will, at a minimum, remove the need to publish your source code.
 
-* If you wish to use Arsenal Image Mounter under its open source terms, you must           
-  contribute back to the community the source code for the solution you use   
-  Arsenal Image Mounter with, so that others may benefit from it as you benefit from Arsenal Image Mounter. 
+* If you wish to use Arsenal Image Mounter under its open source terms, you must contribute back to the community the source code for the solution you use Arsenal Image Mounter with, so that others may benefit from it as you benefit from Arsenal Image Mounter. 
 
 License Inquiries
 -----------------
 
 For more about Arsenal Image Mounter's dual license terms, or to arrange alternative licensing terms, please direct inquires to:                   
-http://ArsenalRecon.com/contact/.                   
+
+http://ArsenalRecon.com/contact/                  
 
 [1] http://en.wikipedia.org/wiki/Dual_license
 [2] http://www.opensource.org/licenses
