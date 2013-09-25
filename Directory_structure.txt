@@ -1,17 +1,23 @@
+
+DriverSetup
+-----------
+Setup tools and signed driver packages that can be used to install the driver
+components.
+
+MountTool
+---------
+Compiled and ready-to-run simple GUI mount tool. Primarily intended to show
+what this project can be used for.
+
 UserMode
 --------
-This directory contains a Visual Studio 2010/2012 solution with all user-mode
-components. This includes Arsenal.ImageMounter.dll that can be referenced from
-other applications to use the public API. It also includes driver setup
-applications and some debug tools.
+Visual Studio 2010/2012 solution with all user-mode components. This includes
+Arsenal.ImageMounter.dll that can be referenced from other applications to use
+the public API. It also includes driver setup applications and some debug
+tools.
 
 KernelMode
 ----------
 This directory contains a WDK 7 kernel mode driver project. This builds the
 kernel mode component used to create a virtual SCSI adapter.
-
-DriverSetup
------------
-This directory contains setup tools and signed driver packages that can be used
-to install the driver components.
 
