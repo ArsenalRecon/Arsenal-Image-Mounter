@@ -26,5 +26,4 @@ For more about Arsenal Image Mounter's dual license terms, or to arrange alterna
 http://ArsenalRecon.com/contact/                  
 
 [1] http://en.wikipedia.org/wiki/Dual_license
-
 [2] http://www.opensource.org/licenses
