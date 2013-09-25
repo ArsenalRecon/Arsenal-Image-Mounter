@@ -312,7 +312,6 @@ ImScsiCreateDevice(
     if (pWkRtnParms == NULL)
     {
         DbgPrint("PhDskMnt::ImScsiCreateDevice Failed to allocate work parm structure\n");
-        DoStorageTraceEtw(DbgLvlErr, MpDemoDebugInfo, "ScsiReadWriteSetup Failed to allocate work parm structure\n");
 
         new_device->SrbIoControl.ReturnCode = (ULONG)STATUS_INSUFFICIENT_RESOURCES;
         ScsiSetSuccess(pSrb, pSrb->DataTransferLength);

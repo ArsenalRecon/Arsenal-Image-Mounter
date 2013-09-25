@@ -337,9 +337,6 @@ MpHwFindAdapter(
         KeDelayExecutionThread(KernelMode, FALSE, &wait_time);
     }
 
-    DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo,
-                      "MpHwFindAdapter:  pHBAExt = 0x%p, pConfigInfo = 0x%p\n", pHBAExt, pConfigInfo);
-
     KeInitializeSpinLock(&pHBAExt->LUListLock);
     InitializeListHead(&pHBAExt->LUList);
 
@@ -756,7 +753,6 @@ MpHwStartIo(
 
     default:
         KdPrint(("PhDskMnt::MpHwStartIo: Unknown pSrb Function = 0x%x\n", pSrb->Function));
-        DoStorageTraceEtw(DbgLvlErr, MpDemoDebugInfo, "MpHwStartIo: Unknown pSrb Function = 0x%x\n", pSrb->Function);
         
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_ILLEGAL_COMMAND, 0);
 
@@ -793,8 +789,6 @@ MpHwStartIo(
 #endif
     }
 
-    DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "MpHwStartIo - OUT\n");
-
     KdPrint2(("PhDskMnt::MpHwStartIo End.\n"));
 
     return TRUE;
@@ -815,15 +809,11 @@ MpHwAdapterControl(
 
     KdPrint2(("PhDskMnt::MpHwAdapterControl:  pHBAExt = 0x%p, ControlType = 0x%p, pParameters=0x%p\n", pHBAExt, ControlType, pParameters));
 
-    DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo,
-                      "MpHwAdapterControl:  ControlType = %d\n", ControlType);
-
     pHBAExt->AdapterState = ControlType;
 
     switch (ControlType) {
         case ScsiQuerySupportedControlTypes:
             KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiQuerySupportedControlTypes\n"));
-            DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "MpHwAdapterControl: ScsiQuerySupportedControlTypes\n");
 
             // Ggt pointer to control type list
             pCtlTypList = (PSCSI_SUPPORTED_CONTROL_TYPE_LIST)pParameters;
@@ -841,7 +831,6 @@ MpHwAdapterControl(
 
         case ScsiStopAdapter:
             KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiStopAdapter\n"));
-            DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "MpHwAdapterControl:  ScsiStopAdapter\n");
 
             // Free memory allocated for disk
             ImScsiStopAdapter(pHBAExt);
@@ -850,7 +839,6 @@ MpHwAdapterControl(
 
         case ScsiRestartAdapter:
             KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiRestartAdapter\n"));
-            DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "MpHwAdapterControl:  ScsiRestartAdapter\n");
 
             /* To Do: Add some function. */
 
@@ -858,24 +846,19 @@ MpHwAdapterControl(
 
         case ScsiSetBootConfig:
             KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiSetBootConfig\n"));
-            DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "MpHwAdapterControl:  ScsiSetBootConfig\n");
 
             break;
             
         case ScsiSetRunningConfig:
             KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiSetRunningConfig\n"));
-            DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "MpHwAdapterControl:  ScsiSetRunningConfig\n");
 
             break;
 
         default:
             KdPrint2(("PhDskMnt::MpHwAdapterControl: UNKNOWN: 0x%X\n", ControlType));
-            DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "MpHwAdapterControl:  UNKNOWN\n");
 
             break;
     } 
-
-    DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "MpHwAdapterControl - OUT\n");
 
     KdPrint2(("PhDskMnt::MpHwAdapterControl End: status=0x%x\n", ScsiAdapterControlSuccess));
 
@@ -928,8 +911,6 @@ ImScsiTracingInit(
 VOID                                                                                                                         
 ImScsiTracingCleanup(__in PVOID pArg1)                                                                                                            
 {                                                                                                                            
-    DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "MPTracingCleanUp entered\n");                                                                       
-
     WPP_CLEANUP(pArg1);
 }                                                     // End ImScsiTracingCleanup().
 
@@ -951,8 +932,6 @@ MpHwFreeAdapterResources(__in pHW_HBA_EXT pHBAExt)
 #endif
 
     KdPrint2(("PhDskMnt::MpHwFreeAdapterResources:  pHBAExt = 0x%p\n", pHBAExt));
-
-    DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "MpHwFreeAdapterResources entered, pHBAExt = 0x%p\n", pHBAExt);                                                                       
 
 #if defined(_AMD64_)
     KeAcquireInStackQueuedSpinLock(&pMPDrvInfoGlobal->DrvInfoLock, &LockHandle);

@@ -44,9 +44,6 @@ ScsiExecuteRaidControllerUnit(
     KdPrint2(("PhDskMnt::ScsiExecuteRaidControllerUnit: pSrb = 0x%p, CDB = 0x%x Path: %x TID: %x Lun: %x\n",
                       pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
-    DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "ScsiExecuteRaidControllerUnit: pSrb = 0x%p, CDB = 0x%x Path: %x TID: %x Lun: %x\n",
-                      pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun);
-
     *pResult = ResultDone;
 
     switch (pSrb->Cdb[0])
@@ -84,9 +81,6 @@ ScsiOpInquiryRaidControllerUnit(
 
     KdPrint2(("PhDskMnt::ScsiOpInquiryRaidControllerUnit:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
-    DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "Path: %d TID: %d Lun: %d\n",
-                      pSrb->PathId, pSrb->TargetId, pSrb->Lun);
-
     RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
 
     pCdb = (PCDB)pSrb->Cdb;
@@ -94,8 +88,6 @@ ScsiOpInquiryRaidControllerUnit(
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
         KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%x\n", pCdb->CDB6INQUIRY.PageCode));
-        DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "Received VPD request for page 0x%x\n",
-                          pCdb->CDB6INQUIRY.PageCode);
 
         // Current implementation of ScsiOpVPDRaidControllerUnit seems somewhat dangerous and could cause buffer
         // overruns. For now, just skip Vital Product Data requests.
@@ -140,9 +132,6 @@ ScsiExecute(
 
     KdPrint2(("PhDskMnt::ScsiExecute: pSrb = 0x%p, CDB = 0x%x Path: %x TID: %x Lun: %x\n",
                       pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
-
-    DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "ScsiExecute: pSrb = 0x%p, CDB = 0x%x Path: %x TID: %x Lun: %x\n",
-                      pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun);
 
 #ifdef USE_SCSIPORT
     // In case of SCSIPORT (Win XP), we need to show at least one working device connected to this
@@ -365,9 +354,6 @@ ScsiOpInquiry(
 
     KdPrint2(("PhDskMnt::ScsiOpInquiry:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
-    DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "Path: %d TID: %d Lun: %d\n",
-                      pSrb->PathId, pSrb->TargetId, pSrb->Lun);
-
     RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
 
     pCdb = (PCDB)pSrb->Cdb;
@@ -375,8 +361,6 @@ ScsiOpInquiry(
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
         KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%x\n", pCdb->CDB6INQUIRY.PageCode));
-        DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "Received VPD request for page 0x%x\n",
-                          pCdb->CDB6INQUIRY.PageCode);
 
         // Current implementation of ScsiOpVPDRaidControllerUnit seems somewhat dangerous and could cause buffer
         // overruns. For now, just skip Vital Product Data requests.
@@ -520,7 +504,6 @@ ScsiGetLUExtension(
     status = SRB_STATUS_SUCCESS;
 
     KdPrint(("PhDskMnt::ScsiGetLUExtension: Device %d:%d:%d get pLUExt=0x%p\n", PathId, TargetId, Lun, *ppLUExt));
-    DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "New device created. %d:%d:%d pLUExt=0x%p\n", PathId, TargetId, Lun, *ppLUExt);
 
 done:
 
@@ -717,7 +700,6 @@ ScsiOpReadCapacity(
       (((PUCHAR)&blockSize)[0] << 24) |  (((PUCHAR)&blockSize)[1] << 16) |
       (((PUCHAR)&blockSize)[2] <<  8) | ((PUCHAR)&blockSize)[3];
 
-    DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "Block Size: 0x%x\n", blockSize);
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Block Size: 0x%x\n", blockSize));
 
     if (pLUExt->DiskSize.QuadPart > 0)
@@ -725,7 +707,6 @@ ScsiOpReadCapacity(
     else
         maxBlocks = 0;
 
-    DoStorageTraceEtw(DbgLvlLoud, MpDemoDebugInfo, "Max Blocks: 0x%x\n", maxBlocks);
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Max Blocks: 0x%x\n", maxBlocks));
 
     readCapacity->LogicalBlockAddress =
@@ -818,7 +799,6 @@ ScsiOpReadWrite(
     if ((startingSector + numBlocks) > (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower))
     {      // Starting sector beyond the bounds?
         KdPrint(("PhDskMnt::ScsiOpReadWrite: Out of bounds: sector: %d, blocks: %d\n", startingSector, numBlocks));
-        DoStorageTraceEtw(DbgLvlInfo, MpDemoDebugInfo, "*** ScsiOpReadWrite Starting sector: %d, number of blocks: %d\n", startingSector, numBlocks);
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_ILLEGAL_BLOCK, 0);
 
@@ -881,7 +861,6 @@ ScsiOpReadWrite(
     if (pWkRtnParms == NULL)
     {
       DbgPrint("PhDskMnt::ScsiOpReadWrite Failed to allocate work parm structure\n");
-      DoStorageTraceEtw(DbgLvlErr, MpDemoDebugInfo, "ScsiOpReadWrite Failed to allocate work parm structure\n");
 
       ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
       return;
