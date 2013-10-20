@@ -154,7 +154,11 @@ Namespace Server.Interaction
                 Trace.WriteLine("Read-only mode.")
             End If
 
-            Return New DevioProviderFromStream(DiskStream, ownsStream:=True)
+            Dim provider As New DevioProviderFromStream(DiskStream, ownsStream:=True)
+
+            AddHandler provider.Disposed, Sub() Device.Dispose()
+
+            Return provider
 
         End Function
 

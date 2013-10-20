@@ -12,107 +12,137 @@
 
 Namespace Server.GenericProviders
 
-  ''' <summary>
-  ''' Base class for implementing <see>IDevioProvider</see> interface with a storage backend where
-  ''' bytes to read from and write to device are provided in a managed byte array.
-  ''' </summary>
-  Public MustInherit Class DevioProviderManagedBase
-    Implements IDevioProvider
-
     ''' <summary>
-    ''' Determines whether virtual disk is writable or read-only.
+    ''' Base class for implementing <see>IDevioProvider</see> interface with a storage backend where
+    ''' bytes to read from and write to device are provided in a managed byte array.
     ''' </summary>
-    ''' <value>True if virtual disk can be written to through this instance, or False
-    ''' if it is opened for reading only.</value>
-    ''' <returns>True if virtual disk can be written to through this instance, or False
-    ''' if it is opened for reading only.</returns>
-    Public MustOverride ReadOnly Property CanWrite As Boolean Implements IDevioProvider.CanWrite
+    Public MustInherit Class DevioProviderManagedBase
+        Implements IDevioProvider
 
-    ''' <summary>
-    ''' Size of virtual disk.
-    ''' </summary>
-    ''' <value>Size of virtual disk.</value>
-    ''' <returns>Size of virtual disk.</returns>
-    Public MustOverride ReadOnly Property Length As Long Implements IDevioProvider.Length
+        ''' <summary>
+        ''' Event when object is about to be disposed
+        ''' </summary>
+        Public Event Disposing As EventHandler
 
-    ''' <summary>
-    ''' Sector size of virtual disk.
-    ''' </summary>
-    ''' <value>Sector size of virtual disk.</value>
-    ''' <returns>Sector size of virtual disk.</returns>
-    Public MustOverride ReadOnly Property SectorSize As UInteger Implements IDevioProvider.SectorSize
+        ''' <summary>
+        ''' Event when object has been disposed
+        ''' </summary>
+        Public Event Disposed As EventHandler
 
-    ''' <summary>
-    ''' Reads bytes from virtual disk to a byte array.
-    ''' </summary>
-    ''' <param name="buffer">Byte array with enough size where read bytes are stored.</param>
-    ''' <param name="bufferoffset">Offset in array where bytes are stored.</param>
-    ''' <param name="count">Number of bytes to read from virtual disk device.</param>
-    ''' <param name="fileoffset">Offset at virtual disk device where read starts.</param>
-    ''' <returns>Returns number of bytes read from device that were stored in byte array.</returns>
-    Public MustOverride Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
+        ''' <summary>
+        ''' Determines whether virtual disk is writable or read-only.
+        ''' </summary>
+        ''' <value>True if virtual disk can be written to through this instance, or False
+        ''' if it is opened for reading only.</value>
+        ''' <returns>True if virtual disk can be written to through this instance, or False
+        ''' if it is opened for reading only.</returns>
+        Public MustOverride ReadOnly Property CanWrite As Boolean Implements IDevioProvider.CanWrite
 
-    Private Function Read(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
+        ''' <summary>
+        ''' Size of virtual disk.
+        ''' </summary>
+        ''' <value>Size of virtual disk.</value>
+        ''' <returns>Size of virtual disk.</returns>
+        Public MustOverride ReadOnly Property Length As Long Implements IDevioProvider.Length
 
-      Dim array(0 To count - 1) As Byte
+        ''' <summary>
+        ''' Sector size of virtual disk.
+        ''' </summary>
+        ''' <value>Sector size of virtual disk.</value>
+        ''' <returns>Sector size of virtual disk.</returns>
+        Public MustOverride ReadOnly Property SectorSize As UInteger Implements IDevioProvider.SectorSize
 
-      Dim readlen = Read(array, 0, count, fileoffset)
-      Marshal.Copy(array, 0, buffer + bufferoffset, readlen)
+        ''' <summary>
+        ''' Reads bytes from virtual disk to a byte array.
+        ''' </summary>
+        ''' <param name="buffer">Byte array with enough size where read bytes are stored.</param>
+        ''' <param name="bufferoffset">Offset in array where bytes are stored.</param>
+        ''' <param name="count">Number of bytes to read from virtual disk device.</param>
+        ''' <param name="fileoffset">Offset at virtual disk device where read starts.</param>
+        ''' <returns>Returns number of bytes read from device that were stored in byte array.</returns>
+        Public MustOverride Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
 
-      Return readlen
+        Private Function Read(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
 
-    End Function
+            Dim array(0 To count - 1) As Byte
 
-    ''' <summary>
-    ''' Writes out bytes from byte array to virtual disk device.
-    ''' </summary>
-    ''' <param name="buffer">Byte array containing bytes to write out to device.</param>
-    ''' <param name="bufferoffset">Offset in array where bytes to write start.</param>
-    ''' <param name="count">Number of bytes to write to virtual disk device.</param>
-    ''' <param name="fileoffset">Offset at virtual disk device where write starts.</param>
-    ''' <returns>Returns number of bytes written to device.</returns>
-    Public MustOverride Function Write(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
+            Dim readlen = Read(array, 0, count, fileoffset)
+            Marshal.Copy(array, 0, buffer + bufferoffset, readlen)
 
-    Private Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
+            Return readlen
 
-      Dim array(0 To count - 1) As Byte
-      Marshal.Copy(buffer + bufferoffset, array, 0, count)
+        End Function
 
-      Return Write(array, 0, count, fileoffset)
+        ''' <summary>
+        ''' Writes out bytes from byte array to virtual disk device.
+        ''' </summary>
+        ''' <param name="buffer">Byte array containing bytes to write out to device.</param>
+        ''' <param name="bufferoffset">Offset in array where bytes to write start.</param>
+        ''' <param name="count">Number of bytes to write to virtual disk device.</param>
+        ''' <param name="fileoffset">Offset at virtual disk device where write starts.</param>
+        ''' <returns>Returns number of bytes written to device.</returns>
+        Public MustOverride Function Write(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
 
-    End Function
+        Private Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
 
-    Private disposedValue As Boolean ' To detect redundant calls
+            Dim array(0 To count - 1) As Byte
+            Marshal.Copy(buffer + bufferoffset, array, 0, count)
 
-    ' IDisposable
-    Protected Overridable Sub Dispose(disposing As Boolean)
-      If Not Me.disposedValue Then
-        If disposing Then
-          ' TODO: dispose managed state (managed objects).
-        End If
+            Return Write(array, 0, count, fileoffset)
 
-        ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-        ' TODO: set large fields to null.
-      End If
-      Me.disposedValue = True
-    End Sub
+        End Function
 
-    ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-    Protected Overrides Sub Finalize()
-      ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-      Dispose(False)
-      MyBase.Finalize()
-    End Sub
+        Private disposedValue As Boolean ' To detect redundant calls
 
-    ''' <summary>
-    ''' Releases all resources used by this instance.
-    ''' </summary>
-    Public Sub Dispose() Implements IDisposable.Dispose
-      ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-      Dispose(True)
-      GC.SuppressFinalize(Me)
-    End Sub
+        ' IDisposable
+        Protected Overridable Sub Dispose(disposing As Boolean)
+            OnDisposing(EventArgs.Empty)
 
-  End Class
+            If Not Me.disposedValue Then
+                If disposing Then
+                    ' TODO: dispose managed state (managed objects).
+                End If
+
+                ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
+                ' TODO: set large fields to null.
+            End If
+            Me.disposedValue = True
+
+            OnDisposed(EventArgs.Empty)
+        End Sub
+
+        ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+        Protected Overrides Sub Finalize()
+            ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+            Dispose(False)
+            MyBase.Finalize()
+        End Sub
+
+        ''' <summary>
+        ''' Releases all resources used by this instance.
+        ''' </summary>
+        Public Sub Dispose() Implements IDisposable.Dispose
+            ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+            Dispose(True)
+            GC.SuppressFinalize(Me)
+        End Sub
+
+        ''' <summary>
+        ''' Raises Disposing event.
+        ''' </summary>
+        ''' <param name="e">Event arguments</param>
+        Protected Overridable Sub OnDisposing(e As EventArgs)
+            RaiseEvent Disposing(Me, e)
+        End Sub
+
+        ''' <summary>
+        ''' Raises Disposed event.
+        ''' </summary>
+        ''' <param name="e">Event arguments</param>
+        Protected Overridable Sub OnDisposed(e As EventArgs)
+            RaiseEvent Disposed(Me, e)
+        End Sub
+
+    End Class
 
 End Namespace
