@@ -1,7 +1,7 @@
 Arsenal-Image-Mounter
 =====================
 
-Arsenal Imager Mounter is the image mounter/physical disk driver used by Registry Recon to mount forensic images as physical disks.  Arsenal Image Mounter includes a complete virtual SCSI adapter which allows the disks within forensic images to be mounted as physical disks (rather than shares or partitions) on Microsoft Windows, facilitating disk-specific features like access to Volume Shadow Copies, integration with Disk Manager, etc.
+Arsenal Image Mounter is the image mounter/physical disk driver used by Registry Recon to mount forensic images as physical disks.  Arsenal Image Mounter includes a complete virtual SCSI adapter which allows the disks within forensic images to be mounted as physical disks (rather than shares or partitions) on Microsoft Windows, facilitating disk-specific features like access to Volume Shadow Copies, integration with Disk Manager, etc.
 
 Contributors to Arsenal Image Mounter must sign the Arsenal Contributor Agreement ("ACA").  The ACA gives Arsenal and the contributor joint copyright interests in the code.
 
