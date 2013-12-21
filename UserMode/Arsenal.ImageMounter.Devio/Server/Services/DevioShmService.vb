@@ -116,13 +116,24 @@ Namespace Server.Services
         ''' </summary>
         Public Overrides Sub RunService()
 
-            Try
-                Trace.WriteLine("Creating objects for shared memory communication '" & ObjectName & "'.")
+            Using DisposableObjects As New DisposableList(Of IDisposable)
 
-                Using _
-                    RequestEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:="Global\" & ObjectName & "_Request"),
-                    ResponseEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:="Global\" & ObjectName & "_Response"),
-                    ServerMutex As New Mutex(initiallyOwned:=False, name:="Global\" & ObjectName & "_Server")
+                Dim RequestEvent As WaitHandle
+
+                Dim ResponseEvent As WaitHandle
+
+                Dim Mapping As MemoryMappedFile
+
+                Dim MapView As SafeMemoryMappedViewHandle
+
+                Dim ServerMutex As Mutex
+
+                Try
+                    Trace.WriteLine("Creating objects for shared memory communication '" & ObjectName & "'.")
+
+                    RequestEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:="Global\" & ObjectName & "_Request")
+                    ResponseEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:="Global\" & ObjectName & "_Response")
+                    ServerMutex = New Mutex(initiallyOwned:=False, name:="Global\" & ObjectName & "_Server")
 
                     If ServerMutex.WaitOne(0) = False Then
                         Trace.WriteLine("Service busy.")
@@ -130,20 +141,27 @@ Namespace Server.Services
                         Return
                     End If
 
-                    Dim Mapping = MemoryMappedFile.CreateNew("Global\" & ObjectName,
+                    Mapping = MemoryMappedFile.CreateNew("Global\" & ObjectName,
                                                              BufferSize,
                                                              MemoryMappedFileAccess.ReadWrite,
                                                              MemoryMappedFileOptions.None,
                                                              Nothing,
                                                              HandleInheritability.None)
 
-                    Dim MapView = Mapping.CreateViewAccessor().SafeMemoryMappedViewHandle
+                    MapView = Mapping.CreateViewAccessor().SafeMemoryMappedViewHandle
 
                     Trace.WriteLine("Created shared memory object, " & MapView.ByteLength & " bytes.")
 
                     Trace.WriteLine("Raising service ready event.")
                     OnServiceReady()
+                Catch ex As Exception
+                    Trace.WriteLine("Service thread initialization exception: " & ex.ToString())
+                    OnServiceInitFailed()
+                    Return
 
+                End Try
+
+                Try
                     Trace.WriteLine("Waiting for client to connect.")
 
                     Using StopServiceThreadEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset)
@@ -217,16 +235,16 @@ Namespace Server.Services
 
                     Trace.WriteLine("Client disconnected.")
 
-                End Using
+                Catch ex As Exception
+                    Trace.WriteLine("Unhandled exception in service thread: " & ex.ToString())
+                    OnServiceUnhandledException(New UnhandledExceptionEventArgs(ex, True))
 
-            Catch ex As Exception
-                Trace.WriteLine("Unhandled exception in service thread: " & ex.ToString())
-                OnServiceUnhandledException(New UnhandledExceptionEventArgs(ex, True))
+                Finally
+                    OnServiceShutdown()
 
-            Finally
-                OnServiceShutdown()
+                End Try
 
-            End Try
+            End Using
 
         End Sub
 
@@ -337,6 +355,49 @@ Namespace Server.Services
             End If
 
         End Sub
+
+        ''' <summary>
+        ''' A System.Collections.Generic.List(Of T) extended with IDisposable implementation that disposes each
+        ''' object in the list when the list is disposed.
+        ''' </summary>
+        ''' <typeparam name="T"></typeparam>
+        <ComVisible(False)> _
+        Private Class DisposableList(Of T As IDisposable)
+            Inherits List(Of T)
+
+            Implements IDisposable
+
+            Private disposedValue As Boolean    ' To detect redundant calls
+
+            ' IDisposable
+            Protected Overridable Sub Dispose(disposing As Boolean)
+                If Not Me.disposedValue Then
+                    If disposing Then
+                        ' TODO: free managed resources when explicitly called
+                    End If
+                End If
+                Me.disposedValue = True
+
+                ' TODO: free shared unmanaged resources
+                For Each obj In Me
+                    obj.Dispose()
+                Next
+
+                Clear()
+            End Sub
+
+            ' This code added by Visual Basic to correctly implement the disposable pattern.
+            Public Sub Dispose() Implements IDisposable.Dispose
+                ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
+                Dispose(True)
+                GC.SuppressFinalize(Me)
+            End Sub
+
+            Protected Overrides Sub Finalize()
+                Dispose(False)
+                MyBase.Finalize()
+            End Sub
+        End Class
 
     End Class
 

@@ -5,7 +5,7 @@ certain virtual disk image file formats.
 DiscUtils.dll
 -------------
 DiscUtils.dll is a .NET managed DLL that is used to access several kinds of
-virtual disk image files, such as VHD, VDI, VMDK. DiscUtils.dll is references
+virtual disk image files, such as VHD, VDI, VMDK. DiscUtils.dll is referenced
 by Arsenal.ImageMounter.Devio project. The DLL file is expected to be found in
 the UserMode\Arsenal.ImageMounter.Devio\DLL subdirectory.
 
