@@ -5,7 +5,7 @@ Arsenal Image Mounter mounts the contents of disk images as complete disks in Mi
 
 Arsenal Image Mounter is only available here under the AGPL-3.0 license (http://www.fsf.org/licensing/licenses/agpl-3.0.html). Arsenal Consulting, Inc. (d/b/a Arsenal Recon) retains the copyright to Arsenal Image Mounter.
 
-Contributors to Arsenal Image Mounter must sign the Arsenal Contributor Agreement ("ACA").  The ACA gives Arsenal and the contributor joint copyright interests in the code.
+Contributors to Arsenal Image Mounter must sign the Arsenal Contributor Agreement ("ACA").  The ACA gives Arsenal and the contributor joint copyright interests in the contributed code.
 
 If your project is not licensed under an AGPL v3 compatible license, contact Arsenal Recon directly regarding alternative licensing:
 
