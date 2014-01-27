@@ -1,4 +1,5 @@
-﻿''''' MainForm.vb
+﻿
+''''' MainForm.vb
 ''''' GUI driver setup application.
 ''''' 
 ''''' Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -12,9 +13,6 @@
 
 Public Class MainForm
 
-    Private Shared ReadOnly kernel As String
-    Private Shared ReadOnly ver As Version = Environment.OSVersion.Version
-    Private Shared ReadOnly hasStorPort As Boolean
     Private Shared ReadOnly setupsource As String = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
     Private Shared ReadOnly UsingDebugConsole As Boolean
 
@@ -26,37 +24,49 @@ Public Class MainForm
             UsingDebugConsole = True
         End If
 
-        If ver.Major >= 6 AndAlso ver.Minor >= 1 Then
-            kernel = "Win7"
-            hasStorPort = True
-        ElseIf ver.Major >= 6 AndAlso ver.Minor >= 0 Then
-            kernel = "WinLH"
-            hasStorPort = True
-        ElseIf ver.Major >= 5 AndAlso ver.Minor >= 2 Then
-            kernel = "WinNET"
-            hasStorPort = True
-        ElseIf ver.Major >= 5 AndAlso ver.Minor >= 1 Then
-            kernel = "WinXP"
-            hasStorPort = False
-        ElseIf ver.Major >= 5 AndAlso ver.Minor >= 0 Then
-            kernel = "Win2K"
-            hasStorPort = False
-        Else
-            kernel = "Not supported"
-            hasStorPort = False
-        End If
-
-        Trace.WriteLine("Kernel type: " & kernel)
-        Trace.WriteLine("Kernel supports StorPort: " & hasStorPort)
-        Trace.WriteLine("Setup source path: " & setupsource)
-
     End Sub
+
+    Private Shared Function GetEULA() As String
+
+        Using Stream =
+            GetType(MainForm).
+            Assembly.
+            GetManifestResourceStream(GetType(MainForm), "EULA.txt")
+
+            Using reader As New StreamReader(Stream)
+
+                Return reader.ReadToEnd()
+
+            End Using
+
+        End Using
+
+    End Function
 
     Protected Overrides Sub OnLoad(e As EventArgs)
         MyBase.OnLoad(e)
 
+        My.Settings.Reload()
+
+        If Not My.Settings.EULAConfirmed Then
+
+            If MessageBox.Show(Me,
+                               GetEULA(),
+                               "Arsenal Image Mounter",
+                               MessageBoxButtons.OKCancel,
+                               MessageBoxIcon.Information) <> DialogResult.OK Then
+                Application.Exit()
+                Return
+            End If
+
+        End If
+
+        My.Settings.EULAConfirmed = True
+
+        My.Settings.Save()
+
         Try
-            tbOSType.Text = kernel & " (" & If(hasStorPort, "storport", "scsiport") & ")"
+            tbOSType.Text = DriverSetup.kernel & " (" & If(DriverSetup.hasStorPort, "storport", "scsiport") & ")"
 
         Catch ex As Exception
             tbOSType.Text = "Exception: " & ex.GetBaseException().Message
@@ -67,16 +77,24 @@ Public Class MainForm
 
     End Sub
 
+    Protected Overrides Sub OnClosed(e As EventArgs)
+        MyBase.OnClosed(e)
+
+        My.Settings.Save()
+
+    End Sub
+
     Private Sub RefreshStatus()
 
         Try
-            Dim devInsts = API.GetAdapterDeviceInstances()
-            If devInsts Is Nothing OrElse devInsts.Count = 0 Then
-                btnInstall.Enabled = True
-                tbStatus.Text = "Not installed."
-            Else
+            If API.AdapterDevicePresent Then
                 btnInstall.Enabled = False
+                btnUninstall.Enabled = True
                 tbStatus.Text = "Installed."
+            Else
+                btnInstall.Enabled = True
+                btnUninstall.Enabled = False
+                tbStatus.Text = "Not installed."
             End If
 
         Catch ex As Exception
@@ -86,42 +104,13 @@ Public Class MainForm
 
     End Sub
 
-    Private Sub btnInstall_Click(sender As Object, e As EventArgs) Handles btnInstall.Click
+    Private Sub btnInstall_Click(sender As Object, e As EventArgs) Handles btnInstall.Click, btnUninstall.Click
 
         Try
-
-            If hasStorPort Then
-
-                Dim infPath = Path.Combine(setupsource, kernel, "phdskmnt.inf")
-
-                NativeFileIO.CreateRootPnPDevice(Handle, infPath, "root\phdskmnt")
-
-            Else
-
-                ''
-                '' Install null device .inf for control unit
-                ''
-                Dim CtlUnitInfPath = Path.Combine(setupsource, "CtlUnit", "ctlunit.inf")
-
-                NativeFileIO.SetupCopyOEMInf(CtlUnitInfPath, NoOverwrite:=True)
-
-                Directory.SetCurrentDirectory(setupsource)
-
-                NativeFileIO.Win32API.SetupSetNonInteractiveMode(False)
-
-                Dim infPath = Path.Combine(".", kernel, "phdskmnt.inf")
-
-                NativeFileIO.RunDLLInstallHinfSection(Handle, infPath, "DefaultInstall")
-
-                Using scm As New ServiceController("phdskmnt")
-                    While scm.Status <> ServiceControllerStatus.Running
-                        scm.Start()
-                        scm.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(3))
-                    End While
-                End Using
-
-                NativeFileIO.ScanForHardwareChanges()
-
+            If sender Is btnInstall Then
+                DriverSetup.Install(Handle, setupsource)
+            ElseIf sender Is btnUninstall Then
+                DriverSetup.Uninstall(Handle)
             End If
 
         Catch ex As Exception

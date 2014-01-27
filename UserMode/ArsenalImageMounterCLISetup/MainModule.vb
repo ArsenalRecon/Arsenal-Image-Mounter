@@ -11,36 +11,17 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports Arsenal.ImageMounter.DriverSetup
+Imports Arsenal.ImageMounter.API
+
 Module MainModule
 
-    Private ReadOnly kernel As String
-    Private ReadOnly ver As Version = Environment.OSVersion.Version
-    Private ReadOnly hasStorPort As Boolean
+    Private ReadOnly ownerWindow As IntPtr = NativeFileIO.Win32API.GetConsoleWindow()
     Private ReadOnly setupsource As String = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
 
     Sub New()
 
         Trace.Listeners.Add(New ConsoleTraceListener)
-
-        If ver.Major >= 6 AndAlso ver.Minor >= 1 Then
-            kernel = "Win7"
-            hasStorPort = True
-        ElseIf ver.Major >= 6 AndAlso ver.Minor >= 0 Then
-            kernel = "WinLH"
-            hasStorPort = True
-        ElseIf ver.Major >= 5 AndAlso ver.Minor >= 2 Then
-            kernel = "WinNET"
-            hasStorPort = True
-        ElseIf ver.Major >= 5 AndAlso ver.Minor >= 1 Then
-            kernel = "WinXP"
-            hasStorPort = False
-        ElseIf ver.Major >= 5 AndAlso ver.Minor >= 0 Then
-            kernel = "Win2K"
-            hasStorPort = False
-        Else
-            kernel = "Not supported"
-            hasStorPort = False
-        End If
 
     End Sub
 
@@ -60,10 +41,6 @@ Module MainModule
             End If
         End If
 
-        Trace.WriteLine("Kernel type: " & kernel)
-        Trace.WriteLine("Kernel supports StorPort: " & hasStorPort)
-        Trace.WriteLine("Setup source path: " & setupsource)
-
         Try
             Dim rc = SetupOperation(opMode)
 
@@ -82,6 +59,10 @@ Module MainModule
 
     Function SetupOperation(opMode As OpMode) As Integer
 
+        Trace.WriteLine("Kernel type: " & kernel)
+        Trace.WriteLine("Kernel supports StorPort: " & hasStorPort)
+        Trace.WriteLine("Setup source path: " & setupsource)
+
         Select Case opMode
 
             Case opMode.Install
@@ -89,14 +70,14 @@ Module MainModule
                     Trace.WriteLine("Already installed.")
                     Return 1
                 Else
-                    Install()
+                    Install(ownerWindow, setupsource)
                     Trace.WriteLine("Driver successfully installed.")
                     Return 0
                 End If
 
             Case opMode.Uninstall
                 If AdapterDevicePresent Then
-                    Uninstall()
+                    Uninstall(ownerWindow)
                     Trace.WriteLine("Driver successfully uninstalled.")
                     Return 0
                 Else
@@ -119,117 +100,6 @@ Module MainModule
         End Select
 
     End Function
-
-    Public ReadOnly Property AdapterDevicePresent As Boolean
-        Get
-            Dim devInsts = API.GetAdapterDeviceInstances()
-            If devInsts Is Nothing OrElse devInsts.Count = 0 Then
-                Return False
-            Else
-                Return True
-            End If
-        End Get
-    End Property
-
-    Public Sub Install()
-
-        If hasStorPort Then
-
-            InstallStorPortDriver()
-
-        Else
-
-            InstallScsiPortDriver()
-
-        End If
-
-    End Sub
-
-    Public Sub InstallStorPortDriver()
-
-        Dim infPath = Path.Combine(setupsource, kernel, "phdskmnt.inf")
-
-        NativeFileIO.CreateRootPnPDevice(NativeFileIO.Win32API.GetConsoleWindow(), infPath, "root\phdskmnt")
-
-    End Sub
-
-    Public Sub RemoveDevices()
-
-        Dim hwinstances As String() = Nothing
-
-        NativeFileIO.GetDeviceInstancesForService("phdskmnt", hwinstances)
-
-        For Each hwinstance In From hwinst In hwinstances Where Not String.IsNullOrEmpty(hwinst)
-            NativeFileIO.RemovePnPDevice(NativeFileIO.Win32API.GetConsoleWindow(), hwinstance, removeDriverPackage:=False)
-        Next
-
-    End Sub
-
-    Public Sub InstallScsiPortDriver()
-
-        ''
-        '' Install null device .inf for control unit
-        ''
-        Dim CtlUnitInfPath = Path.Combine(setupsource, "CtlUnit", "ctlunit.inf")
-
-        NativeFileIO.SetupCopyOEMInf(CtlUnitInfPath, NoOverwrite:=False)
-
-        Directory.SetCurrentDirectory(setupsource)
-
-        NativeFileIO.Win32API.SetupSetNonInteractiveMode(False)
-
-        Dim infPath = Path.Combine(".", kernel, "phdskmnt.inf")
-
-        NativeFileIO.RunDLLInstallHinfSection(NativeFileIO.Win32API.GetConsoleWindow(), infPath, "DefaultInstall")
-
-        Using scm As New ServiceController("phdskmnt")
-            While scm.Status <> ServiceControllerStatus.Running
-                scm.Start()
-                scm.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(3))
-            End While
-        End Using
-
-        NativeFileIO.ScanForHardwareChanges()
-
-    End Sub
-
-    Public Sub RemoveDriver()
-
-        Using scm = NativeFileIO.Win32API.OpenSCManager(Nothing, Nothing, NativeFileIO.Win32API.SC_MANAGER_ALL_ACCESS)
-
-            If scm.IsInvalid Then
-                Throw New Win32Exception("OpenSCManager")
-            End If
-
-            Using svc = NativeFileIO.Win32API.OpenService(scm, "phdskmnt", NativeFileIO.Win32API.SC_MANAGER_ALL_ACCESS)
-
-                If svc.IsInvalid Then
-                    Throw New Win32Exception("OpenService")
-                End If
-
-                NativeFileIO.Win32API.DeleteService(svc)
-
-            End Using
-
-        End Using
-
-        Dim driverSysFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System, Environment.SpecialFolderOption.DoNotVerify), "drivers\phdskmnt.sys")
-
-        If File.Exists(driverSysFile) Then
-            File.Delete(driverSysFile)
-        End If
-
-    End Sub
-
-    Public Sub Uninstall()
-
-        If hasStorPort Then
-            RemoveDevices()
-        End If
-
-        RemoveDriver()
-
-    End Sub
 
 End Module
 

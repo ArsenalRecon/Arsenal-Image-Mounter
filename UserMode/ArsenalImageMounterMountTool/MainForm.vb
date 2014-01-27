@@ -14,29 +14,17 @@
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports System.Threading
+Imports System.Threading.Tasks
 
 Public Class MainForm
-
-    Private Shared WithEvents CurrentAppDomain As AppDomain = AppDomain.CurrentDomain
 
     Private Adapter As ScsiAdapter
     Private ReadOnly ServiceList As New List(Of DevioServiceBase)
 
     Private IsClosing As Boolean
+    Private LastCreatedDevice As UInteger?
 
-    Private Shared ReadOnly LogFilename As String = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log.txt")
-
-    Public Shared ReadOnly UsingDebugConsole As Boolean
-
-    Shared Sub New()
-
-        If ConfigurationManager.AppSettings!DebugConsole = Boolean.TrueString Then
-            NativeFileIO.Win32API.AllocConsole()
-            Trace.Listeners.Add(New ConsoleTraceListener)
-            UsingDebugConsole = True
-        End If
-
-    End Sub
+    Public ReadOnly DeviceListRefreshEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset)
 
     Protected Overrides Sub OnLoad(e As EventArgs)
         Do
@@ -44,12 +32,39 @@ Public Class MainForm
                 Adapter = New ScsiAdapter
                 Exit Do
 
+            Catch ex As FileNotFoundException
+
+                Dim rc =
+                    MessageBox.Show(Me,
+                                    "This application requires a virtual SCSI miniport driver to create virtual disks. The " &
+                                    "necessary driver is not currently installed. Do you wish to install the driver now?",
+                                    "Arsenal Image Mounter",
+                                    MessageBoxButtons.YesNo,
+                                    MessageBoxIcon.Information,
+                                    MessageBoxDefaultButton.Button2)
+
+                If rc = DialogResult.No Then
+                    Application.Exit()
+                    Return
+                End If
+
+                If InstallDriver() Then
+                    Continue Do
+                Else
+                    Application.Exit()
+                    Return
+                End If
+
             Catch ex As Exception
                 Trace.WriteLine(ex.ToString())
-                If MessageBox.Show(ex.GetBaseException().Message,
+                Dim rc =
+                    MessageBox.Show(Me,
+                                   ex.GetBaseException().Message,
                                    ex.GetBaseException().GetType().ToString(),
                                    MessageBoxButtons.RetryCancel,
-                                   MessageBoxIcon.Exclamation) <> Windows.Forms.DialogResult.Retry Then
+                                   MessageBoxIcon.Exclamation)
+
+                If rc <> DialogResult.Retry Then
                     Application.Exit()
                     Return
                 End If
@@ -59,7 +74,10 @@ Public Class MainForm
 
         MyBase.OnLoad(e)
 
-        RefreshDeviceList()
+        With New Thread(AddressOf DeviceListRefreshTask)
+            .Start()
+        End With
+
     End Sub
 
     Protected Overrides Sub OnClosing(e As CancelEventArgs)
@@ -100,9 +118,17 @@ Public Class MainForm
 
     End Sub
 
+    Protected Overrides Sub OnClosed(e As EventArgs)
+        IsClosing = True
+
+        DeviceListRefreshEvent.Set()
+
+        MyBase.OnClosed(e)
+    End Sub
+
     Private Sub RefreshDeviceList() Handles btnRefresh.Click
 
-        If IsClosing Then
+        If IsClosing OrElse Disposing OrElse IsDisposed Then
             Return
         End If
 
@@ -111,31 +137,211 @@ Public Class MainForm
             Return
         End If
 
-        Thread.Sleep(400)
-
-        Dim DeviceList = Adapter.GetDeviceList()
+        SetLabelBusy()
 
         Thread.Sleep(400)
 
         btnRemoveSelected.Enabled = False
 
-        With lbDevices.Items
-            .Clear()
-            For Each DeviceInfo In
-              From DeviceNumber In DeviceList
-              Select Adapter.QueryDevice(DeviceNumber)
+        DeviceListRefreshEvent.Set()
 
-                .Add(DeviceInfo.DeviceNumber.ToString("X6") & " - " & DeviceInfo.Filename)
+        'With lbDevices.Items
+        '    .Clear()
+        '    For Each DeviceInfo In
+        '      From DeviceNumber In DeviceList
+        '      Select Adapter.QueryDevice(DeviceNumber)
 
-            Next
-            btnRemoveAll.Enabled = .Count > 0
-        End With
+        '        .Add(DeviceInfo.DeviceNumber.ToString("X6") & " - " & DeviceInfo.Filename)
+
+        '    Next
+        '    btnRemoveAll.Enabled = .Count > 0
+        'End With
 
     End Sub
 
-    Private Sub lbDevices_SelectedIndexChanged(sender As Object, e As EventArgs) Handles lbDevices.SelectedIndexChanged
+    Private Sub SetLabelBusy()
 
-        btnRemoveSelected.Enabled = lbDevices.SelectedIndices.Count > 0
+        With lblDeviceList
+            .Text = "Loading device list..."
+            .ForeColor = Color.White
+            .BackColor = Color.DarkRed
+        End With
+
+        lblDeviceList.Update()
+
+    End Sub
+
+    Private Sub SetDiskView(list As ICollection(Of DiskStateView), finished As Boolean)
+
+        If finished Then
+            With lblDeviceList
+                .Text = "Device list"
+                .ForeColor = SystemColors.ControlText
+                .BackColor = SystemColors.Control
+            End With
+        End If
+
+        DiskStateViewBindingSource.DataSource = list
+
+        If list Is Nothing OrElse list.Count = 0 Then
+            btnRemoveSelected.Enabled = False
+            btnRemoveAll.Enabled = False
+            Return
+        End If
+
+        btnRemoveAll.Enabled = True
+
+        If LastCreatedDevice.HasValue Then
+            Dim obj =
+                Aggregate diskview In list
+                Into FirstOrDefault(diskview.DeviceProperties.DeviceNumber = LastCreatedDevice.Value)
+
+            LastCreatedDevice = Nothing
+
+            '' If a refresh started before device was added and has not yet finished,
+            '' the newly created device will not be found here. This routine will be
+            '' called again when next refresh has finished in which case an object
+            '' will be found.
+            If obj Is Nothing Then
+                Return
+            End If
+
+            If obj.IsOffline.GetValueOrDefault() Then
+                If obj.DiskState Is Nothing OrElse obj.DiskState.OfflineReason <> PSDiskParser.OfflineReason.SignatureConflict Then
+                    MessageBox.Show(Me,
+                                    "The new virtual disk was mounted in offline mode. Please use Disk Management to analyze why disk is offline and for bringing it online.",
+                                    "Disk offline",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Exclamation)
+                ElseIf obj.IsReadOnly OrElse Not obj.DriveNumber.HasValue Then
+                    MessageBox.Show(Me,
+                                    "The new virtual disk was mounted in offline mode due to a signature conflict with another disk.",
+                                    "Disk offline",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Exclamation)
+                ElseIf _
+                    MessageBox.Show(Me,
+                                    "The new virtual disk was mounted in offline mode due to a signature conflict with another disk. Do you wish to let Windows create a new disk signature and bring the virtual disk online?",
+                                    "Disk offline",
+                                    MessageBoxButtons.YesNo,
+                                    MessageBoxIcon.Exclamation) = DialogResult.Yes Then
+
+                    Try
+                        Update()
+
+                        Using New AsyncMessageBox("Please wait...")
+                            PSDiskAPI.SetDisk(obj.DriveNumber.Value, New Dictionary(Of String, Object) From {{"IsOffline", False}})
+                        End Using
+
+                        MessageBox.Show(Me,
+                                        "The virtual disk was successfully brought online.",
+                                        "Disk online",
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Information)
+
+                    Catch ex As Exception
+                        MessageBox.Show(Me,
+                                        "An error occured: " & ex.GetBaseException().Message,
+                                        ex.GetBaseException().GetType().ToString(),
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Hand)
+
+                    End Try
+
+                    SetLabelBusy()
+
+                    ThreadPool.QueueUserWorkItem(Sub() RefreshDeviceList())
+
+                End If
+            End If
+        End If
+    End Sub
+
+    Private Sub DeviceListRefreshTask()
+        Try
+
+            Using parser As New DiskStateParser()
+
+                Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.GetDeviceProperties)
+
+                Dim simpleviewtask = Task.Factory.StartNew(Function() parser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result))
+
+                Dim fullviewtask = Task.Factory.StartNew(Function() parser.GetFullView(Adapter.ScsiPortNumber, devicelist.Result))
+
+                While Not IsHandleCreated
+                    If IsClosing OrElse Disposing OrElse IsDisposed Then
+                        Return
+                    End If
+                    Thread.Sleep(300)
+                End While
+
+                Invoke(New Action(AddressOf SetLabelBusy))
+
+                Dim simpleview = simpleviewtask.Result
+
+                If IsClosing OrElse Disposing OrElse IsDisposed Then
+                    Return
+                End If
+
+                Invoke(Sub() SetDiskView(simpleview, finished:=False))
+
+                Dim listFunction As Func(Of Byte, List(Of ScsiAdapter.DeviceProperties), List(Of DiskStateView))
+
+                Try
+                    Dim fullview = fullviewtask.Result
+
+                    If IsClosing OrElse Disposing OrElse IsDisposed Then
+                        Return
+                    End If
+
+                    Invoke(Sub() SetDiskView(fullview, finished:=True))
+
+                    listFunction = AddressOf parser.GetFullView
+
+                Catch ex As Exception
+                    Trace.WriteLine("Full disk state view not supported on this platform: " & ex.ToString())
+
+                    listFunction = AddressOf parser.GetSimpleView
+
+                    Invoke(Sub() SetDiskView(simpleview, finished:=True))
+
+                End Try
+
+                Do
+
+                    DeviceListRefreshEvent.WaitOne()
+
+                    If IsClosing OrElse Disposing OrElse IsDisposed Then
+                        Exit Do
+                    End If
+
+                    Invoke(New Action(AddressOf SetLabelBusy))
+
+                    Dim view = listFunction(Adapter.ScsiPortNumber, Adapter.GetDeviceProperties())
+
+                    If IsClosing OrElse Disposing OrElse IsDisposed Then
+                        Return
+                    End If
+
+                    Invoke(Sub() SetDiskView(view, finished:=True))
+
+                Loop
+
+            End Using
+
+        Catch ex As Exception
+            Trace.WriteLine("Device list view thread caught exception: " & ex.ToString())
+
+        Finally
+            DeviceListRefreshEvent.Dispose()
+
+        End Try
+
+    End Sub
+
+    Private Sub lbDevices_SelectedIndexChanged(sender As Object, e As EventArgs) Handles lbDevices.SelectionChanged
+
+        btnRemoveSelected.Enabled = lbDevices.SelectedRows.Count > 0
 
     End Sub
 
@@ -159,11 +365,14 @@ Public Class MainForm
     Private Sub btnRemoveSelected_Click(sender As Object, e As EventArgs) Handles btnRemoveSelected.Click
 
         Try
-            For Each DeviceNumber In
-              From DeviceItem In lbDevices.SelectedItems().OfType(Of String)()
-              Select UInteger.Parse(DeviceItem.Split({" "}, StringSplitOptions.RemoveEmptyEntries)(0), NumberStyles.HexNumber)
+            For Each DeviceItem In
+              lbDevices.
+              SelectedRows().
+              OfType(Of DataGridViewRow)().
+              Select(Function(row) row.DataBoundItem).
+              OfType(Of DiskStateView)()
 
-                Adapter.RemoveDevice(DeviceNumber)
+                Adapter.RemoveDevice(DeviceItem.DeviceProperties.DeviceNumber)
             Next
 
         Catch ex As Exception
@@ -235,26 +444,34 @@ Public Class MainForm
             Imagefiles = OpenFileDialog.FileNames
         End Using
 
-        For Each Imagefile In Imagefiles
-            Try
-                Dim Service = DevioServiceFactory.AutoMount(Imagefile,
-                                                            Adapter,
-                                                            ProxyType,
-                                                            Flags)
+        Update()
 
-                AddServiceToShutdownHandler(Service)
+        Using New AsyncMessageBox("Please wait...")
 
-            Catch ex As Exception
-                Trace.WriteLine(ex.ToString())
-                MessageBox.Show(ex.GetBaseException().Message,
-                                ex.GetBaseException().GetType().ToString(),
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Exclamation)
+            For Each Imagefile In Imagefiles
+                Try
+                    Dim Service = DevioServiceFactory.AutoMount(Imagefile,
+                                                                Adapter,
+                                                                ProxyType,
+                                                                Flags)
 
-            End Try
-        Next
+                    AddServiceToShutdownHandler(Service)
 
-        RefreshDeviceList()
+                    LastCreatedDevice = Service.DiskDeviceNumber
+
+                Catch ex As Exception
+                    Trace.WriteLine(ex.ToString())
+                    MessageBox.Show(ex.GetBaseException().Message,
+                                    ex.GetBaseException().GetType().ToString(),
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Exclamation)
+
+                End Try
+            Next
+
+            RefreshDeviceList()
+
+        End Using
 
     End Sub
 
@@ -276,23 +493,13 @@ Public Class MainForm
 
     End Sub
 
-    Private Shared Sub CurrentAppDomain_UnhandledException(sender As Object, e As UnhandledExceptionEventArgs) Handles CurrentAppDomain.UnhandledException
-
-        Dim logfile = Path.ChangeExtension(Assembly.GetExecutingAssembly().Location, ".log")
-        File.AppendAllText(logfile,
-                             "---------------" & Environment.NewLine &
-                             Date.Now.ToString() & Environment.NewLine &
-                             e.ExceptionObject.ToString() & Environment.NewLine)
-
-    End Sub
-
     Private Sub cbNotifyLibEwf_CheckedChanged(sender As Object, e As EventArgs) Handles cbNotifyLibEwf.CheckedChanged
 
         Try
 
             'Dim pipename As String
             'Using CurrentProcess = Process.GetCurrentProcess
-            '    pipename = "\\.\pipe\libewf-devio-" & CurrentProcess.Id
+            '    pipename = "\\?\pipe\libewf-devio-" & CurrentProcess.Id
             'End Using
             'Dim pipe As New Pipes.NamedPipeServerStream(pipename, Pipes.PipeDirection.In, 0, Pipes.PipeTransmissionMode.Byte, Pipes.PipeOptions.None)
             'Using pipe
@@ -301,8 +508,12 @@ Public Class MainForm
 
             If cbNotifyLibEwf.Checked Then
                 NativeFileIO.Win32API.AllocConsole()
+                If Not UsingDebugConsole Then
+                    Trace.Listeners.Add(New ConsoleTraceListener With {.Name = "AIMConsoleTraceListener"})
+                End If
             Else
                 If Not UsingDebugConsole Then
+                    Trace.Listeners.Remove("AIMConsoleTraceListener")
                     NativeFileIO.Win32API.FreeConsole()
                 End If
             End If
@@ -317,4 +528,43 @@ Public Class MainForm
         End Try
 
     End Sub
+
+    Private Function InstallDriver() As Boolean
+
+        Try
+            Using msgbox As New AsyncMessageBox("Driver setup in progress")
+
+                Using zipStream = GetType(MainForm).Assembly.GetManifestResourceStream(GetType(MainForm), "DriverFiles.zip")
+
+                    DriverSetup.InstallFromZipFile(msgbox.Handle, zipStream)
+
+                End Using
+
+            End Using
+
+        Catch ex As Exception
+            Dim msg = ex.ToString()
+            Trace.WriteLine("Exception on driver install: " & msg)
+            LogMessage(msg)
+
+            MessageBox.Show(Me,
+                            "An error occurred while installing driver: " & ex.GetBaseException().Message,
+                            "Driver Setup",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error)
+
+            Return False
+
+        End Try
+
+        MessageBox.Show(Me,
+                        "Driver was successfully installed.",
+                        "Driver Setup",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information)
+
+        Return True
+
+    End Function
+
 End Class

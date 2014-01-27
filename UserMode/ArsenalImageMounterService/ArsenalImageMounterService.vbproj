@@ -136,10 +136,12 @@
     <ProjectReference Include="..\Arsenal.ImageMounter.Devio\Arsenal.ImageMounter.Devio.vbproj">
       <Project>{C8131F7E-E240-4A1B-8D3D-FC4E5DBED050}</Project>
       <Name>Arsenal.ImageMounter.Devio</Name>
+      <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj">
       <Project>{3efcb6f8-ef7e-4f60-a0de-bb197240fcc9}</Project>
       <Name>Arsenal.ImageMounter</Name>
+      <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />

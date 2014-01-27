@@ -8,7 +8,7 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("Mount tool")> 
+<Assembly: AssemblyTitle("Arsenal Image Mounter Mount Tool")> 
 <Assembly: AssemblyDescription("")> 
 <Assembly: AssemblyCompany("Arsenal Recon")> 
 <Assembly: AssemblyProduct("Arsenal Image Mounter")> 
@@ -31,5 +31,5 @@ Imports System.Runtime.InteropServices
 ' by using the '*' as shown below:
 ' <Assembly: AssemblyVersion("1.0.*")> 
 
-<Assembly: AssemblyVersion("1.0.0.0")> 
-<Assembly: AssemblyFileVersion("1.0.010.0")> 
+<Assembly: AssemblyVersion("1.0.011.0")> 
+<Assembly: AssemblyFileVersion("1.0.011.0")> 

@@ -17,14 +17,7 @@ Namespace Server.SpecializedProviders
 Public Class DevioProviderLibEwf
         Inherits DevioProviderUnmanagedBase
 
-        Public Shared ReadOnly TemporaryDirectory As String
-
         Shared Sub New()
-
-            TemporaryDirectory =
-              Path.Combine(Path.GetTempPath(),
-                           Assembly.GetCallingAssembly().GetName().Name,
-                           NativeFileIO.ProcessArchitecture)
 
             AccessFlagsRead = libewf_get_flags_read()
             AccessFlagsReadWrite = libewf_get_flags_read_write()

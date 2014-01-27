@@ -51,11 +51,44 @@ Public Class DiskDevice
     End Sub
 
     ''' <summary>
-    ''' Retrieves device number for this virtual disk.
+    ''' Retrieves device number for this disk.
     ''' </summary>
     Public Function GetDeviceNumber() As UInt32
 
-        Return NativeFileIO.GetScsiAddress(SafeFileHandle).DWordDeviceNumber
+        Return GetScsiAddress().DWordDeviceNumber
+
+    End Function
+
+    ''' <summary>
+    ''' Retrieves device number for a disk, given a Win32 path such
+    ''' as \\?\PhysicalDrive0
+    ''' </summary>
+    Public Shared Function GetDeviceNumber(path As String) As UInt32
+
+        Using disk As New DiskDevice(path, FileAccess.Read)
+            Return disk.GetDeviceNumber()
+        End Using
+
+    End Function
+
+    ''' <summary>
+    ''' Retrieves SCSI address for this disk.
+    ''' </summary>
+    Public Function GetScsiAddress() As NativeFileIO.Win32API.SCSI_ADDRESS
+
+        Return NativeFileIO.GetScsiAddress(SafeFileHandle)
+
+    End Function
+
+    ''' <summary>
+    ''' Retrieves SCSI address for a disk, given a Win32 path such
+    ''' as \\?\PhysicalDrive0
+    ''' </summary>
+    Public Shared Function GetScsiAddress(path As String) As NativeFileIO.Win32API.SCSI_ADDRESS
+
+        Using disk As New DiskDevice(path, FileAccess.Read)
+            Return disk.GetScsiAddress()
+        End Using
 
     End Function
 

@@ -83,6 +83,21 @@ Public Class API
     End Function
 
     ''' <summary>
+    ''' Returns a value indicating whether Arsenal Image Mounter driver is
+    ''' installed and running.
+    ''' </summary>
+    Public Shared ReadOnly Property AdapterDevicePresent As Boolean
+        Get
+            Dim devInsts = GetAdapterDeviceInstances()
+            If devInsts Is Nothing OrElse devInsts.Count = 0 Then
+                Return False
+            Else
+                Return True
+            End If
+        End Get
+    End Property
+
+    ''' <summary>
     ''' Builds a list of setup device ids for active Arsenal Image Mounter
     ''' objects. Device ids are used in calls to plug-and-play setup functions.
     ''' </summary>

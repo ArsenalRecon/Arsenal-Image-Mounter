@@ -58,7 +58,6 @@
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
@@ -71,7 +70,7 @@
     <Import Include="System.IO" />
     <Import Include="System.Linq" />
     <Import Include="System.Reflection" />
-    <Import Include="System.ServiceProcess" />
+    <Import Include="System.Threading.Tasks" />
     <Import Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
@@ -126,6 +125,11 @@
       <Project>{3EFCB6F8-EF7E-4F60-A0DE-BB197240FCC9}</Project>
       <Name>Arsenal.ImageMounter</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\ArsenalImageMounterMountTool\EULA.txt">
+      <Link>EULA.txt</Link>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

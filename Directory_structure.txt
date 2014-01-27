@@ -1,23 +1,42 @@
 
+MountTool
+---------
+ArsenalImageMounterMountTool.exe:
+Compiled, ready-to-run, one-piece simple GUI mount tool. Installs necessary
+driver components if not already installed. This mount tool application is
+primarily intended to show what this project can be used for.
+
+ArsenalImageMounterControl.exe:
+Provides command line access to basic features.
+
 DriverSetup
 -----------
 Setup tools and signed driver packages that can be used to install the driver
-components.
+components alone.
 
-MountTool
----------
-Compiled and ready-to-run simple GUI mount tool. Primarily intended to show
-what this project can be used for.
+ArsenalImageMounter-DriverSetup.exe:
+One-piece simple driver setup GUI application that includes everything to
+automatically install the correct driver for current version of Windows.
+
+DriverSetup.7z:
+Setup tools and setup files as a 7-zip archive. Contains both GUI setup tool
+and a console based setup tool ArsenalImageMounterCLISetup.exe that could be
+used to automate driver setup, for example for use from a script.
+
+DriverSetup.zip:
+Driver setup files only (sys, cat and inf files). For use when integrating
+driver setup with, for example, other driver setup packages.
 
 UserMode
 --------
-Visual Studio 2010/2012 solution with all user-mode components. This includes
-Arsenal.ImageMounter.dll that can be referenced from other applications to use
-the public API. It also includes driver setup applications and some debug
+Visual Studio 2010/2012/2013 solution with all user-mode components. This
+includes Arsenal.ImageMounter.dll that can be referenced from other applications
+to use the public API. It also includes driver setup applications and some debug
 tools.
 
 KernelMode
 ----------
 This directory contains a WDK 7 kernel mode driver project. This builds the
-kernel mode component used to create a virtual SCSI adapter.
+kernel mode component used to create a virtual SCSI adapter as well as other
+kernel mode components, .inf files for driver setup and similar.
 

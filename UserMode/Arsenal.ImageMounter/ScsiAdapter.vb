@@ -211,6 +211,15 @@ Public Class ScsiAdapter
     End Function
 
     ''' <summary>
+    ''' Retrieves a list of DeviceProperties objects for each virtual disk on this adapter.
+    ''' </summary>
+    Public Function GetDeviceProperties() As List(Of DeviceProperties)
+
+        Return GetDeviceList().ConvertAll(AddressOf QueryDevice)
+
+    End Function
+
+    ''' <summary>
     ''' Creates a new virtual disk.
     ''' </summary>
     ''' <param name="DiskSize">Size of virtual disk. If this parameter is zero, current size of disk image file will

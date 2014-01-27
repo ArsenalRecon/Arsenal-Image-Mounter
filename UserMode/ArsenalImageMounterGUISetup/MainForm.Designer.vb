@@ -27,6 +27,7 @@ Partial Class MainForm
         Me.Label2 = New System.Windows.Forms.Label()
         Me.tbOSType = New System.Windows.Forms.TextBox()
         Me.btnInstall = New System.Windows.Forms.Button()
+        Me.btnUninstall = New System.Windows.Forms.Button()
         Me.SuspendLayout()
         '
         'Label1
@@ -34,7 +35,7 @@ Partial Class MainForm
         Me.Label1.AutoSize = True
         Me.Label1.Location = New System.Drawing.Point(12, 9)
         Me.Label1.Name = "Label1"
-        Me.Label1.Size = New System.Drawing.Size(136, 13)
+        Me.Label1.Size = New System.Drawing.Size(69, 13)
         Me.Label1.TabIndex = 0
         Me.Label1.Text = "Setup status:"
         '
@@ -77,11 +78,22 @@ Partial Class MainForm
         Me.btnInstall.Text = "Install"
         Me.btnInstall.UseVisualStyleBackColor = True
         '
+        'btnUninstall
+        '
+        Me.btnUninstall.Enabled = False
+        Me.btnUninstall.Location = New System.Drawing.Point(110, 93)
+        Me.btnUninstall.Name = "btnUninstall"
+        Me.btnUninstall.Size = New System.Drawing.Size(92, 33)
+        Me.btnUninstall.TabIndex = 2
+        Me.btnUninstall.Text = "Uninstall"
+        Me.btnUninstall.UseVisualStyleBackColor = True
+        '
         'MainForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(288, 134)
+        Me.Controls.Add(Me.btnUninstall)
         Me.Controls.Add(Me.btnInstall)
         Me.Controls.Add(Me.tbOSType)
         Me.Controls.Add(Me.Label2)
@@ -93,9 +105,10 @@ Partial Class MainForm
         Me.PerformLayout()
 
     End Sub
-  Friend WithEvents Label1 As System.Windows.Forms.Label
-  Friend WithEvents tbStatus As System.Windows.Forms.TextBox
-  Friend WithEvents Label2 As System.Windows.Forms.Label
-  Friend WithEvents tbOSType As System.Windows.Forms.TextBox
-  Friend WithEvents btnInstall As System.Windows.Forms.Button
+    Friend WithEvents Label1 As System.Windows.Forms.Label
+    Friend WithEvents tbStatus As System.Windows.Forms.TextBox
+    Friend WithEvents Label2 As System.Windows.Forms.Label
+    Friend WithEvents tbOSType As System.Windows.Forms.TextBox
+    Friend WithEvents btnInstall As System.Windows.Forms.Button
+    Friend WithEvents btnUninstall As System.Windows.Forms.Button
 End Class
