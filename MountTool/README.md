@@ -10,3 +10,12 @@ Contributors to Arsenal Image Mounter must sign the Arsenal Contributor Agreemen
 If your project is not licensed under an AGPL v3 compatible license, contact Arsenal Recon directly regarding alternative licensing:
 
 http://ArsenalRecon.com/contact/
+
+Folder specific information:
+
+ArsenalImageMounterMountTool.exe - Compiled, ready-to-run, one-piece simple GUI mount tool. Installs necessary driver components if not already installed.  Complete functionality is available when run on Windows 8, but all basic functionality exists when run on Windows 7.  This mount tool application is primarily intended to show what the Arsenal Image Mounter source code can be used for.
+
+ArsenalImageMounterControl.exe - Provides command line access to basic Arsenal Image Mounter features.
+
+Screenshot.png - Example of MountTool's disk signature collision reporting and remediation.  Note - remediation only available in read/write mode.
+
