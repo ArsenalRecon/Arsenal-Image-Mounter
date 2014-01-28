@@ -10,14 +10,26 @@ Public Class DiskStateParser
 
     Private Shared Function GetDriveScsiIds(portnumber As Byte) As Dictionary(Of UInteger, UInteger)
 
+        Dim GetScsiAddress =
+            Function(drv As String) As NativeFileIO.Win32API.SCSI_ADDRESS?
+                Try
+                    Return DiskDevice.GetScsiAddress(drv)
+
+                Catch
+                    Return Nothing
+
+                End Try
+            End Function
+
         Dim q =
             From drv In NativeFileIO.QueryDosDevice()
             Where drv.StartsWith("PhysicalDrive")
-            Let address = DiskDevice.GetScsiAddress("\\?\" & drv)
-            Where address.PortNumber = portnumber
+            Let address = GetScsiAddress("\\?\" & drv)
+            Where address.HasValue
+            Where address.Value.PortNumber = portnumber
             Let drivenumber = UInteger.Parse(drv.Substring("PhysicalDrive".Length))
 
-        Return q.ToDictionary(Function(o) o.address.DWordDeviceNumber,
+        Return q.ToDictionary(Function(o) o.address.Value.DWordDeviceNumber,
                               Function(o) o.drivenumber)
 
     End Function

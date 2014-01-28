@@ -331,9 +331,20 @@ Public Class MainForm
 
         Catch ex As Exception
             Trace.WriteLine("Device list view thread caught exception: " & ex.ToString())
+            LogMessage("Device list view thread caught exception: " & ex.ToString())
 
-        Finally
-            DeviceListRefreshEvent.Dispose()
+            Dim action =
+                Sub()
+                    MessageBox.Show(Me,
+                                    "Exception while enumerating disk drives: " & ex.GetBaseException().Message,
+                                    ex.GetBaseException().GetType().ToString(),
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Error)
+
+                    Application.Exit()
+                End Sub
+
+            Invoke(action)
 
         End Try
 
