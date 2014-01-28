@@ -13,7 +13,7 @@ http://ArsenalRecon.com/contact/
 
 Folder specific information:
 
-ArsenalImageMounterMountTool.exe - Compiled, ready-to-run, one-piece simple GUI mount tool. Installs necessary driver components if not already installed.  Complete functionality is available when run on Windows 8, but all basic functionality exists when run on Windows 7.  This mount tool application is primarily intended to show what the Arsenal Image Mounter source code can be used for.
+ArsenalImageMounterMountTool.exe - Compiled, ready-to-run, one-piece simple GUI mount tool. Installs necessary driver components if not already installed.  Complete functionality is available when run on Windows 8, but all basic functionality exists when run on Windows 7.  This mount tool application is primarily intended to show what the Arsenal Image Mounter source code can be used for. libewf and zlib binaries (to facilitate EnCase/EWF image mounting) are being included with MountTool under their respective licenses - see lgpl-3.0.txt and zlib license.txt.
 
 ArsenalImageMounterControl.exe - Provides command line access to basic Arsenal Image Mounter features.
 
