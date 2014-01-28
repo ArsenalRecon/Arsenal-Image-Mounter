@@ -1,5 +1,6 @@
 ﻿Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.ScsiAdapter
+Imports System.Runtime.InteropServices
 
 Public Class DiskStateParser
     Implements IDisposable
@@ -12,13 +13,24 @@ Public Class DiskStateParser
 
         Dim GetScsiAddress =
             Function(drv As String) As NativeFileIO.Win32API.SCSI_ADDRESS?
-                Try
-                    Return DiskDevice.GetScsiAddress(drv)
+                Using disk As New DiskDevice(drv, FileAccess.Read)
+                    Dim ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS
+                    Dim rc = NativeFileIO.Win32API.
+                        DeviceIoControl(disk.SafeFileHandle,
+                                        NativeFileIO.Win32API.IOCTL_SCSI_GET_ADDRESS,
+                                        IntPtr.Zero,
+                                        0,
+                                        ScsiAddress,
+                                        CUInt(Marshal.SizeOf(GetType(NativeFileIO.Win32API.SCSI_ADDRESS))),
+                                        Nothing,
+                                        Nothing)
 
-                Catch
-                    Return Nothing
-
-                End Try
+                    If rc Then
+                        Return ScsiAddress
+                    Else
+                        Return Nothing
+                    End If
+                End Using
             End Function
 
         Dim q =
@@ -60,13 +72,13 @@ Public Class DiskStateParser
 
         Dim getid =
             Function(dev As DeviceProperties)
-                Dim result As UInteger
-                If ids.TryGetValue(dev.DeviceNumber, result) Then
-                    Return result
-                Else
-                    Return Nothing
-                End If
-            End Function
+                            Dim result As UInteger
+                            If ids.TryGetValue(dev.DeviceNumber, result) Then
+                                Return result
+                            Else
+                                Return Nothing
+                            End If
+                        End Function
 
         Return _
             deviceProperties.
