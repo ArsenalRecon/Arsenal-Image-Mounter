@@ -59,6 +59,9 @@ Public Class NativeFileIO
         Public Const IOCTL_DISK_GET_LENGTH_INFO As UInt32 = &H7405C
         Public Const IOCTL_DISK_GROW_PARTITION As UInt32 = &H7C0D0
         Public Const IOCTL_DISK_UPDATE_PROPERTIES As UInt32 = &H70140
+        Public Const IOCTL_DISK_IS_WRITABLE As UInt32 = &H70024
+
+        Public Const ERROR_WRITE_PROTECT As UInt32 = 19UI
 
         Public Const SC_MANAGER_CREATE_SERVICE As UInt32 = &H2
         Public Const SC_MANAGER_ALL_ACCESS As UInt32 = &HF003F
@@ -516,8 +519,8 @@ Public Class NativeFileIO
           <MarshalAs(UnmanagedType.LPTStr), [In]()> OEMSourceMediaLocation As String,
           OEMSourceMediaType As UInt32,
           CopyStyle As UInt32,
-          <MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=5), [In](), Out()> DestinationInfFileName As Char(),
-          DestinationInfFileNameSize As UInt32,
+          <MarshalAs(UnmanagedType.LPTStr), [In](), Out()> DestinationInfFileName As StringBuilder,
+          DestinationInfFileNameSize As Int32,
           ByRef RequiredSize As UInt32,
           DestinationInfFileNameComponent As IntPtr) As Boolean
 
@@ -852,6 +855,27 @@ Public Class NativeFileIO
           RebootRequired As IntPtr) As Boolean
 
         Public Declare Auto Function GetConsoleWindow Lib "kernel32.dll" () As IntPtr
+
+        <Flags>
+        Public Enum ShutdownFlags As UInt32
+            HybridShutdown = &H400000UI
+            Logoff = &H0UI
+            PowerOff = &H8UI
+            Reboot = &H2UI
+            RestartApps = &H40UI
+            Shutdown = &H1UI
+            Force = &H4UI
+            ForceIfHung = &H10UI
+        End Enum
+
+        <Flags>
+        Public Enum ShutdownReason As UInt32
+            ReasonFlagPlanned = &H80000000UI
+        End Enum
+
+        Public Declare Auto Function ExitWindowsEx Lib "kernel32.dll" (
+          flags As ShutdownFlags,
+          reason As ShutdownReason) As Boolean
 
     End Class
 #End Region
@@ -1334,6 +1358,22 @@ Public Class NativeFileIO
 
     End Function
 
+    Public Shared Function IsDiskWritable(SafeFileHandle As SafeFileHandle) As Boolean
+
+        Dim rc = Win32API.DeviceIoControl(SafeFileHandle, Win32API.IOCTL_DISK_IS_WRITABLE, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+        If rc Then
+            Return True
+        Else
+            Dim err = Marshal.GetLastWin32Error()
+            If err = Win32API.ERROR_WRITE_PROTECT Then
+                Return False
+            Else
+                Throw New Win32Exception(err)
+            End If
+        End If
+
+    End Function
+
     Public Shared Sub UpdateDiskProperties(SafeFileHandle As SafeFileHandle)
 
         Win32Try(Win32API.DeviceIoControl(SafeFileHandle, Win32API.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
@@ -1655,7 +1695,7 @@ Public Class NativeFileIO
 
     Public Shared Sub CreateRootPnPDevice(OwnerWindow As IntPtr, InfPath As String, hwid As String)
 
-        Trace.WriteLine("CreateRootPnPDevice: InfPath=""" & InfPath & """, hwid=""" & hwid & """")
+        Trace.WriteLine("CreateOrUpdateRootPnPDevice: InfPath=""" & InfPath & """, hwid=""" & hwid & """")
 
         ''
         '' Inf must be a full pathname
@@ -1681,7 +1721,7 @@ Public Class NativeFileIO
                                              CUInt(ClassName.Length),
                                              0))
 
-        Trace.WriteLine("CreateRootPnPDevice: ClassGUID=""" & ClassGUID.ToString() & """, ClassName=""" & New String(ClassName) & """")
+        Trace.WriteLine("CreateOrUpdateRootPnPDevice: ClassGUID=""" & ClassGUID.ToString() & """, ClassName=""" & New String(ClassName) & """")
 
         ''
         '' Create the container for the to-be-created Device Information Element.
@@ -1854,7 +1894,7 @@ Public Class NativeFileIO
     '                                                    Return failcode
     '    End Function
 
-    Public Shared Function RemovePnPDevice(OwnerWindow As IntPtr, hwid As String, removeDriverPackage As Boolean) As Integer
+    Public Shared Function RemovePnPDevice(OwnerWindow As IntPtr, hwid As String) As Integer
 
         Trace.WriteLine("RemovePnPDevice: hwid=""" & hwid & """")
 
@@ -1921,7 +1961,7 @@ Public Class NativeFileIO
 
     End Sub
 
-    Public Shared Sub SetupCopyOEMInf(InfPath As String, NoOverwrite As Boolean)
+    Public Shared Function SetupCopyOEMInf(InfPath As String, NoOverwrite As Boolean) As String
 
         ''
         '' Inf must be a full pathname
@@ -1931,16 +1971,20 @@ Public Class NativeFileIO
             Throw New FileNotFoundException(InfPath)
         End If
 
+        Dim destName As New StringBuilder(260)
+
         Win32Try(Win32API.SetupCopyOEMInf(InfPath,
                                           Nothing,
                                           0,
                                           If(NoOverwrite, &H8UI, &H0UI),
-                                          Nothing,
-                                          0,
+                                          destName,
+                                          destName.Capacity,
                                           Nothing,
                                           Nothing))
 
-    End Sub
+        Return destName.ToString()
+
+    End Function
 
     Public Shared Sub DriverPackagePreinstall(InfPath As String)
 
@@ -2012,7 +2056,7 @@ Public Class NativeFileIO
             Where device.StartsWith("PhysicalDrive", StringComparison.InvariantCultureIgnoreCase)
 
             Try
-                Using device = OpenFileHandle("\\?\" & diskdevice, FileAccess.Read, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
+                Using device = OpenFileHandle("\\?\" & diskdevice, 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
 
                     UpdateDiskProperties(device)
 

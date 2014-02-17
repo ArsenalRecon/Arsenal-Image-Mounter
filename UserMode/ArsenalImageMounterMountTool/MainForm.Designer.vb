@@ -270,26 +270,26 @@ Partial Class MainForm
         Me.PerformLayout()
 
     End Sub
-    Friend WithEvents lblDeviceList As System.Windows.Forms.Label
-    Friend WithEvents btnRefresh As System.Windows.Forms.Button
-    Friend WithEvents btnRemoveSelected As System.Windows.Forms.Button
-    Friend WithEvents btnRemoveAll As System.Windows.Forms.Button
-    Friend WithEvents btnMountRaw As System.Windows.Forms.Button
-    Friend WithEvents btnMountDiscUtils As System.Windows.Forms.Button
-    Friend WithEvents btnMountLibEwf As System.Windows.Forms.Button
-    Friend WithEvents btnRescanBus As System.Windows.Forms.Button
-    Friend WithEvents cbNotifyLibEwf As System.Windows.Forms.CheckBox
-    Friend WithEvents btnMountMultiPartRaw As System.Windows.Forms.Button
-    Friend WithEvents lbDevices As System.Windows.Forms.DataGridView
-    Friend WithEvents DiskStateViewBindingSource As System.Windows.Forms.BindingSource
-    Friend WithEvents DriveNumberDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents ScsiIdDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents ImagePathDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents DriveNumberString As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents IsOfflineDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents PartitionLayoutDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents SignatureDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents DiskSizeDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents IsReadOnlyDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents lblDeviceList As System.Windows.Forms.Label
+    Private WithEvents btnRefresh As System.Windows.Forms.Button
+    Private WithEvents btnRemoveSelected As System.Windows.Forms.Button
+    Private WithEvents btnRemoveAll As System.Windows.Forms.Button
+    Private WithEvents btnMountRaw As System.Windows.Forms.Button
+    Private WithEvents btnMountDiscUtils As System.Windows.Forms.Button
+    Private WithEvents btnMountLibEwf As System.Windows.Forms.Button
+    Private WithEvents btnRescanBus As System.Windows.Forms.Button
+    Private WithEvents cbNotifyLibEwf As System.Windows.Forms.CheckBox
+    Private WithEvents btnMountMultiPartRaw As System.Windows.Forms.Button
+    Private WithEvents lbDevices As System.Windows.Forms.DataGridView
+    Private WithEvents DiskStateViewBindingSource As System.Windows.Forms.BindingSource
+    Private WithEvents DriveNumberDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents ScsiIdDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents ImagePathDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents DriveNumberString As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents IsOfflineDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents PartitionLayoutDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents SignatureDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents DiskSizeDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Private WithEvents IsReadOnlyDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
 
 End Class

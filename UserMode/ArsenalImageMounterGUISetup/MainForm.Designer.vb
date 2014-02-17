@@ -99,6 +99,7 @@ Partial Class MainForm
         Me.Controls.Add(Me.Label2)
         Me.Controls.Add(Me.tbStatus)
         Me.Controls.Add(Me.Label1)
+        Me.MinimumSize = New System.Drawing.Size(304, 173)
         Me.Name = "MainForm"
         Me.Text = "Arsenal Image Mounter Setup"
         Me.ResumeLayout(False)

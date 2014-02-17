@@ -101,7 +101,7 @@
          {1UL << 30, " GB"},
          {1UL << 20, " MB"},
          {1UL << 10, " KB"},
-         {1UL, " bytes"}}
+         {0UL, " bytes"}}
 
     Public ReadOnly Property DiskSize As String
         Get
@@ -124,7 +124,7 @@
         Get
             If DiskState IsNot Nothing Then
                 Return DiskState.IsReadOnly
-            ElseIf PhysicalDiskState IsNot Nothing Then
+            ElseIf DeviceProperties IsNot Nothing Then
                 Return (DeviceProperties.Flags And DeviceFlags.ReadOnly) = DeviceFlags.ReadOnly
             Else
                 Return Nothing

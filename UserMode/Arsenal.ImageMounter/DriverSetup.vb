@@ -55,6 +55,9 @@ Public Class DriverSetup
         Dim origdir = Environment.CurrentDirectory
 
         Dim temppath = Path.Combine(Path.GetTempPath(), "ArsenalImageMounter-DriverSetup")
+
+        Trace.WriteLine("Using temp path: " & temppath)
+
         Directory.CreateDirectory(temppath)
 
         zipFile.ExtractAll(temppath, ExtractExistingFileAction.OverwriteSilently)
@@ -63,33 +66,37 @@ Public Class DriverSetup
 
         Environment.CurrentDirectory = origdir
 
-        Dim directoryRemover =
-            Sub()
+        If hasStorPort Then
 
-                Dim start = TimeSpan.FromMilliseconds(Environment.TickCount)
+            Dim directoryRemover =
+                Sub()
 
-                While Directory.Exists(temppath)
+                    Dim start = TimeSpan.FromMilliseconds(Environment.TickCount)
 
-                    Try
-                        Directory.Delete(temppath, recursive:=True)
+                    While Directory.Exists(temppath)
 
-                    Catch ex As IOException When TimeSpan.FromMilliseconds(Environment.TickCount).Subtract(start).TotalMinutes < 15
-                        Trace.WriteLine("I/O Error removing temporary directory: " & ex.ToString())
-                        Thread.Sleep(TimeSpan.FromSeconds(10))
-                        Continue While
+                        Try
+                            Directory.Delete(temppath, recursive:=True)
 
-                    Catch ex As Exception
-                        Trace.WriteLine("Error removing temporary directory: " & ex.ToString())
+                        Catch ex As IOException When TimeSpan.FromMilliseconds(Environment.TickCount).Subtract(start).TotalMinutes < 15
+                            Trace.WriteLine("I/O Error removing temporary directory: " & ex.ToString())
+                            Thread.Sleep(TimeSpan.FromSeconds(10))
+                            Continue While
 
-                    End Try
+                        Catch ex As Exception
+                            Trace.WriteLine("Error removing temporary directory: " & ex.ToString())
 
-                End While
+                        End Try
 
-            End Sub
+                    End While
 
-        With New Thread(directoryRemover)
-            .Start()
-        End With
+                End Sub
+
+            With New Thread(directoryRemover)
+                .Start()
+            End With
+
+        End If
 
     End Sub
 
@@ -171,8 +178,17 @@ Public Class DriverSetup
     ''' version followed by one subdirectory for each architecture.</param>
     Protected Shared Sub InstallStorPortDriver(ownerWindow As IntPtr, setupsource As String)
 
-        Dim infPath = Path.Combine(setupsource, kernel, "phdskmnt.inf")
+        '' First, check if device nodes already exist.
+        Try
+            RemoveDevices(ownerWindow)
 
+        Catch ex As Exception
+            Trace.WriteLine("Error removing existing device nodes. This will be ignored and driver update operation will continue anyway. Exception: " & ex.ToString())
+
+        End Try
+
+        '' Create device node and install driver
+        Dim infPath = Path.Combine(setupsource, kernel, "phdskmnt.inf")
         NativeFileIO.CreateRootPnPDevice(ownerWindow, infPath, "root\phdskmnt")
 
     End Sub
@@ -193,7 +209,7 @@ Public Class DriverSetup
         NativeFileIO.GetDeviceInstancesForService("phdskmnt", hwinstances)
 
         For Each hwinstance In From hwinst In hwinstances Where Not String.IsNullOrEmpty(hwinst)
-            NativeFileIO.RemovePnPDevice(ownerWindow, hwinstance, removeDriverPackage:=False)
+            NativeFileIO.RemovePnPDevice(ownerWindow, hwinstance)
         Next
 
     End Sub
@@ -219,7 +235,8 @@ Public Class DriverSetup
         ''
         Dim CtlUnitInfPath = Path.Combine(setupsource, "CtlUnit", "ctlunit.inf")
 
-        NativeFileIO.SetupCopyOEMInf(CtlUnitInfPath, NoOverwrite:=False)
+        CtlUnitInfPath = NativeFileIO.SetupCopyOEMInf(CtlUnitInfPath, NoOverwrite:=False)
+        Trace.WriteLine("Pre-installed controller inf: '" & CtlUnitInfPath & "'")
 
         Directory.SetCurrentDirectory(setupsource)
 

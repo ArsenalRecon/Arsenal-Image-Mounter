@@ -4,7 +4,7 @@
 /// requests are used for example to add or remove virtual disks and similar
 /// tasks.
 /// 
-/// Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code is available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -191,7 +191,7 @@ ScsiIoControl(
 
     default :
 
-        DbgPrint("PhDskMnt::ScsiExecute: Unknown IOControl code=0x%x\n", srb_io_control->ControlCode);
+        DbgPrint("PhDskMnt::ScsiExecute: Unknown IOControl code=0x%X\n", srb_io_control->ControlCode);
 
         ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
         break;
@@ -214,7 +214,6 @@ ImScsiCreateDevice(
     pHW_LU_EXTENSION        pLUExt = NULL;
     PSRB_IMSCSI_CREATE_DATA new_device = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
     pMP_WorkRtnParms        pWkRtnParms;
-    UCHAR                   pathId = new_device->DeviceNumber.PathId;
 
     // If auto-selecting device number
     if (new_device->DeviceNumber.LongNumber == IMSCSI_ALL_DEVICES)
@@ -341,7 +340,7 @@ ImScsiCreateDevice(
     
     *pResult = ResultQueued;                          // Indicate queuing.
 
-    StoragePortNotification(BusChangeDetected, pHBAExt, pathId);
+    StoragePortNotification(BusChangeDetected, pHBAExt, new_device->DeviceNumber.PathId);
     
     KdPrint(("PhDskMnt::ImScsiCreateDevice: End: *Result=%i\n", *pResult));
 
@@ -646,7 +645,7 @@ ImScsiRemoveDevice(
     StoragePortNotification(BusChangeDetected, pHBAExt, pathId);
     
 Done:
-    KdPrint2(("PhDskMnt::ImScsiRemoveDevice: End: status=0x%x, *Result=%i\n", status));
+    KdPrint2(("PhDskMnt::ImScsiRemoveDevice: End: status=0x%X, *Result=%i\n", status));
 
     return status;
 }

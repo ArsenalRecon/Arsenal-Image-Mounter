@@ -2,7 +2,7 @@
 ; CTLUNIT.INF
 ; Installs NULL device driver for Arsenal Image Mounter Control Unit.
 ; 
-; Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+; Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ; This source code is available under the terms of the Affero General Public
 ; License v3.
 ;
@@ -16,7 +16,7 @@ Class=System
 ClassGuid={4D36E97D-E325-11CE-BFC1-08002BE10318}
 Provider=%ARSENALRECON%
 CatalogFile=ctlunit.cat
-DriverVer = 03/03/2013,1.0.0004.00004
+DriverVer = 02/15/2014,1.1.0007.00007
 
 [ControlFlags]
 ExcludeFromSelect = *

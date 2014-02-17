@@ -15,9 +15,11 @@
 #ifndef _MP_H_
 #define _MP_H_
 
-#define IMSCSI_DRIVER_VERSION ((ULONG) 0x0100)
+#define IMSCSI_DRIVER_VERSION ((ULONG) 0x0101)
 
+#ifndef VERBOSE_DEBUG_TRACE
 #define VERBOSE_DEBUG_TRACE 0
+#endif
 
 #if VERBOSE_DEBUG_TRACE >= 1
 #define KdPrint2(x) KdPrint(x)
@@ -147,6 +149,7 @@ typedef struct _MPDriverInfo {                        // The master miniport obj
     KEVENT                         ResponseEvent;
 #endif
     ULONG                          DrvInfoNbrMPHBAObj;// Count of items in ListMPHBAObj.
+	ULONG                          RandomSeed;
 } MPDriverInfo, * pMPDriverInfo;
 
 typedef struct _LUNInfo {
@@ -191,8 +194,9 @@ typedef struct _HW_LU_EXTENSION {                     // LUN extension allocated
     UCHAR                 DeviceType;
     BOOLEAN               RemovableMedia;
     BOOLEAN               ReadOnly;
+    ULONG                 FakeDiskSignature;
     PVOID                 LastIoBuffer;
-    ULONG                 LastIoStartSector;
+    LONGLONG              LastIoStartSector;
     ULONG                 LastIoLength;
     KSPIN_LOCK            LastIoLock;
     DEVICE_NUMBER         DeviceNumber;
@@ -344,11 +348,11 @@ ScsiOpInquiryRaidControllerUnit(
 
 UCHAR
 ScsiGetLUExtension(
-              __in pHW_HBA_EXT              pHBAExt,      // Adapter device-object extension from port driver.
-              __in __out_opt pHW_LU_EXTENSION * ppLUExt,
-              __in UCHAR                    PathId,
-              __in UCHAR                    TargetId,
-              __in UCHAR                    Lun
+              __in pHW_HBA_EXT								pHBAExt,      // Adapter device-object extension from port driver.
+			  pHW_LU_EXTENSION * ppLUExt,
+              __in UCHAR									PathId,
+              __in UCHAR									TargetId,
+              __in UCHAR									Lun
              );
 
 VOID

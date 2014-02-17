@@ -89,6 +89,12 @@ Public Enum DeviceFlags As UInt32
     ''' </summary>
     Modified = &H10000UI
 
+    ''' <summary>
+    ''' If this flag is set, the driver will report a random fake disk signature to Windows in case device is read-only,
+    ''' existing disk signature is zero and master boot record has otherwise apparently valid data.
+    ''' </summary>
+    FakeDiskSignatureIfZero = &H20000UI
+
 End Enum
 
 

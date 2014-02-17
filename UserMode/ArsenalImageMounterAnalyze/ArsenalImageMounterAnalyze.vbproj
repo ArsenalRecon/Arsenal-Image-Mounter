@@ -26,7 +26,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DocumentationFile>ArsenalImageMounterAnalyze.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
-    <IntermediateOutputPath>S:\Temp\vsCAA1.tmp\x86\Debug\</IntermediateOutputPath>
+    <IntermediateOutputPath>S:\Temp\vs8606.tmp\x86\Debug\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -37,7 +37,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DocumentationFile>ArsenalImageMounterAnalyze.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
-    <IntermediateOutputPath>S:\Temp\vsCAA1.tmp\x86\Release\</IntermediateOutputPath>
+    <IntermediateOutputPath>S:\Temp\vs8606.tmp\x86\Release\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup>
     <OptionExplicit>On</OptionExplicit>
@@ -64,6 +64,7 @@
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <IntermediateOutputPath>S:\Temp\vs8606.tmp\Debug\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <DefineTrace>true</DefineTrace>
@@ -74,6 +75,7 @@
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <IntermediateOutputPath>S:\Temp\vs8606.tmp\Release\</IntermediateOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />

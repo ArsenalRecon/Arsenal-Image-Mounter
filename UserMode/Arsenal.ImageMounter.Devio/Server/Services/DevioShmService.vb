@@ -41,11 +41,10 @@ Namespace Server.Services
         ''' </summary>
         Public Shared ReadOnly Property DefaultBufferSize As Long
             Get
-                If Environment.OSVersion.Version.Major > 5 Then
-                    Return 2097152 + IMDPROXY_HEADER_SIZE
-                Else
-                    Return 1048576 + IMDPROXY_HEADER_SIZE
-                End If
+                '' Corresponds to MaximumTransferLength that driver reports to
+                '' storage port driver. This is the largest possible size of an
+                '' I/O request from the driver.
+                Return (8 << 20) + IMDPROXY_HEADER_SIZE
             End Get
         End Property
 

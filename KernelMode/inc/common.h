@@ -69,8 +69,21 @@
 /// Extracts the IMSCSI_PROXY_TYPE_xxx from flags
 #define IMSCSI_PROXY_TYPE(x)            ((ULONG)(x) & 0x0000F000)
 
+// Types with file mode
+
+/// Proxy connection is direct-type
+#define IMSCSI_FILE_TYPE_DIRECT         0x00000000
+/// Proxy connection is over serial line
+#define IMSCSI_FILE_TYPE_AWEALLOC       0x00001000
+
+/// Extracts the IMSCSI_PROXY_TYPE_xxx from flags
+#define IMSCSI_FILE_TYPE(x)             ((ULONG)(x) & 0x0000F000)
+
 /// Extracts the IMSCSI_PROXY_TYPE_xxx from flags
 #define IMSCSI_IMAGE_MODIFIED           0x00010000
+
+/// Report a fake disk signature if zero
+#define IMSCSI_FAKE_DISK_SIG_IF_ZERO    0x00020000
 
 /// Specify as device number to remove all devices.
 #define IMSCSI_ALL_DEVICES              (0x00FFFFFFUL)

@@ -11,10 +11,11 @@
 '''''
 
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports System.IO.Pipes
 
 Namespace Server.SpecializedProviders
 
-Public Class DevioProviderLibEwf
+    Public Class DevioProviderLibEwf
         Inherits DevioProviderUnmanagedBase
 
         Shared Sub New()
@@ -67,23 +68,23 @@ Public Class DevioProviderLibEwf
 
         Private handle As SafeLibEwfHandle
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_flags_read() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_flags_read_write() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_flags_write() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_flags_write_resume() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_set_notify_values(c_libstream As IntPtr, Verbose As Integer) As Integer
         End Function
 
@@ -91,7 +92,7 @@ Public Class DevioProviderLibEwf
         Private Shared Function libewf_notify_stream_open(<[In](), MarshalAs(UnmanagedType.LPStr)> filename As String, err As IntPtr) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Sub libewf_notify_set_verbose(Verbose As Integer)
         End Sub
 
@@ -99,32 +100,61 @@ Public Class DevioProviderLibEwf
         Private Shared Function libewf_open(<[In](), MarshalAs(UnmanagedType.LPArray)> filenames As String(), AmountOfFiles As Integer, AccessFlags As Byte) As SafeLibEwfHandle
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Unicode, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_open_wide(<[In](), MarshalAs(UnmanagedType.LPArray)> filenames As String(), AmountOfFiles As Integer, AccessFlags As Byte) As SafeLibEwfHandle
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_media_size(handle As SafeLibEwfHandle, ByRef media_size As Long) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_read_random(handle As SafeLibEwfHandle, buffer As IntPtr, buffer_size As IntPtr, offset As Long) As IntPtr
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_write_random(handle As SafeLibEwfHandle, buffer As IntPtr, buffer_size As IntPtr, offset As Long) As IntPtr
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_write_finalize(handle As SafeLibEwfHandle) As IntPtr
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_close(handle As IntPtr) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_notify_stream_close(errobj As IntPtr) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
-        Private Shared Function libewf_notify_set_stream(FILE As IntPtr, err As IntPtr) As Integer
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_notify_set_stream(FILE As IntPtr, errobj As IntPtr) As Integer
+        End Function
+
+        Public Shared WriteOnly Property NotificationFile As String
+            Set(value As String)
+                If String.IsNullOrEmpty(value) Then
+                    If libewf_notify_stream_close(Nothing) < 0 Then
+                        Throw New IOException("Error closing notification stream.")
+                    End If
+                Else
+                    If libewf_notify_stream_open(value, Nothing) < 0 Then
+                        Throw New IOException("Error opening " & value & ".")
+                    End If
+                End If
+            End Set
+        End Property
+
+        Public Shared Function OpenNotificationStream() As NamedPipeServerStream
+            Dim pipename = "DevioProviderLibEwf-" & Guid.NewGuid().ToString()
+            Dim pipe As New NamedPipeServerStream(pipename, PipeDirection.In, 1, PipeTransmissionMode.Message, PipeOptions.None)
+            If libewf_notify_stream_open("\\?\PIPE\" & pipename, Nothing) < 0 Then
+                pipe.Dispose()
+                Throw New IOException("Error opening named pipe " & pipename & ".")
+            End If
+            pipe.WaitForConnection()
+            Return pipe
         End Function
 
         Public Shared WriteOnly Property NotificationVerbose As Boolean
@@ -166,7 +196,7 @@ Public Class DevioProviderLibEwf
         Public Sub New(filenames As String(), Flags As Byte)
             Me.Flags = Flags
 
-            handle = libewf_open(filenames, filenames.Length, Flags)
+            handle = libewf_open_wide(filenames, filenames.Length, Flags)
             If handle.IsInvalid Then
                 Throw New Exception("Error opening image file(s).")
             End If

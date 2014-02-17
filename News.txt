@@ -1,0 +1,28 @@
+-- What's new, driver version 1.0.1.07 and API library version 1.0.013.001
+
+* MountTool previously crashed on start if any disk drive in the system was
+  exclusively locked by another application. This problem has been corrected
+  in this version.
+
+* Driver now supports drives larger than 2 TB. This requires Windows Server
+  2003 or Windows Vista or later, there is still a 2 TB limit on Windows XP.
+
+* MountTool now shows a "mount options" dialog after image file has been
+  selected. This dialog shows different options depending on what kind of
+  image file is opened.
+
+* A new feature in the driver enables mounting VHD files from Windows Backup
+  that have blank disk signature, even in read-only mode. It is done by
+  reporting a random disk signature when Windows reads MBR data from the
+  disk. This feature is activated from the "mount options" dialog in
+  MountTool, or using an option flag when integrating with the API.
+
+* Driver now supports up to 8 MB transfer size instead of old limit of 64 KB.
+  For compatibility with existing proxy service providers, large I/O requests
+  are automatically split into several smaller requests if proxy service uses
+  smaller buffer size. This could severly degrade performance, so when
+  developing proxy service providers, use at least 8 MB buffer size.
+
+* Some users have experienced extremely bad performance on Windows XP. A
+  possible reason has been identified and corrected. Please report if such
+  problems are still seen!

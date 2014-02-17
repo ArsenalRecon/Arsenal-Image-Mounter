@@ -19,7 +19,7 @@
 Public Class ScsiAdapter
     Inherits DeviceObject
 
-    Public Const CompatibleDriverVersion As UInteger = &H100
+    Public Const CompatibleDriverVersion As UInteger = &H101
 
     Public Const AutoDeviceNumber As UInt32 = &HFFFFFF
 
@@ -339,13 +339,22 @@ Public Class ScsiAdapter
 
         Loop
 
-        Do
+        Using DiskDevice
 
-            Thread.Sleep(500)
-            Trace.WriteLine("Updating disk properties...")
-            DiskDevice.UpdateProperties()
+            '' Wait at most 20 x 500 msec for device to get initialized by driver
+            For i = 1 To 20
 
-        Loop While DiskDevice.DiskSize = 0
+                Thread.Sleep(500)
+                Trace.WriteLine("Updating disk properties...")
+                DiskDevice.UpdateProperties()
+
+                If DiskDevice.DiskSize <> 0 Then
+                    Exit For
+                End If
+
+            Next
+
+        End Using
 
         Trace.WriteLine("CreateDevice done.")
 

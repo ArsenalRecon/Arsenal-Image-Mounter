@@ -47,7 +47,7 @@ Module MainModule
 
         Dim FileName As String = Nothing
         Dim DiskPath As String = Nothing
-        Dim DeviceNumber As UInt32 = ScsiAdapter.AutoDeviceNumber
+        Dim DeviceNumber As UInt32?
         Dim ShowHelp As Boolean = False
         Dim Mode As OpMode
         Dim DiskSize As Long
@@ -122,16 +122,19 @@ Module MainModule
             Console.WriteLine(asmname & "." & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax:" & Environment.NewLine &
-                              asmname & " /add|/rescan|/remove|/query|/list [/trace] [/device=nnnnnn] [/filename=path] [/disksize=nnn]" & Environment.NewLine &
-                              "    [/offset=nnn] [/sectorsize=nnn] [/getdevicenumber=path] [/proxy=shm] [/vm] [/sparse] [/readonly]")
+                              asmname & " /add|/rescan|/remove|/query|/list [/trace] " & Environment.NewLine &
+                              "    [/device=nnnnnn] [/filename=path] [/disksize=nnn] [/offset=nnn] " & Environment.NewLine &
+                              "    [/sectorsize=nnn] [/getdevicenumber=path] [/proxy=shm] [/vm] [/sparse]" & Environment.NewLine &
+                              "    [/readonly]")
             Return
         End If
 
-        Trace.WriteLine("Selected device number: " & DeviceNumber.ToString("X6"))
+        Trace.WriteLine("Selected device number: " & If(DeviceNumber Is Nothing, "Auto", DeviceNumber.Value.ToString("X6")))
 
         Select Case Mode
 
             Case OpMode.Add
+                Dim CreateDeviceNumber = If(DeviceNumber, ScsiAdapter.AutoDeviceNumber)
                 Using Adapter As New ScsiAdapter
                     Adapter.CreateDevice(DiskSize:=DiskSize,
                                          BytesPerSector:=SectorSize,
@@ -139,26 +142,46 @@ Module MainModule
                                          Flags:=Flags,
                                          Filename:=FileName,
                                          NativePath:=False,
-                                         DeviceNumber:=DeviceNumber)
+                                         DeviceNumber:=CreateDeviceNumber)
                 End Using
-                Console.WriteLine("Created device (format: LLTTPP hex): " & DeviceNumber.ToString("X6"))
+                Console.WriteLine("Created device (format: LLTTPP hex): " & CreateDeviceNumber.ToString("X6"))
 
             Case OpMode.Remove
                 Using adapter As New ScsiAdapter
-                    adapter.RemoveDevice(DeviceNumber)
+                    If DeviceNumber.HasValue Then
+                        adapter.RemoveDevice(DeviceNumber.Value)
+                    Else
+                        adapter.RemoveAllDevices()
+                    End If
                 End Using
 
             Case OpMode.GetDeviceNumber
                 Using disk As New DiskDevice(DiskPath, FileAccess.ReadWrite)
-                    DeviceNumber = disk.GetDeviceNumber()
-                    Console.WriteLine("DeviceNumber (format: LLTTPP hex): " & DeviceNumber.ToString("X6"))
+                    Dim Device = disk.GetDeviceNumber()
+                    Console.WriteLine("DeviceNumber (format: LLTTPP hex): " & Device.ToString("X6"))
                 End Using
 
             Case OpMode.QueryDevice
                 Using adapter As New ScsiAdapter
-                    Dim prop = adapter.QueryDevice(DeviceNumber)
-                    For Each field In prop.GetType().GetFields()
-                        Console.WriteLine(field.Name & " = " & field.GetValue(prop).ToString())
+                    Dim DeviceList As ICollection(Of UInt32)
+                    If DeviceNumber.HasValue Then
+                        DeviceList = {DeviceNumber.Value}
+                    Else
+                        DeviceList = adapter.GetDeviceList()
+                    End If
+                    If DeviceList.Count = 0 Then
+                        Console.WriteLine("No virtual disks defined.")
+                        Return
+                    End If
+                    For Each Device In DeviceList.Select(AddressOf adapter.QueryDevice)
+                        Console.WriteLine()
+                        For Each field In Device.GetType().GetFields()
+                            If field.FieldType Is GetType(UInt32) Then
+                                Console.WriteLine(field.Name & " = " & DirectCast(field.GetValue(Device), UInt32).ToString("X8"))
+                            Else
+                                Console.WriteLine(field.Name & " = " & If(field.GetValue(Device), "(null)").ToString())
+                            End If
+                        Next
                     Next
                 End Using
 

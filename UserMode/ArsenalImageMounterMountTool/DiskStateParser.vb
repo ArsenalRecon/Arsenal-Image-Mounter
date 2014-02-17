@@ -13,7 +13,7 @@ Public Class DiskStateParser
 
         Dim GetScsiAddress =
             Function(drv As String) As NativeFileIO.Win32API.SCSI_ADDRESS?
-                Using disk As New DiskDevice(drv, FileAccess.Read)
+                Using disk As New DiskDevice(drv)
                     Dim ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS
                     Dim rc = NativeFileIO.Win32API.
                         DeviceIoControl(disk.SafeFileHandle,
@@ -72,13 +72,13 @@ Public Class DiskStateParser
 
         Dim getid =
             Function(dev As DeviceProperties)
-                            Dim result As UInteger
-                            If ids.TryGetValue(dev.DeviceNumber, result) Then
-                                Return result
-                            Else
-                                Return Nothing
-                            End If
-                        End Function
+                Dim result As UInt32
+                If ids.TryGetValue(dev.DeviceNumber, result) Then
+                    Return result
+                Else
+                    Return Nothing
+                End If
+            End Function
 
         Return _
             deviceProperties.

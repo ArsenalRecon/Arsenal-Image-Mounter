@@ -15,6 +15,8 @@ Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports System.Threading
 Imports System.Threading.Tasks
+Imports System.Text
+Imports System.Runtime.InteropServices
 
 Public Class MainForm
 
@@ -27,32 +29,72 @@ Public Class MainForm
     Public ReadOnly DeviceListRefreshEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset)
 
     Protected Overrides Sub OnLoad(e As EventArgs)
+
+        Dim SetupRun As Boolean
+
         Do
+
             Try
                 Adapter = New ScsiAdapter
                 Exit Do
 
             Catch ex As FileNotFoundException
 
+                If SetupRun Then
+
+                    If MessageBox.Show(Me,
+                                       "You need to restart your computer to finish driver setup. Do you want to restart now?",
+                                       "Arsenal Image Mounter",
+                                       MessageBoxButtons.OKCancel,
+                                       MessageBoxIcon.Information,
+                                       MessageBoxDefaultButton.Button2) = DialogResult.OK Then
+
+                        Dim sd As New ProcessStartInfo With {
+                            .Arguments = "-r -t 0 -d p:0:0",
+                            .FileName = "shutdown.exe",
+                            .UseShellExecute = False,
+                            .CreateNoWindow = True
+                        }
+                        Try
+                            Using Process.Start(sd)
+                            End Using
+
+                        Catch ex2 As Exception
+                            Trace.WriteLine(ex2.ToString())
+                            MessageBox.Show(Me,
+                                            "Reboot failed: " & ex2.GetBaseException().Message,
+                                            "Arsenal Image Mounter",
+                                            MessageBoxButtons.OK,
+                                            MessageBoxIcon.Exclamation)
+
+                        End Try
+
+                    End If
+
+                    Exit Do
+
+                End If
+
                 Dim rc =
                     MessageBox.Show(Me,
                                     "This application requires a virtual SCSI miniport driver to create virtual disks. The " &
-                                    "necessary driver is not currently installed. Do you wish to install the driver now?",
+                                    "necessary driver is either not currently installed or the currently installed driver is " &
+                                    "incompatible with the current version of this application. Do you wish to install the driver now?",
                                     "Arsenal Image Mounter",
                                     MessageBoxButtons.YesNo,
                                     MessageBoxIcon.Information,
                                     MessageBoxDefaultButton.Button2)
 
                 If rc = DialogResult.No Then
-                    Application.Exit()
-                    Return
+                    Exit Do
                 End If
+
+                SetupRun = True
 
                 If InstallDriver() Then
                     Continue Do
                 Else
-                    Application.Exit()
-                    Return
+                    Exit Do
                 End If
 
             Catch ex As Exception
@@ -65,18 +107,27 @@ Public Class MainForm
                                    MessageBoxIcon.Exclamation)
 
                 If rc <> DialogResult.Retry Then
-                    Application.Exit()
-                    Return
+                    Exit Do
                 End If
 
             End Try
+
         Loop
+
+        If Adapter Is Nothing Then
+            Application.Exit()
+            Return
+        End If
 
         MyBase.OnLoad(e)
 
-        With New Thread(AddressOf DeviceListRefreshTask)
+        With New Thread(AddressOf DeviceListRefreshThread)
             .Start()
         End With
+
+        'With New Thread(AddressOf LibEwfNotifyStreamReader)
+        '    .Start()
+        'End With
 
     End Sub
 
@@ -101,7 +152,8 @@ Public Class MainForm
         Catch ex As Exception
             e.Cancel = True
             Trace.WriteLine(ex.ToString())
-            MessageBox.Show(ex.GetBaseException().Message,
+            MessageBox.Show(Me,
+                            ex.GetBaseException().Message,
                             ex.GetBaseException().GetType().ToString(),
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Exclamation)
@@ -257,7 +309,7 @@ Public Class MainForm
         End If
     End Sub
 
-    Private Sub DeviceListRefreshTask()
+    Private Sub DeviceListRefreshThread()
         Try
 
             Using parser As New DiskStateParser()
@@ -364,7 +416,8 @@ Public Class MainForm
 
         Catch ex As Exception
             Trace.WriteLine(ex.ToString())
-            MessageBox.Show(ex.GetBaseException().Message,
+            MessageBox.Show(Me,
+                            ex.GetBaseException().Message,
                             ex.GetBaseException().GetType().ToString(),
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Exclamation)
@@ -388,7 +441,8 @@ Public Class MainForm
 
         Catch ex As Exception
             Trace.WriteLine(ex.ToString())
-            MessageBox.Show(ex.GetBaseException().Message,
+            MessageBox.Show(Me,
+                            ex.GetBaseException().Message,
                             ex.GetBaseException().GetType().ToString(),
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Exclamation)
@@ -457,6 +511,22 @@ Public Class MainForm
 
         Update()
 
+        Using FormMountOptions As New FormMountOptions With
+            {
+                .ProxyType = ProxyType,
+                .Flags = Flags,
+                .Imagefiles = Imagefiles
+            }
+
+            If FormMountOptions.ShowDialog(Me) <> DialogResult.OK Then
+                Return
+            End If
+
+            Flags = FormMountOptions.Flags
+        End Using
+
+        Update()
+
         Using New AsyncMessageBox("Please wait...")
 
             For Each Imagefile In Imagefiles
@@ -472,7 +542,8 @@ Public Class MainForm
 
                 Catch ex As Exception
                     Trace.WriteLine(ex.ToString())
-                    MessageBox.Show(ex.GetBaseException().Message,
+                    MessageBox.Show(Me,
+                                    ex.GetBaseException().Message,
                                     ex.GetBaseException().GetType().ToString(),
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Exclamation)
@@ -493,7 +564,8 @@ Public Class MainForm
 
         Catch ex As Exception
             Trace.WriteLine(ex.ToString())
-            MessageBox.Show(ex.GetBaseException().Message,
+            MessageBox.Show(Me,
+                            ex.GetBaseException().Message,
                             ex.GetBaseException().GetType().ToString(),
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Exclamation)
@@ -508,15 +580,6 @@ Public Class MainForm
 
         Try
 
-            'Dim pipename As String
-            'Using CurrentProcess = Process.GetCurrentProcess
-            '    pipename = "\\?\pipe\libewf-devio-" & CurrentProcess.Id
-            'End Using
-            'Dim pipe As New Pipes.NamedPipeServerStream(pipename, Pipes.PipeDirection.In, 0, Pipes.PipeTransmissionMode.Byte, Pipes.PipeOptions.None)
-            'Using pipe
-
-            'End Using
-
             If cbNotifyLibEwf.Checked Then
                 NativeFileIO.Win32API.AllocConsole()
                 If Not UsingDebugConsole Then
@@ -527,6 +590,25 @@ Public Class MainForm
                     Trace.Listeners.Remove("AIMConsoleTraceListener")
                     NativeFileIO.Win32API.FreeConsole()
                 End If
+            End If
+
+        Catch ex As Exception
+            MessageBox.Show(Me,
+                            ex.GetBaseException().Message,
+                            ex.GetType().ToString(),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error)
+
+        End Try
+
+        Try
+
+            If cbNotifyLibEwf.Checked Then
+                Devio.Server.SpecializedProviders.DevioProviderLibEwf.NotificationFile = "CONOUT$"
+                Devio.Server.SpecializedProviders.DevioProviderLibEwf.NotificationVerbose = True
+            Else
+                Devio.Server.SpecializedProviders.DevioProviderLibEwf.NotificationVerbose = False
+                Devio.Server.SpecializedProviders.DevioProviderLibEwf.NotificationFile = Nothing
             End If
 
         Catch ex As Exception
@@ -577,5 +659,47 @@ Public Class MainForm
         Return True
 
     End Function
+
+    'Private Sub LibEwfNotifyStreamReader()
+
+    '    Try
+
+    '        Using reader As New StreamReader(Devio.Server.SpecializedProviders.DevioProviderLibEwf.OpenNotificationStream(), Encoding.ASCII)
+
+    '            Do
+
+    '                If IsClosing OrElse Disposing OrElse IsDisposed Then
+    '                    Return
+    '                End If
+
+    '                Dim b = reader.ReadLine()
+    '                If b Is Nothing Then
+    '                    Return
+    '                End If
+
+    '                Trace.WriteLine(b)
+
+    '            Loop
+
+    '        End Using
+
+    '    Catch ex As Exception
+    '        Trace.WriteLine(ex.ToString())
+
+    '        If IsClosing OrElse Disposing OrElse IsDisposed Then
+    '            Return
+    '        End If
+
+    '        Invoke(Sub()
+    '                   MessageBox.Show(Me,
+    '                                   ex.GetBaseException().GetType().ToString(),
+    '                                   "Error setting up notification stream for libewf.dll: " & ex.GetBaseException().Message,
+    '                                   MessageBoxButtons.OK,
+    '                                   MessageBoxIcon.Error)
+    '               End Sub)
+
+    '    End Try
+
+    'End Sub
 
 End Class

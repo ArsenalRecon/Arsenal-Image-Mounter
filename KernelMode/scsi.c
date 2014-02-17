@@ -5,7 +5,7 @@
 /// queueing work items for requests that need to be carried out at
 /// PASSIVE_LEVEL.
 /// 
-/// Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code is available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -28,7 +28,7 @@
 #pragma warning(pop)
 
 #include "trace.h"
-#include "scsi.tmh"
+//#include "scsi.tmh"
 
 #ifdef USE_SCSIPORT
 /**************************************************************************************************/     
@@ -41,7 +41,7 @@ ScsiExecuteRaidControllerUnit(
             __in PUCHAR               pResult
             )
 {
-    KdPrint2(("PhDskMnt::ScsiExecuteRaidControllerUnit: pSrb = 0x%p, CDB = 0x%x Path: %x TID: %x Lun: %x\n",
+    KdPrint2(("PhDskMnt::ScsiExecuteRaidControllerUnit: pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
                       pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
     *pResult = ResultDone;
@@ -64,7 +64,7 @@ ScsiExecuteRaidControllerUnit(
         break;
 
     default:
-        KdPrint(("PhDskMnt::ScsiExecuteRaidControllerUnit: Unknown opcode=0x%x\n", (int)pSrb->Cdb[0]));
+        KdPrint(("PhDskMnt::ScsiExecuteRaidControllerUnit: Unknown opcode=0x%X\n", (int)pSrb->Cdb[0]));
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
         break;
     }
@@ -87,7 +87,7 @@ ScsiOpInquiryRaidControllerUnit(
 
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
-        KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%x\n", pCdb->CDB6INQUIRY.PageCode));
+        KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%X\n", pCdb->CDB6INQUIRY.PageCode));
 
         // Current implementation of ScsiOpVPDRaidControllerUnit seems somewhat dangerous and could cause buffer
         // overruns. For now, just skip Vital Product Data requests.
@@ -111,7 +111,7 @@ ScsiOpInquiryRaidControllerUnit(
     ScsiSetSuccess(pSrb, sizeof(INQUIRYDATA));
 
 done:
-    KdPrint2(("PhDskMnt::ScsiOpInquiry: End: status=0x%x\n", (int)pSrb->SrbStatus));
+    KdPrint2(("PhDskMnt::ScsiOpInquiry: End: status=0x%X\n", (int)pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiOpInquiry.
@@ -130,7 +130,7 @@ ScsiExecute(
     pHW_LU_EXTENSION  pLUExt = NULL;
     UCHAR             status;
 
-    KdPrint2(("PhDskMnt::ScsiExecute: pSrb = 0x%p, CDB = 0x%x Path: %x TID: %x Lun: %x\n",
+    KdPrint2(("PhDskMnt::ScsiExecute: pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
                       pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
 #ifdef USE_SCSIPORT
@@ -187,32 +187,36 @@ ScsiExecute(
     {
     case SCSIOP_TEST_UNIT_READY:
     case SCSIOP_SYNCHRONIZE_CACHE:
+    case SCSIOP_SYNCHRONIZE_CACHE16:
     case SCSIOP_START_STOP_UNIT:
     case SCSIOP_VERIFY:
+    case SCSIOP_VERIFY16:
         ScsiSetSuccess(pSrb, 0);
         break;
 
     case SCSIOP_INQUIRY:
         ScsiOpInquiry(pHBAExt, pLUExt, pSrb);
         break;
-
+    
     case SCSIOP_READ_CAPACITY:
+    case SCSIOP_READ_CAPACITY16:
         ScsiOpReadCapacity(pHBAExt, pLUExt, pSrb);
         break;
 
     case SCSIOP_READ:
-        ScsiOpReadWrite(pHBAExt, pLUExt, pSrb, pResult);
-        break;
-
+    case SCSIOP_READ16:
     case SCSIOP_WRITE:
+    case SCSIOP_WRITE16:
         ScsiOpReadWrite(pHBAExt, pLUExt, pSrb, pResult);
         break;
 
     case SCSIOP_READ_TOC:
         ScsiOpReadTOC(pHBAExt, pLUExt, pSrb);
+        break;
 
     case SCSIOP_MEDIUM_REMOVAL:
         ScsiOpMediumRemoval(pHBAExt, pLUExt, pSrb);
+        break;
 
     case SCSIOP_MODE_SENSE:
         ScsiOpModeSense(pHBAExt, pLUExt, pSrb);
@@ -227,14 +231,14 @@ ScsiExecute(
         break;
 
     default:
-        KdPrint(("PhDskMnt::ScsiExecute: Unknown opcode=0x%x\n", (int)pSrb->Cdb[0]));
+        KdPrint(("PhDskMnt::ScsiExecute: Unknown opcode=0x%X\n", (int)pSrb->Cdb[0]));
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
         break;
 
     } // switch (pSrb->Cdb[0])
 
 Done:
-    KdPrint2(("PhDskMnt::ScsiExecute: End: status=0x%x, *pResult=%i\n", (int)pSrb->SrbStatus, (INT)*pResult));
+    KdPrint2(("PhDskMnt::ScsiExecute: End: status=0x%X, *pResult=%i\n", (int)pSrb->SrbStatus, (INT)*pResult));
 
     return;
 }                                                     // End ScsiExecute.
@@ -360,7 +364,7 @@ ScsiOpInquiry(
 
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
-        KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%x\n", pCdb->CDB6INQUIRY.PageCode));
+        KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%X\n", pCdb->CDB6INQUIRY.PageCode));
 
         // Current implementation of ScsiOpVPDRaidControllerUnit seems somewhat dangerous and could cause buffer
         // overruns. For now, just skip Vital Product Data requests.
@@ -385,7 +389,7 @@ ScsiOpInquiry(
     ScsiSetSuccess(pSrb, sizeof(INQUIRYDATA));
 
 done:
-    KdPrint2(("PhDskMnt::ScsiOpInquiry: End: status=0x%x\n", (int)pSrb->SrbStatus));
+    KdPrint2(("PhDskMnt::ScsiOpInquiry: End: status=0x%X\n", (int)pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiOpInquiry.
@@ -395,11 +399,11 @@ done:
 /**************************************************************************************************/     
 UCHAR
 ScsiGetLUExtension(
-              __in pHW_HBA_EXT                  pHBAExt,      // Adapter device-object extension from port driver.
-              __in __out_opt pHW_LU_EXTENSION * ppLUExt,
-              __in UCHAR                        PathId,
-              __in UCHAR                        TargetId,
-              __in UCHAR                        Lun
+              __in pHW_HBA_EXT								pHBAExt,      // Adapter device-object extension from port driver.
+              pHW_LU_EXTENSION * ppLUExt,
+              __in UCHAR									PathId,
+              __in UCHAR									TargetId,
+              __in UCHAR									Lun
              )
 {
     PLIST_ENTRY           list_ptr;
@@ -513,7 +517,7 @@ done:
     KeReleaseSpinLock(&pHBAExt->LUListLock, SaveIrql);
 #endif
 
-    KdPrint2(("PhDskMnt::ScsiGetLUExtension: End: status=0x%x\n", (int)status));
+    KdPrint2(("PhDskMnt::ScsiGetLUExtension: End: status=0x%X\n", (int)status));
 
     return status;
 }                                                     // End ScsiOpInquiry.
@@ -658,7 +662,7 @@ ScsiOpVPDRaidControllerUnit(
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
     }
 
-    KdPrint2(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  End: status=0x%x\n", (int)pSrb->SrbStatus));
+    KdPrint2(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiOpVPDRaidControllerUnit().
@@ -674,44 +678,56 @@ ScsiOpReadCapacity(
                    __in PSCSI_REQUEST_BLOCK  pSrb
                   )
 {
-    PREAD_CAPACITY_DATA  readCapacity = (PREAD_CAPACITY_DATA) pSrb->DataBuffer;
-    ULONG                maxBlocks,
-                         blockSize;
+    PREAD_CAPACITY_DATA     readCapacity = (PREAD_CAPACITY_DATA) pSrb->DataBuffer;
+    PREAD_CAPACITY_DATA_EX  readCapacity16 = (PREAD_CAPACITY_DATA_EX) pSrb->DataBuffer;
+    ULARGE_INTEGER          maxBlocks;
+    ULONG                   blockSize;
 
     UNREFERENCED_PARAMETER(pHBAExt);
 
-    KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
+    KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p, Action=0x%X\n", pHBAExt, pLUExt, pSrb, (int)pSrb->Cdb[0]));
 
     RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength );
 
-    if ((pLUExt == NULL) ? TRUE : (pLUExt->DiskSize.QuadPart == 0))
-    {
-        KdPrint(("PhDskMnt::ScsiOpReadCapacity: Rejected. Device shutting down or not initialized.\n"));
+    //if ((pLUExt == NULL) ? TRUE : ((pLUExt->DiskSize.QuadPart == 0) | (!pLUExt->Initialized)))
+    //{
+    //    KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Device not initialized.\n"));
 
-        ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
-    }
+    //    ScsiSetCheckCondition(
+    //        pSrb,
+    //        SRB_STATUS_NOT_POWERED,
+    //        SCSI_SENSE_NOT_READY,
+    //        SCSI_ADSENSE_LUN_NOT_READY,
+    //        SCSI_SENSEQ_BECOMING_READY);
 
+    //    return;
+    //}
 
-    // Claim 512-byte blocks (big-endian).
+    blockSize = 1UL << pLUExt->BlockPower;
 
-    blockSize = 1 << pLUExt->BlockPower;
-
-    readCapacity->BytesPerBlock =
-      (((PUCHAR)&blockSize)[0] << 24) |  (((PUCHAR)&blockSize)[1] << 16) |
-      (((PUCHAR)&blockSize)[2] <<  8) | ((PUCHAR)&blockSize)[3];
-
-    KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Block Size: 0x%x\n", blockSize));
+    KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Block Size: 0x%X\n", blockSize));
 
     if (pLUExt->DiskSize.QuadPart > 0)
-        maxBlocks = (ULONG)(pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower) - 1;
+        maxBlocks.QuadPart = (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower) - 1;
     else
-        maxBlocks = 0;
+        maxBlocks.QuadPart = 0;
 
-    KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Max Blocks: 0x%x\n", maxBlocks));
+    if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY)
+        if (maxBlocks.QuadPart > MAXULONG)
+            maxBlocks.QuadPart = MAXULONG;
 
-    readCapacity->LogicalBlockAddress =
-      (((PUCHAR)&maxBlocks)[0] << 24) | (((PUCHAR)&maxBlocks)[1] << 16) |
-      (((PUCHAR)&maxBlocks)[2] <<  8) | ((PUCHAR)&maxBlocks)[3];
+    KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Max Blocks: 0x%I64X\n", maxBlocks));
+    
+    if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY)
+    {
+        REVERSE_BYTES(&readCapacity->BytesPerBlock, &blockSize);
+        REVERSE_BYTES(&readCapacity->LogicalBlockAddress, &maxBlocks.LowPart);
+    }
+    else if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY16)
+    {
+        REVERSE_BYTES(&readCapacity16->BytesPerBlock, &blockSize);
+        REVERSE_BYTES_QUAD(&readCapacity16->LogicalBlockAddress, &maxBlocks);
+    }
 
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  End.\n"));
 
@@ -719,13 +735,13 @@ ScsiOpReadCapacity(
     return;
 }                                                     // End ScsiOpReadCapacity.
 
-/**************************************************************************************************/     
-/*                                                                                                */     
+/******************************************************************************************************/     
+/*                                                                                                    */     
 /* This routine does the setup for reading or writing. Thread ImScsiDispatchWork is going to be the   */     
-/* place to do the work since it gets control at PASSIVE_LEVEL and so could do real I/O, could    */     
-/* wait, etc, etc.                                                                                */     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/* place to do the work since it gets control at PASSIVE_LEVEL and so could do real I/O, could        */     
+/* wait, etc, etc.                                                                                    */     
+/*                                                                                                    */     
+/******************************************************************************************************/     
 VOID
 ScsiOpReadWrite(
                 __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
@@ -735,34 +751,42 @@ ScsiOpReadWrite(
                 )
 {
     PCDB                         pCdb = (PCDB)pSrb->Cdb;
-    ULONG                        startingSector;
+    LONGLONG                     startingSector;
     LONGLONG                     startingOffset;
-    USHORT                       numBlocks;
+    ULONG                        numBlocks;
     pMP_WorkRtnParms             pWkRtnParms;
     KIRQL                        SaveIrql;
 
     KdPrint2(("PhDskMnt::ScsiOpReadWrite:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
     *pResult = ResultDone;                            // Assume no queuing.
-        
-    startingSector = pCdb->CDB10.LogicalBlockByte3       |
-                     pCdb->CDB10.LogicalBlockByte2 << 8  |
-                     pCdb->CDB10.LogicalBlockByte1 << 16 |
-                     pCdb->CDB10.LogicalBlockByte0 << 24;
-    numBlocks      = (USHORT)(pSrb->DataTransferLength >> pLUExt->BlockPower);
-    startingOffset = (LONGLONG)startingSector << pLUExt->BlockPower;
 
-    KdPrint2(("PhDskMnt::ScsiOpReadWrite action: 0x%X, starting sector: 0x%X, number of blocks: 0x%X\n", (int)pSrb->Cdb[0], startingSector, numBlocks));
-    KdPrint2(("PhDskMnt::ScsiOpReadWrite pSrb: 0x%p, pSrb->DataBuffer: 0x%p\n", pSrb, pSrb->DataBuffer));
-
-    if ((pLUExt == NULL) ? TRUE : (pLUExt->DiskSize.QuadPart == 0))
+    if ((pCdb->AsByte[0] == SCSIOP_READ16) |
+        (pCdb->AsByte[0] == SCSIOP_WRITE16))
     {
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Dummy device.\n"));
+        REVERSE_BYTES_QUAD(&startingSector, pCdb->CDB16.LogicalBlock);
+    }
+    else
+    {
+        startingSector = 0;
+        REVERSE_BYTES(&startingSector, &pCdb->CDB10.LogicalBlockByte0);
+    }
 
-        ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+    if (startingSector & ~(MAXLONGLONG >> pLUExt->BlockPower))
+    {      // Check if startingSector << blockPower fits within a LONGLONG.
+        KdPrint(("PhDskMnt::ScsiOpReadWrite: Too large sector number: %I64X\n", startingSector));
+
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_ILLEGAL_BLOCK, 0);
 
         return;
     }
+
+    startingOffset = startingSector << pLUExt->BlockPower;
+
+    numBlocks      = pSrb->DataTransferLength >> pLUExt->BlockPower;
+
+    KdPrint2(("PhDskMnt::ScsiOpReadWrite action: 0x%X, starting sector: 0x%I64X, number of blocks: 0x%X\n", (int)pSrb->Cdb[0], startingSector, numBlocks));
+    KdPrint2(("PhDskMnt::ScsiOpReadWrite pSrb: 0x%p, pSrb->DataBuffer: 0x%p\n", pSrb, pSrb->DataBuffer));
 
     if (!pLUExt->Initialized)
     {
@@ -778,6 +802,7 @@ ScsiOpReadWrite(
         return;
     }
 
+    // Check device shutdown condition
     if (KeReadStateEvent(&pLUExt->StopThread))
     {
         KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Device shutting down.\n"));
@@ -787,7 +812,10 @@ ScsiOpReadWrite(
         return;
     }
 
-    if ((pSrb->Cdb[0] == SCSIOP_WRITE) && pLUExt->ReadOnly)
+    // Check write protection
+    if (((pSrb->Cdb[0] == SCSIOP_WRITE) |
+         (pSrb->Cdb[0] == SCSIOP_WRITE16)) &&
+         pLUExt->ReadOnly)
     {
         KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Write attempt on read-only device.\n"));
 
@@ -796,9 +824,10 @@ ScsiOpReadWrite(
         return;
     }
 
+    // Check disk bounds
     if ((startingSector + numBlocks) > (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower))
     {      // Starting sector beyond the bounds?
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Out of bounds: sector: %d, blocks: %d\n", startingSector, numBlocks));
+        KdPrint(("PhDskMnt::ScsiOpReadWrite: Out of bounds: sector: %I64X, blocks: %d\n", startingSector, numBlocks));
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_ILLEGAL_BLOCK, 0);
 
@@ -809,7 +838,8 @@ ScsiOpReadWrite(
 
     KeAcquireSpinLock(&pLUExt->LastIoLock, &SaveIrql);
     
-    if ((pSrb->Cdb[0] == SCSIOP_READ) &
+    if (((pSrb->Cdb[0] == SCSIOP_READ) |
+         (pSrb->Cdb[0] == SCSIOP_READ16)) &
         (pLUExt->LastIoBuffer != NULL) &
         (pLUExt->LastIoStartSector <= startingSector) &
         ((startingOffset - (pLUExt->LastIoStartSector << pLUExt->BlockPower) + pSrb->DataTransferLength) <= pLUExt->LastIoLength))
@@ -1022,7 +1052,7 @@ ScsiOpReportLuns(
 
     ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
-    KdPrint2(("PhDskMnt::ScsiOpReportLuns:  End: status=0x%x\n", (int)pSrb->SrbStatus));
+    KdPrint2(("PhDskMnt::ScsiOpReportLuns:  End: status=0x%X\n", (int)pSrb->SrbStatus));
 }                                                     // End ScsiOpReportLuns.
 
 VOID

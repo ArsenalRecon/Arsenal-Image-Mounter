@@ -27,6 +27,15 @@ Public MustInherit Class DeviceObject
     ''' in a new DeviceObject.
     ''' </summary>
     ''' <param name="Path">Path to pass to CreateFile API</param>
+    Protected Sub New(Path As String)
+        Me.New(NativeFileIO.OpenFileHandle(Path, 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False), 0)
+    End Sub
+
+    ''' <summary>
+    ''' Opens specified Path with CreateFile Win32 API and encapsulates the returned handle
+    ''' in a new DeviceObject.
+    ''' </summary>
+    ''' <param name="Path">Path to pass to CreateFile API</param>
     ''' <param name="AccessMode">Access mode for opening and for underlying FileStream</param>
     Protected Sub New(Path As String, AccessMode As FileAccess)
         Me.New(NativeFileIO.OpenFileHandle(Path, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped:=False), AccessMode)

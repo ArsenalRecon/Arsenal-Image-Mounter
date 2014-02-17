@@ -4,7 +4,7 @@
 /// PASSIVE_LEVEL. Work from miniport callback routines are queued here for
 /// completion at an IRQL where waiting and communicating is possible.
 /// 
-/// Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code is available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -19,13 +19,13 @@
 
 #include "phdskmnt.h"
 
-#pragma warning(push)
-#pragma warning(disable : 4204)                       /* Prevent C4204 messages from stortrce.h. */
-#include <stortrce.h>
-#pragma warning(pop)
-
-#include "trace.h"
-#include "iodisp.tmh"
+//#pragma warning(push)
+//#pragma warning(disable : 4204)                       /* Prevent C4204 messages from stortrce.h. */
+//#include <stortrce.h>
+//#pragma warning(pop)
+//
+//#include "trace.h"
+//#include "iodisp.tmh"
 
 #define SECTOR_SIZE_CD_ROM     4096
 #define SECTOR_SIZE_HDD        512
@@ -169,7 +169,7 @@ ImScsiWorkerThread(__in PVOID Context)
         }
 
         if (!NT_SUCCESS(status))
-            DbgPrint("PhDskMnt::ImScsiWorkerThread: IoCallDriver failed: 0x%x for work 0x%p\n", status, pWkRtnParms);
+            DbgPrint("PhDskMnt::ImScsiWorkerThread: IoCallDriver failed: 0x%X for work 0x%p\n", status, pWkRtnParms);
         else
             KdPrint2(("PhDskMnt::ImScsiWorkerThread: Finished SMB_IMSCSI_CHECK for work: 0x%p.\n", pWkRtnParms));
 
@@ -231,22 +231,31 @@ ImScsiDispatchWork(
         {
         case SCSIOP_READ:
         case SCSIOP_WRITE:
+        case SCSIOP_READ16:
+        case SCSIOP_WRITE16:
             {  
                 // Read/write?
                 PVOID sysaddress;
                 PVOID buffer;
                 ULONG status;
-                ULONG startingSector;
+                LARGE_INTEGER startingSector;
                 LARGE_INTEGER startingOffset;
+		KIRQL SaveIrql;
 
-                startingSector = pCdb->CDB10.LogicalBlockByte3       |
-                                 pCdb->CDB10.LogicalBlockByte2 << 8  |
-                                 pCdb->CDB10.LogicalBlockByte1 << 16 |
-                                 pCdb->CDB10.LogicalBlockByte0 << 24;
+                if ((pCdb->AsByte[0] == SCSIOP_READ16) |
+                    (pCdb->AsByte[0] == SCSIOP_WRITE16))
+                {
+                    REVERSE_BYTES_QUAD(&startingSector, pCdb->CDB16.LogicalBlock);
+                }
+                else
+                {
+                    startingSector.QuadPart = 0;
+                    REVERSE_BYTES(&startingSector, &pCdb->CDB10.LogicalBlockByte0);
+                }
 
-                startingOffset.QuadPart = (LONGLONG)startingSector << pLUExt->BlockPower;
+                startingOffset.QuadPart = startingSector.QuadPart << pLUExt->BlockPower;
 
-                KdPrint2(("PhDskMnt::ImScsiDispatchWork starting sector: 0x%X\n", startingSector));
+                KdPrint2(("PhDskMnt::ImScsiDispatchWork starting sector: 0x%I64X\n", startingSector));
 
                 status = StoragePortGetSystemAddress(pHBAExt, pSrb, &sysaddress);
 
@@ -275,60 +284,98 @@ ImScsiDispatchWork(
                     break;
                 }
 
-                __try
-                {
-                    KIRQL SaveIrql;
-                    NTSTATUS status = STATUS_NOT_IMPLEMENTED;
-                    ULONG requested_length = pSrb->DataTransferLength;
+		__try
+		{
+		    NTSTATUS status = STATUS_NOT_IMPLEMENTED;
 
-                    if (pSrb->Cdb[0] == SCSIOP_READ)
-                    {
-                        status = ImScsiReadDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
-                        RtlMoveMemory(sysaddress, buffer, pSrb->DataTransferLength);
-                    }
-                    else if (pSrb->Cdb[0] == SCSIOP_WRITE)
-                    {
-                        RtlMoveMemory(buffer, sysaddress, pSrb->DataTransferLength);
-                        status = ImScsiWriteDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
-                    }
+		    /// For write operations, prepare temporary buffer
+		    if ((pSrb->Cdb[0] == SCSIOP_WRITE) | (pSrb->Cdb[0] == SCSIOP_WRITE16))
+		    {
+			RtlMoveMemory(buffer, sysaddress, pSrb->DataTransferLength);
+		    }
 
-                    if (!NT_SUCCESS(status))
-                    {
-                        DbgPrint("PhDskMnt::ImScsiDispatchWork: I/O error status=%#X\n", status);
-                        if ((status == STATUS_END_OF_FILE) &
-                            (pSrb->Cdb[0] == SCSIOP_READ))
-                        {
-                            RtlZeroMemory(buffer, requested_length);
-                            pSrb->DataTransferLength = requested_length;
-                        }
-                        else
-                        {
-                            ScsiSetError(pSrb, SRB_STATUS_PARITY_ERROR);
-                            goto rwdone;
-                        }
-                    }
+		    if ((pSrb->Cdb[0] == SCSIOP_READ) | (pSrb->Cdb[0] == SCSIOP_READ16))
+		    {
+		        status = ImScsiReadDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
+		    }
+		    else if ((pSrb->Cdb[0] == SCSIOP_WRITE) | (pSrb->Cdb[0] == SCSIOP_WRITE16))
+		    {
+		        status = ImScsiWriteDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
+		    }
 
-                    /// ToDo: Check if lock release can be done more exception-handling safe
+		    if (!NT_SUCCESS(status))
+		    {
+			DbgPrint("PhDskMnt::ImScsiDispatchWork: I/O error status=0x%X\n", status);
+			if (status == STATUS_INVALID_BUFFER_SIZE)
+			{
+			    DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
+			    ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
+			    ExFreePoolWithTag(buffer, MP_TAG_GENERAL);
+			    break;
+			}
+			else
+			{
+			    ScsiSetError(pSrb, SRB_STATUS_PARITY_ERROR);
+			    ExFreePoolWithTag(buffer, MP_TAG_GENERAL);
+			    break;
+			}
+		    }
 
-                    KeAcquireSpinLock(&pLUExt->LastIoLock, &SaveIrql);
+		    /// Fake random disk signature in case mounted read-only, 0xAA55 at end of mbr and 0x00000000 in disk id field.
+		    /// Compatibility fix for mounting Windows Backup vhd files in read-only.
+                    if ((pLUExt->FakeDiskSignature != 0) &&
+                        ((pSrb->Cdb[0] == SCSIOP_READ) |
+                         (pSrb->Cdb[0] == SCSIOP_READ16)) &&
+			(startingSector.QuadPart == 0) &&
+			(pSrb->DataTransferLength >= 512) &&
+			(pLUExt->ReadOnly))
+		    {
+			PUCHAR mbr = (PUCHAR)buffer;
+
+			if ((*(PUSHORT)(mbr + 0x01FE) == 0xAA55) &
+			    (*(PUSHORT)(mbr + 0x01BC) == 0x0000) &
+			    ((*(mbr + 0x01BE) & 0x7F) == 0x00) &
+			    ((*(mbr + 0x01CE) & 0x7F) == 0x00) &
+			    ((*(mbr + 0x01DE) & 0x7F) == 0x00) &
+			    ((*(mbr + 0x01EE) & 0x7F) == 0x00) &
+			    ((*(PULONG)(mbr + 0x01B8) == 0x00000000UL)))
+			{
+                            DbgPrint("PhDskMnt::ImScsiDispatchWork: Faking disk signature as %#X.\n", pLUExt->FakeDiskSignature);
+
+			    *(PULONG)(mbr + 0x01B8) = pLUExt->FakeDiskSignature;
+			}
+		    }
+
+		    /// For write operations, temporary buffer holds read data.
+		    /// Copy that to system buffer.
+		    if ((pSrb->Cdb[0] == SCSIOP_READ) | (pSrb->Cdb[0] == SCSIOP_READ16))
+		    {
+			RtlMoveMemory(sysaddress, buffer, pSrb->DataTransferLength);
+		    }
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+		    ScsiSetError(pSrb, SRB_STATUS_PARITY_ERROR);
+
+		    DbgPrint("PhDskMnt::ImScsiDispatchWork: Exception caught!\n");
+
+		    ExFreePoolWithTag(buffer, MP_TAG_GENERAL);
+
+		    break;
+		}
+
+                KeAcquireSpinLock(&pLUExt->LastIoLock, &SaveIrql);
     
-                    if (pLUExt->LastIoBuffer != NULL)
-                        ExFreePoolWithTag(pLUExt->LastIoBuffer, MP_TAG_GENERAL);
+                if (pLUExt->LastIoBuffer != NULL)
+                    ExFreePoolWithTag(pLUExt->LastIoBuffer, MP_TAG_GENERAL);
 
-                    pLUExt->LastIoStartSector = startingSector;
-                    pLUExt->LastIoLength = pSrb->DataTransferLength;
-                    pLUExt->LastIoBuffer = buffer;
+                pLUExt->LastIoStartSector = startingSector.QuadPart;
+                pLUExt->LastIoLength = pSrb->DataTransferLength;
+                pLUExt->LastIoBuffer = buffer;
 
-                    KeReleaseSpinLock(&pLUExt->LastIoLock, SaveIrql);
+                KeReleaseSpinLock(&pLUExt->LastIoLock, SaveIrql);
 
-                    ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
-                }
-                __except(EXCEPTION_EXECUTE_HANDLER)
-                {
-                    ScsiSetError(pSrb, SRB_STATUS_PARITY_ERROR);
-
-                    DbgPrint("PhDskMnt::ImScsiDispatchWork: Exception caught!\n");
-                }
+                ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
             }
             break;
 
@@ -344,7 +391,6 @@ ImScsiDispatchWork(
         break;
     }
 
-rwdone:
     KdPrint2(("PhDskMnt::ImScsiDispatchWork: End pSrb: 0x%p.\n", pSrb));
 
 }                                                     // End ImScsiDispatchWork().
@@ -581,6 +627,8 @@ ImScsiReadDevice(
 
     byteoffset.QuadPart = Offset->QuadPart + pLUExt->ImageOffset.QuadPart;
 
+    KdPrint2(("PhDskMnt::ImScsiReadDevice: pLUExt=%p, Buffer=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n", pLUExt, Buffer, *Offset, byteoffset, *Length));
+
     if (pLUExt->VMDisk)
     {
 #ifdef _WIN64
@@ -617,7 +665,19 @@ ImScsiReadDevice(
             &byteoffset,
             NULL);
 
-    *Length = (ULONG)io_status.Information;
+    if ((status == STATUS_END_OF_FILE) &
+        (io_status.Information == 0))
+    {
+        KdPrint2(("PhDskMnt::ImScsiReadDevice pLUExt=%p, status=STATUS_END_OF_FILE, Length=0x%X. Returning zeroed buffer with requested length.\n", pLUExt, *Length));
+        RtlZeroMemory(Buffer, *Length);
+        status = STATUS_SUCCESS;
+    }
+    else
+    {
+        *Length = (ULONG)io_status.Information;
+    }
+
+    KdPrint2(("PhDskMnt::ImScsiReadDevice Result: pLUExt=%p, status=0x%X, Length=0x%X\n", pLUExt, status, *Length));
 
     return status;
 }
@@ -635,6 +695,8 @@ ImScsiWriteDevice(
     LARGE_INTEGER byteoffset;
 
     byteoffset.QuadPart = Offset->QuadPart + pLUExt->ImageOffset.QuadPart;
+
+    KdPrint2(("PhDskMnt::ImScsiWriteDevice: pLUExt=%p, Buffer=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n", pLUExt, Buffer, *Offset, byteoffset, *Length));
 
     pLUExt->Modified = TRUE;
 
@@ -675,6 +737,8 @@ ImScsiWriteDevice(
             NULL);
 
     *Length = (ULONG)io_status.Information;
+
+    KdPrint2(("PhDskMnt::ImScsiWriteDevice Result: pLUExt=%p, status=0x%X, Length=0x%X\n", pLUExt, status, *Length));
 
     return status;
 }
@@ -1335,7 +1399,7 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
                   if (NT_SUCCESS(status))
                       KdPrint(("PhDskMnt::ImScsiInitializeLU: Sparse attribute set on image file.\n"));
                   else
-                      DbgPrint("PhDskMnt::ImScsiInitializeLU: Cannot set sparse attribute on image file: %X\n", status);
+                      DbgPrint("PhDskMnt::ImScsiInitializeLU: Cannot set sparse attribute on image file: 0x%X\n", status);
               }
 
 	      if (CreateData->DiskSize.QuadPart == 0)
@@ -1586,53 +1650,62 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
   if (alignment_requirement > CreateData->BytesPerSector)
       CreateData->BytesPerSector = alignment_requirement + 1;
 
-  KdPrint
+    KdPrint
     (("PhDskMnt: After checks and translations we got this create data:\n"
-      "DeviceNumber   = %#x\n"
-      "DiskSize       = %I64u\n"
-      "ImageOffset    = %I64u\n"
-      "SectorSize     = %u\n"
-      "Flags          = %#x\n"
-      "FileNameLength = %u\n"
-      "FileName       = '%.*ws'\n",
-      CreateData->DeviceNumber,
-      CreateData->DiskSize.QuadPart,
-      CreateData->ImageOffset.QuadPart,
-      CreateData->BytesPerSector,
-      CreateData->Flags,
-      CreateData->FileNameLength,
-      (int)(CreateData->FileNameLength / sizeof(*CreateData->FileName)),
-      CreateData->FileName));
+        "DeviceNumber   = %#x\n"
+        "DiskSize       = %I64u\n"
+        "ImageOffset    = %I64u\n"
+        "SectorSize     = %u\n"
+        "Flags          = %#x\n"
+        "FileNameLength = %u\n"
+        "FileName       = '%.*ws'\n",
+        CreateData->DeviceNumber,
+        CreateData->DiskSize.QuadPart,
+        CreateData->ImageOffset.QuadPart,
+        CreateData->BytesPerSector,
+        CreateData->Flags,
+        CreateData->FileNameLength,
+        (int)(CreateData->FileNameLength / sizeof(*CreateData->FileName)),
+        CreateData->FileName));
 
-  LUExtension->ObjectName = file_name;
+    LUExtension->ObjectName = file_name;
 
-  LUExtension->DiskSize = CreateData->DiskSize;
+    LUExtension->DiskSize = CreateData->DiskSize;
 
-  while (CreateData->BytesPerSector >>= 1)
-      LUExtension->BlockPower++;
-  if (LUExtension->BlockPower == 0)
-      LUExtension->BlockPower = DEFAULT_BLOCK_POWER;
-  CreateData->BytesPerSector = 1UL << LUExtension->BlockPower;
+    while (CreateData->BytesPerSector >>= 1)
+        LUExtension->BlockPower++;
+    if (LUExtension->BlockPower == 0)
+        LUExtension->BlockPower = DEFAULT_BLOCK_POWER;
+    CreateData->BytesPerSector = 1UL << LUExtension->BlockPower;
 
-  LUExtension->ImageOffset = CreateData->ImageOffset;
+    LUExtension->ImageOffset = CreateData->ImageOffset;
 
-  // VM disk.
-  if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM)
+    // VM disk.
+    if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM)
     LUExtension->VMDisk = TRUE;
-  else
+    else
     LUExtension->VMDisk = FALSE;
 
-  LUExtension->ImageBuffer = image_buffer;
-  LUExtension->ImageFile = file_handle;
+    LUExtension->ImageBuffer = image_buffer;
+    LUExtension->ImageFile = file_handle;
 
-  // Use proxy service.
-  if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY)
+    // Use proxy service.
+    if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY)
     {
-      LUExtension->Proxy = proxy;
-      LUExtension->UseProxy = TRUE;
+        LUExtension->Proxy = proxy;
+        LUExtension->UseProxy = TRUE;
     }
-  else
-    LUExtension->UseProxy = FALSE;
+    else
+        LUExtension->UseProxy = FALSE;
+
+    // If we are going to fake a disk signature if existing one
+    // is all zeroes and device is read-only, prepare that fake
+    // disk sig here.
+    if ((CreateData->Flags & IMSCSI_FAKE_DISK_SIG_IF_ZERO) &&
+        IMSCSI_READONLY(CreateData->Flags))
+        LUExtension->FakeDiskSignature =
+            (RtlRandomEx(&pMPDrvInfoGlobal->RandomSeed) |
+            0x80808081UL) &	0xFEFEFEFFUL;
 
     KeInitializeSpinLock(&LUExtension->RequestListLock);
     InitializeListHead(&LUExtension->RequestList);
@@ -1661,9 +1734,9 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
 
     ZwClose(thread_handle);
 
-  KdPrint(("PhDskMnt: Device created.\n"));
+    KdPrint(("PhDskMnt: Device created.\n"));
 
-  return STATUS_SUCCESS;
+    return STATUS_SUCCESS;
 }
 
 BOOLEAN

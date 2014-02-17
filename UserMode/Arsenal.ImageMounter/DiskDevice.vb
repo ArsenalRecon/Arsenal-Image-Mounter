@@ -21,22 +21,37 @@ Public Class DiskDevice
 
     Private _RawDiskStream As DiskStream
 
-    Protected Friend Sub New(DeviceHandle As SafeFileHandle, AccessMode As FileAccess)
-        MyBase.New(DeviceHandle, AccessMode)
-
+    Private Sub AllowExtendedDasdIo()
         NativeFileIO.Win32API.DeviceIoControl(SafeFileHandle, NativeFileIO.Win32API.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
     End Sub
 
+    Protected Friend Sub New(DeviceHandle As SafeFileHandle, AccessMode As FileAccess)
+        MyBase.New(DeviceHandle, AccessMode)
+
+        AllowExtendedDasdIo()
+    End Sub
+
     ''' <summary>
-    ''' Opens an disk device object.
+    ''' Opens an disk device object without requesting read or write permissions. The
+    ''' resulting object can only be used to query properties like SCSI address, disk
+    ''' size and similar, but not for reading or writing raw disk data.
+    ''' </summary>
+    ''' <param name="DevicePath"></param>
+    Public Sub New(DevicePath As String)
+        MyBase.New(DevicePath)
+
+        AllowExtendedDasdIo()
+    End Sub
+
+    ''' <summary>
+    ''' Opens an disk device object, requesting read, write or both permissions.
     ''' </summary>
     ''' <param name="DevicePath"></param>
     ''' <param name="AccessMode"></param>
-    ''' <remarks></remarks>
     Public Sub New(DevicePath As String, AccessMode As FileAccess)
         MyBase.New(DevicePath, AccessMode)
 
-        NativeFileIO.Win32API.DeviceIoControl(SafeFileHandle, NativeFileIO.Win32API.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+        AllowExtendedDasdIo()
     End Sub
 
     ''' <summary>
@@ -44,7 +59,6 @@ Public Class DiskDevice
     ''' </summary>
     ''' <param name="ScsiAddress"></param>
     ''' <param name="AccessMode"></param>
-    ''' <remarks></remarks>
     Public Sub New(ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS, AccessMode As FileAccess)
         Me.New(NativeFileIO.OpenDiskByScsiAddress(ScsiAddress, AccessMode).Value, AccessMode)
 
@@ -65,7 +79,7 @@ Public Class DiskDevice
     ''' </summary>
     Public Shared Function GetDeviceNumber(path As String) As UInt32
 
-        Using disk As New DiskDevice(path, FileAccess.Read)
+        Using disk As New DiskDevice(path)
             Return disk.GetDeviceNumber()
         End Using
 
@@ -86,7 +100,7 @@ Public Class DiskDevice
     ''' </summary>
     Public Shared Function GetScsiAddress(path As String) As NativeFileIO.Win32API.SCSI_ADDRESS
 
-        Using disk As New DiskDevice(path, FileAccess.Read)
+        Using disk As New DiskDevice(path)
             Return disk.GetScsiAddress()
         End Using
 
@@ -218,6 +232,15 @@ Public Class DiskDevice
     End Property
 
     ''' <summary>
+    ''' Determines whether disk is writable or read-only.
+    ''' </summary>
+    Public ReadOnly Property IsDiskWritable As Boolean
+        Get
+            Return NativeFileIO.IsDiskWritable(SafeFileHandle)
+        End Get
+    End Property
+
+    ''' <summary>
     ''' Locks and dismounts filesystem on a volume. Upon successful return, further access to the device
     ''' can only be done through this device object instance until it is either closed (disposed) or lock is
     ''' released on the underlying handle.
@@ -236,7 +259,8 @@ Public Class DiskDevice
     ''' </summary>
     Public Function GetRawDiskStream() As DiskStream
         If _RawDiskStream Is Nothing Then
-            _RawDiskStream = New DiskStream(SafeFileHandle, AccessMode)
+            _RawDiskStream = New DiskStream(SafeFileHandle,
+                                            If(AccessMode = 0, FileAccess.Read, AccessMode))
         End If
         Return _RawDiskStream
     End Function

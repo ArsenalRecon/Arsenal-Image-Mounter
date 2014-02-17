@@ -86,11 +86,27 @@ Public Class MainForm
 
     Private Sub RefreshStatus()
 
+        SuspendLayout()
+
+        btnInstall.Enabled = False
+        btnUninstall.Enabled = False
+
         Try
             If API.AdapterDevicePresent Then
-                btnInstall.Enabled = False
-                btnUninstall.Enabled = True
-                tbStatus.Text = "Installed."
+                Try
+                    Using New ScsiAdapter
+                    End Using
+
+                    btnInstall.Enabled = False
+                    btnUninstall.Enabled = True
+                    tbStatus.Text = "Installed."
+
+                Catch ex As Exception
+                    btnInstall.Enabled = True
+                    btnUninstall.Enabled = True
+                    tbStatus.Text = "Needs upgrade."
+
+                End Try
             Else
                 btnInstall.Enabled = True
                 btnUninstall.Enabled = False
@@ -98,7 +114,11 @@ Public Class MainForm
             End If
 
         Catch ex As Exception
+            Trace.WriteLine(ex.ToString())
             tbStatus.Text = "Exception: " & ex.GetBaseException().Message
+
+        Finally
+            ResumeLayout()
 
         End Try
 
@@ -126,6 +146,19 @@ Public Class MainForm
 
         Finally
             RefreshStatus()
+
+        End Try
+
+        Try
+            Using New ScsiAdapter
+            End Using
+
+        Catch ex As Exception
+            Trace.WriteLine(ex.ToString())
+            MessageBox.Show(Me,
+                            "A reboot may be required to complete driver setup.",
+                            "Arsenal Image Mounter",
+                            MessageBoxButtons.OK)
 
         End Try
 

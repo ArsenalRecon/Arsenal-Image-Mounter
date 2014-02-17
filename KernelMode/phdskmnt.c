@@ -3,7 +3,7 @@
 /// Driver entry routines, miniport callback definitions and other support
 /// routines.
 /// 
-/// Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code is available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -19,8 +19,8 @@
 #include <stortrce.h>
 #pragma warning(pop)
 
-#include "trace.h"
-#include "phdskmnt.tmh"
+//#include "trace.h"
+//#include "phdskmnt.tmh"
 #include "hbapiwmi.h"
 
 #pragma warning(disable : 4204)
@@ -61,6 +61,7 @@ ImScsiGetAdapterDeviceObject()
     for (i = 0; i < 100; i++)
     {
         LARGE_INTEGER wait_time;
+        int r;
 
         if ((i & 7) == 7)
         {
@@ -72,31 +73,45 @@ ImScsiGetAdapterDeviceObject()
 
         RtlInitUnicodeString(&objname, objstr);
 
-        KdPrint2(("PhDskMnt::ImScsiGetAdapterDeviceObject: Attempt to open %ws...\n", objstr));
+        for (r = 0; r < 120; r++)
+        {
+            KdPrint2(("PhDskMnt::ImScsiGetAdapterDeviceObject: Attempt to open %ws...\n", objstr));
     
-        status = IoGetDeviceObjectPointer(&objname, GENERIC_ALL, &file_object, &device_object);
+            status = IoGetDeviceObjectPointer(&objname, GENERIC_ALL, &file_object, &device_object);
+
+            // Not yet ready? (In case port driver not yet intialized)
+            if (status == STATUS_DEVICE_NOT_READY)
+            {
+                DbgPrint("PhDskMnt::ImScsiGetAdapterDeviceObject: Object %ws not ready, waiting...\n", objstr);
+                wait_time.QuadPart = -5000000;
+                KeDelayExecutionThread(KernelMode, FALSE, &wait_time);
+                continue;
+            }
+
+            break;
+        }
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint2(("PhDskMnt::ImScsiGetAdapterDeviceObject: Attempt to open %ws failed: status=0x%x\n", objstr, status));
+            DbgPrint("PhDskMnt::ImScsiGetAdapterDeviceObject: Attempt to open %ws failed: status=0x%X\n", objstr, status);
             continue;
         }
 
         if (device_object->DriverObject != pMPDrvInfoGlobal->pDriverObj)
         {
-            KdPrint2(("PhDskMnt::ImScsiGetAdapterDeviceObject: %ws was not our device.\n", objstr, status));
+            DbgPrint("PhDskMnt::ImScsiGetAdapterDeviceObject: %ws was not our device.\n", objstr, status);
             continue;
         }
 
         pMPDrvInfoGlobal->DeviceObject = device_object;
 
-        return STATUS_SUCCESS;
+        break;
     }
 
     if (NT_SUCCESS(status))
-        KdPrint(("PhDskMnt::ImScsiGetAdapterDeviceObject: Successfully opened %ws.\n", objstr));
+        DbgPrint("PhDskMnt::ImScsiGetAdapterDeviceObject: Successfully opened %ws.\n", objstr);
     else
-        DbgPrint(("PhDskMnt::ImScsiGetAdapterDeviceObject: Could not locate SCSI adapter device object by name.\n"));
+        DbgPrint("PhDskMnt::ImScsiGetAdapterDeviceObject: Could not locate SCSI adapter device object by name.\n");
 
     return status;
 }
@@ -148,6 +163,7 @@ DriverEntry(
     HW_INITIALIZATION_DATA         hwInitData = { 0 };
 #endif
     pMPDriverInfo                  pMPDrvInfo;
+	LARGE_INTEGER                  liTickCount;
 
     KdPrint2(("PhDskMnt::DriverEntry: Begin.\n"));
     
@@ -178,6 +194,8 @@ DriverEntry(
 
 #endif
 
+	// Initialize driver globals structure
+
     pMPDrvInfoGlobal = pMPDrvInfo;                    // Save pointer in binary's storage.
 
     RtlZeroMemory(pMPDrvInfo, sizeof(MPDriverInfo));  // Set pMPDrvInfo's storage to a known state.
@@ -187,6 +205,9 @@ DriverEntry(
     KeInitializeSpinLock(&pMPDrvInfo->DrvInfoLock);   // Initialize spin lock.
 
     InitializeListHead(&pMPDrvInfo->ListMPHBAObj);    // Initialize list head.
+
+	KeQueryTickCount(&liTickCount);
+	pMPDrvInfo->RandomSeed = liTickCount.LowPart;     // Initialize random seed.
 
     // Get registry parameters.
 
@@ -235,7 +256,7 @@ DriverEntry(
                                     NULL
                                     );
 
-    DbgPrint("PhDskMnt::DriverEntry: StoragePortInitialize returned 0x%x\n", status);
+    DbgPrint("PhDskMnt::DriverEntry: StoragePortInitialize returned 0x%X\n", status);
 
     if (NT_SUCCESS(status))
     {
@@ -250,7 +271,7 @@ DriverEntry(
         ImScsiFreeGlobalResources();
     }
 
-    KdPrint2(("PhDskMnt::DriverEntry: End. status=0x%x\n", status));
+    KdPrint2(("PhDskMnt::DriverEntry: End. status=0x%X\n", status));
     
     return status;
 }                                                     // End DriverEntry().
@@ -327,6 +348,13 @@ MpHwFindAdapter(
         pConfigInfo,
         KeGetCurrentIrql()));
 
+#if VERBOSE_DEBUG_TRACE > 0
+
+    if (!KD_DEBUGGER_NOT_PRESENT)
+        DbgBreakPoint();
+
+#endif
+
     if (pMPDrvInfoGlobal->GlobalsInitialized)
     {
         LARGE_INTEGER wait_time;
@@ -342,12 +370,33 @@ MpHwFindAdapter(
 
     pHBAExt->HostTargetId = (UCHAR)pMPDrvInfoGlobal->MPRegInfo.InitiatorID;
 
+    pConfigInfo->WmiDataProvider                = FALSE;                       // Indicate WMI provider.
+
+    pConfigInfo->NumberOfPhysicalBreaks         = 4096;
+
+    pConfigInfo->MaximumTransferLength          = 8 << 20;                     // 8 MB.
+
 #ifdef USE_STORPORT
+
     pConfigInfo->VirtualDevice                  = TRUE;                        // Inidicate no real hardware.
     pConfigInfo->SynchronizationModel           = StorSynchronizeFullDuplex;
+
+    if (pConfigInfo->Dma64BitAddresses == SCSI_DMA64_SYSTEM_SUPPORTED)
+        pConfigInfo->Dma64BitAddresses = SCSI_DMA64_MINIPORT_FULL64BIT_SUPPORTED;
+
 #endif
-    pConfigInfo->WmiDataProvider                = FALSE;                       // Indicate WMI provider.
-    pConfigInfo->MaximumTransferLength          = SP_UNINITIALIZED_VALUE;      // Indicate unlimited.
+#ifdef USE_SCSIPORT
+
+    //if (pConfigInfo->NumberOfPhysicalBreaks == SP_UNINITIALIZED_VALUE)
+    //    pConfigInfo->NumberOfPhysicalBreaks     = 4096;
+
+    //if (pConfigInfo->MaximumTransferLength > (64 << 10))
+    //    pConfigInfo->MaximumTransferLength      = 64 << 10;                     // 64 KB.
+
+    pConfigInfo->Dma64BitAddresses = SCSI_DMA64_MINIPORT_SUPPORTED;
+
+#endif
+
     pConfigInfo->AlignmentMask                  = 0x3;                         // Indicate DWORD alignment.
     pConfigInfo->CachesData                     = FALSE;                       // Indicate miniport wants flush and shutdown notification.
     pConfigInfo->MaximumNumberOfTargets         = SCSI_MAXIMUM_TARGETS;        // Indicate maximum targets.
@@ -458,7 +507,7 @@ MpHwFindAdapter(
 //Done:
     *pBAgain = FALSE;    
         
-    KdPrint2(("PhDskMnt::MpHwFindAdapter: End, status = 0x%x\n", status));
+    KdPrint2(("PhDskMnt::MpHwFindAdapter: End, status = 0x%X\n", status));
 
     return status;
 }                                                     // End MpHwFindAdapter().
@@ -601,7 +650,7 @@ MpHwHandlePnP(
     if (STATUS_SUCCESS!=status) {
     }
 
-    KdPrint2(("PhDskMnt::MpHwHandlePnP:  status = 0x%x\n", status));
+    KdPrint2(("PhDskMnt::MpHwHandlePnP:  status = 0x%X\n", status));
 
     return status;
 }                                                     // End MpHwHandlePnP().
@@ -748,7 +797,7 @@ MpHwStartIo(
         break;
 
     default:
-        KdPrint(("PhDskMnt::MpHwStartIo: Unknown pSrb Function = 0x%x\n", pSrb->Function));
+        KdPrint(("PhDskMnt::MpHwStartIo: Unknown pSrb Function = 0x%X\n", pSrb->Function));
         
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_ILLEGAL_COMMAND, 0);
 
@@ -856,7 +905,7 @@ MpHwAdapterControl(
             break;
     } 
 
-    KdPrint2(("PhDskMnt::MpHwAdapterControl End: status=0x%x\n", ScsiAdapterControlSuccess));
+    KdPrint2(("PhDskMnt::MpHwAdapterControl End: status=0x%X\n", ScsiAdapterControlSuccess));
 
     return ScsiAdapterControlSuccess;
 }                                                     // End MpHwAdapterControl().
@@ -883,32 +932,32 @@ ImScsiStopAdapter(
     return;
 }                                                     // End ImScsiStopAdapter().
 
-/**************************************************************************************************/                         
-/*                                                                                                */                         
-/* ImScsiTracingInit.                                                                             */                         
-/*                                                                                                */                         
-/**************************************************************************************************/                         
-VOID                                                                                                                         
-ImScsiTracingInit(                                                                                                            
-              __in PVOID pArg1,                                                                                  
-              __in PVOID pArg2
-             )                                                                                                            
-{                                                                                                                            
-    WPP_INIT_TRACING(pArg1, pArg2);
-}                                                     // End ImScsiTracingInit().
+///**************************************************************************************************/                         
+///*                                                                                                */                         
+///* ImScsiTracingInit.                                                                             */                         
+///*                                                                                                */                         
+///**************************************************************************************************/                         
+//VOID                                                                                                                         
+//ImScsiTracingInit(                                                                                                            
+//              __in PVOID pArg1,                                                                                  
+//              __in PVOID pArg2
+//             )                                                                                                            
+//{                                                                                                                            
+//    WPP_INIT_TRACING(pArg1, pArg2);
+//}                                                     // End ImScsiTracingInit().
 
-/**************************************************************************************************/                         
-/*                                                                                                */                         
-/* MPTracingCleanUp.                                                                              */                         
-/*                                                                                                */                         
-/* This is called when the driver is being unloaded.                                              */                         
-/*                                                                                                */                         
-/**************************************************************************************************/                         
-VOID                                                                                                                         
-ImScsiTracingCleanup(__in PVOID pArg1)                                                                                                            
-{                                                                                                                            
-    WPP_CLEANUP(pArg1);
-}                                                     // End ImScsiTracingCleanup().
+///**************************************************************************************************/                         
+///*                                                                                                */                         
+///* MPTracingCleanUp.                                                                              */                         
+///*                                                                                                */                         
+///* This is called when the driver is being unloaded.                                              */                         
+///*                                                                                                */                         
+///**************************************************************************************************/                         
+//VOID                                                                                                                         
+//ImScsiTracingCleanup(__in PVOID pArg1)                                                                                                            
+//{                                                                                                                            
+//    WPP_CLEANUP(pArg1);
+//}                                                     // End ImScsiTracingCleanup().
 
 #ifdef USE_STORPORT
 /**************************************************************************************************/                         
@@ -1229,7 +1278,7 @@ ImScsiSafeIOStream(IN PFILE_OBJECT FileObject,
 
 	  status = IoStatusBlock->Status;
 
-	  KdPrint2(("ImScsiSafeIOStream: IRP %#x completed. Status=%#x.\n",
+	  KdPrint2(("ImScsiSafeIOStream: IRP %#x completed. Status=0x%X.\n",
 		    irp, IoStatusBlock->Status));
 
 	  RequestLength >>= 1;
@@ -1239,14 +1288,14 @@ ImScsiSafeIOStream(IN PFILE_OBJECT FileObject,
 
       if (!NT_SUCCESS(status))
 	{
-	  KdPrint2(("ImScsiSafeIOStream: I/O failed. Status=%#x.\n", status));
+	  KdPrint2(("ImScsiSafeIOStream: I/O failed. Status=0x%X.\n", status));
 
 	  IoStatusBlock->Status = status;
 	  IoStatusBlock->Information = 0;
 	  return IoStatusBlock->Status;
 	}
 
-      KdPrint2(("ImScsiSafeIOStream: I/O done. Status=%#x. Length=%#x\n",
+      KdPrint2(("ImScsiSafeIOStream: I/O done. Status=0x%X. Length=0x%X\n",
 		status, IoStatusBlock->Information));
 
       if (IoStatusBlock->Information == 0)

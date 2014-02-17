@@ -111,6 +111,12 @@
     </Compile>
     <Compile Include="DiskStateParser.vb" />
     <Compile Include="DiskStateView.vb" />
+    <Compile Include="FormMountOptions.Designer.vb">
+      <DependentUpon>FormMountOptions.vb</DependentUpon>
+    </Compile>
+    <Compile Include="FormMountOptions.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MainForm.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -137,6 +143,9 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AsyncMessageBox.resx" />
+    <EmbeddedResource Include="FormMountOptions.resx">
+      <DependentUpon>FormMountOptions.vb</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.vb</DependentUpon>
       <SubType>Designer</SubType>

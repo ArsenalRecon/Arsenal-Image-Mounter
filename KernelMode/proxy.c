@@ -3,7 +3,7 @@
 /// Client components for ImDisk/devio proxy services, for use with ImScsi kernel
 /// components.
 /// 
-/// Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code is available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -606,54 +606,89 @@ ImScsiReadProxy(IN PPROXY_CONNECTION Proxy,
 		IN ULONG Length,
 		IN PLARGE_INTEGER ByteOffset)
 {
-  IMDPROXY_READ_REQ read_req;
-  IMDPROXY_READ_RESP read_resp;
-  NTSTATUS status;
+	IMDPROXY_READ_REQ read_req;
+	IMDPROXY_READ_RESP read_resp;
+	NTSTATUS status;
+	ULONG_PTR max_transfer_size;
+	ULONG length_done;
 
-  //PAGED_CODE();
+	//PAGED_CODE();
 
-  ASSERT(Proxy != NULL);
-  ASSERT(IoStatusBlock != NULL);
-  ASSERT(Buffer != NULL);
-  ASSERT(ByteOffset != NULL);
+	ASSERT(Proxy != NULL);
+	ASSERT(IoStatusBlock != NULL);
+	ASSERT(Buffer != NULL);
+	ASSERT(ByteOffset != NULL);
 
-  read_req.request_code = IMDPROXY_REQ_READ;
-  read_req.offset = ByteOffset->QuadPart;
-  read_req.length = Length;
+	if (Proxy->connection_type == PROXY_CONNECTION_SHM)
+		max_transfer_size = Proxy->shared_memory_size - IMDPROXY_HEADER_SIZE;
+	else
+		max_transfer_size = Length;
 
-  KdPrint2(("ImScsi Proxy Client: IMDPROXY_REQ_READ %u bytes at %u.\n",
-	    (ULONG) read_req.length, (ULONG) read_req.offset));
+	length_done = 0;
+	status = STATUS_SUCCESS;
 
-  status = ImScsiCallProxy(Proxy,
-			   IoStatusBlock,
-			   CancelEvent,
-			   &read_req,
-			   sizeof(read_req),
-			   NULL,
-			   0,
-			   &read_resp,
-			   sizeof(read_resp),
-			   Buffer,
-			   Length,
-			   (PULONG) &read_resp.length);
+	while (length_done < Length)
+	{
+		ULONG length_to_do = Length - length_done;
 
-  if (!NT_SUCCESS(status))
-    {
-      IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
-      IoStatusBlock->Information = 0;
-      return IoStatusBlock->Status;
-    }
+		KdPrint2(("ImScsi Proxy Client: "
+			"IMDPROXY_REQ_READ 0x%.8x done 0x%.8x left to do.\n",
+			length_done, length_to_do));
 
-  if (read_resp.errorno != 0)
-    {
-      KdPrint(("ImScsi Proxy Client: Server returned error %p-%p.\n",
-	       read_resp.errorno));
-      IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
-      IoStatusBlock->Information = 0;
-      return IoStatusBlock->Status;
-    }
+		read_req.request_code = IMDPROXY_REQ_READ;
+		read_req.offset = ByteOffset->QuadPart + length_done;
+		read_req.length = min(length_to_do, max_transfer_size);
 
-  return status;
+		KdPrint2(("ImScsi Proxy Client: "
+			"IMDPROXY_REQ_READ 0x%.8x%.8x bytes at 0x%.8x%.8x.\n",
+			((PLARGE_INTEGER)&read_req.length)->HighPart,
+			((PLARGE_INTEGER)&read_req.length)->LowPart,
+			((PLARGE_INTEGER)&read_req.offset)->HighPart,
+			((PLARGE_INTEGER)&read_req.offset)->LowPart));
+
+		status = ImScsiCallProxy(Proxy,
+			IoStatusBlock,
+			CancelEvent,
+			&read_req,
+			sizeof(read_req),
+			NULL,
+			0,
+			&read_resp,
+			sizeof(read_resp),
+			(PUCHAR)Buffer + length_done,
+			(ULONG)read_req.length,
+			(PULONG)&read_resp.length);
+
+		if (!NT_SUCCESS(status))
+		{
+			IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
+			IoStatusBlock->Information = length_done;
+			return IoStatusBlock->Status;
+		}
+
+		length_done += (ULONG)read_resp.length;
+
+		if (read_resp.errorno != 0)
+		{
+			KdPrint(("ImScsi Proxy Client: Server returned error %p-%p.\n",
+				read_resp.errorno));
+			IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
+			IoStatusBlock->Information = length_done;
+			return IoStatusBlock->Status;
+		}
+
+		KdPrint2(("ImScsi Proxy Client: Server sent 0x%.8x%.8x bytes.\n",
+			((PLARGE_INTEGER)&read_resp.length)->HighPart,
+			((PLARGE_INTEGER)&read_resp.length)->LowPart));
+
+		if (read_resp.length == 0)
+			break;
+	}
+
+	IoStatusBlock->Status = status;
+	IoStatusBlock->Information = length_done;
+
+	return status;
 }
 
 NTSTATUS
@@ -664,70 +699,111 @@ ImScsiWriteProxy(IN PPROXY_CONNECTION Proxy,
 		 IN ULONG Length,
 		 IN PLARGE_INTEGER ByteOffset)
 {
-  IMDPROXY_READ_REQ write_req;
-  IMDPROXY_READ_RESP write_resp;
-  NTSTATUS status;
+	IMDPROXY_WRITE_REQ write_req;
+	IMDPROXY_WRITE_RESP write_resp;
+	NTSTATUS status;
+	ULONG_PTR max_transfer_size;
+	ULONG length_done;
 
-  //PAGED_CODE();
+	//PAGED_CODE();
 
-  ASSERT(Proxy != NULL);
-  ASSERT(IoStatusBlock != NULL);
-  ASSERT(Buffer != NULL);
-  ASSERT(ByteOffset != NULL);
+	ASSERT(Proxy != NULL);
+	ASSERT(IoStatusBlock != NULL);
+	ASSERT(Buffer != NULL);
+	ASSERT(ByteOffset != NULL);
 
-  write_req.request_code = IMDPROXY_REQ_WRITE;
-  write_req.offset = ByteOffset->QuadPart;
-  write_req.length = Length;
+	if (Proxy->connection_type == PROXY_CONNECTION_SHM)
+		max_transfer_size = Proxy->shared_memory_size - IMDPROXY_HEADER_SIZE;
+	else
+		max_transfer_size = Length;
 
-  KdPrint2(("ImScsi Proxy Client: IMDPROXY_REQ_WRITE %u bytes at %u.\n",
-	    (ULONG) write_req.length, (ULONG) write_req.offset));
+	length_done = 0;
+	status = STATUS_SUCCESS;
 
-  status = ImScsiCallProxy(Proxy,
-			   IoStatusBlock,
-			   CancelEvent,
-			   &write_req,
-			   sizeof(write_req),
-			   Buffer,
-			   (ULONG) write_req.length,
-			   &write_resp,
-			   sizeof(write_resp),
-			   NULL,
-			   0,
-			   NULL);
+	while (length_done < Length)
+	{
+		ULONG length_to_do = Length - length_done;
 
-  if (!NT_SUCCESS(status))
-    {
-      IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
-      IoStatusBlock->Information = 0;
-      return IoStatusBlock->Status;
-    }
+		KdPrint2(("ImScsi Proxy Client: "
+			"IMDPROXY_REQ_WRITE 0x%.8x done 0x%.8x left to do.\n",
+			length_done, length_to_do));
 
-  if (write_resp.errorno != 0)
-    {
-      KdPrint(("ImScsi Proxy Client: Server returned error %p-%p.\n",
-	       write_resp.errorno));
-      IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
-      IoStatusBlock->Information = 0;
-      return IoStatusBlock->Status;
-    }
+		write_req.request_code = IMDPROXY_REQ_WRITE;
+		write_req.offset = ByteOffset->QuadPart + length_done;
+		write_req.length = min(length_to_do, max_transfer_size);
 
-  return status;
+		KdPrint2(("ImScsi Proxy Client: "
+			"IMDPROXY_REQ_WRITE 0x%.8x%.8x bytes at 0x%.8x%.8x.\n",
+			((PLARGE_INTEGER)&write_req.length)->HighPart,
+			((PLARGE_INTEGER)&write_req.length)->LowPart,
+			((PLARGE_INTEGER)&write_req.offset)->HighPart,
+			((PLARGE_INTEGER)&write_req.offset)->LowPart));
 
-  //if (write_resp.length != Length)
-  //  {
-  //    KdPrint(("ImScsi Proxy Client: IMDPROXY_REQ_WRITE %u bytes, "
-	 //      "IMDPROXY_RESP_WRITE %u bytes.\n",
-	 //      Length, (ULONG) write_resp.length));
-  //    IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
-  //    IoStatusBlock->Information = 0;
-  //    return IoStatusBlock->Status;
-  //  }
+		status = ImScsiCallProxy(
+			Proxy,
+			IoStatusBlock,
+			CancelEvent,
+			&write_req,
+			sizeof(write_req),
+			(PUCHAR)Buffer + length_done,
+			(ULONG)write_req.length,
+			&write_resp,
+			sizeof(write_resp),
+			NULL,
+			0,
+			NULL);
 
-  //KdPrint2(("ImScsi Proxy Client: Got ok response. "
-	 //   "Resetting IoStatusBlock fields.\n"));
+		if (!NT_SUCCESS(status))
+		{
+			IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
+			IoStatusBlock->Information = length_done;
+			return IoStatusBlock->Status;
+		}
 
-  //IoStatusBlock->Status = STATUS_SUCCESS;
-  //IoStatusBlock->Information = Length;
-  //return IoStatusBlock->Status;
+		if (write_resp.errorno != 0)
+		{
+			KdPrint(("ImScsi Proxy Client: Server returned error 0x%.8x%.8x.\n",
+				write_resp.errorno));
+			IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
+			IoStatusBlock->Information = length_done;
+			return IoStatusBlock->Status;
+		}
+
+		if (write_resp.length != write_req.length)
+		{
+			KdPrint(("ImScsi Proxy Client: IMDPROXY_REQ_WRITE %u bytes, "
+				"IMDPROXY_RESP_WRITE %u bytes.\n",
+				Length,
+				(ULONG)write_resp.length));
+			IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
+			IoStatusBlock->Information = length_done;
+			return IoStatusBlock->Status;
+		}
+
+		KdPrint2(("ImScsi Proxy Client: Server replied OK.\n"));
+
+		length_done += (ULONG)write_req.length;
+	}
+
+	IoStatusBlock->Status = STATUS_SUCCESS;
+	IoStatusBlock->Information = length_done;
+	return IoStatusBlock->Status;
+	
+	//if (write_resp.length != Length)
+	//  {
+	//    KdPrint(("ImScsi Proxy Client: IMDPROXY_REQ_WRITE %u bytes, "
+	//      "IMDPROXY_RESP_WRITE %u bytes.\n",
+	//      Length, (ULONG) write_resp.length));
+	//    IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
+	//    IoStatusBlock->Information = 0;
+	//    return IoStatusBlock->Status;
+	//  }
+
+	//KdPrint2(("ImScsi Proxy Client: Got ok response. "
+	//   "Resetting IoStatusBlock fields.\n"));
+
+	//IoStatusBlock->Status = STATUS_SUCCESS;
+	//IoStatusBlock->Information = Length;
+	//return IoStatusBlock->Status;
 }
 
