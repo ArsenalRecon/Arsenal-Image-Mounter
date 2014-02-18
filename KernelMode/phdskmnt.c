@@ -789,8 +789,8 @@ MpHwStartIo(
 
         break;
 
-    case SRB_FUNCTION_SHUTDOWN:                   
-        KdPrint(("PhDskMnt::MpHwStartIo: SRB_FUNCTION_SHUTDOWN.\n"));
+    case SRB_FUNCTION_SHUTDOWN:
+	KdPrint(("PhDskMnt::MpHwStartIo: SRB_FUNCTION_SHUTDOWN.\n"));
         // Do nothing.
         pSrb->SrbStatus = SRB_STATUS_SUCCESS;
 
@@ -807,10 +807,6 @@ MpHwStartIo(
 
     if (Result == ResultDone)
     {                         // Complete now?
-        // Note:  A miniport with real hardware would not always be calling RequestComplete from HwScsiStartIo.  Rather,
-        //        the miniport would typically be doing real I/O and would call RequestComplete only at the end of that
-        //        real I/O, in its HwScsiInterrupt or in a DPC routine.
-
 #ifdef USE_SCSIPORT
         KdPrint2(("PhDskMnt::MpHwStartIo sending 'RequestComplete', 'NextRequest' and 'NextLuRequest' to ScsiPort.\n"));
         ScsiPortNotification(RequestComplete, pHBAExt, pSrb);

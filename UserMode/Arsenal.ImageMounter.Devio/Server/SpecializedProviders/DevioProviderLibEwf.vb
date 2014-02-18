@@ -132,6 +132,10 @@ Namespace Server.SpecializedProviders
         Private Shared Function libewf_notify_set_stream(FILE As IntPtr, errobj As IntPtr) As Integer
         End Function
 
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_get_bytes_per_sector(safeLibEwfHandle As SafeLibEwfHandle, ByRef SectorSize As UInteger) As Integer
+        End Function
+
         Public Shared WriteOnly Property NotificationFile As String
             Set(value As String)
                 If String.IsNullOrEmpty(value) Then
@@ -274,9 +278,14 @@ Namespace Server.SpecializedProviders
 
         Public Overrides ReadOnly Property SectorSize As UInteger
             Get
-                Return 512
+                Dim _SectorSize As UInteger
+                If libewf_get_bytes_per_sector(SafeHandle, _SectorSize) < 0 Then
+                    Throw New Exception("Unable to get number of bytes per sector.")
+                End If
+                Return _SectorSize
             End Get
         End Property
+
     End Class
 
 End Namespace

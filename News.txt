@@ -1,4 +1,11 @@
--- What's new, driver version 1.0.1.07 and API library version 1.0.013.001
+-- What's new, API library version 1.0.014
+
+* Disks mounted from ewf images through libewf.dll now use sector size from
+  ewf image. Previously, sector size was hard-coded as 512 bytes which
+  caused Windows to misread partition table and similar if sector size was
+  different from that number.
+
+-- What's new, driver version 1.0.1 and API library version 1.0.013
 
 * MountTool previously crashed on start if any disk drive in the system was
   exclusively locked by another application. This problem has been corrected
