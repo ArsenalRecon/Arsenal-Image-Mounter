@@ -59,6 +59,10 @@ Namespace Server.Interaction
                 DiskAccess = FileAccess.Read
             End If
 
+            If Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) Then
+                Flags = Flags Or DeviceFlags.DeviceTypeCD
+            End If
+
             Dim Service = GetService(Imagefile, DiskAccess, Proxy)
 
             Service.StartServiceThreadAndMount(Adapter, Flags)

@@ -34,6 +34,7 @@ Partial Class MainForm
         Me.cbNotifyLibEwf = New System.Windows.Forms.CheckBox()
         Me.btnMountMultiPartRaw = New System.Windows.Forms.Button()
         Me.lbDevices = New System.Windows.Forms.DataGridView()
+        Me.DiskStateViewBindingSource = New System.Windows.Forms.BindingSource(Me.components)
         Me.ScsiIdDataGridViewTextBoxColumn = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.ImagePathDataGridViewTextBoxColumn = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.DriveNumberString = New System.Windows.Forms.DataGridViewTextBoxColumn()
@@ -42,7 +43,6 @@ Partial Class MainForm
         Me.SignatureDataGridViewTextBoxColumn = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.DiskSizeDataGridViewTextBoxColumn = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.IsReadOnlyDataGridViewTextBoxColumn = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.DiskStateViewBindingSource = New System.Windows.Forms.BindingSource(Me.components)
         CType(Me.lbDevices, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.DiskStateViewBindingSource, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
@@ -178,6 +178,10 @@ Partial Class MainForm
         Me.lbDevices.Size = New System.Drawing.Size(629, 227)
         Me.lbDevices.TabIndex = 6
         '
+        'DiskStateViewBindingSource
+        '
+        Me.DiskStateViewBindingSource.DataSource = GetType(Arsenal.ImageMounter.DiskStateView)
+        '
         'ScsiIdDataGridViewTextBoxColumn
         '
         Me.ScsiIdDataGridViewTextBoxColumn.DataPropertyName = "ScsiId"
@@ -189,7 +193,7 @@ Partial Class MainForm
         'ImagePathDataGridViewTextBoxColumn
         '
         Me.ImagePathDataGridViewTextBoxColumn.DataPropertyName = "ImagePath"
-        Me.ImagePathDataGridViewTextBoxColumn.HeaderText = "Image object/path"
+        Me.ImagePathDataGridViewTextBoxColumn.HeaderText = "Image file"
         Me.ImagePathDataGridViewTextBoxColumn.Name = "ImagePathDataGridViewTextBoxColumn"
         Me.ImagePathDataGridViewTextBoxColumn.ReadOnly = True
         Me.ImagePathDataGridViewTextBoxColumn.Width = 200
@@ -242,10 +246,6 @@ Partial Class MainForm
         Me.IsReadOnlyDataGridViewTextBoxColumn.ReadOnly = True
         Me.IsReadOnlyDataGridViewTextBoxColumn.Width = 40
         '
-        'DiskStateViewBindingSource
-        '
-        Me.DiskStateViewBindingSource.DataSource = GetType(Arsenal.ImageMounter.DiskStateView)
-        '
         'MainForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
@@ -283,13 +283,13 @@ Partial Class MainForm
     Private WithEvents lbDevices As System.Windows.Forms.DataGridView
     Private WithEvents DiskStateViewBindingSource As System.Windows.Forms.BindingSource
     Private WithEvents DriveNumberDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Private WithEvents ScsiIdDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Private WithEvents ImagePathDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Private WithEvents DriveNumberString As System.Windows.Forms.DataGridViewTextBoxColumn
-    Private WithEvents IsOfflineDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Private WithEvents PartitionLayoutDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Private WithEvents SignatureDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Private WithEvents DiskSizeDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
-    Private WithEvents IsReadOnlyDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents ScsiIdDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents ImagePathDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents DriveNumberString As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents IsOfflineDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents PartitionLayoutDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents SignatureDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents DiskSizeDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents IsReadOnlyDataGridViewTextBoxColumn As System.Windows.Forms.DataGridViewTextBoxColumn
 
 End Class

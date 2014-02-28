@@ -23,45 +23,37 @@ Public Class PSDiskParser
 
     Public Class DiskState
 
-        Private Shared ReadOnly fields As New Dictionary(Of String, FieldInfo)
-
-        Shared Sub New()
-            fields = Aggregate fld In GetType(DiskState).GetFields(BindingFlags.NonPublic Or BindingFlags.Instance)
-                      Where fld.Name.StartsWith("_", StringComparison.Ordinal)
-                      Into ToDictionary(String.Intern(fld.Name.Substring(1)))
-        End Sub
-
-        Public Property AllocatedSize As UInt64 ' = 16777216
-        Public Property BootFromDisk As Boolean ' = False
-        Public Property BusType As UInt16 ' = 6
+        Public Property AllocatedSize As UInt64? ' = 16777216
+        Public Property BootFromDisk As Boolean? ' = False
+        Public Property BusType As UInt16? ' = 6
         Public Property FirmwareVersion As String ' = "0001"
         Public Property FriendlyName As String ' = "Arsenal Virtual  SCSI Disk Device"
         Public Property Guid As String ' = Nothing
-        Public Property HealthStatus As UInt16 ' = 1
-        Public Property IsBoot As Boolean ' = False
-        Public Property IsClustered As Boolean ' = False
-        Public Property IsOffline As Boolean ' = True
-        Public Property IsReadOnly As Boolean ' = True
-        Public Property IsSystem As Boolean ' = False
-        Public Property LargestFreeExtent As UInt64 ' = 0
+        Public Property HealthStatus As UInt16? ' = 1
+        Public Property IsBoot As Boolean? ' = False
+        Public Property IsClustered As Boolean? ' = False
+        Public Property IsOffline As Boolean? ' = True
+        Public Property IsReadOnly As Boolean? ' = True
+        Public Property IsSystem As Boolean? ' = False
+        Public Property LargestFreeExtent As UInt64? ' = 0
         Public Property Location As String ' = Nothing
-        Public Property LogicalSectorSize As UInt32 ' = 0
+        Public Property LogicalSectorSize As UInt32? ' = 0
         Public Property Manufacturer As String ' = "Arsenal "
         Public Property Model As String ' = "Virtual "
-        Public Property Number As UInt32 ' = 2
-        Public Property NumberOfPartitions As UInt32 ' = 1
+        Public Property Number As UInt32? ' = 2
+        Public Property NumberOfPartitions As UInt32? ' = 1
         Public Property ObjectId As String ' = "\\?\scsi#disk&ven_arsenal&prod_virtual_#1&2afd7d61&1&000000#{53f56307-b6bf-11d0-94f2-00a0c91efb8b}"
-        Public Property OfflineReason As OfflineReason ' UInt16 = 0 = Online, 1 = Policy, 4 = Sign conflict
-        Public Property OperationalStatus As OperationalStatus ' UInt16 = 1 = OK, 4 = Offline
-        Public Property PartitionStyle As PartitionStyle ' UInt16 = 1 = MBR
+        Public Property OfflineReason As OfflineReason? ' UInt16? = 0 = Online, 1 = Policy, 4 = Sign conflict
+        Public Property OperationalStatus As OperationalStatus? ' UInt16? = 1 = OK, 4 = Offline
+        Public Property PartitionStyle As PartitionStyle? ' UInt16? = 1 = MBR
         Public Property Path As String ' = "\\?\scsi#disk&ven_arsenal&prod_virtual_#1&2afd7d61&1&000000#{53f56307-b6bf-11d0-94f2-00a0c91efb8b}"
-        Public Property PhysicalSectorSize As UInt32 ' = 512
-        Public Property ProvisioningType As UInt16 ' = 2
+        Public Property PhysicalSectorSize As UInt32? ' = 512
+        Public Property ProvisioningType As UInt16? ' = 2
         Public Property SerialNumber As String ' = Nothing
-        Public Property Signature As UInt32 ' = 2499952371
-        Public Property Size As UInt64 ' = 16777216
+        Public Property Signature As UInt32? ' = 2499952371
+        Public Property Size As UInt64? ' = 16777216
         Public Property UniqueId As String ' = "SCSI\DISK&VEN_ARSENAL&PROD_VIRTUAL_\1&2AFD7D61&1&000000:VPCWIN8ENT"
-        Public Property UniqueIdFormat As UInt16 ' = 0
+        Public Property UniqueIdFormat As UInt16? ' = 0
         Public Property PSComputerName As String ' = Nothing
 
         Public Sub New()
@@ -69,15 +61,7 @@ Public Class PSDiskParser
         End Sub
 
         Private Sub New(obj As PSObject)
-
-            For Each commonprop In
-                From prop In obj.Properties
-                Join fld In fields
-                On prop.Name Equals fld.Key
-
-                commonprop.fld.Value.SetValue(Me, commonprop.prop.Value)
-
-            Next
+            FieldAssigner(Of DiskState).AssignFieldsFromPSObject(Me, obj)
 
         End Sub
 

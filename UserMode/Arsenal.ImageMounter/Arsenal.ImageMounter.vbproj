@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DriverSetup.vb" />
+    <Compile Include="FieldAssigner.vb" />
     <Compile Include="Flags.vb" />
     <Compile Include="API.vb" />
     <Compile Include="PSDiskAPI.vb" />

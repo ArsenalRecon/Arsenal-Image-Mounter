@@ -20,8 +20,16 @@ Imports System.Runtime.InteropServices
 
 Public Class MainForm
 
+    Private Class ServiceListItem
+
+        Public Property ImageFile As String
+
+        Public Property Service As DevioServiceBase
+
+    End Class
+
     Private Adapter As ScsiAdapter
-    Private ReadOnly ServiceList As New List(Of DevioServiceBase)
+    Private ReadOnly ServiceList As New List(Of ServiceListItem)
 
     Private IsClosing As Boolean
     Private LastCreatedDevice As UInteger?
@@ -136,16 +144,16 @@ Public Class MainForm
         IsClosing = True
 
         Try
-            Dim Services As IEnumerable(Of DevioServiceBase)
+            Dim ServiceItems As ICollection(Of ServiceListItem)
             SyncLock ServiceList
-                Services = ServiceList.ToArray()
+                ServiceItems = ServiceList.ToArray()
             End SyncLock
-            For Each Service In Services
-                If Service.HasDiskDevice Then
-                    Trace.WriteLine("Requesting service for device " & Service.DiskDeviceNumber.ToString("X6") & " to shut down...")
-                    Service.DismountAndStopServiceThread(TimeSpan.FromSeconds(10))
+            For Each Item In ServiceItems
+                If Item.Service IsNot Nothing AndAlso Item.Service.HasDiskDevice Then
+                    Trace.WriteLine("Requesting service for device " & Item.Service.DiskDeviceNumber.ToString("X6") & " to shut down...")
+                    Item.Service.DismountAndStopServiceThread(TimeSpan.FromSeconds(10))
                 Else
-                    ServiceList.Remove(Service)
+                    ServiceList.Remove(Item)
                 End If
             Next
 
@@ -223,7 +231,7 @@ Public Class MainForm
 
     End Sub
 
-    Private Sub SetDiskView(list As ICollection(Of DiskStateView), finished As Boolean)
+    Private Sub SetDiskView(list As List(Of DiskStateView), finished As Boolean)
 
         If finished Then
             With lblDeviceList
@@ -232,6 +240,14 @@ Public Class MainForm
                 .BackColor = SystemColors.Control
             End With
         End If
+
+        For Each item In
+            From view In list
+            Join serviceItem In ServiceList
+            On view.ScsiId Equals serviceItem.Service.DiskDeviceNumber.ToString("X6")
+
+            item.view.DeviceProperties.Filename = item.serviceItem.ImageFile
+        Next
 
         DiskStateViewBindingSource.DataSource = list
 
@@ -259,7 +275,7 @@ Public Class MainForm
             End If
 
             If obj.IsOffline.GetValueOrDefault() Then
-                If obj.DiskState Is Nothing OrElse obj.DiskState.OfflineReason <> PSDiskParser.OfflineReason.SignatureConflict Then
+                If obj.DiskState Is Nothing OrElse (Not obj.DiskState.OfflineReason.HasValue) OrElse obj.DiskState.OfflineReason.Value <> PSDiskParser.OfflineReason.SignatureConflict Then
                     MessageBox.Show(Me,
                                     "The new virtual disk was mounted in offline mode. Please use Disk Management to analyze why disk is offline and for bringing it online.",
                                     "Disk offline",
@@ -292,6 +308,7 @@ Public Class MainForm
                                         MessageBoxIcon.Information)
 
                     Catch ex As Exception
+                        Trace.WriteLine(ex.ToString())
                         MessageBox.Show(Me,
                                         "An error occured: " & ex.GetBaseException().Message,
                                         ex.GetBaseException().GetType().ToString(),
@@ -453,18 +470,18 @@ Public Class MainForm
 
     End Sub
 
-    Private Sub AddServiceToShutdownHandler(Service As DevioServiceBase)
+    Private Sub AddServiceToShutdownHandler(ServiceItem As ServiceListItem)
 
-        AddHandler Service.ServiceShutdown,
+        AddHandler ServiceItem.Service.ServiceShutdown,
           Sub()
               SyncLock ServiceList
-                  ServiceList.RemoveAll(AddressOf Service.Equals)
+                  ServiceList.RemoveAll(AddressOf ServiceItem.Equals)
               End SyncLock
               RefreshDeviceList()
           End Sub
 
         SyncLock ServiceList
-            ServiceList.Add(Service)
+            ServiceList.Add(ServiceItem)
         End SyncLock
 
     End Sub
@@ -485,12 +502,12 @@ Public Class MainForm
             Return
         End If
 
-        Dim Imagefiles As String()
+        Dim Imagefile As String
         Dim Flags As DeviceFlags
         Using OpenFileDialog As New OpenFileDialog With {
           .CheckFileExists = True,
           .DereferenceLinks = True,
-          .Multiselect = True,
+          .Multiselect = False,
           .ReadOnlyChecked = True,
           .ShowReadOnly = True,
           .SupportMultiDottedExtensions = True,
@@ -506,54 +523,73 @@ Public Class MainForm
                 Flags = Flags Or DeviceFlags.ReadOnly
             End If
 
-            Imagefiles = OpenFileDialog.FileNames
+            Imagefile = OpenFileDialog.FileName
         End Using
 
         Update()
 
-        Using FormMountOptions As New FormMountOptions With
-            {
-                .ProxyType = ProxyType,
-                .Flags = Flags,
-                .Imagefiles = Imagefiles
-            }
+        Try
+            Dim SectorSize As UInteger
+            Using service = DevioServiceFactory.GetService(Imagefile, FileAccess.Read, ProxyType)
+                SectorSize = service.SectorSize
+            End Using
 
-            If FormMountOptions.ShowDialog(Me) <> DialogResult.OK Then
-                Return
-            End If
+            Using FormMountOptions As New FormMountOptions With
+                {
+                    .ProxyType = ProxyType,
+                    .Flags = Flags,
+                    .Imagefile = Imagefile,
+                    .SectorSize = SectorSize
+                }
 
-            Flags = FormMountOptions.Flags
-        End Using
+                If FormMountOptions.ShowDialog(Me) <> DialogResult.OK Then
+                    Return
+                End If
 
-        Update()
+                Flags = FormMountOptions.Flags
+                SectorSize = FormMountOptions.SectorSize
+            End Using
 
-        Using New AsyncMessageBox("Please wait...")
+            Update()
 
-            For Each Imagefile In Imagefiles
-                Try
-                    Dim Service = DevioServiceFactory.AutoMount(Imagefile,
-                                                                Adapter,
-                                                                ProxyType,
-                                                                Flags)
+            Using New AsyncMessageBox("Please wait...")
 
-                    AddServiceToShutdownHandler(Service)
+                Dim DiskAccess As FileAccess
 
-                    LastCreatedDevice = Service.DiskDeviceNumber
+                If (Flags And DeviceFlags.ReadOnly) = 0 Then
+                    DiskAccess = FileAccess.ReadWrite
+                Else
+                    DiskAccess = FileAccess.Read
+                End If
 
-                Catch ex As Exception
-                    Trace.WriteLine(ex.ToString())
-                    MessageBox.Show(Me,
-                                    ex.GetBaseException().Message,
-                                    ex.GetBaseException().GetType().ToString(),
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Exclamation)
+                Dim Service = DevioServiceFactory.GetService(Imagefile, DiskAccess, ProxyType)
 
-                End Try
-            Next
+                Service.SectorSize = SectorSize
 
-            RefreshDeviceList()
+                Service.StartServiceThreadAndMount(Adapter, Flags)
 
-        End Using
+                Dim ServiceItem As New ServiceListItem With {
+                    .ImageFile = Imagefile,
+                    .Service = Service
+                }
+
+                AddServiceToShutdownHandler(ServiceItem)
+
+                LastCreatedDevice = Service.DiskDeviceNumber
+
+            End Using
+
+        Catch ex As Exception
+            Trace.WriteLine(ex.ToString())
+            MessageBox.Show(Me,
+                            ex.GetBaseException().Message,
+                            ex.GetBaseException().GetType().ToString(),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Exclamation)
+
+        End Try
+
+        RefreshDeviceList()
 
     End Sub
 

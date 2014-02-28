@@ -1,5 +1,6 @@
 ﻿Imports System.Management.Automation
 Imports System.Reflection
+Imports System.Linq.Expressions
 
 Public Class PSPhysicalDiskParser
     Implements IDisposable
@@ -19,48 +20,40 @@ Public Class PSPhysicalDiskParser
 
     Public Class PhysicalDiskState
 
-        Private Shared ReadOnly fields As New Dictionary(Of String, FieldInfo)
-
-        Shared Sub New()
-            fields = Aggregate fld In GetType(PhysicalDiskState).GetFields(BindingFlags.NonPublic Or BindingFlags.Instance)
-                     Where fld.Name.StartsWith("_", StringComparison.Ordinal)
-                     Into ToDictionary(String.Intern(fld.Name.Substring(1)))
-        End Sub
-
         Public Property ObjectId As String ' = "{1}\\VPCWIN8ENT\root/Microsoft/Windows/Storage/Providers_v2\SPACES_PhysicalDisk.ObjectId=""{26be8332-3f79-11e3-824f-806e6f6e6963}:PD:{d2598005-8323-11e3-beff-00155db3d602}"""
         Public Property PassThroughClass As String ' = Nothing
         Public Property PassThroughIds As String ' = Nothing
         Public Property PassThroughNamespace As String ' = Nothing
         Public Property PassThroughServer As String ' = Nothing
         Public Property UniqueId As String ' = "SCSI\Disk&Ven_Arsenal&Prod_Virtual_\1&2afd7d61&1&000100:VPCWIN8ENT"
-        Public Property AllocatedSize As UInt64 ' = 0
-        Public Property BusType As UInt16 ' = 6
+        Public Property AllocatedSize As UInt64? ' = 0
+        Public Property BusType As UInt16? ' = 6
         Public Property CannotPoolReason As CannotPoolReason() ' UInt16() = {6}
-        Public Property CanPool As Boolean ' = False
+        Public Property CanPool As Boolean? ' = False
         Public Property Description As String ' = ""
         Public Property DeviceId As String ' = "3"
-        Public Property EnclosureNumber As UInt16 ' = Nothing
+        Public Property EnclosureNumber As UInt16? ' = Nothing
         Public Property FirmwareVersion As String ' = "0001"
         Public Property FriendlyName As String ' = "PhysicalDisk3"
-        Public Property HealthStatus As UInt16 ' = 0
-        Public Property IsIndicationEnabled As Boolean ' = Nothing
-        Public Property IsPartial As Boolean ' = False
-        Public Property LogicalSectorSize As UInt64 ' = 512
+        Public Property HealthStatus As UInt16? ' = 0
+        Public Property IsIndicationEnabled As Boolean? ' = Nothing
+        Public Property IsPartial As Boolean? ' = False
+        Public Property LogicalSectorSize As UInt64? ' = 512
         Public Property Manufacturer As String ' = "Arsenal "
-        Public Property MediaType As UInt16 ' = 0
+        Public Property MediaType As UInt16? ' = 0
         Public Property Model As String ' = "Virtual "
         Public Property OperationalStatus As UInt16() ' = {2}
         Public Property OtherCannotPoolReasonDescription As String ' = Nothing
         Public Property PartNumber As String ' = Nothing
         Public Property PhysicalLocation As String ' = Nothing
-        Public Property PhysicalSectorSize As UInt64 ' = 512
+        Public Property PhysicalSectorSize As UInt64? ' = 512
         Public Property SerialNumber As String ' = Nothing
-        Public Property Size As UInt64 ' = 1468006400
-        Public Property SlotNumber As UInt16 ' = Nothing
+        Public Property Size As UInt64? ' = 1468006400
+        Public Property SlotNumber As UInt16? ' = Nothing
         Public Property SoftwareVersion As String ' = Nothing
-        Public Property SpindleSpeed As UInt32 ' = 4294967295
+        Public Property SpindleSpeed As UInt32? ' = 4294967295
         Public Property SupportedUsages As UInt16() ' = {1, 2, 3, 4, 5}
-        Public Property Usage As UInt16 ' = 1
+        Public Property Usage As UInt16? ' = 1
         Public Property PSComputerName As String ' = Nothing
 
         Public Sub New()
@@ -68,15 +61,7 @@ Public Class PSPhysicalDiskParser
         End Sub
 
         Private Sub New(obj As PSObject)
-
-            For Each commonprop In
-                From prop In obj.Properties
-                Join fld In fields
-                On prop.Name Equals fld.Key
-
-                commonprop.fld.Value.SetValue(Me, commonprop.prop.Value)
-
-            Next
+            FieldAssigner(Of PhysicalDiskState).AssignFieldsFromPSObject(Me, obj)
 
         End Sub
 

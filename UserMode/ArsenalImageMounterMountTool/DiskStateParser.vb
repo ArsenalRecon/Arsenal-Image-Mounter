@@ -71,7 +71,7 @@ Public Class DiskStateParser
         Dim ids = GetDriveScsiIds(portnumber)
 
         Dim getid =
-            Function(dev As DeviceProperties)
+            Function(dev As DeviceProperties) As UInt32?
                 Dim result As UInt32
                 If ids.TryGetValue(dev.DeviceNumber, result) Then
                     Return result
@@ -80,12 +80,32 @@ Public Class DiskStateParser
                 End If
             End Function
 
+        Dim getsig =
+            Function(drv As UInt32?) As UInt32?
+                If Not drv.HasValue Then
+                    Return Nothing
+                End If
+
+                Try
+                    Using dev As New DiskDevice("\\?\PhysicalDrive" & drv.Value.ToString(), FileAccess.Read)
+                        Dim rawsig(0 To Convert.ToInt32(dev.Geometry.BytesPerSector - 1UI)) As Byte
+                        dev.GetRawDiskStream().Read(rawsig, 0, rawsig.Length)
+                        Return BitConverter.ToUInt32(rawsig, &H1B8)
+                    End Using
+
+                Catch ex As Exception
+                    Trace.WriteLine("Error reading signature from MBR for drive " & drv.Value.ToString() & ": " & ex.ToString())
+
+                End Try
+            End Function
+
         Return _
             deviceProperties.
             ConvertAll(
                 Function(dev) New DiskStateView With {
                     .DeviceProperties = dev,
-                    .DriveNumber = getid(dev)
+                    .DriveNumber = getid(dev),
+                    .RawDiskSignature = getsig(.DriveNumber)
                 })
 
     End Function
@@ -109,7 +129,7 @@ Public Class DiskStateParser
                     .PhysicalDiskState = (Aggregate DiskState In phdiskstates Into FirstOrDefault(DiskState.Key = dev.DeviceNumber)).Value,
                     .DiskState = If(.PhysicalDiskState IsNot Nothing,
                                     (Aggregate DiskState In diskstates
-                                     Into FirstOrDefault(DiskState.Number = UInteger.Parse(.PhysicalDiskState.DeviceId))),
+                                     Into FirstOrDefault(DiskState.Number.HasValue AndAlso DiskState.Number.Value = UInteger.Parse(.PhysicalDiskState.DeviceId))),
                                     Nothing),
                     .DriveNumber = If(.DiskState IsNot Nothing,
                                       .DiskState.Number,

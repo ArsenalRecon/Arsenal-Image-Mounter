@@ -118,9 +118,6 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="lblWriteOverlay.Text" xml:space="preserve">
-    <value>This option mounts the image file as a readable and writable disk device. Modifications are written to a temporary differential file and original image file is not changed. This mode is sometimes also referred to as write-overlay mode or write-copy mode.</value>
-  </data>
-  <data name="lblFakeDiskSig.Text" xml:space="preserve">
-    <value>If you select this option, the driver will report a random disk signature to Windows if the device is mounted in read-only mode and if existing disk signature is zero but master boot record otherwise seems to contain valid data.</value>
+    <value>Mount the disk image as a writeable disk device. Modifications will be written to a temporary differential file and original disk image will not be changed.  (Sometimes referred to as write-overlay or write-copy mode.)</value>
   </data>
 </root>

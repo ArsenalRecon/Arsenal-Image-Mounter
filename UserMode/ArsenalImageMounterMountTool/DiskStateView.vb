@@ -3,6 +3,7 @@
     Public DiskState As PSDiskParser.DiskState
     Public PhysicalDiskState As PSPhysicalDiskParser.PhysicalDiskState
     Public DeviceProperties As ScsiAdapter.DeviceProperties
+    Public RawDiskSignature As UInt32?
     Public DriveNumber As UInteger?
 
     Friend Sub New()
@@ -72,8 +73,10 @@
 
     Public ReadOnly Property Signature As String
         Get
-            If DiskState IsNot Nothing Then
-                Return DiskState.Signature.ToString("X8")
+            If DiskState IsNot Nothing AndAlso DiskState.Signature.HasValue Then
+                Return DiskState.Signature.Value.ToString("X8")
+            ElseIf RawDiskSignature.HasValue Then
+                Return RawDiskSignature.Value.ToString("X8")
             Else
                 Return Nothing
             End If

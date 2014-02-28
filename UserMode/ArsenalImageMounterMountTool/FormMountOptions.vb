@@ -6,7 +6,9 @@ Public Class FormMountOptions
 
     Public Property Flags As DeviceFlags
 
-    Public Property Imagefiles As String()
+    Public Property Imagefile As String
+
+    Public Property SectorSize As UInteger
 
     Protected Overrides Sub OnLoad(e As EventArgs)
         MyBase.OnLoad(e)
@@ -43,6 +45,9 @@ Public Class FormMountOptions
                 Throw New NotSupportedException("Unknown proxy type=" & CUInt(ProxyType))
 
         End Select
+
+        cbSectorSize.Text = SectorSize.ToString()
+
     End Sub
 
     Protected Overrides Sub OnClosing(e As CancelEventArgs)
@@ -58,6 +63,8 @@ Public Class FormMountOptions
             Flags = Flags And Not DeviceFlags.ReadOnly
         End If
 
+        SectorSize = UInteger.Parse(cbSectorSize.Text)
+        
     End Sub
 
     Private Sub rbReadOnly_CheckedChanged(sender As Object, e As EventArgs) Handles rbReadOnly.CheckedChanged
@@ -72,4 +79,5 @@ Public Class FormMountOptions
         Close()
 
     End Sub
+
 End Class

@@ -71,6 +71,8 @@ Module MainModule
             ElseIf arg.StartsWith("/getdevicenumber=", StringComparison.InvariantCultureIgnoreCase) Then
                 Mode = OpMode.GetDeviceNumber
                 DiskPath = arg.Substring("/getdevicenumber=".Length)
+            ElseIf arg.Equals("/cd", StringComparison.InvariantCultureIgnoreCase) Then
+                Flags = Flags Or DeviceFlags.DeviceTypeCD
             ElseIf arg.Equals("/proxy", StringComparison.InvariantCultureIgnoreCase) Then
                 Flags = Flags Or DeviceFlags.TypeProxy
             ElseIf arg.StartsWith("/proxy=", StringComparison.InvariantCultureIgnoreCase) Then

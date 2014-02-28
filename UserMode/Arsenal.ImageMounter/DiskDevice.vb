@@ -241,6 +241,16 @@ Public Class DiskDevice
     End Property
 
     ''' <summary>
+    ''' Returns logical disk geometry. Normally, only the BytesPerSector member
+    ''' contains data of interest.
+    ''' </summary>
+    Public ReadOnly Property Geometry As NativeFileIO.Win32API.DISK_GEOMETRY
+        Get
+            Return NativeFileIO.GetDiskGeometry(SafeFileHandle)
+        End Get
+    End Property
+
+    ''' <summary>
     ''' Locks and dismounts filesystem on a volume. Upon successful return, further access to the device
     ''' can only be done through this device object instance until it is either closed (disposed) or lock is
     ''' released on the underlying handle.

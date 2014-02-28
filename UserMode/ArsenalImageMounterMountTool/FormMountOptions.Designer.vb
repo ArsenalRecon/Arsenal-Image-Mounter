@@ -33,6 +33,8 @@ Partial Class FormMountOptions
         Me.lblFakeDiskSig = New System.Windows.Forms.Label()
         Me.btnOK = New System.Windows.Forms.Button()
         Me.btnCancel = New System.Windows.Forms.Button()
+        Me.Label1 = New System.Windows.Forms.Label()
+        Me.cbSectorSize = New System.Windows.Forms.ComboBox()
         Me.SuspendLayout()
         '
         'rbReadOnly
@@ -53,7 +55,7 @@ Partial Class FormMountOptions
         Me.rbWriteOverlay.Location = New System.Drawing.Point(13, 117)
         Me.rbWriteOverlay.Name = "rbWriteOverlay"
         Me.rbWriteOverlay.Size = New System.Drawing.Size(99, 17)
-        Me.rbWriteOverlay.TabIndex = 0
+        Me.rbWriteOverlay.TabIndex = 4
         Me.rbWriteOverlay.Text = "Write temporary"
         Me.rbWriteOverlay.UseVisualStyleBackColor = True
         '
@@ -64,7 +66,7 @@ Partial Class FormMountOptions
         Me.rbReadWrite.Location = New System.Drawing.Point(13, 187)
         Me.rbReadWrite.Name = "rbReadWrite"
         Me.rbReadWrite.Size = New System.Drawing.Size(86, 17)
-        Me.rbReadWrite.TabIndex = 0
+        Me.rbReadWrite.TabIndex = 6
         Me.rbReadWrite.Text = "Write original"
         Me.rbReadWrite.UseVisualStyleBackColor = True
         '
@@ -75,8 +77,8 @@ Partial Class FormMountOptions
         Me.lblReadOnly.Name = "lblReadOnly"
         Me.lblReadOnly.Size = New System.Drawing.Size(473, 20)
         Me.lblReadOnly.TabIndex = 1
-        Me.lblReadOnly.Text = "This option mounts the image file as a read-only disk device. No write operations" & _
-    " are allowed."
+        Me.lblReadOnly.Text = "Mount the disk image as a read-only disk device.  No write operations will be all" & _
+    "owed."
         '
         'lblWriteOverlay
         '
@@ -84,7 +86,7 @@ Partial Class FormMountOptions
         Me.lblWriteOverlay.Location = New System.Drawing.Point(16, 137)
         Me.lblWriteOverlay.Name = "lblWriteOverlay"
         Me.lblWriteOverlay.Size = New System.Drawing.Size(473, 47)
-        Me.lblWriteOverlay.TabIndex = 1
+        Me.lblWriteOverlay.TabIndex = 5
         Me.lblWriteOverlay.Text = resources.GetString("lblWriteOverlay.Text")
         '
         'lblReadWrite
@@ -93,10 +95,9 @@ Partial Class FormMountOptions
         Me.lblReadWrite.Location = New System.Drawing.Point(16, 207)
         Me.lblReadWrite.Name = "lblReadWrite"
         Me.lblReadWrite.Size = New System.Drawing.Size(473, 35)
-        Me.lblReadWrite.TabIndex = 1
-        Me.lblReadWrite.Text = "This option mounts the image file as a readable and writable disk device. All rea" & _
-    "d and write operations are directed to the original image file. Use this option " & _
-    "to modify an image file."
+        Me.lblReadWrite.TabIndex = 7
+        Me.lblReadWrite.Text = "Mount the disk image as a writeable disk device. Modifications will be written to" & _
+    " the disk image. (Caution - this option modifies the original disk image.)"
         '
         'cbFakeDiskSig
         '
@@ -114,15 +115,17 @@ Partial Class FormMountOptions
         Me.lblFakeDiskSig.Location = New System.Drawing.Point(16, 74)
         Me.lblFakeDiskSig.Name = "lblFakeDiskSig"
         Me.lblFakeDiskSig.Size = New System.Drawing.Size(473, 40)
-        Me.lblFakeDiskSig.TabIndex = 1
-        Me.lblFakeDiskSig.Text = resources.GetString("lblFakeDiskSig.Text")
+        Me.lblFakeDiskSig.TabIndex = 3
+        Me.lblFakeDiskSig.Text = "Report a random disk signature to Windows if the disk image contains a zeroed-out" & _
+    " disk signature.  (Requires read-only mounting and an existing valid master boot" & _
+    " record.)"
         '
         'btnOK
         '
         Me.btnOK.Location = New System.Drawing.Point(267, 248)
         Me.btnOK.Name = "btnOK"
         Me.btnOK.Size = New System.Drawing.Size(108, 33)
-        Me.btnOK.TabIndex = 3
+        Me.btnOK.TabIndex = 10
         Me.btnOK.Text = "OK"
         Me.btnOK.UseVisualStyleBackColor = True
         '
@@ -132,9 +135,26 @@ Partial Class FormMountOptions
         Me.btnCancel.Location = New System.Drawing.Point(381, 248)
         Me.btnCancel.Name = "btnCancel"
         Me.btnCancel.Size = New System.Drawing.Size(108, 33)
-        Me.btnCancel.TabIndex = 3
+        Me.btnCancel.TabIndex = 11
         Me.btnCancel.Text = "Cancel"
         Me.btnCancel.UseVisualStyleBackColor = True
+        '
+        'Label1
+        '
+        Me.Label1.Location = New System.Drawing.Point(19, 248)
+        Me.Label1.Name = "Label1"
+        Me.Label1.Size = New System.Drawing.Size(69, 20)
+        Me.Label1.TabIndex = 8
+        Me.Label1.Text = "Sector size:"
+        '
+        'cbSectorSize
+        '
+        Me.cbSectorSize.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.cbSectorSize.Items.AddRange(New Object() {"512", "1024", "2048", "4096", "8192", "16384", "32768", "65536"})
+        Me.cbSectorSize.Location = New System.Drawing.Point(94, 245)
+        Me.cbSectorSize.Name = "cbSectorSize"
+        Me.cbSectorSize.Size = New System.Drawing.Size(121, 21)
+        Me.cbSectorSize.TabIndex = 9
         '
         'FormMountOptions
         '
@@ -144,6 +164,8 @@ Partial Class FormMountOptions
         Me.CancelButton = Me.btnCancel
         Me.ClientSize = New System.Drawing.Size(501, 293)
         Me.ControlBox = False
+        Me.Controls.Add(Me.cbSectorSize)
+        Me.Controls.Add(Me.Label1)
         Me.Controls.Add(Me.btnCancel)
         Me.Controls.Add(Me.btnOK)
         Me.Controls.Add(Me.cbFakeDiskSig)
@@ -176,4 +198,6 @@ Partial Class FormMountOptions
     Private WithEvents lblFakeDiskSig As System.Windows.Forms.Label
     Private WithEvents btnOK As System.Windows.Forms.Button
     Private WithEvents btnCancel As System.Windows.Forms.Button
+    Friend WithEvents Label1 As System.Windows.Forms.Label
+    Private WithEvents cbSectorSize As System.Windows.Forms.ComboBox
 End Class
