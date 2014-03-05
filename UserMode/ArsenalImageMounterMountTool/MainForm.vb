@@ -497,6 +497,9 @@ Public Class MainForm
         ElseIf sender Is btnMountDiscUtils Then
             ProxyType = DevioServiceFactory.ProxyType.DiscUtils
         ElseIf sender Is btnMountLibEwf Then
+            If Not LibewfVerify.VerifyLibewf(Me) Then
+                Return
+            End If
             ProxyType = DevioServiceFactory.ProxyType.LibEwf
         Else
             Return

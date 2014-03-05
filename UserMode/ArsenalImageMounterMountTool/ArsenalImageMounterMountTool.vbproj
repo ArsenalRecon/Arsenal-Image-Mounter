@@ -117,6 +117,7 @@
     <Compile Include="FormMountOptions.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="LibewfVerify.vb" />
     <Compile Include="MainForm.vb">
       <SubType>Form</SubType>
     </Compile>
