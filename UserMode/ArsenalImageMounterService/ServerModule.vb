@@ -103,7 +103,7 @@ Module ServerModule
                               Environment.NewLine &
                               "Syntax, start TCP/IP service mode, for mounting from other computers:" & Environment.NewLine &
                               asmname & " [/ipaddress=address] /port=tcpport [/mount] [/readonly]" & Environment.NewLine &
-                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf]")
+                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]")
 
             Return
 
@@ -118,6 +118,9 @@ Module ServerModule
 
             Case "libewf"
                 Provider = DevioServiceFactory.GetProviderLibEwf(DeviceName, DiskAccess)
+
+            Case "multipartraw"
+                Provider = DevioServiceFactory.GetProviderMultiPartRaw(DeviceName, DiskAccess)
 
             Case Else
                 Console.WriteLine("Provider names can be DiscUtils or LibEwf.")
@@ -148,12 +151,29 @@ Module ServerModule
         End If
 
         If Mount Then
+            Console.WriteLine("Opening image file and mounting as virtual disk...")
             Service.StartServiceThreadAndMount(New ScsiAdapter, 0)
+            Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
         Else
+            Console.WriteLine("Opening image file...")
             Service.StartServiceThread()
+            Console.WriteLine("Image file opened, waiting for incoming connections. Press Ctrl+C to exit.")
         End If
 
+        AddHandler Console.CancelKeyPress,
+            Sub(sender, e)
+                Console.WriteLine("Stopping service...")
+                Service.Dispose()
+
+                Try
+                    e.Cancel = True
+                Catch
+                End Try
+            End Sub
+
         Service.WaitForServiceThreadExit()
+
+        Console.WriteLine("Service stopped.")
 
     End Sub
 

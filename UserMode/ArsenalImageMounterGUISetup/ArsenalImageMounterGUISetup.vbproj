@@ -132,6 +132,9 @@
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if "$(ConfigurationName)" == "Release" signtool sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://arsenalrecon.com" /ac Z:\Kod\cert\MSCV-GlobalSign.cer /t "http://timestamp.verisign.com/scripts/timestamp.dll" "$(TargetDir)*.exe" "$(TargetDir)*.dll"</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

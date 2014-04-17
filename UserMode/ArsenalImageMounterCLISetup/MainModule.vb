@@ -25,7 +25,7 @@ Module MainModule
 
     End Sub
 
-    Sub Main(args As String())
+    Function Main(args As String()) As Integer
 
         Dim opMode As OpMode = opMode.Status
 
@@ -42,20 +42,18 @@ Module MainModule
         End If
 
         Try
-            Dim rc = SetupOperation(opMode)
-
-            Environment.Exit(rc)
+            Return SetupOperation(opMode)
 
         Catch ex As Exception
             If TypeOf ex Is Win32Exception Then
                 Trace.WriteLine("Win32 error: " & DirectCast(ex, Win32Exception).NativeErrorCode)
             End If
             Trace.WriteLine(ex.ToString())
-            Environment.Exit(-1)
+            Return -1
 
         End Try
 
-    End Sub
+    End Function
 
     Function SetupOperation(opMode As OpMode) As Integer
 

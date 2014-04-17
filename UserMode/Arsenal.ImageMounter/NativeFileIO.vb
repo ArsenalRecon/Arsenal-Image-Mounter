@@ -1641,7 +1641,7 @@ Public Class NativeFileIO
 
         InfPath = Path.GetFullPath(InfPath)
         If Not File.Exists(InfPath) Then
-            Throw New FileNotFoundException(InfPath)
+            Throw New FileNotFoundException("File not found", InfPath)
         End If
 
         Win32API.InstallHinfSection(OwnerWindow,
@@ -1660,7 +1660,7 @@ Public Class NativeFileIO
         ''
         InfPath = Path.GetFullPath(InfPath)
         If Not File.Exists(InfPath) Then
-            Throw New FileNotFoundException(InfPath)
+            Throw New FileNotFoundException("File not found", InfPath)
         End If
 
         Dim ErrorLine As UInt32
@@ -1702,7 +1702,7 @@ Public Class NativeFileIO
         ''
         InfPath = Path.GetFullPath(InfPath)
         If Not File.Exists(InfPath) Then
-            Throw New FileNotFoundException(InfPath)
+            Throw New FileNotFoundException("File not found", InfPath)
         End If
 
         ''
@@ -1947,7 +1947,7 @@ Public Class NativeFileIO
         ''
         InfPath = Path.GetFullPath(InfPath)
         If Not File.Exists(InfPath) Then
-            Throw New FileNotFoundException(InfPath)
+            Throw New FileNotFoundException("File not found", InfPath)
         End If
 
         ''
@@ -1968,7 +1968,7 @@ Public Class NativeFileIO
         ''
         InfPath = Path.GetFullPath(InfPath)
         If Not File.Exists(InfPath) Then
-            Throw New FileNotFoundException(InfPath)
+            Throw New FileNotFoundException("File not found", InfPath)
         End If
 
         Dim destName As New StringBuilder(260)
@@ -1993,7 +1993,7 @@ Public Class NativeFileIO
         ''
         InfPath = Path.GetFullPath(InfPath)
         If Not File.Exists(InfPath) Then
-            Throw New FileNotFoundException(InfPath)
+            Throw New FileNotFoundException("File not found", InfPath)
         End If
 
         Dim errcode = Win32API.DriverPackagePreinstall(InfPath, 1)
@@ -2010,7 +2010,7 @@ Public Class NativeFileIO
         ''
         InfPath = Path.GetFullPath(InfPath)
         If Not File.Exists(InfPath) Then
-            Throw New FileNotFoundException(InfPath)
+            Throw New FileNotFoundException("File not found", InfPath)
         End If
 
         Dim errcode = Win32API.DriverPackageInstall(InfPath, 1, Nothing, NeedReboot)
@@ -2035,7 +2035,7 @@ Public Class NativeFileIO
         ''
         InfPath = Path.GetFullPath(InfPath)
         If Not File.Exists(InfPath) Then
-            Throw New FileNotFoundException(InfPath)
+            Throw New FileNotFoundException("File not found", InfPath)
         End If
 
         Dim errcode = Win32API.DriverPackageUninstall(InfPath, Flags, Nothing, NeedReboot)
