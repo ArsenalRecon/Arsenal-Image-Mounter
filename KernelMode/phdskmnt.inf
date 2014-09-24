@@ -17,7 +17,7 @@ Signature = "$WINDOWS NT$"
 Class = SCSIAdapter
 ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
 Provider = %ARSENALRECON%
-DriverVer = 02/15/2014,1.1.0007.00007
+DriverVer = 09/24/2014,1.3.0009.00009
 CatalogFile = phdskmnt.cat
 
 [SourceDisksFiles.x86]

@@ -99,7 +99,7 @@ Module ServerModule
                               Environment.NewLine &
                               "Syntax, start shared memory service mode, for mounting from other applications:" & Environment.NewLine &
                               asmname & " /name=objectname [/mount] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
-                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf]" & Environment.NewLine &
+                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, start TCP/IP service mode, for mounting from other computers:" & Environment.NewLine &
                               asmname & " [/ipaddress=address] /port=tcpport [/mount] [/readonly]" & Environment.NewLine &

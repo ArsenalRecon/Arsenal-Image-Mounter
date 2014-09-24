@@ -84,21 +84,13 @@ Namespace Server.SpecializedProviders
         Private Shared Function libewf_get_flags_write_resume() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
-        Private Shared Function libewf_set_notify_values(c_libstream As IntPtr, Verbose As Integer) As Integer
-        End Function
-
         <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
-        Private Shared Function libewf_notify_stream_open(<[In](), MarshalAs(UnmanagedType.LPStr)> filename As String, err As IntPtr) As Integer
+        Private Shared Function libewf_notify_stream_open(<[In], MarshalAs(UnmanagedType.LPStr)> filename As String, err As IntPtr) As Integer
         End Function
 
         <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Sub libewf_notify_set_verbose(Verbose As Integer)
         End Sub
-
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
-        Private Shared Function libewf_open(<[In](), MarshalAs(UnmanagedType.LPArray)> filenames As String(), AmountOfFiles As Integer, AccessFlags As Byte) As SafeLibEwfHandle
-        End Function
 
         <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Unicode, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_open_wide(<[In](), MarshalAs(UnmanagedType.LPArray)> filenames As String(), AmountOfFiles As Integer, AccessFlags As Byte) As SafeLibEwfHandle
@@ -168,18 +160,21 @@ Namespace Server.SpecializedProviders
         End Property
 
         Private Shared Function GetMultiSegmentFiles(FirstFile As String) As String()
+
             Dim pathpart = Path.GetDirectoryName(FirstFile)
             Dim filepart = Path.GetFileNameWithoutExtension(FirstFile)
             Dim extension = Path.GetExtension(FirstFile)
-            If extension.StartsWith(".e", StringComparison.InvariantCultureIgnoreCase) AndAlso
-              Integer.TryParse(extension.Substring(2), Nothing) Then
+            If extension.EndsWith("01") Then
 
-                Dim mask As New String("0"c, extension.Length - 2)
+                Dim mask = "00"
 
                 Dim foundfiles As New List(Of String)
-                Dim filenumber = Integer.Parse(extension.Substring(2))
+                Dim filenumber = Integer.Parse(extension.Substring(extension.Length - 2))
                 Do
-                    Dim thisfile = Path.Combine(pathpart, filepart & ".e" & filenumber.ToString(mask))
+                    Dim thisfile =
+                        Path.Combine(pathpart,
+                                     filepart & extension.Remove(extension.Length - 2) & filenumber.ToString(mask))
+
                     If Not File.Exists(thisfile) Then
                         Exit Do
                     End If

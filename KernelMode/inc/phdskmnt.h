@@ -600,6 +600,11 @@ ImScsiSafeIOStream(IN PFILE_OBJECT FileObject,
 		   OUT PVOID Buffer,
 		   IN ULONG Length);
 
+NTSTATUS
+ImScsiGetDiskSize(IN HANDLE FileHandle,
+		  IN OUT PIO_STATUS_BLOCK IoStatus,
+		  IN OUT PLARGE_INTEGER DiskSize);
+
 VOID
 ImScsiLogDbgError(IN PVOID Object,
                   IN UCHAR MajorFunctionCode,

@@ -654,7 +654,7 @@ ImScsiReadDevice(
             *Length,
             &byteoffset);
     else if (pLUExt->ImageFile != NULL)
-	status = ZwReadFile(
+	status = NtReadFile(
             pLUExt->ImageFile,
             NULL,
             NULL,
@@ -725,7 +725,7 @@ ImScsiWriteDevice(
             *Length,
             &byteoffset);
     else if (pLUExt->ImageFile != NULL)
-	status = ZwWriteFile(
+	status = NtWriteFile(
             pLUExt->ImageFile,
             NULL,
             NULL,
@@ -1237,13 +1237,12 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
       // Get the file size of the disk file.
       if (IMSCSI_TYPE(CreateData->Flags) != IMSCSI_TYPE_PROXY)
 	{
-	  FILE_STANDARD_INFORMATION file_standard;
+	  LARGE_INTEGER disk_size;
 
-	  status = ZwQueryInformationFile(file_handle,
-					  &io_status,
-					  &file_standard,
-					  sizeof(FILE_STANDARD_INFORMATION),
-					  FileStandardInformation);
+	  status = ImScsiGetDiskSize(
+	      file_handle,
+	      &io_status,
+	      &disk_size);
 
 	  if (!NT_SUCCESS(status))
 	    {
@@ -1262,10 +1261,10 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
 			      0,
 			      0,
 			      NULL,
-			      L"Error getting FILE_STANDARD_INFORMATION."));
+			      L"Error getting image size."));
 
 	      KdPrint
-		(("PhDskMnt: Error getting FILE_STANDARD_INFORMATION (%#x).\n",
+		(("PhDskMnt: Error getting image size (%#x).\n",
 		  status));
 
 	      return status;
@@ -1282,14 +1281,14 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
 #ifdef _WIN64
 	      if (CreateData->DiskSize.QuadPart == 0)
 		CreateData->DiskSize.QuadPart =
-		  file_standard.EndOfFile.QuadPart -
+		  disk_size.QuadPart -
 		  CreateData->ImageOffset.QuadPart;
 
 	      max_size = CreateData->DiskSize.QuadPart;
 #else
 	      if (CreateData->DiskSize.QuadPart == 0)
 		// Check that file size < 2 GB.
-		if ((file_standard.EndOfFile.QuadPart -
+		if ((disk_size.QuadPart -
 		     CreateData->ImageOffset.QuadPart) & 0xFFFFFFFF80000000)
 		  {
 		    ZwClose(file_handle);
@@ -1301,7 +1300,7 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
 		  }
 		else
 		  CreateData->DiskSize.QuadPart =
-		    file_standard.EndOfFile.QuadPart -
+		    disk_size.QuadPart -
 		    CreateData->ImageOffset.QuadPart;
 
 	      max_size = CreateData->DiskSize.LowPart;
@@ -1404,9 +1403,9 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
 
 	      if (CreateData->DiskSize.QuadPart == 0)
                   CreateData->DiskSize.QuadPart =
-                  file_standard.EndOfFile.QuadPart -
+		  disk_size.QuadPart -
                   CreateData->ImageOffset.QuadPart;
-              else if ((file_standard.EndOfFile.QuadPart <
+	      else if ((disk_size.QuadPart <
                   CreateData->DiskSize.QuadPart +
                   CreateData->ImageOffset.QuadPart) &
                   (!IMSCSI_READONLY(CreateData->Flags)))

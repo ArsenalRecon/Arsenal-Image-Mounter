@@ -61,8 +61,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 1,0,1,07
-PRODUCTVERSION 1,0,1,07
+FILEVERSION 1,0,3,09
+PRODUCTVERSION 1,0,3,09
 FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
 #ifndef DEBUG
   FILEFLAGS    0
@@ -79,12 +79,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Arsenal Recon\0"
             VALUE "FileDescription", "Arsenal Image Mounter\0"
-            VALUE "FileVersion", "1.0.1.07\0"
+            VALUE "FileVersion", "1.0.3.09\0"
             VALUE "InternalName", "phdskmnt\0"
             VALUE "LegalCopyright", "Copyright: (c) Arsenal Recon. All Rights Reserved.\0"
             VALUE "OriginalFilename", "phdskmnt.sys\0"
             VALUE "ProductName", "phdskmnt\0"
-            VALUE "ProductVersion", "1.0.1.07\0"
+            VALUE "ProductVersion", "1.0.3.09\0"
         END
     END
     BLOCK "VarFileInfo"

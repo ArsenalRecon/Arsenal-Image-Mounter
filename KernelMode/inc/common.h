@@ -37,6 +37,12 @@
 /// Check if flags specifies sparse
 #define IMSCSI_SPARSE_FILE(x)           ((ULONG)(x) & 0x00000004)
 
+/// Swaps each byte pair in image file (not currently supported).
+//#define IMSCSI_OPTION_BYTE_SWAP         0x00000008
+
+/// Check if flags specifies byte swapping (not currently supported).
+//#define IMSCSI_BYTE_SWAP(x)             ((ULONG)(x) & 0x00000008)
+
 /// Device type is virtual harddisk partition
 #define IMSCSI_DEVICE_TYPE_HD           0x00000010
 /// Device type is virtual floppy drive

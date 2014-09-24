@@ -252,7 +252,7 @@ ScsiOpMediumRemoval(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-ob
     UNREFERENCED_PARAMETER(pHBAExt);
     UNREFERENCED_PARAMETER(device_extension);
 
-    KdPrint(("ImDisk: ScsiOMediumRemoval for device %i:%i:%i.\n",
+    KdPrint(("ImScsi: ScsiOpMediumRemoval for device %i:%i:%i.\n",
         (int)device_extension->DeviceNumber.PathId,
         (int)device_extension->DeviceNumber.TargetId,
         (int)device_extension->DeviceNumber.Lun));
@@ -279,7 +279,7 @@ ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object e
 
     UNREFERENCED_PARAMETER(pHBAExt);
 
-    KdPrint(("ImDisk: ScsiOpReadTOC for device %i:%i:%i.\n",
+    KdPrint(("ImScsi: ScsiOpReadTOC for device %i:%i:%i.\n",
         (int)device_extension->DeviceNumber.PathId,
         (int)device_extension->DeviceNumber.TargetId,
         (int)device_extension->DeviceNumber.Lun));

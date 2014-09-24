@@ -1003,6 +1003,100 @@ MpHwFreeAdapterResources(__in pHW_HBA_EXT pHBAExt)
 }                                                     // End MpHwFreeAdapterResources().
 #endif
 
+NTSTATUS
+ImScsiGetDiskSize(
+    IN HANDLE FileHandle,
+    IN OUT PIO_STATUS_BLOCK IoStatus,
+    IN OUT PLARGE_INTEGER DiskSize)
+{
+    NTSTATUS status;
+
+    {
+	FILE_STANDARD_INFORMATION file_standard;
+
+	status = ZwQueryInformationFile(FileHandle,
+	    IoStatus,
+	    &file_standard,
+	    sizeof(FILE_STANDARD_INFORMATION),
+	    FileStandardInformation);
+
+	if (NT_SUCCESS(status))
+	{
+	    *DiskSize = file_standard.EndOfFile;
+	    return status;
+	}
+
+	KdPrint(("ImScsi: FileStandardInformation not supported for "
+	    "target device. %#x\n", status));
+    }
+
+    // Retry with IOCTL_DISK_GET_LENGTH_INFO instead
+    {
+	GET_LENGTH_INFORMATION part_info = { 0 };
+
+	status =
+	    ZwDeviceIoControlFile(FileHandle,
+	    NULL,
+	    NULL,
+	    NULL,
+	    IoStatus,
+	    IOCTL_DISK_GET_LENGTH_INFO,
+	    NULL,
+	    0,
+	    &part_info,
+	    sizeof(part_info));
+
+	if (status == STATUS_PENDING)
+	{
+	    ZwWaitForSingleObject(FileHandle, FALSE, NULL);
+	    status = IoStatus->Status;
+	}
+
+	if (NT_SUCCESS(status))
+	{
+	    *DiskSize = part_info.Length;
+	    return status;
+	}
+
+	KdPrint(("ImScsi: IOCTL_DISK_GET_LENGTH_INFO not supported "
+	    "for target device. %#x\n", status));
+    }
+
+    // Retry with IOCTL_DISK_GET_PARTITION_INFO instead
+    {
+	PARTITION_INFORMATION part_info = { 0 };
+
+	status =
+	    ZwDeviceIoControlFile(FileHandle,
+	    NULL,
+	    NULL,
+	    NULL,
+	    IoStatus,
+	    IOCTL_DISK_GET_PARTITION_INFO,
+	    NULL,
+	    0,
+	    &part_info,
+	    sizeof(part_info));
+
+	if (status == STATUS_PENDING)
+	{
+	    ZwWaitForSingleObject(FileHandle, FALSE, NULL);
+	    status = IoStatus->Status;
+	}
+
+	if (NT_SUCCESS(status))
+	{
+	    *DiskSize = part_info.PartitionLength;
+	    return status;
+	}
+
+	KdPrint(("ImScsi: IOCTL_DISK_GET_PARTITION_INFO not supported "
+	    "for target device. %#x\n", status));
+    }
+
+    return status;
+}
+
 VOID
 ImScsiLogDbgError(IN PVOID Object,
                   IN UCHAR MajorFunctionCode,
@@ -1032,7 +1126,7 @@ ImScsiLogDbgError(IN PVOID Object,
 
   if (packet_size > ERROR_LOG_MAXIMUM_SIZE)
     {
-      KdPrint(("ImDisk: Warning: Too large error log packet.\n"));
+      KdPrint(("ImScsi: Warning: Too large error log packet.\n"));
       return;
     }
 
@@ -1042,7 +1136,7 @@ ImScsiLogDbgError(IN PVOID Object,
 
   if (error_log_packet == NULL)
     {
-      KdPrint(("ImDisk: Warning: IoAllocateErrorLogEntry() returned NULL.\n"));
+      KdPrint(("ImScsi: Warning: IoAllocateErrorLogEntry() returned NULL.\n"));
       return;
     }
 
@@ -1176,138 +1270,138 @@ ImScsiSafeReadFile(IN HANDLE FileHandle,
 
 NTSTATUS
 ImScsiSafeIOStream(IN PFILE_OBJECT FileObject,
-		   IN UCHAR MajorFunction,
-		   IN OUT PIO_STATUS_BLOCK IoStatusBlock,
-		   IN PKEVENT CancelEvent,
-		   OUT PVOID Buffer,
-		   IN ULONG Length)
+IN UCHAR MajorFunction,
+IN OUT PIO_STATUS_BLOCK IoStatusBlock,
+IN PKEVENT CancelEvent,
+OUT PVOID Buffer,
+IN ULONG Length)
 {
-  NTSTATUS status;
-  ULONG length_done = 0;
-  KEVENT io_complete_event;
-  PIO_STACK_LOCATION io_stack;
-  LARGE_INTEGER offset = { 0 };
-  PVOID wait_object[] = {
-    &io_complete_event,
-    CancelEvent
-  };
-  ULONG number_of_wait_objects = CancelEvent != NULL ? 2 : 1;
+    NTSTATUS status;
+    ULONG length_done = 0;
+    KEVENT io_complete_event;
+    PIO_STACK_LOCATION io_stack;
+    LARGE_INTEGER offset = { 0 };
+    PVOID wait_object[] = {
+	&io_complete_event,
+	CancelEvent
+    };
+    ULONG number_of_wait_objects = CancelEvent != NULL ? 2 : 1;
 
-  //PAGED_CODE();
+    //PAGED_CODE();
 
-  KdPrint2(("ImScsiSafeIOStream: FileObject=%#x, MajorFunction=%#x, "
-	    "IoStatusBlock=%#x, Buffer=%#x, Length=%#x.\n",
-	    FileObject, MajorFunction, IoStatusBlock, Buffer, Length));
+    KdPrint2(("ImScsiSafeIOStream: FileObject=%#x, MajorFunction=%#x, "
+	"IoStatusBlock=%#x, Buffer=%#x, Length=%#x.\n",
+	FileObject, MajorFunction, IoStatusBlock, Buffer, Length));
 
-  ASSERT(FileObject != NULL);
-  ASSERT(IoStatusBlock != NULL);
-  ASSERT(Buffer != NULL);
+    ASSERT(FileObject != NULL);
+    ASSERT(IoStatusBlock != NULL);
+    ASSERT(Buffer != NULL);
 
-  KeInitializeEvent(&io_complete_event,
-		    NotificationEvent,
-		    FALSE);
+    KeInitializeEvent(&io_complete_event,
+	NotificationEvent,
+	FALSE);
 
-  while (length_done < Length)
+    while (length_done < Length)
     {
-      ULONG RequestLength = Length - length_done;
+	ULONG RequestLength = Length - length_done;
 
-      do
+	do
 	{
-	  PIRP irp;
+	    PIRP irp;
+	    PDEVICE_OBJECT device_object = IoGetRelatedDeviceObject(FileObject);
 
-	  KdPrint2(("ImScsiSafeIOStream: Building IRP...\n"));
+	    KdPrint2(("ImScsiSafeIOStream: Building IRP...\n"));
 
-	  irp = IoBuildSynchronousFsdRequest(MajorFunction,
-					     FileObject->DeviceObject,
-					     (PUCHAR) Buffer + length_done,
-					     RequestLength,
-					     &offset,
-					     &io_complete_event,
-					     IoStatusBlock);
+	    irp = IoBuildSynchronousFsdRequest(
+		MajorFunction,
+		device_object,
+		(PUCHAR)Buffer + length_done,
+		RequestLength,
+		&offset,
+		&io_complete_event,
+		IoStatusBlock);
 
-	  if (irp == NULL)
+	    if (irp == NULL)
 	    {
-	      KdPrint(("ImScsiSafeIOStream: Error building IRP.\n"));
+		KdPrint(("ImScsiSafeIOStream: Error building IRP.\n"));
 
-	      IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
-	      IoStatusBlock->Information = length_done;
-	      return IoStatusBlock->Status;
+		IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
+		IoStatusBlock->Information = length_done;
+		return IoStatusBlock->Status;
 	    }
 
-	  KdPrint2(("ImScsiSafeIOStream: Built IRP=%#x.\n", irp));
+	    KdPrint2(("ImScsiSafeIOStream: Built IRP=%#x.\n", irp));
 
-	  io_stack = IoGetNextIrpStackLocation(irp);
-	  io_stack->FileObject = FileObject;
-	  io_stack->DeviceObject = FileObject->DeviceObject;
+	    io_stack = IoGetNextIrpStackLocation(irp);
+	    io_stack->FileObject = FileObject;
 
-	  KdPrint2(("ImScsiSafeIOStream: MajorFunction=%#x, Length=%#x\n",
-		    io_stack->MajorFunction,
-		    io_stack->Parameters.Read.Length));
+	    KdPrint2(("ImScsiSafeIOStream: MajorFunction=%#x, Length=%#x\n",
+		io_stack->MajorFunction,
+		io_stack->Parameters.Read.Length));
 
-	  KeResetEvent(&io_complete_event);
+	    KeResetEvent(&io_complete_event);
 
-	  status = IoCallDriver(io_stack->FileObject->DeviceObject, irp);
+	    status = IoCallDriver(device_object, irp);
 
-	  if (status == STATUS_PENDING)
+	    if (status == STATUS_PENDING)
 	    {
-	      status = KeWaitForMultipleObjects(number_of_wait_objects,
-						wait_object,
-						WaitAny,
-						Executive,
-						KernelMode,
-						FALSE,
-						NULL,
-						NULL);
+		status = KeWaitForMultipleObjects(number_of_wait_objects,
+		    wait_object,
+		    WaitAny,
+		    Executive,
+		    KernelMode,
+		    FALSE,
+		    NULL,
+		    NULL);
 
-	      if (KeReadStateEvent(&io_complete_event) == 0)
+		if (KeReadStateEvent(&io_complete_event) == 0)
 		{
-		  IoCancelIrp(irp);
-		  KeWaitForSingleObject(&io_complete_event,
-					Executive,
-					KernelMode,
-					FALSE,
-					NULL);
+		    IoCancelIrp(irp);
+		    KeWaitForSingleObject(&io_complete_event,
+			Executive,
+			KernelMode,
+			FALSE,
+			NULL);
 		}
 	    }
-	  else if (!NT_SUCCESS(status))
-	    break;
+	    else if (!NT_SUCCESS(status))
+		break;
 
-	  status = IoStatusBlock->Status;
+	    status = IoStatusBlock->Status;
 
-	  KdPrint2(("ImScsiSafeIOStream: IRP %#x completed. Status=0x%X.\n",
-		    irp, IoStatusBlock->Status));
+	    KdPrint2(("ImScsiSafeIOStream: IRP %#x completed. Status=0x%X.\n",
+		irp, IoStatusBlock->Status));
 
-	  RequestLength >>= 1;
-	}
-      while ((status == STATUS_INVALID_BUFFER_SIZE) |
-	     (status == STATUS_INVALID_PARAMETER));
+	    RequestLength >>= 1;
+	} while ((status == STATUS_INVALID_BUFFER_SIZE) |
+	    (status == STATUS_INVALID_PARAMETER));
 
-      if (!NT_SUCCESS(status))
+	if (!NT_SUCCESS(status))
 	{
-	  KdPrint2(("ImScsiSafeIOStream: I/O failed. Status=0x%X.\n", status));
+	    KdPrint2(("ImScsiSafeIOStream: I/O failed. Status=0x%X.\n", status));
 
-	  IoStatusBlock->Status = status;
-	  IoStatusBlock->Information = 0;
-	  return IoStatusBlock->Status;
+	    IoStatusBlock->Status = status;
+	    IoStatusBlock->Information = 0;
+	    return IoStatusBlock->Status;
 	}
 
-      KdPrint2(("ImScsiSafeIOStream: I/O done. Status=0x%X. Length=0x%X\n",
-		status, IoStatusBlock->Information));
+	KdPrint2(("ImScsiSafeIOStream: I/O done. Status=0x%X. Length=0x%X\n",
+	    status, IoStatusBlock->Information));
 
-      if (IoStatusBlock->Information == 0)
+	if (IoStatusBlock->Information == 0)
 	{
-	  IoStatusBlock->Status = STATUS_CONNECTION_RESET;
-	  IoStatusBlock->Information = 0;
-	  return IoStatusBlock->Status;
+	    IoStatusBlock->Status = STATUS_CONNECTION_RESET;
+	    IoStatusBlock->Information = 0;
+	    return IoStatusBlock->Status;
 	}
 
-      length_done += (ULONG) IoStatusBlock->Information;
+	length_done += (ULONG)IoStatusBlock->Information;
     }
 
-  KdPrint2(("ImScsiSafeIOStream: I/O complete.\n"));
+    KdPrint2(("ImScsiSafeIOStream: I/O complete.\n"));
 
-  IoStatusBlock->Status = STATUS_SUCCESS;
-  IoStatusBlock->Information = length_done;
-  return IoStatusBlock->Status;
+    IoStatusBlock->Status = STATUS_SUCCESS;
+    IoStatusBlock->Information = length_done;
+    return IoStatusBlock->Status;
 }
 
