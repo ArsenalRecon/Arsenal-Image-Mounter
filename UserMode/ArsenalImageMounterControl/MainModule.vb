@@ -3,7 +3,7 @@
 ''''' Main module for control application.
 ''''' 
 ''''' 
-''''' Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code is available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -96,6 +96,8 @@ Module MainModule
                 Flags = Flags Or DeviceFlags.SparseFile
             ElseIf arg.Equals("/readonly", StringComparison.InvariantCultureIgnoreCase) Then
                 Flags = Flags Or DeviceFlags.ReadOnly
+            ElseIf arg.Equals("/removable", StringComparison.InvariantCultureIgnoreCase) Then
+                Flags = Flags Or DeviceFlags.Removable
             ElseIf arg.Equals("/add", StringComparison.InvariantCultureIgnoreCase) Then
                 Mode = OpMode.Add
             ElseIf arg.Equals("/rescan", StringComparison.InvariantCultureIgnoreCase) Then
@@ -127,7 +129,7 @@ Module MainModule
                               asmname & " /add|/rescan|/remove|/query|/list [/trace] " & Environment.NewLine &
                               "    [/device=nnnnnn] [/filename=path] [/disksize=nnn] [/offset=nnn] " & Environment.NewLine &
                               "    [/sectorsize=nnn] [/getdevicenumber=path] [/proxy=shm] [/vm] [/sparse]" & Environment.NewLine &
-                              "    [/readonly]")
+                              "    [/readonly] [/removable]")
             Return
         End If
 

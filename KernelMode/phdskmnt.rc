@@ -12,6 +12,8 @@
 #undef APSTUDIO_HIDDEN_SYMBOLS
 #include "ntverp.h"
 
+#include "phdskmntver.h"
+
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -61,8 +63,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 1,0,3,09
-PRODUCTVERSION 1,0,3,09
+FILEVERSION PHDSKMNT_RC_VERSION_FLD
+PRODUCTVERSION PHDSKMNT_RC_VERSION_FLD
 FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
 #ifndef DEBUG
   FILEFLAGS    0
@@ -79,12 +81,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Arsenal Recon\0"
             VALUE "FileDescription", "Arsenal Image Mounter\0"
-            VALUE "FileVersion", "1.0.3.09\0"
+	    VALUE "FileVersion", PHDSKMNT_RC_VERSION_STR "\0"
             VALUE "InternalName", "phdskmnt\0"
             VALUE "LegalCopyright", "Copyright: (c) Arsenal Recon. All Rights Reserved.\0"
             VALUE "OriginalFilename", "phdskmnt.sys\0"
             VALUE "ProductName", "phdskmnt\0"
-            VALUE "ProductVersion", "1.0.3.09\0"
+	    VALUE "ProductVersion", PHDSKMNT_RC_VERSION_STR "\0"
         END
     END
     BLOCK "VarFileInfo"

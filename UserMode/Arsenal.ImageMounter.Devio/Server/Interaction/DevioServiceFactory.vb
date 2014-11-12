@@ -2,7 +2,7 @@
 ''''' Support routines for creating provider and service instances given a known
 ''''' proxy provider.
 ''''' 
-''''' Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code is available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -33,6 +33,38 @@ Namespace Server.Interaction
             MultiPartRaw
 
         End Enum
+
+        ''' <summary>
+        ''' Virtual disk access modes. A list of supported modes for a particular ProxyType
+        ''' is obtained by calling GetSupportedVirtualDiskAccess().
+        ''' </summary>
+        <Flags>
+        Public Enum VirtualDiskAccess
+
+            [ReadOnly] = 1
+
+            ReadWriteOriginal = 3
+
+            ReadWriteOverlay = 7
+
+        End Enum
+
+        Private Shared SupportedVirtualDiskAccess As New Dictionary(Of ProxyType, ReadOnlyCollection(Of VirtualDiskAccess)) From
+            {
+                {ProxyType.None,
+                 Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
+                                   VirtualDiskAccess.ReadWriteOriginal})},
+                {ProxyType.MultiPartRaw,
+                 Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
+                                   VirtualDiskAccess.ReadWriteOriginal})},
+                {ProxyType.DiscUtils,
+                 Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
+                                   VirtualDiskAccess.ReadWriteOriginal,
+                                   VirtualDiskAccess.ReadWriteOverlay})},
+                {ProxyType.LibEwf,
+                 Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
+                                   VirtualDiskAccess.ReadWriteOverlay})}
+            }
 
         Private Sub New()
 
@@ -66,6 +98,51 @@ Namespace Server.Interaction
             Dim Service = GetService(Imagefile, DiskAccess, Proxy)
 
             Service.StartServiceThreadAndMount(Adapter, Flags)
+
+            Return Service
+
+        End Function
+
+        Public Shared Function GetSupportedVirtualDiskAccess(Proxy As ProxyType) As ReadOnlyCollection(Of VirtualDiskAccess)
+
+            GetSupportedVirtualDiskAccess = Nothing
+            If Not SupportedVirtualDiskAccess.TryGetValue(Proxy, GetSupportedVirtualDiskAccess) Then
+                Throw New ArgumentException("Proxy type not supported: " & Proxy.ToString(), "Proxy")
+            End If
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType) As DevioServiceBase
+
+            Dim Service As DevioServiceBase
+
+            Select Case Proxy
+
+                Case ProxyType.MultiPartRaw
+                    Service = New DevioShmService(GetProviderMultiPartRaw(Imagefile, DiskAccess), OwnsProvider:=True)
+
+                Case ProxyType.DiscUtils
+                    Service = New DevioShmService(GetProviderDiscUtils(Imagefile, DiskAccess), OwnsProvider:=True)
+
+                Case ProxyType.LibEwf
+                    Service = New DevioShmService(GetProviderLibEwf(Imagefile, DiskAccess), OwnsProvider:=True)
+
+                Case ProxyType.None
+                    Service = New DevioNoneService(Imagefile, GetDirectFileAccessFlags(DiskAccess))
+
+                Case Else
+                    Throw New NotSupportedException("Proxy " & Proxy.ToString() & " not supported.")
+
+            End Select
+
+            Service.Description = "Image file " & Imagefile
 
             Return Service
 
@@ -107,6 +184,13 @@ Namespace Server.Interaction
 
         End Function
 
+        Private Shared Function GetDirectFileAccessFlags(DiskAccess As VirtualDiskAccess) As FileAccess
+            If (DiskAccess And Not FileAccess.ReadWrite) <> 0 Then
+                Throw New ArgumentException("Unsupported VirtualDiskAccess flags for direct file access: " & DiskAccess.ToString(), "DiskAccess")
+            End If
+            Return CType(DiskAccess, FileAccess)
+        End Function
+
         ''' <summary>
         ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using DiscUtils library.
@@ -115,54 +199,136 @@ Namespace Server.Interaction
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         Public Shared Function GetProviderDiscUtils(Imagefile As String, DiskAccess As FileAccess) As IDevioProvider
 
+            Dim VirtualDiskAccess As VirtualDiskAccess
+
+            Select Case DiskAccess
+                Case FileAccess.Read
+                    VirtualDiskAccess = DevioServiceFactory.VirtualDiskAccess.ReadOnly
+
+                Case FileAccess.ReadWrite
+                    VirtualDiskAccess = DevioServiceFactory.VirtualDiskAccess.ReadWriteOriginal
+
+                Case Else
+                    Throw New ArgumentException("Unsupported DiskAccess for DiscUtils: " & DiskAccess.ToString(), "DiskAccess")
+
+            End Select
+
+            Return GetProviderDiscUtils(Imagefile, VirtualDiskAccess)
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file using DiscUtils library.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        Public Shared Function GetProviderDiscUtils(Imagefile As String, DiskAccess As VirtualDiskAccess) As IDevioProvider
+
+            Dim FileAccess As FileAccess
+
+            Select Case DiskAccess
+                Case VirtualDiskAccess.ReadOnly
+                    FileAccess = FileAccess.Read
+
+                Case VirtualDiskAccess.ReadWriteOriginal
+                    FileAccess = FileAccess.ReadWrite
+
+                Case VirtualDiskAccess.ReadWriteOverlay
+                    FileAccess = FileAccess.Read
+
+                Case Else
+                    Throw New ArgumentException("Unsupported DiskAccess for DiscUtils: " & DiskAccess.ToString(), "DiskAccess")
+
+            End Select
+
             Trace.WriteLine("Opening image " & Imagefile)
 
-            Dim Device = VirtualDisk.OpenDisk(Imagefile, DiskAccess)
+            Dim Disk As VirtualDisk = VirtualDisk.OpenDisk(Imagefile, FileAccess)
 
-            If Device Is Nothing Then
-                Dim fs As New FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete)
+            If Disk Is Nothing Then
+                Dim fs As New FileStream(Imagefile, FileMode.Open, FileAccess, FileShare.Read Or FileShare.Delete)
                 Try
-                    Device = New Dmg.Disk(fs, Ownership.Dispose)
+                    Disk = New Dmg.Disk(fs, Ownership.Dispose)
                 Catch
                     fs.Dispose()
                 End Try
             End If
 
-            If Device Is Nothing Then
+            If Disk Is Nothing Then
                 Trace.WriteLine("Image not recognized by DiscUtils." & Environment.NewLine &
                                   Environment.NewLine &
-                                  "Formats currently supported: " & String.Join(", ", VirtualDisk.SupportedDiskTypes.ToArray()),
+                                  "Formats currently supported: " & String.Join(", ", VirtualDisk.SupportedDiskTypes),
                                   "Error")
                 Return Nothing
             End If
-            Trace.WriteLine("Image type class: " & Device.GetType().ToString())
+            Trace.WriteLine("Image type class: " & Disk.GetType().ToString())
 
-            If Device.IsPartitioned Then
-                Trace.WriteLine("Partition table class: " & Device.Partitions.GetType().ToString())
-            End If
+            Dim DisposableObjects As New List(Of IDisposable)
 
-            Trace.WriteLine("Image virtual size is " & Device.Capacity & " bytes")
+            DisposableObjects.Add(Disk)
 
-            If Device.Geometry Is Nothing Then
-                Trace.WriteLine("Image sector size is unknown")
-            Else
-                Trace.WriteLine("Image sector size is " & Device.Geometry.BytesPerSector & " bytes")
-            End If
+            Try
 
-            Dim DiskStream = Device.Content
-            Trace.WriteLine("Used size is " & DiskStream.Length & " bytes")
+                If Disk.IsPartitioned Then
+                    Trace.WriteLine("Partition table class: " & Disk.Partitions.GetType().ToString())
+                End If
 
-            If DiskStream.CanWrite Then
-                Trace.WriteLine("Read/write mode.")
-            Else
-                Trace.WriteLine("Read-only mode.")
-            End If
+                Trace.WriteLine("Image virtual size is " & Disk.Capacity & " bytes")
 
-            Dim provider As New DevioProviderFromStream(DiskStream, ownsStream:=True)
+                If Disk.Geometry Is Nothing Then
+                    Trace.WriteLine("Image sector size is unknown")
+                Else
+                    Trace.WriteLine("Image sector size is " & Disk.Geometry.BytesPerSector & " bytes")
+                End If
 
-            AddHandler provider.Disposed, Sub() Device.Dispose()
+                If DiskAccess = VirtualDiskAccess.ReadWriteOverlay Then
+                    Dim DifferencingPath =
+                        Path.Combine(Path.GetDirectoryName(Imagefile),
+                                     Path.GetFileNameWithoutExtension(Imagefile) & "_aimdiff" & Path.GetExtension(Imagefile))
 
-            Return provider
+                    Trace.WriteLine("Using temporary overlay file '" & DifferencingPath & "'")
+
+                    If File.Exists(DifferencingPath) Then
+                        File.Delete(DifferencingPath)
+                    End If
+
+                    Disk = Disk.CreateDifferencingDisk(DifferencingPath)
+                    DisposableObjects.Add(Disk)
+                End If
+
+                Dim DiskStream = Disk.Content
+                Trace.WriteLine("Used size is " & DiskStream.Length & " bytes")
+
+                If DiskStream.CanWrite Then
+                    Trace.WriteLine("Read/write mode.")
+                Else
+                    Trace.WriteLine("Read-only mode.")
+                End If
+
+                Dim provider As New DevioProviderFromStream(DiskStream, ownsStream:=True)
+
+                AddHandler provider.Disposed, Sub() DisposableObjects.ForEach(Sub(obj) obj.Dispose())
+
+                Return provider
+
+            Catch
+                DisposableObjects.ForEach(Sub(obj) obj.Dispose())
+                Throw
+
+            End Try
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified set of multi-part raw image files.
+        ''' </summary>
+        ''' <param name="Imagefile">First part image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        Public Shared Function GetProviderMultiPartRaw(Imagefile As String, DiskAccess As VirtualDiskAccess) As IDevioProvider
+
+            Return GetProviderMultiPartRaw(Imagefile, GetDirectFileAccessFlags(DiskAccess))
 
         End Function
 
@@ -177,6 +343,32 @@ Namespace Server.Interaction
             Dim DiskStream As New MultiPartFileStream(Imagefile, DiskAccess)
 
             Return New DevioProviderFromStream(DiskStream, ownsStream:=True)
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file using libewf library.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        Public Shared Function GetProviderLibEwf(Imagefile As String, DiskAccess As VirtualDiskAccess) As IDevioProvider
+
+            Dim FileAccess As FileAccess
+
+            Select Case DiskAccess
+                Case VirtualDiskAccess.ReadOnly
+                    FileAccess = FileAccess.Read
+
+                Case VirtualDiskAccess.ReadWriteOverlay
+                    FileAccess = FileAccess.ReadWrite
+
+                Case Else
+                    Throw New ArgumentException("Unsupported VirtualDiskAccess for libewf: " & DiskAccess.ToString(), "DiskAccess")
+
+            End Select
+
+            Return GetProviderLibEwf(Imagefile, FileAccess)
 
         End Function
 

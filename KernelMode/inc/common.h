@@ -177,6 +177,17 @@ typedef struct {
 } SRB_IMSCSI_REMOVE_DEVICE, *PSRB_IMSCSI_REMOVE_DEVICE;
 
 typedef struct {
+    /// SRB_IO_CONTROL header
+    SRB_IO_CONTROL  SrbIoControl;
+
+    // API compatibility version is returned in SrbIoControl.ReturnCode.
+    // SubVersion contains, in newer versions, a revision version that
+    // applications can check to see if latest version is loaded.
+    ULONG           SubVersion;
+
+} SRB_IMSCSI_QUERY_VERSION, *PSRB_IMSCSI_QUERY_VERSION;
+
+typedef struct {
   SRB_IO_CONTROL        sic;
 } SRB_IMSCSI_CHECK, *PSRB_IMSCSI_CHECK;
 

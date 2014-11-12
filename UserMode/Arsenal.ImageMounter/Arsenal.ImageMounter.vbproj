@@ -89,18 +89,23 @@
     <Import Include="System.Threading" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.vb">
+      <Link>CommonAssemblyInfo.vb</Link>
+    </Compile>
+    <Compile Include="IO\CachedIniFile.vb" />
     <Compile Include="DriverSetup.vb" />
-    <Compile Include="FieldAssigner.vb" />
+    <Compile Include="PSDisk\FieldAssigner.vb" />
     <Compile Include="Flags.vb" />
     <Compile Include="API.vb" />
-    <Compile Include="PSDiskAPI.vb" />
-    <Compile Include="PSDiskParser.vb" />
-    <Compile Include="PSPhysicalDiskParser.vb" />
+    <Compile Include="IO\NullSafeDictionary.vb" />
+    <Compile Include="PSDisk\PSDiskAPI.vb" />
+    <Compile Include="PSDisk\PSDiskParser.vb" />
+    <Compile Include="PSDisk\PSPhysicalDiskParser.vb" />
     <Compile Include="ScsiAdapter.vb" />
     <Compile Include="DiskStream.vb" />
     <Compile Include="DiskDevice.vb" />
     <Compile Include="DeviceObject.vb" />
-    <Compile Include="NativeFileIO.vb" />
+    <Compile Include="IO\NativeFileIO.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>

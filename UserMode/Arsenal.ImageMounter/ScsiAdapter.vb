@@ -1,8 +1,7 @@
-﻿
-''''' ScsiAdapter.vb
+﻿''''' ScsiAdapter.vb
 ''''' Class for controlling Arsenal Image Mounter Devices.
 ''''' 
-''''' Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code is available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -11,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports Arsenal.ImageMounter.IO
 
 
 ''' <summary>
@@ -314,45 +314,52 @@ Public Class ScsiAdapter
 
         While Not GetDeviceList().Contains(DeviceNumber)
             Trace.WriteLine("Waiting for new device " & DeviceNumber.ToString("X6") & " to be registered by driver...")
-            Thread.Sleep(500)
+            Thread.Sleep(2500)
         End While
 
         Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
         Dim DiskDevice As DiskDevice
 
+        Dim waittime = TimeSpan.FromMilliseconds(500)
         Do
 
-            Thread.Sleep(500)
+            Thread.Sleep(waittime)
 
             Try
                 DiskDevice = New DiskDevice(ScsiAddress, FileAccess.Read)
                 Exit Do
 
-            Catch ex As Exception
+            Catch ex As DriveNotFoundException
                 Trace.WriteLine("Error opening device: " & ex.ToString())
-                Thread.Sleep(500)
+                waittime += TimeSpan.FromMilliseconds(500)
 
             End Try
 
             Trace.WriteLine("Not ready, rescanning SCSI adapter...")
-            API.RescanScsiAdapter()
+
+            RescanBus()
 
         Loop
 
         Using DiskDevice
 
-            '' Wait at most 20 x 500 msec for device to get initialized by driver
-            For i = 1 To 20
+            If DiskDevice.DiskSize = 0 Then
 
-                Thread.Sleep(500)
-                Trace.WriteLine("Updating disk properties...")
-                DiskDevice.UpdateProperties()
+                '' Wait at most 20 x 500 msec for device to get initialized by driver
+                For i = 1 To 20
 
-                If DiskDevice.DiskSize <> 0 Then
-                    Exit For
-                End If
+                    Thread.Sleep(500 * i)
 
-            Next
+                    If DiskDevice.DiskSize <> 0 Then
+                        Exit For
+                    End If
+
+                    Trace.WriteLine("Updating disk properties...")
+                    DiskDevice.UpdateProperties()
+
+                Next
+
+            End If
 
         End Using
 
@@ -540,6 +547,59 @@ Public Class ScsiAdapter
         Return False
 
     End Function
+
+    ''' <summary>
+    ''' Retrieves the sub version of the driver. This is not the same as the API compatibility version checked for by
+    ''' CheckDriverVersion method. The version record returned by this GetDriverSubVersion method can be used to find
+    ''' out whether the latest version of the driver is loaded, for example to show a dialog box asking user whether to
+    ''' upgrade the driver. If driver does not support this version query, this method returns Nothing/null.
+    ''' </summary>
+    Public Function GetDriverSubVersion() As Version
+
+        Dim ReturnCode As Int32
+        Dim Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                                  NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION,
+                                                                  0,
+                                                                  Sub(writer) writer.Write(New Byte(0 To 3) {}),
+                                                                  ReturnCode)
+
+        Trace.WriteLine("Library version: " & CompatibleDriverVersion.ToString("X4"))
+        Trace.WriteLine("Driver version: " & ReturnCode.ToString("X4"))
+
+        If ReturnCode <> CompatibleDriverVersion Then
+            Return Nothing
+        End If
+
+        Try
+            Dim build = Response.ReadByte()
+            Dim revision = build
+            Dim minor = Response.ReadUInt16()
+            Dim major = Response.ReadByte()
+
+            Return New Version(major, minor, build, revision)
+
+        Catch ex As IOException
+            Return Nothing
+
+        End Try
+
+    End Function
+
+    ''' <summary>
+    ''' Issues a SCSI bus rescan to find newly attached devices and remove missing ones.
+    ''' </summary>
+    Public Sub RescanBus()
+
+        Try
+            NativeFileIO.DeviceIoControl(SafeFileHandle, NativeFileIO.Win32API.IOCTL_SCSI_RESCAN_BUS, Nothing, 0)
+
+        Catch ex As Exception
+            Trace.WriteLine("IOCTL_SCSI_RESCAN_BUS failed: " & ex.ToString())
+            API.RescanScsiAdapter()
+
+        End Try
+
+    End Sub
 
     ''' <summary>
     ''' Re-enumerates partitions on all disk drives currently connected to this adapter. No

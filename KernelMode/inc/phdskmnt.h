@@ -53,6 +53,7 @@
 
 #include "common.h"
 #include "imdproxy.h"
+#include "phdskmntver.h"
 
 #if !defined(_MP_User_Mode_Only)                      // User-mode only.
 
@@ -334,11 +335,24 @@ ScsiExecute(
             );
 
 VOID
+ScsiPnP(
+	__in pHW_HBA_EXT              pHBAExt,
+	__in PSCSI_PNP_REQUEST_BLOCK  pSrb
+	);
+
+VOID
+ScsiOpStartStopUnit(
+__in pHW_HBA_EXT DevExt,
+__in pHW_LU_EXTENSION LuExt,
+__in PSCSI_REQUEST_BLOCK Srb
+);
+
+VOID
 ScsiOpInquiry(
-    __in pHW_HBA_EXT DevExt,
-    __in pHW_LU_EXTENSION LuExt,
-    __in PSCSI_REQUEST_BLOCK Srb
-    );
+__in pHW_HBA_EXT DevExt,
+__in pHW_LU_EXTENSION LuExt,
+__in PSCSI_REQUEST_BLOCK Srb
+);
 
 VOID
 ScsiOpInquiryRaidControllerUnit(
@@ -498,6 +512,24 @@ ScsiOpMediumRemoval(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-ob
                     __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
                     __in PSCSI_REQUEST_BLOCK  pSrb
                     );
+
+VOID
+ScsiOpReadDiscInformation(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+);
+
+VOID
+ScsiOpReadTrackInformation(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+);
+
+VOID
+ScsiOpGetConfiguration(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+);
 
 VOID
 ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.

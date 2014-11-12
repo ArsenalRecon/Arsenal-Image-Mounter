@@ -1,4 +1,6 @@
-﻿Public MustInherit Class LibewfVerify
+﻿Imports Arsenal.ImageMounter.IO
+
+Public MustInherit Class LibewfVerify
 
     Private Sub New()
 

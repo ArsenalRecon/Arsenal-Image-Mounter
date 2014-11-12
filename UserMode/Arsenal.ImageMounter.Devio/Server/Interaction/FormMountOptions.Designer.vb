@@ -35,6 +35,7 @@ Partial Class FormMountOptions
         Me.btnCancel = New System.Windows.Forms.Button()
         Me.Label1 = New System.Windows.Forms.Label()
         Me.cbSectorSize = New System.Windows.Forms.ComboBox()
+        Me.cbRemovable = New System.Windows.Forms.CheckBox()
         Me.SuspendLayout()
         '
         'rbReadOnly
@@ -122,20 +123,20 @@ Partial Class FormMountOptions
         '
         'btnOK
         '
-        Me.btnOK.Location = New System.Drawing.Point(267, 248)
+        Me.btnOK.Location = New System.Drawing.Point(267, 256)
         Me.btnOK.Name = "btnOK"
         Me.btnOK.Size = New System.Drawing.Size(108, 33)
-        Me.btnOK.TabIndex = 10
+        Me.btnOK.TabIndex = 11
         Me.btnOK.Text = "OK"
         Me.btnOK.UseVisualStyleBackColor = True
         '
         'btnCancel
         '
         Me.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel
-        Me.btnCancel.Location = New System.Drawing.Point(381, 248)
+        Me.btnCancel.Location = New System.Drawing.Point(381, 256)
         Me.btnCancel.Name = "btnCancel"
         Me.btnCancel.Size = New System.Drawing.Size(108, 33)
-        Me.btnCancel.TabIndex = 11
+        Me.btnCancel.TabIndex = 12
         Me.btnCancel.Text = "Cancel"
         Me.btnCancel.UseVisualStyleBackColor = True
         '
@@ -156,14 +157,25 @@ Partial Class FormMountOptions
         Me.cbSectorSize.Size = New System.Drawing.Size(121, 21)
         Me.cbSectorSize.TabIndex = 9
         '
+        'cbRemovable
+        '
+        Me.cbRemovable.AutoSize = True
+        Me.cbRemovable.Location = New System.Drawing.Point(13, 272)
+        Me.cbRemovable.Name = "cbRemovable"
+        Me.cbRemovable.Size = New System.Drawing.Size(176, 17)
+        Me.cbRemovable.TabIndex = 10
+        Me.cbRemovable.Text = "Create ""removable"" disk device"
+        Me.cbRemovable.UseVisualStyleBackColor = True
+        '
         'FormMountOptions
         '
         Me.AcceptButton = Me.btnOK
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.CancelButton = Me.btnCancel
-        Me.ClientSize = New System.Drawing.Size(501, 293)
+        Me.ClientSize = New System.Drawing.Size(501, 300)
         Me.ControlBox = False
+        Me.Controls.Add(Me.cbRemovable)
         Me.Controls.Add(Me.cbSectorSize)
         Me.Controls.Add(Me.Label1)
         Me.Controls.Add(Me.btnCancel)
@@ -198,6 +210,7 @@ Partial Class FormMountOptions
     Private WithEvents lblFakeDiskSig As System.Windows.Forms.Label
     Private WithEvents btnOK As System.Windows.Forms.Button
     Private WithEvents btnCancel As System.Windows.Forms.Button
-    Friend WithEvents Label1 As System.Windows.Forms.Label
     Private WithEvents cbSectorSize As System.Windows.Forms.ComboBox
+    Private WithEvents Label1 As System.Windows.Forms.Label
+    Private WithEvents cbRemovable As System.Windows.Forms.CheckBox
 End Class

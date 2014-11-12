@@ -1,4 +1,5 @@
 ﻿Imports System.Threading
+Imports Arsenal.ImageMounter.IO
 
 Public Module MainModule
 

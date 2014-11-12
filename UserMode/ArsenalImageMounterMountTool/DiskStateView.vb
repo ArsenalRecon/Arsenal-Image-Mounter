@@ -1,4 +1,6 @@
-﻿Public Class DiskStateView
+﻿Imports Arsenal.ImageMounter.PSDisk
+
+Public Class DiskStateView
 
     Public DiskState As PSDiskParser.DiskState
     Public PhysicalDiskState As PSPhysicalDiskParser.PhysicalDiskState
@@ -117,7 +119,7 @@
                 Aggregate m In multipliers.Keys
                 Where size.Value >= m
                 Into Max()
-            
+
             Return (size.Value / multiplier).ToString("0.000") & multipliers(multiplier)
 
         End Get

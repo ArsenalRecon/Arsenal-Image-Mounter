@@ -117,6 +117,48 @@ ImScsiGetAdapterDeviceObject()
 }
 #endif
 
+BOOLEAN
+ImScsiVirtualDrivesPresent()
+{
+    PLIST_ENTRY           list_ptr;
+    BOOLEAN		  result = FALSE;
+
+#if defined(_AMD64_)
+    KLOCK_QUEUE_HANDLE    LockHandle;
+    KeAcquireInStackQueuedSpinLock(                   // Serialize the linked list of HBA.
+	&pMPDrvInfoGlobal->DrvInfoLock, &LockHandle);
+#else
+    KIRQL                 SaveIrql;
+    KeAcquireSpinLock(&pMPDrvInfoGlobal->DrvInfoLock, &SaveIrql);
+#endif
+
+    for (list_ptr = pMPDrvInfoGlobal->ListMPHBAObj.Flink;
+	list_ptr != &pMPDrvInfoGlobal->ListMPHBAObj;
+	list_ptr = list_ptr->Flink
+	)
+    {
+	pHW_HBA_EXT pHBAExt;
+
+	pHBAExt = CONTAINING_RECORD(list_ptr, HW_HBA_EXT, List);
+
+	if (!IsListEmpty(&pHBAExt->LUList))
+	{
+	    result = TRUE;
+	    break;
+	}
+    }
+
+    pMPDrvInfoGlobal->DrvInfoLock;
+
+#if defined(_AMD64_)
+    KeReleaseInStackQueuedSpinLock(&LockHandle);
+#else
+    KeReleaseSpinLock(&pMPDrvInfoGlobal->DrvInfoLock, SaveIrql);
+#endif
+
+    return result;
+}
+
 VOID
 ImScsiFreeGlobalResources()
 {
@@ -124,7 +166,9 @@ ImScsiFreeGlobalResources()
 
     if (pMPDrvInfoGlobal != NULL)
     {
-        if ((pMPDrvInfoGlobal->GlobalsInitialized) &
+	KdPrint(("PhDskMnt::ImScsiFreeGlobalResources: Ready to stop worker thread and free global data.\n"));
+
+	if ((pMPDrvInfoGlobal->GlobalsInitialized) &
             (pMPDrvInfoGlobal->WorkerThread != NULL))
         {
             KeSetEvent(&pMPDrvInfoGlobal->StopWorker, (KPRIORITY) 0, TRUE);
@@ -286,10 +330,11 @@ ImScsiUnload(PDRIVER_OBJECT pDrvObj)
 {
     KdPrint(("PhDskMnt::ImScsiUnload.\n"));
 
-    if (pMPDrvInfoGlobal != NULL ? pMPDrvInfoGlobal->pChainUnload != NULL : FALSE)
+    if ((pMPDrvInfoGlobal != NULL) &&
+	(pMPDrvInfoGlobal->pChainUnload != NULL))
     {
-        KdPrint(("PhDskMnt::ImScsiUnload: Calling next in chain 0x%p.\n", pMPDrvInfoGlobal->pChainUnload));
-        pMPDrvInfoGlobal->pChainUnload(pDrvObj);
+	KdPrint(("PhDskMnt::ImScsiUnload: Calling next in chain 0x%p.\n", pMPDrvInfoGlobal->pChainUnload));
+	pMPDrvInfoGlobal->pChainUnload(pDrvObj);
     }
 
     // Free our own resources
@@ -573,88 +618,6 @@ MpHwResetBus(
 }                                                     // End MpHwResetBus().
 #endif
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
-NTSTATUS                                              
-ImScsiHandleRemoveDevice(
-                         __in pHW_HBA_EXT             pHBAExt,// Adapter device-object extension from port driver.
-                         __in PSCSI_PNP_REQUEST_BLOCK pSrb
-                         )
-{
-    UNREFERENCED_PARAMETER(pHBAExt);
-
-    KdPrint(("PhDskMnt::ImScsiHandleRemoveDevice:  pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
-
-    pSrb->SrbStatus = SRB_STATUS_BAD_FUNCTION;
-
-    return STATUS_UNSUCCESSFUL;
-}                                                     // End ImScsiHandleRemoveDevice().
-
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
-NTSTATUS                                           
-ImScsiHandleQueryCapabilities(
-                              __in pHW_HBA_EXT             pHBAExt,// Adapter device-object extension from port driver.
-                              __in PSCSI_PNP_REQUEST_BLOCK pSrb
-                              )
-{
-    NTSTATUS                  status = STATUS_SUCCESS;
-    PSTOR_DEVICE_CAPABILITIES pStorageCapabilities = (PSTOR_DEVICE_CAPABILITIES)pSrb->DataBuffer;
-
-    UNREFERENCED_PARAMETER(pHBAExt);
-
-    KdPrint(("PhDskMnt::ImScsiHandleQueryCapabilities:  pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
-
-    RtlZeroMemory(pStorageCapabilities, pSrb->DataTransferLength);
-
-    pStorageCapabilities->Removable = FALSE;
-    pStorageCapabilities->SurpriseRemovalOK = FALSE;
-
-    pSrb->SrbStatus = SRB_STATUS_SUCCESS;
-
-    return status;
-}                                                     // End ImScsiHandleQueryCapabilities().
-
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
-NTSTATUS                                              
-MpHwHandlePnP(
-              __in pHW_HBA_EXT              pHBAExt,  // Adapter device-object extension from port driver.
-              __in PSCSI_PNP_REQUEST_BLOCK  pSrb
-             )
-{
-    NTSTATUS status = STATUS_SUCCESS;
-
-    KdPrint2(("PhDskMnt::MpHwHandlePnP:  pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
-
-    switch(pSrb->PnPAction)
-    {
-
-      case StorRemoveDevice:
-        status = ImScsiHandleRemoveDevice(pHBAExt, pSrb);
-
-        break;
-
-      case StorQueryCapabilities:
-        status = ImScsiHandleQueryCapabilities(pHBAExt, pSrb);
-
-        break;
-
-      default:
-        pSrb->SrbStatus = SRB_STATUS_SUCCESS;         // Do nothing.
-    }
-
-    if (STATUS_SUCCESS!=status) {
-    }
-
-    KdPrint2(("PhDskMnt::MpHwHandlePnP:  status = 0x%X\n", status));
-
-    return status;
-}                                                     // End MpHwHandlePnP().
-
 #ifdef USE_SCSIPORT
 LONG
 ImScsiCompletePendingSrbs(
@@ -779,7 +742,7 @@ MpHwStartIo(
         break;
             
     case SRB_FUNCTION_PNP:                        
-        MpHwHandlePnP(pHBAExt, (PSCSI_PNP_REQUEST_BLOCK)pSrb);
+        ScsiPnP(pHBAExt, (PSCSI_PNP_REQUEST_BLOCK)pSrb);
         break;
 
     case SRB_FUNCTION_POWER:                      

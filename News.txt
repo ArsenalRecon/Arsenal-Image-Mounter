@@ -1,3 +1,29 @@
+-- What's new, driver version 1.0.4.013 and API library version 1.0.019
+
+* Write-temporary mode (also known as "write-overlay") is now supported for
+  most virtual disk formats mounted through DiscUtils.dll as well as the
+  existing support through libewf.dll. The API needed to change somewhat to
+  make this possible, so existing application that uses this API likely
+  need to modify code that creates new virtual disks.
+
+* The driver now supports emulating removable disk devices that can be
+  removed using right-click/eject in for example Disk Management.
+
+* The routine that scans for new disks after creating a new disk device is
+  now much faster, more efficient and should have less compatibility
+  problems.
+
+* The driver now supports directly mounting an existing "PhysicalDrive"
+  object as a new virtual SCSI disk. This makes it possible to emulate a
+  full partitionable disk using a USB thumb drive. Useful for example to
+  access partitions other than the first one on a USB thumb drive.
+
+* Mounting of images using libewf.dll now supports the new .ex01 formats as
+  well as old .e01 formats.
+
+* Included newer version of DiscUtils.dll with some fixes and improvements
+  for some virtual disk formats.
+
 -- What's new, API library version 1.0.014
 
 * Disks mounted from ewf images through libewf.dll now use sector size from

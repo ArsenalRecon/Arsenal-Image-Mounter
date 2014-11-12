@@ -88,6 +88,8 @@
       <HintPath>DLL\DiscUtils.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
     <Import Include="DiscUtils" />
@@ -109,6 +111,9 @@
     <Import Include="System.Threading" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.vb">
+      <Link>CommonAssemblyInfo.vb</Link>
+    </Compile>
     <Compile Include="Client\DevioShmStream.vb" />
     <Compile Include="Client\DevioStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderFromStream.vb" />
@@ -132,6 +137,12 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="Server\Interaction\DevioServiceFactory.vb" />
+    <Compile Include="Server\Interaction\FormMountOptions.Designer.vb">
+      <DependentUpon>FormMountOptions.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Server\Interaction\FormMountOptions.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Server\Services\DevioServiceBase.vb" />
     <Compile Include="Server\Services\DevioNoneService.vb" />
     <Compile Include="Server\Services\DevioShmService.vb" />
@@ -145,6 +156,9 @@
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
       <CustomToolNamespace>My.Resources</CustomToolNamespace>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Server\Interaction\FormMountOptions.resx">
+      <DependentUpon>FormMountOptions.vb</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

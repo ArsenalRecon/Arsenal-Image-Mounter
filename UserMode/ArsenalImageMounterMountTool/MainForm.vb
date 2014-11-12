@@ -2,7 +2,7 @@
 ''''' MainForm.vb
 ''''' GUI mount tool.
 ''''' 
-''''' Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code is available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -17,6 +17,8 @@ Imports System.Threading
 Imports System.Threading.Tasks
 Imports System.Text
 Imports System.Runtime.InteropServices
+Imports Arsenal.ImageMounter.PSDisk
+Imports Arsenal.ImageMounter.IO
 
 Public Class MainForm
 
@@ -44,6 +46,41 @@ Public Class MainForm
 
             Try
                 Adapter = New ScsiAdapter
+
+                Dim loadedVersion As Version = Nothing
+                Try
+                    loadedVersion = Adapter.GetDriverSubVersion()
+
+                Catch ex As Exception
+                    Trace.WriteLine("Error checking driver version: " & ex.ToString())
+
+                End Try
+
+                If loadedVersion Is Nothing OrElse
+                    loadedVersion < GetEmbeddedDriverVersion() Then
+
+                    Dim rc =
+                        MessageBox.Show(Me,
+                                        "There is an update available to the Arsenal Image Mounter driver. Do you want to install the updated driver now?",
+                                        "Arsenal Image Mounter",
+                                        MessageBoxButtons.YesNo,
+                                        MessageBoxIcon.Information,
+                                        MessageBoxDefaultButton.Button2)
+
+                    If rc = DialogResult.Yes Then
+
+                        Adapter.Close()
+                        Adapter = Nothing
+
+                        If InstallDriver() Then
+                            Continue Do
+                        Else
+                            Exit Do
+                        End If
+                    End If
+
+                End If
+
                 Exit Do
 
             Catch ex As FileNotFoundException
@@ -87,7 +124,7 @@ Public Class MainForm
                     MessageBox.Show(Me,
                                     "This application requires a virtual SCSI miniport driver to create virtual disks. The " &
                                     "necessary driver is either not currently installed or the currently installed driver is " &
-                                    "incompatible with the current version of this application. Do you wish to install the driver now?",
+                                    "incompatible with the current version of this application. Do you want to install the driver now?",
                                     "Arsenal Image Mounter",
                                     MessageBoxButtons.YesNo,
                                     MessageBoxIcon.Information,
@@ -518,6 +555,7 @@ Public Class MainForm
           .AutoUpgradeEnabled = True,
           .Title = "Open image file"
         }
+
             If OpenFileDialog.ShowDialog(Me) <> DialogResult.OK Then
                 Return
             End If
@@ -533,37 +571,53 @@ Public Class MainForm
 
         Try
             Dim SectorSize As UInteger
-            Using service = DevioServiceFactory.GetService(Imagefile, FileAccess.Read, ProxyType)
-                SectorSize = service.SectorSize
-            End Using
+            Dim DiskAccess As DevioServiceFactory.VirtualDiskAccess
 
-            Using FormMountOptions As New FormMountOptions With
-                {
-                    .ProxyType = ProxyType,
-                    .Flags = Flags,
-                    .Imagefile = Imagefile,
-                    .SectorSize = SectorSize
-                }
+            Using FormMountOptions As New Devio.FormMountOptions
 
-                If FormMountOptions.ShowDialog(Me) <> DialogResult.OK Then
-                    Return
-                End If
+                With FormMountOptions
 
-                Flags = FormMountOptions.Flags
-                SectorSize = FormMountOptions.SectorSize
+                    .SupportedAccessModes = DevioServiceFactory.GetSupportedVirtualDiskAccess(ProxyType)
+
+                    If (Flags And DeviceFlags.ReadOnly) <> 0 Then
+                        .SelectedReadOnly = True
+                    Else
+                        .SelectedReadOnly = False
+                    End If
+
+                    Using service = DevioServiceFactory.GetService(Imagefile, FileAccess.Read, ProxyType)
+                        .SelectedSectorSize = service.SectorSize
+                    End Using
+
+                    If .ShowDialog(Me) <> DialogResult.OK Then
+                        Return
+                    End If
+
+                    If .SelectedFakeSignature Then
+                        Flags = Flags Or DeviceFlags.FakeDiskSignatureIfZero
+                    End If
+
+                    If .SelectedReadOnly Then
+                        Flags = Flags Or DeviceFlags.ReadOnly
+                    Else
+                        Flags = Flags And Not DeviceFlags.ReadOnly
+                    End If
+
+                    If .SelectedRemovable Then
+                        Flags = Flags Or DeviceFlags.Removable
+                    End If
+
+                    DiskAccess = .SelectedAccessMode
+
+                    SectorSize = .SelectedSectorSize
+
+                End With
+
             End Using
 
             Update()
 
             Using New AsyncMessageBox("Please wait...")
-
-                Dim DiskAccess As FileAccess
-
-                If (Flags And DeviceFlags.ReadOnly) = 0 Then
-                    DiskAccess = FileAccess.ReadWrite
-                Else
-                    DiskAccess = FileAccess.Read
-                End If
 
                 Dim Service = DevioServiceFactory.GetService(Imagefile, DiskAccess, ProxyType)
 
@@ -660,6 +714,16 @@ Public Class MainForm
         End Try
 
     End Sub
+
+    Private Function GetEmbeddedDriverVersion() As Version
+
+        Using zipStream = GetType(MainForm).Assembly.GetManifestResourceStream(GetType(MainForm), "DriverFiles.zip")
+
+            Return DriverSetup.GetArchiveDriverVersion(zipStream)
+
+        End Using
+
+    End Function
 
     Private Function InstallDriver() As Boolean
 

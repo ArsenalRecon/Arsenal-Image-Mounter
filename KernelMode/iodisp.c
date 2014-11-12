@@ -745,945 +745,946 @@ ImScsiWriteDevice(
 
 NTSTATUS
 ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
-		 IN OUT PSRB_IMSCSI_CREATE_DATA CreateData,
-		 IN PETHREAD ClientThread)
+		IN OUT PSRB_IMSCSI_CREATE_DATA CreateData,
+		IN PETHREAD ClientThread)
 {
-  UNICODE_STRING file_name;
-  HANDLE thread_handle = NULL;
-  NTSTATUS status;
-  HANDLE file_handle = NULL;
-  PUCHAR image_buffer = NULL;
-  PROXY_CONNECTION proxy = { 0 };
-  ULONG alignment_requirement;
+    UNICODE_STRING file_name;
+    HANDLE thread_handle = NULL;
+    NTSTATUS status;
+    HANDLE file_handle = NULL;
+    PUCHAR image_buffer = NULL;
+    PROXY_CONNECTION proxy = { 0 };
+    ULONG alignment_requirement;
 
-  ASSERT(CreateData != NULL);
+    ASSERT(CreateData != NULL);
 
-  KdPrint
-    (("PhDskMnt: Got request to create a virtual disk. Request data:\n"
-      "DeviceNumber   = %#x\n"
-      "DiskSize       = %I64u\n"
-      "ImageOffset    = %I64u\n"
-      "SectorSize     = %u\n"
-      "Flags          = %#x\n"
-      "FileNameLength = %u\n"
-      "FileName       = '%.*ws'\n",
-      CreateData->DeviceNumber,
-      CreateData->DiskSize.QuadPart,
-      CreateData->ImageOffset.QuadPart,
-      CreateData->BytesPerSector,
-      CreateData->Flags,
-      CreateData->FileNameLength,
-      (int)(CreateData->FileNameLength / sizeof(*CreateData->FileName)),
-      CreateData->FileName));
+    KdPrint
+	(("PhDskMnt: Got request to create a virtual disk. Request data:\n"
+	"DeviceNumber   = %#x\n"
+	"DiskSize       = %I64u\n"
+	"ImageOffset    = %I64u\n"
+	"SectorSize     = %u\n"
+	"Flags          = %#x\n"
+	"FileNameLength = %u\n"
+	"FileName       = '%.*ws'\n",
+	CreateData->DeviceNumber,
+	CreateData->DiskSize.QuadPart,
+	CreateData->ImageOffset.QuadPart,
+	CreateData->BytesPerSector,
+	CreateData->Flags,
+	CreateData->FileNameLength,
+	(int)(CreateData->FileNameLength / sizeof(*CreateData->FileName)),
+	CreateData->FileName));
 
-  // Auto-select type if not specified.
-  if (IMSCSI_TYPE(CreateData->Flags) == 0)
-    if (CreateData->FileNameLength == 0)
-      CreateData->Flags |= IMSCSI_TYPE_VM;
-    else
-      CreateData->Flags |= IMSCSI_TYPE_FILE;
+    // Auto-select type if not specified.
+    if (IMSCSI_TYPE(CreateData->Flags) == 0)
+	if (CreateData->FileNameLength == 0)
+	    CreateData->Flags |= IMSCSI_TYPE_VM;
+	else
+	    CreateData->Flags |= IMSCSI_TYPE_FILE;
 
-  // Blank filenames only supported for non-zero VM disks.
-  if (((CreateData->FileNameLength == 0) &
-       (IMSCSI_TYPE(CreateData->Flags) != IMSCSI_TYPE_VM)) |
-      ((CreateData->FileNameLength == 0) &
-       (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM) &
-       (CreateData->DiskSize.QuadPart == 0)))
+    // Blank filenames only supported for non-zero VM disks.
+    if (((CreateData->FileNameLength == 0) &
+	(IMSCSI_TYPE(CreateData->Flags) != IMSCSI_TYPE_VM)) |
+	((CreateData->FileNameLength == 0) &
+	(IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM) &
+	(CreateData->DiskSize.QuadPart == 0)))
     {
-      KdPrint(("PhDskMnt: Blank filenames only supported for non-zero length "
-	       "vm type disks.\n"));
+	KdPrint(("PhDskMnt: Blank filenames only supported for non-zero length "
+	    "vm type disks.\n"));
 
-      ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-		      0,
-		      0,
-		      NULL,
-		      0,
-		      1000,
-		      STATUS_INVALID_PARAMETER,
-		      102,
-		      STATUS_INVALID_PARAMETER,
-		      0,
-		      0,
-		      NULL,
-		      L"Blank filenames only supported for non-zero length "
-		      L"vm type disks."));
+	ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+	    0,
+	    0,
+	    NULL,
+	    0,
+	    1000,
+	    STATUS_INVALID_PARAMETER,
+	    102,
+	    STATUS_INVALID_PARAMETER,
+	    0,
+	    0,
+	    NULL,
+	    L"Blank filenames only supported for non-zero length "
+	    L"vm type disks."));
 
-      return STATUS_INVALID_PARAMETER;
+	return STATUS_INVALID_PARAMETER;
     }
 
-  // Cannot create >= 2 GB VM disk in 32 bit version.
+    // Cannot create >= 2 GB VM disk in 32 bit version.
 #ifndef _WIN64
-  if ((IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM) &
-      ((CreateData->DiskSize.QuadPart & 0xFFFFFFFF80000000) !=
-       0))
+    if ((IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM) &
+	((CreateData->DiskSize.QuadPart & 0xFFFFFFFF80000000) !=
+	0))
     {
-      KdPrint(("PhDskMnt: Cannot create >= 2GB vm disks on 32-bit system.\n"));
+	KdPrint(("PhDskMnt: Cannot create >= 2GB vm disks on 32-bit system.\n"));
 
-      return STATUS_INVALID_PARAMETER;
+	return STATUS_INVALID_PARAMETER;
     }
 #endif
 
-  file_name.Length = CreateData->FileNameLength;
-  file_name.MaximumLength = CreateData->FileNameLength;
-  file_name.Buffer = NULL;
+    file_name.Length = CreateData->FileNameLength;
+    file_name.MaximumLength = CreateData->FileNameLength;
+    file_name.Buffer = NULL;
 
-  // If a file is to be opened or created, allocate name buffer and open that
-  // file...
-  if (CreateData->FileNameLength > 0)
+    // If a file is to be opened or created, allocate name buffer and open that
+    // file...
+    if (CreateData->FileNameLength > 0)
     {
-      IO_STATUS_BLOCK io_status;
-      OBJECT_ATTRIBUTES object_attributes;
-      UNICODE_STRING real_file_name;
+	IO_STATUS_BLOCK io_status;
+	OBJECT_ATTRIBUTES object_attributes;
+	UNICODE_STRING real_file_name;
 
-      file_name.Buffer = (PWCHAR) ExAllocatePoolWithTag(NonPagedPool,
-          file_name.MaximumLength, MP_TAG_GENERAL);
+	file_name.Buffer = (PWCHAR)ExAllocatePoolWithTag(NonPagedPool,
+	    file_name.MaximumLength, MP_TAG_GENERAL);
 
-      if (file_name.Buffer == NULL)
+	if (file_name.Buffer == NULL)
 	{
-	  KdPrint(("PhDskMnt: Error allocating buffer for filename.\n"));
+	    KdPrint(("PhDskMnt: Error allocating buffer for filename.\n"));
 
-	  ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			  0,
-			  0,
-			  NULL,
-			  0,
-			  1000,
-			  STATUS_INSUFFICIENT_RESOURCES,
-			  102,
-			  STATUS_INSUFFICIENT_RESOURCES,
-			  0,
-			  0,
-			  NULL,
-			  L"Memory allocation error."));
+	    ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		0,
+		0,
+		NULL,
+		0,
+		1000,
+		STATUS_INSUFFICIENT_RESOURCES,
+		102,
+		STATUS_INSUFFICIENT_RESOURCES,
+		0,
+		0,
+		NULL,
+		L"Memory allocation error."));
 
-	  return STATUS_INSUFFICIENT_RESOURCES;
+	    return STATUS_INSUFFICIENT_RESOURCES;
 	}
 
-      RtlCopyMemory(file_name.Buffer, CreateData->FileName,
-		    CreateData->FileNameLength);
-      // If no device-type specified, check if filename ends with .iso, .nrg or
-      // .bin. In that case, set device-type automatically to FILE_DEVICE_CDROM
-      if ((IMSCSI_DEVICE_TYPE(CreateData->Flags) == 0) &
-	  (CreateData->FileNameLength >= (4 * sizeof(*CreateData->FileName))))
+	RtlCopyMemory(file_name.Buffer, CreateData->FileName,
+	    CreateData->FileNameLength);
+
+	// If no device-type specified, check if filename ends with .iso or .nrg.
+	// In that case, set device-type automatically to FILE_DEVICE_CDROM
+	//if ((IMSCSI_DEVICE_TYPE(CreateData->Flags) == 0) &
+	//    (CreateData->FileNameLength >= (4 * sizeof(*CreateData->FileName))))
+	//{
+	//    LPWSTR name = CreateData->FileName +
+	//	(CreateData->FileNameLength / sizeof(*CreateData->FileName)) - 4;
+	//    if ((_wcsnicmp(name, L".iso", 4) == 0) ||
+	//	(_wcsnicmp(name, L".bin", 4) == 0) ||
+	//	(_wcsnicmp(name, L".nrg", 4) == 0))
+	//	CreateData->Flags |= IMSCSI_DEVICE_TYPE_CD | IMSCSI_OPTION_RO;
+	//}
+
+	if (IMSCSI_DEVICE_TYPE(CreateData->Flags) == IMSCSI_DEVICE_TYPE_CD)
+	    CreateData->Flags |= IMSCSI_OPTION_RO;
+
+	KdPrint(("PhDskMnt: Done with device type auto-selection by file ext.\n"));
+
+	if (ClientThread != NULL)
 	{
-	  LPWSTR name = CreateData->FileName +
-	    (CreateData->FileNameLength / sizeof(*CreateData->FileName)) - 4;
-	  if ((_wcsnicmp(name, L".iso", 4) == 0) |
-	      (_wcsnicmp(name, L".nrg", 4) == 0) |
-	      (_wcsnicmp(name, L".bin", 4) == 0))
-	    CreateData->Flags |= IMSCSI_DEVICE_TYPE_CD | IMSCSI_OPTION_RO;
-	}
+	    SECURITY_QUALITY_OF_SERVICE security_quality_of_service;
+	    SECURITY_CLIENT_CONTEXT security_client_context;
 
-      if (IMSCSI_DEVICE_TYPE(CreateData->Flags) == IMSCSI_DEVICE_TYPE_CD)
-	CreateData->Flags |= IMSCSI_OPTION_RO;
+	    RtlZeroMemory(&security_quality_of_service,
+		sizeof(SECURITY_QUALITY_OF_SERVICE));
 
-      KdPrint(("PhDskMnt: Done with device type auto-selection by file ext.\n"));
+	    security_quality_of_service.Length =
+		sizeof(SECURITY_QUALITY_OF_SERVICE);
+	    security_quality_of_service.ImpersonationLevel =
+		SecurityImpersonation;
+	    security_quality_of_service.ContextTrackingMode =
+		SECURITY_STATIC_TRACKING;
+	    security_quality_of_service.EffectiveOnly = FALSE;
 
-      if (ClientThread != NULL)
-	{
-	  SECURITY_QUALITY_OF_SERVICE security_quality_of_service;
-	  SECURITY_CLIENT_CONTEXT security_client_context;
+	    status =
+		SeCreateClientSecurity(
+		ClientThread,
+		&security_quality_of_service,
+		FALSE,
+		&security_client_context);
 
-	  RtlZeroMemory(&security_quality_of_service,
-			sizeof(SECURITY_QUALITY_OF_SERVICE));
-
-	  security_quality_of_service.Length =
-	    sizeof(SECURITY_QUALITY_OF_SERVICE);
-	  security_quality_of_service.ImpersonationLevel =
-	    SecurityImpersonation;
-	  security_quality_of_service.ContextTrackingMode =
-	    SECURITY_STATIC_TRACKING;
-	  security_quality_of_service.EffectiveOnly = FALSE;
-
-          status =
-              SeCreateClientSecurity(
-              ClientThread,
-              &security_quality_of_service,
-              FALSE,
-              &security_client_context);
-
-          if (NT_SUCCESS(status))
-          {
-              KdPrint(("PhDskMnt: Impersonating client thread token.\n"));
-              SeImpersonateClient(&security_client_context, NULL);
-              SeDeleteClientSecurity(&security_client_context);
-          }
-          else
-              DbgPrint("PhDskMnt: Error impersonating client thread token: %#X\n", status);
-
-          ObDereferenceObject(ClientThread);
-	}
-      else
-	KdPrint(("PhDskMnt: No impersonation information.\n"));
-
-      if ((IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY) &
-	  ((IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_TCP) |
-	   (IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_COMM)))
-	{
-	  RtlInitUnicodeString(&real_file_name, IMDPROXY_SVC_PIPE_NATIVE_NAME);
-
-	  InitializeObjectAttributes(&object_attributes,
-				     &real_file_name,
-				     OBJ_CASE_INSENSITIVE,
-				     NULL,
-				     NULL);
-	}
-      else
-	{
-	  real_file_name = file_name;
-
-	  InitializeObjectAttributes(&object_attributes,
-				     &real_file_name,
-				     OBJ_CASE_INSENSITIVE |
-				     OBJ_FORCE_ACCESS_CHECK,
-				     NULL,
-				     NULL);
-	}
-
-      if ((IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY) &
-	  (IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_SHM))
-	{
-	  proxy.connection_type = PROXY_CONNECTION_SHM;
-
-	  status =
-	    ZwOpenSection(&file_handle,
-			  GENERIC_READ | GENERIC_WRITE,
-			  &object_attributes);
-	}
-      else
-	{
-	  KdPrint(("PhDskMnt: Passing WriteMode=%#x and WriteShare=%#x\n",
-		   (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY) |
-		   ((IMSCSI_TYPE(CreateData->Flags) != IMSCSI_TYPE_VM) &
-		    !IMSCSI_READONLY(CreateData->Flags)),
-		   IMSCSI_READONLY(CreateData->Flags) |
-		   (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM)));
-
-	  status =
-	    ZwCreateFile(&file_handle,
-			 GENERIC_READ |
-			 ((IMSCSI_TYPE(CreateData->Flags) ==
-			   IMSCSI_TYPE_PROXY) |
-			  (((IMSCSI_TYPE(CreateData->Flags) !=
-			     IMSCSI_TYPE_VM) &
-			    !IMSCSI_READONLY(CreateData->Flags))) ?
-			  GENERIC_WRITE : 0),
-			 &object_attributes,
-			 &io_status,
-			 NULL,
-			 FILE_ATTRIBUTE_NORMAL,
-			 FILE_SHARE_READ |
-			 FILE_SHARE_DELETE |
-			 (IMSCSI_READONLY(CreateData->Flags) |
-			  (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM) ?
-			  FILE_SHARE_WRITE : 0),
-			 FILE_OPEN,
-			 IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY ?
-			 FILE_NON_DIRECTORY_FILE |
-			 FILE_SEQUENTIAL_ONLY |
-			 FILE_NO_INTERMEDIATE_BUFFERING |
-			 FILE_SYNCHRONOUS_IO_NONALERT :
-			 FILE_NON_DIRECTORY_FILE |
-			 FILE_RANDOM_ACCESS |
-			 FILE_NO_INTERMEDIATE_BUFFERING |
-			 FILE_SYNCHRONOUS_IO_NONALERT,
-			 NULL,
-			 0);
-	}
-
-      // For 32 bit driver running on Windows 2000 and earlier, the above
-      // call will fail because OBJ_FORCE_ACCESS_CHECK is not supported. If so,
-      // STATUS_INVALID_PARAMETER is returned and we go on without any access
-      // checks in that case.
-#ifdef NT4_COMPATIBLE
-      if (status == STATUS_INVALID_PARAMETER)
-	{
-	  InitializeObjectAttributes(&object_attributes,
-				     &real_file_name,
-				     OBJ_CASE_INSENSITIVE,
-				     NULL,
-				     NULL);
-
-	  if ((IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY) &
-	      (IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_SHM))
+	    if (NT_SUCCESS(status))
 	    {
-	      proxy.connection_type = PROXY_CONNECTION_SHM;
-	      
-	      status =
-		ZwOpenSection(&file_handle,
-			      GENERIC_READ | GENERIC_WRITE,
-			      &object_attributes);
+		KdPrint(("PhDskMnt: Impersonating client thread token.\n"));
+		SeImpersonateClient(&security_client_context, NULL);
+		SeDeleteClientSecurity(&security_client_context);
 	    }
-	  else
-	    {
-	      status =
+	    else
+		DbgPrint("PhDskMnt: Error impersonating client thread token: %#X\n", status);
+
+	    ObDereferenceObject(ClientThread);
+	}
+	else
+	    KdPrint(("PhDskMnt: No impersonation information.\n"));
+
+	if ((IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY) &
+	    ((IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_TCP) |
+	    (IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_COMM)))
+	{
+	    RtlInitUnicodeString(&real_file_name, IMDPROXY_SVC_PIPE_NATIVE_NAME);
+
+	    InitializeObjectAttributes(&object_attributes,
+		&real_file_name,
+		OBJ_CASE_INSENSITIVE,
+		NULL,
+		NULL);
+	}
+	else
+	{
+	    real_file_name = file_name;
+
+	    InitializeObjectAttributes(&object_attributes,
+		&real_file_name,
+		OBJ_CASE_INSENSITIVE |
+		OBJ_FORCE_ACCESS_CHECK,
+		NULL,
+		NULL);
+	}
+
+	if ((IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY) &
+	    (IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_SHM))
+	{
+	    proxy.connection_type = PROXY_CONNECTION_SHM;
+
+	    status =
+		ZwOpenSection(&file_handle,
+		GENERIC_READ | GENERIC_WRITE,
+		&object_attributes);
+	}
+	else
+	{
+	    KdPrint(("PhDskMnt: Passing WriteMode=%#x and WriteShare=%#x\n",
+		(IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY) |
+		((IMSCSI_TYPE(CreateData->Flags) != IMSCSI_TYPE_VM) &
+		!IMSCSI_READONLY(CreateData->Flags)),
+		IMSCSI_READONLY(CreateData->Flags) |
+		(IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM)));
+
+	    status =
 		ZwCreateFile(&file_handle,
-			     GENERIC_READ |
-			     ((IMSCSI_TYPE(CreateData->Flags) ==
-			       IMSCSI_TYPE_PROXY) |
-			      (((IMSCSI_TYPE(CreateData->Flags) !=
-				 IMSCSI_TYPE_VM) &
-				!IMSCSI_READONLY(CreateData->Flags))) ?
-			      GENERIC_WRITE : 0),
-			     &object_attributes,
-			     &io_status,
-			     NULL,
-			     FILE_ATTRIBUTE_NORMAL,
-			     FILE_SHARE_READ |
-			     FILE_SHARE_DELETE |
-			     (IMSCSI_READONLY(CreateData->Flags) |
-			      (IMSCSI_TYPE(CreateData->Flags) ==
-			       IMSCSI_TYPE_VM) ?
-			      FILE_SHARE_WRITE : 0),
-			     FILE_OPEN,
-			     IMSCSI_TYPE(CreateData->Flags) ==
-			     IMSCSI_TYPE_PROXY ?
-			     FILE_NON_DIRECTORY_FILE |
-			     FILE_SEQUENTIAL_ONLY |
-			     FILE_NO_INTERMEDIATE_BUFFERING |
-			     FILE_SYNCHRONOUS_IO_NONALERT :
-			     FILE_NON_DIRECTORY_FILE |
-			     FILE_RANDOM_ACCESS |
-			     FILE_NO_INTERMEDIATE_BUFFERING |
-			     FILE_SYNCHRONOUS_IO_NONALERT,
-			     NULL,
-			     0);
+		GENERIC_READ |
+		((IMSCSI_TYPE(CreateData->Flags) ==
+		IMSCSI_TYPE_PROXY) |
+		(((IMSCSI_TYPE(CreateData->Flags) !=
+		IMSCSI_TYPE_VM) &
+		!IMSCSI_READONLY(CreateData->Flags))) ?
+	    GENERIC_WRITE : 0),
+			    &object_attributes,
+			    &io_status,
+			    NULL,
+			    FILE_ATTRIBUTE_NORMAL,
+			    FILE_SHARE_READ |
+			    FILE_SHARE_DELETE |
+			    (IMSCSI_READONLY(CreateData->Flags) |
+			    (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM) ?
+			FILE_SHARE_WRITE : 0),
+					   FILE_OPEN,
+					   IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY ?
+					   FILE_NON_DIRECTORY_FILE |
+					   FILE_SEQUENTIAL_ONLY |
+					   FILE_NO_INTERMEDIATE_BUFFERING |
+				       FILE_SYNCHRONOUS_IO_NONALERT :
+								    FILE_NON_DIRECTORY_FILE |
+								    FILE_RANDOM_ACCESS |
+								    FILE_NO_INTERMEDIATE_BUFFERING |
+								    FILE_SYNCHRONOUS_IO_NONALERT,
+								    NULL,
+								    0);
+	}
+
+	// For 32 bit driver running on Windows 2000 and earlier, the above
+	// call will fail because OBJ_FORCE_ACCESS_CHECK is not supported. If so,
+	// STATUS_INVALID_PARAMETER is returned and we go on without any access
+	// checks in that case.
+#ifdef NT4_COMPATIBLE
+	if (status == STATUS_INVALID_PARAMETER)
+	{
+	    InitializeObjectAttributes(&object_attributes,
+		&real_file_name,
+		OBJ_CASE_INSENSITIVE,
+		NULL,
+		NULL);
+
+	    if ((IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY) &
+		(IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_SHM))
+	    {
+		proxy.connection_type = PROXY_CONNECTION_SHM;
+
+		status =
+		    ZwOpenSection(&file_handle,
+		    GENERIC_READ | GENERIC_WRITE,
+		    &object_attributes);
+	    }
+	    else
+	    {
+		status =
+		    ZwCreateFile(&file_handle,
+		    GENERIC_READ |
+		    ((IMSCSI_TYPE(CreateData->Flags) ==
+		    IMSCSI_TYPE_PROXY) |
+		    (((IMSCSI_TYPE(CreateData->Flags) !=
+		    IMSCSI_TYPE_VM) &
+		    !IMSCSI_READONLY(CreateData->Flags))) ?
+		GENERIC_WRITE : 0),
+				&object_attributes,
+				&io_status,
+				NULL,
+				FILE_ATTRIBUTE_NORMAL,
+				FILE_SHARE_READ |
+				FILE_SHARE_DELETE |
+				(IMSCSI_READONLY(CreateData->Flags) |
+				(IMSCSI_TYPE(CreateData->Flags) ==
+				IMSCSI_TYPE_VM) ?
+			    FILE_SHARE_WRITE : 0),
+					       FILE_OPEN,
+					       IMSCSI_TYPE(CreateData->Flags) ==
+					       IMSCSI_TYPE_PROXY ?
+					       FILE_NON_DIRECTORY_FILE |
+					       FILE_SEQUENTIAL_ONLY |
+					       FILE_NO_INTERMEDIATE_BUFFERING |
+					   FILE_SYNCHRONOUS_IO_NONALERT :
+									FILE_NON_DIRECTORY_FILE |
+									FILE_RANDOM_ACCESS |
+									FILE_NO_INTERMEDIATE_BUFFERING |
+									FILE_SYNCHRONOUS_IO_NONALERT,
+									NULL,
+									0);
 	    }
 	}
 #endif
 
-      if (!NT_SUCCESS(status))
-	KdPrint(("PhDskMnt: Error opening file '%.*ws'. Status: %#x SpecSize: %i WritableFile: %i DevTypeFile: %i Flags: %#x\n",
-		 (int)(real_file_name.Length / sizeof(WCHAR)),
-		 real_file_name.Buffer,
-		 status,
-		 CreateData->DiskSize.QuadPart != 0,
-		 !IMSCSI_READONLY(CreateData->Flags),
-		 IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_FILE,
-		 CreateData->Flags));
+	if (!NT_SUCCESS(status))
+	    KdPrint(("PhDskMnt: Error opening file '%.*ws'. Status: %#x SpecSize: %i WritableFile: %i DevTypeFile: %i Flags: %#x\n",
+	    (int)(real_file_name.Length / sizeof(WCHAR)),
+	    real_file_name.Buffer,
+	    status,
+	    CreateData->DiskSize.QuadPart != 0,
+	    !IMSCSI_READONLY(CreateData->Flags),
+	    IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_FILE,
+	    CreateData->Flags));
 
-      // If not found we will create the file if a new non-zero size is
-      // specified, read-only virtual disk is not specified and we are
-      // creating a type 'file' virtual disk.
-      if (((status == STATUS_OBJECT_NAME_NOT_FOUND) |
-	   (status == STATUS_NO_SUCH_FILE)) &
-	  (CreateData->DiskSize.QuadPart != 0) &
-	  (!IMSCSI_READONLY(CreateData->Flags)) &
-	  (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_FILE))
+	// If not found we will create the file if a new non-zero size is
+	// specified, read-only virtual disk is not specified and we are
+	// creating a type 'file' virtual disk.
+	if (((status == STATUS_OBJECT_NAME_NOT_FOUND) |
+	    (status == STATUS_NO_SUCH_FILE)) &
+	    (CreateData->DiskSize.QuadPart != 0) &
+	    (!IMSCSI_READONLY(CreateData->Flags)) &
+	    (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_FILE))
 	{
 
-	  status =
-	    ZwCreateFile(&file_handle,
-			 GENERIC_READ |
-			 GENERIC_WRITE,
-			 &object_attributes,
-			 &io_status,
-			 &CreateData->DiskSize,
-			 FILE_ATTRIBUTE_NORMAL,
-			 FILE_SHARE_READ |
-			 FILE_SHARE_DELETE,
-			 FILE_OPEN_IF,
-			 FILE_NON_DIRECTORY_FILE |
-			 FILE_RANDOM_ACCESS |
-			 FILE_NO_INTERMEDIATE_BUFFERING |
-			 FILE_SYNCHRONOUS_IO_NONALERT, NULL, 0);
-      
-	  if (!NT_SUCCESS(status))
-	    {
-	      ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			      0,
-			      0,
-			      NULL,
-			      0,
-			      1000,
-			      status,
-			      102,
-			      status,
-			      0,
-			      0,
-			      NULL,
-			      L"Cannot create image file."));
-
-	      KdPrint(("PhDskMnt: Cannot create '%.*ws'. (%#x)\n",
-		       (int)(CreateData->FileNameLength /
-			     sizeof(*CreateData->FileName)),
-		       CreateData->FileName,
-		       status));
-	      
-	      ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
-
-	      return status;
-	    }
-	}
-      else if (!NT_SUCCESS(status))
-	{
-	  ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			  0,
-			  0,
-			  NULL,
-			  0,
-			  1000,
-			  status,
-			  102,
-			  status,
-			  0,
-			  0,
-			  NULL,
-			  L"Cannot open image file."));
-
-	  KdPrint(("PhDskMnt: Cannot open file '%.*ws'. Status: %#x\n",
-		   (int)(real_file_name.Length / sizeof(WCHAR)),
-		   real_file_name.Buffer,
-		   status));
-
-	  ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
-	  
-	  return status;
-	}
-
-      KdPrint(("PhDskMnt: File '%.*ws' opened successfully.\n",
-	       (int)(real_file_name.Length / sizeof(WCHAR)),
-	       real_file_name.Buffer));
-
-      if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY)
-	{
-	  if (IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_SHM)
 	    status =
-	      ZwMapViewOfSection(file_handle,
-				 NtCurrentProcess(),
-				 (PVOID*)&proxy.shared_memory,
-				 0,
-				 0,
-				 NULL,
-				 &proxy.shared_memory_size,
-				 ViewUnmap,
-				 0,
-				 PAGE_READWRITE);
-	  else
-	    status =
-	      ObReferenceObjectByHandle(file_handle,
-					FILE_READ_ATTRIBUTES |
-					FILE_READ_DATA |
-					FILE_WRITE_DATA,
-					*IoFileObjectType,
-					KernelMode,
-					(PVOID*)&proxy.device,
-					NULL);
+		ZwCreateFile(&file_handle,
+		GENERIC_READ |
+		GENERIC_WRITE,
+		&object_attributes,
+		&io_status,
+		&CreateData->DiskSize,
+		FILE_ATTRIBUTE_NORMAL,
+		FILE_SHARE_READ |
+		FILE_SHARE_DELETE,
+		FILE_OPEN_IF,
+		FILE_NON_DIRECTORY_FILE |
+		FILE_RANDOM_ACCESS |
+		FILE_NO_INTERMEDIATE_BUFFERING |
+		FILE_SYNCHRONOUS_IO_NONALERT, NULL, 0);
 
-	  if (!NT_SUCCESS(status))
+	    if (!NT_SUCCESS(status))
 	    {
-	      ZwClose(file_handle);
-	      ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+		ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		    0,
+		    0,
+		    NULL,
+		    0,
+		    1000,
+		    status,
+		    102,
+		    status,
+		    0,
+		    0,
+		    NULL,
+		    L"Cannot create image file."));
 
-	      ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			      0,
-			      0,
-			      NULL,
-			      0,
-			      1000,
-			      status,
-			      102,
-			      status,
-			      0,
-			      0,
-			      NULL,
-			      L"Error referencing proxy device."));
+		KdPrint(("PhDskMnt: Cannot create '%.*ws'. (%#x)\n",
+		    (int)(CreateData->FileNameLength /
+		    sizeof(*CreateData->FileName)),
+		    CreateData->FileName,
+		    status));
 
-	      KdPrint(("PhDskMnt: Error referencing proxy device (%#x).\n",
-		       status));
+		ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
 
-	      return status;
+		return status;
+	    }
+	}
+	else if (!NT_SUCCESS(status))
+	{
+	    ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		0,
+		0,
+		NULL,
+		0,
+		1000,
+		status,
+		102,
+		status,
+		0,
+		0,
+		NULL,
+		L"Cannot open image file."));
+
+	    KdPrint(("PhDskMnt: Cannot open file '%.*ws'. Status: %#x\n",
+		(int)(real_file_name.Length / sizeof(WCHAR)),
+		real_file_name.Buffer,
+		status));
+
+	    ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+
+	    return status;
+	}
+
+	KdPrint(("PhDskMnt: File '%.*ws' opened successfully.\n",
+	    (int)(real_file_name.Length / sizeof(WCHAR)),
+	    real_file_name.Buffer));
+
+	if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY)
+	{
+	    if (IMSCSI_PROXY_TYPE(CreateData->Flags) == IMSCSI_PROXY_TYPE_SHM)
+		status =
+		ZwMapViewOfSection(file_handle,
+		NtCurrentProcess(),
+		(PVOID*)&proxy.shared_memory,
+		0,
+		0,
+		NULL,
+		&proxy.shared_memory_size,
+		ViewUnmap,
+		0,
+		PAGE_READWRITE);
+	    else
+		status =
+		ObReferenceObjectByHandle(file_handle,
+		FILE_READ_ATTRIBUTES |
+		FILE_READ_DATA |
+		FILE_WRITE_DATA,
+		*IoFileObjectType,
+		KernelMode,
+		(PVOID*)&proxy.device,
+		NULL);
+
+	    if (!NT_SUCCESS(status))
+	    {
+		ZwClose(file_handle);
+		ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+
+		ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		    0,
+		    0,
+		    NULL,
+		    0,
+		    1000,
+		    status,
+		    102,
+		    status,
+		    0,
+		    0,
+		    NULL,
+		    L"Error referencing proxy device."));
+
+		KdPrint(("PhDskMnt: Error referencing proxy device (%#x).\n",
+		    status));
+
+		return status;
 	    }
 
-	  KdPrint(("PhDskMnt: Got reference to proxy object %#x.\n",
-		   proxy.connection_type == PROXY_CONNECTION_DEVICE ?
-		   (PVOID) proxy.device :
-		   (PVOID) proxy.shared_memory));
+	    KdPrint(("PhDskMnt: Got reference to proxy object %#x.\n",
+		proxy.connection_type == PROXY_CONNECTION_DEVICE ?
+		(PVOID)proxy.device :
+		(PVOID)proxy.shared_memory));
 
-	  if (IMSCSI_PROXY_TYPE(CreateData->Flags) != IMSCSI_PROXY_TYPE_DIRECT)
-	    status = ImScsiConnectProxy(&proxy,
-					&io_status,
-					NULL,
-					CreateData->Flags,
-					CreateData->FileName,
-					CreateData->FileNameLength);
+	    if (IMSCSI_PROXY_TYPE(CreateData->Flags) != IMSCSI_PROXY_TYPE_DIRECT)
+		status = ImScsiConnectProxy(&proxy,
+		&io_status,
+		NULL,
+		CreateData->Flags,
+		CreateData->FileName,
+		CreateData->FileNameLength);
 
-	  if (!NT_SUCCESS(status))
+	    if (!NT_SUCCESS(status))
 	    {
-	      ImScsiCloseProxy(&proxy);
-	      ZwClose(file_handle);
-	      ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+		ImScsiCloseProxy(&proxy);
+		ZwClose(file_handle);
+		ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
 
-	      ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			      0,
-			      0,
-			      NULL,
-			      0,
-			      1000,
-			      status,
-			      102,
-			      status,
-			      0,
-			      0,
-			      NULL,
-			      L"Error connecting proxy."));
+		ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		    0,
+		    0,
+		    NULL,
+		    0,
+		    1000,
+		    status,
+		    102,
+		    status,
+		    0,
+		    0,
+		    NULL,
+		    L"Error connecting proxy."));
 
-	      KdPrint(("PhDskMnt: Error connecting proxy (%#x).\n", status));
+		KdPrint(("PhDskMnt: Error connecting proxy (%#x).\n", status));
 
-	      return status;
+		return status;
 	    }
 	}
 
-      // Get the file size of the disk file.
-      if (IMSCSI_TYPE(CreateData->Flags) != IMSCSI_TYPE_PROXY)
+	// Get the file size of the disk file.
+	if (IMSCSI_TYPE(CreateData->Flags) != IMSCSI_TYPE_PROXY)
 	{
-	  LARGE_INTEGER disk_size;
+	    LARGE_INTEGER disk_size;
 
-	  status = ImScsiGetDiskSize(
-	      file_handle,
-	      &io_status,
-	      &disk_size);
+	    status = ImScsiGetDiskSize(
+		file_handle,
+		&io_status,
+		&disk_size);
 
-	  if (!NT_SUCCESS(status))
+	    if (!NT_SUCCESS(status))
 	    {
-	      ZwClose(file_handle);
-	      ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+		ZwClose(file_handle);
+		ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
 
-	      ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			      0,
-			      0,
-			      NULL,
-			      0,
-			      1000,
-			      status,
-			      102,
-			      status,
-			      0,
-			      0,
-			      NULL,
-			      L"Error getting image size."));
+		ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		    0,
+		    0,
+		    NULL,
+		    0,
+		    1000,
+		    status,
+		    102,
+		    status,
+		    0,
+		    0,
+		    NULL,
+		    L"Error getting image size."));
 
-	      KdPrint
-		(("PhDskMnt: Error getting image size (%#x).\n",
-		  status));
+		KdPrint
+		    (("PhDskMnt: Error getting image size (%#x).\n",
+		    status));
 
-	      return status;
+		return status;
 	    }
 
-	  // Allocate virtual memory for 'vm' type.
-	  if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM)
+	    // Allocate virtual memory for 'vm' type.
+	    if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM)
 	    {
-	      SIZE_T max_size;
+		SIZE_T max_size;
 
-	      // If no size given for VM disk, use size of pre-load image file.
-	      // This code is somewhat easier for 64 bit architectures.
+		// If no size given for VM disk, use size of pre-load image file.
+		// This code is somewhat easier for 64 bit architectures.
 
 #ifdef _WIN64
-	      if (CreateData->DiskSize.QuadPart == 0)
-		CreateData->DiskSize.QuadPart =
-		  disk_size.QuadPart -
-		  CreateData->ImageOffset.QuadPart;
+		if (CreateData->DiskSize.QuadPart == 0)
+		    CreateData->DiskSize.QuadPart =
+		    disk_size.QuadPart -
+		    CreateData->ImageOffset.QuadPart;
 
-	      max_size = CreateData->DiskSize.QuadPart;
+		max_size = CreateData->DiskSize.QuadPart;
 #else
-	      if (CreateData->DiskSize.QuadPart == 0)
-		// Check that file size < 2 GB.
-		if ((disk_size.QuadPart -
-		     CreateData->ImageOffset.QuadPart) & 0xFFFFFFFF80000000)
-		  {
+		if (CreateData->DiskSize.QuadPart == 0)
+		    // Check that file size < 2 GB.
+		    if ((disk_size.QuadPart -
+			CreateData->ImageOffset.QuadPart) & 0xFFFFFFFF80000000)
+		    {
 		    ZwClose(file_handle);
 		    ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
 
 		    KdPrint(("PhDskMnt: VM disk >= 2GB not supported.\n"));
 
 		    return STATUS_INSUFFICIENT_RESOURCES;
-		  }
-		else
-		  CreateData->DiskSize.QuadPart =
+		    }
+		    else
+			CreateData->DiskSize.QuadPart =
+			disk_size.QuadPart -
+			CreateData->ImageOffset.QuadPart;
+
+		max_size = CreateData->DiskSize.LowPart;
+#endif
+
+		status =
+		    ZwAllocateVirtualMemory(NtCurrentProcess(),
+		    (PVOID*)&image_buffer,
+		    0,
+		    &max_size,
+		    MEM_COMMIT,
+		    PAGE_READWRITE);
+		if (!NT_SUCCESS(status))
+		{
+		    ZwClose(file_handle);
+		    ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+
+		    ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+			0,
+			0,
+			NULL,
+			0,
+			1000,
+			status,
+			102,
+			status,
+			0,
+			0,
+			NULL,
+			L"Not enough memory for VM disk."));
+
+		    KdPrint(("PhDskMnt: Error allocating vm for image. (%#x)\n",
+			status));
+
+		    return STATUS_NO_MEMORY;
+		}
+
+		alignment_requirement = FILE_BYTE_ALIGNMENT;
+
+		// Loading of image file has been moved to be done just before
+		// the service loop.
+	    }
+	    else
+	    {
+		FILE_ALIGNMENT_INFORMATION file_alignment;
+
+		status = ZwQueryInformationFile(file_handle,
+		    &io_status,
+		    &file_alignment,
+		    sizeof
+		    (FILE_ALIGNMENT_INFORMATION),
+		    FileAlignmentInformation);
+
+		if (!NT_SUCCESS(status))
+		{
+		    ZwClose(file_handle);
+		    ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+
+		    ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+			0,
+			0,
+			NULL,
+			0,
+			1000,
+			status,
+			102,
+			status,
+			0,
+			0,
+			NULL,
+			L"Error getting alignment information."));
+
+		    KdPrint(("PhDskMnt: Error querying file alignment (%#x).\n",
+			status));
+
+		    return status;
+		}
+
+		// If creating a sparse image file
+		if (IMSCSI_SPARSE_FILE(CreateData->Flags))
+		{
+		    status = ZwFsControlFile(
+			file_handle,
+			NULL,
+			NULL,
+			NULL,
+			&io_status,
+			FSCTL_SET_SPARSE,
+			NULL,
+			0,
+			NULL,
+			0
+			);
+
+		    if (NT_SUCCESS(status))
+			KdPrint(("PhDskMnt::ImScsiInitializeLU: Sparse attribute set on image file.\n"));
+		    else
+			DbgPrint("PhDskMnt::ImScsiInitializeLU: Cannot set sparse attribute on image file: 0x%X\n", status);
+		}
+
+		if (CreateData->DiskSize.QuadPart == 0)
+		    CreateData->DiskSize.QuadPart =
 		    disk_size.QuadPart -
 		    CreateData->ImageOffset.QuadPart;
-
-	      max_size = CreateData->DiskSize.LowPart;
-#endif
-
-	      status =
-		ZwAllocateVirtualMemory(NtCurrentProcess(),
-					(PVOID*)&image_buffer,
-					0,
-					&max_size,
-					MEM_COMMIT,
-					PAGE_READWRITE);
-	      if (!NT_SUCCESS(status))
+		else if ((disk_size.QuadPart <
+		    CreateData->DiskSize.QuadPart +
+		    CreateData->ImageOffset.QuadPart) &
+		    (!IMSCSI_READONLY(CreateData->Flags)))
 		{
-		  ZwClose(file_handle);
-		  ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+		    LARGE_INTEGER new_image_size;
+		    new_image_size.QuadPart =
+			CreateData->DiskSize.QuadPart +
+			CreateData->ImageOffset.QuadPart;
 
-		  ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-				  0,
-				  0,
-				  NULL,
-				  0,
-				  1000,
-				  status,
-				  102,
-				  status,
-				  0,
-				  0,
-				  NULL,
-				  L"Not enough memory for VM disk."));
+		    // Adjust the file length to the requested virtual disk size.
+		    status = ZwSetInformationFile(
+			file_handle,
+			&io_status,
+			&new_image_size,
+			sizeof(FILE_END_OF_FILE_INFORMATION),
+			FileEndOfFileInformation);
 
-		  KdPrint(("PhDskMnt: Error allocating vm for image. (%#x)\n",
-			   status));
-		  
-		  return STATUS_NO_MEMORY;
+		    if (!NT_SUCCESS(status))
+		    {
+			ZwClose(file_handle);
+			ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+
+			ImScsiLogError((
+			    pMPDrvInfoGlobal->pDriverObj,
+			    0,
+			    0,
+			    NULL,
+			    0,
+			    1000,
+			    status,
+			    102,
+			    status,
+			    0,
+			    0,
+			    NULL,
+			    L"Error setting file size."));
+
+			DbgPrint("PhDskMnt: Error setting eof (%#x).\n", status);
+			return status;
+		    }
 		}
 
-	      alignment_requirement = FILE_BYTE_ALIGNMENT;
-
-	      // Loading of image file has been moved to be done just before
-	      // the service loop.
+		alignment_requirement = file_alignment.AlignmentRequirement;
 	    }
-	  else
-	    {
-	      FILE_ALIGNMENT_INFORMATION file_alignment;
-
-	      status = ZwQueryInformationFile(file_handle,
-					      &io_status,
-					      &file_alignment,
-					      sizeof
-					      (FILE_ALIGNMENT_INFORMATION),
-					      FileAlignmentInformation);
-	  
-	      if (!NT_SUCCESS(status))
-		{
-		  ZwClose(file_handle);
-		  ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
-
-		  ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-				  0,
-				  0,
-				  NULL,
-				  0,
-				  1000,
-				  status,
-				  102,
-				  status,
-				  0,
-				  0,
-				  NULL,
-				  L"Error getting alignment information."));
-
-		  KdPrint(("PhDskMnt: Error querying file alignment (%#x).\n",
-			   status));
-
-		  return status;
-		}
-
-              // If creating a sparse image file
-              if (IMSCSI_SPARSE_FILE(CreateData->Flags))
-              {
-                  status = ZwFsControlFile(
-                      file_handle,
-                      NULL,
-                      NULL,
-                      NULL,
-                      &io_status,
-                      FSCTL_SET_SPARSE,
-                      NULL,
-                      0,
-                      NULL,
-                      0
-                      );
-
-                  if (NT_SUCCESS(status))
-                      KdPrint(("PhDskMnt::ImScsiInitializeLU: Sparse attribute set on image file.\n"));
-                  else
-                      DbgPrint("PhDskMnt::ImScsiInitializeLU: Cannot set sparse attribute on image file: 0x%X\n", status);
-              }
-
-	      if (CreateData->DiskSize.QuadPart == 0)
-                  CreateData->DiskSize.QuadPart =
-		  disk_size.QuadPart -
-                  CreateData->ImageOffset.QuadPart;
-	      else if ((disk_size.QuadPart <
-                  CreateData->DiskSize.QuadPart +
-                  CreateData->ImageOffset.QuadPart) &
-                  (!IMSCSI_READONLY(CreateData->Flags)))
-              {
-                  LARGE_INTEGER new_image_size;
-                  new_image_size.QuadPart =
-                      CreateData->DiskSize.QuadPart +
-                      CreateData->ImageOffset.QuadPart;
-
-                  // Adjust the file length to the requested virtual disk size.
-                  status = ZwSetInformationFile(
-                      file_handle,
-                      &io_status,
-                      &new_image_size,
-                      sizeof(FILE_END_OF_FILE_INFORMATION),
-                      FileEndOfFileInformation);
-
-                  if (!NT_SUCCESS(status))
-                  {
-                      ZwClose(file_handle);
-                      ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
-
-                      ImScsiLogError((
-                          pMPDrvInfoGlobal->pDriverObj,
-                          0,
-                          0,
-                          NULL,
-                          0,
-                          1000,
-                          status,
-                          102,
-                          status,
-                          0,
-                          0,
-                          NULL,
-                          L"Error setting file size."));
-
-                      DbgPrint("PhDskMnt: Error setting eof (%#x).\n", status);
-                      return status;
-                  }
-              }
-
-              alignment_requirement = file_alignment.AlignmentRequirement;
-            }
-        }
-      else
-	// If proxy is used, get the image file size from the proxy instead.
+	}
+	else
+	    // If proxy is used, get the image file size from the proxy instead.
 	{
-	  IMDPROXY_INFO_RESP proxy_info;
+	    IMDPROXY_INFO_RESP proxy_info;
 
-	  status = ImScsiQueryInformationProxy(&proxy,
-					       &io_status,
-					       NULL,
-					       &proxy_info,
-					       sizeof(IMDPROXY_INFO_RESP));
+	    status = ImScsiQueryInformationProxy(&proxy,
+		&io_status,
+		NULL,
+		&proxy_info,
+		sizeof(IMDPROXY_INFO_RESP));
 
-	  if (!NT_SUCCESS(status))
+	    if (!NT_SUCCESS(status))
 	    {
-	      ImScsiCloseProxy(&proxy);
-	      ZwClose(file_handle);
-	      ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+		ImScsiCloseProxy(&proxy);
+		ZwClose(file_handle);
+		ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
 
-	      ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			      0,
-			      0,
-			      NULL,
-			      0,
-			      1000,
-			      status,
-			      102,
-			      status,
-			      0,
-			      0,
-			      NULL,
-			      L"Error querying proxy."));
+		ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		    0,
+		    0,
+		    NULL,
+		    0,
+		    1000,
+		    status,
+		    102,
+		    status,
+		    0,
+		    0,
+		    NULL,
+		    L"Error querying proxy."));
 
-	      KdPrint(("PhDskMnt: Error querying proxy (%#x).\n", status));
+		KdPrint(("PhDskMnt: Error querying proxy (%#x).\n", status));
 
-	      return status;
+		return status;
 	    }
 
-	  if (CreateData->DiskSize.QuadPart == 0)
-	    CreateData->DiskSize.QuadPart = proxy_info.file_size;
+	    if (CreateData->DiskSize.QuadPart == 0)
+		CreateData->DiskSize.QuadPart = proxy_info.file_size;
 
-	  if ((proxy_info.req_alignment - 1 > FILE_512_BYTE_ALIGNMENT) |
-	      (CreateData->DiskSize.QuadPart == 0))
+	    if ((proxy_info.req_alignment - 1 > FILE_512_BYTE_ALIGNMENT) |
+		(CreateData->DiskSize.QuadPart == 0))
 	    {
-	      ImScsiCloseProxy(&proxy);
-	      ZwClose(file_handle);
-	      ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+		ImScsiCloseProxy(&proxy);
+		ZwClose(file_handle);
+		ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
 
-	      ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			      0,
-			      0,
-			      NULL,
-			      0,
-			      1000,
-			      status,
-			      102,
-			      status,
-			      0,
-			      0,
-			      NULL,
-			      L"Unsupported sizes."));
+		ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		    0,
+		    0,
+		    NULL,
+		    0,
+		    1000,
+		    status,
+		    102,
+		    status,
+		    0,
+		    0,
+		    NULL,
+		    L"Unsupported sizes."));
 
-	      KdPrint(("PhDskMnt: Unsupported sizes. "
-		       "Got 0x%08x%08x size and 0x%08x%08x alignment.\n",
-		       proxy_info.file_size,
-		       proxy_info.req_alignment));
+		KdPrint(("PhDskMnt: Unsupported sizes. "
+		    "Got 0x%08x%08x size and 0x%08x%08x alignment.\n",
+		    proxy_info.file_size,
+		    proxy_info.req_alignment));
 
-	      return STATUS_INVALID_PARAMETER;
+		return STATUS_INVALID_PARAMETER;
 	    }
 
-	  alignment_requirement = (ULONG) proxy_info.req_alignment - 1;
+	    alignment_requirement = (ULONG)proxy_info.req_alignment - 1;
 
-	  if (proxy_info.flags & IMDPROXY_FLAG_RO)
-	    CreateData->Flags |= IMSCSI_OPTION_RO;
+	    if (proxy_info.flags & IMDPROXY_FLAG_RO)
+		CreateData->Flags |= IMSCSI_OPTION_RO;
 
-	  KdPrint(("PhDskMnt: Got from proxy: Siz=0x%08x%08x Flg=%#x Alg=%#x.\n",
-		   CreateData->DiskSize.HighPart,
-		   CreateData->DiskSize.LowPart,
-		   (ULONG) proxy_info.flags,
-		   (ULONG) proxy_info.req_alignment));
+	    KdPrint(("PhDskMnt: Got from proxy: Siz=0x%08x%08x Flg=%#x Alg=%#x.\n",
+		CreateData->DiskSize.HighPart,
+		CreateData->DiskSize.LowPart,
+		(ULONG)proxy_info.flags,
+		(ULONG)proxy_info.req_alignment));
 	}
 
-      if (CreateData->DiskSize.QuadPart == 0)
+	if (CreateData->DiskSize.QuadPart == 0)
 	{
-	  SIZE_T free_size = 0;
-      
-	  ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			  0,
-			  0,
-			  NULL,
-			  0,
-			  1000,
-			  status,
-			  102,
-			  status,
-			  0,
-			  0,
-			  NULL,
-			  L"Disk size equals zero."));
+	    SIZE_T free_size = 0;
 
-	  KdPrint(("PhDskMnt: Fatal error: Disk size equals zero.\n"));
+	    ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		0,
+		0,
+		NULL,
+		0,
+		1000,
+		status,
+		102,
+		status,
+		0,
+		0,
+		NULL,
+		L"Disk size equals zero."));
 
-	  ImScsiCloseProxy(&proxy);
-	  if (file_handle != NULL)
-	    ZwClose(file_handle);
-	  if (file_name.Buffer != NULL)
-	    ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
-	  if (image_buffer != NULL)
-	    ZwFreeVirtualMemory(NtCurrentProcess(),
-				(PVOID*)&image_buffer,
-				&free_size, MEM_RELEASE);
+	    KdPrint(("PhDskMnt: Fatal error: Disk size equals zero.\n"));
 
-	  return STATUS_INVALID_PARAMETER;
+	    ImScsiCloseProxy(&proxy);
+	    if (file_handle != NULL)
+		ZwClose(file_handle);
+	    if (file_name.Buffer != NULL)
+		ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
+	    if (image_buffer != NULL)
+		ZwFreeVirtualMemory(NtCurrentProcess(),
+		(PVOID*)&image_buffer,
+		&free_size, MEM_RELEASE);
+
+	    return STATUS_INVALID_PARAMETER;
 	}
     }
-  // Blank vm-disk, just allocate...
-  else
+    // Blank vm-disk, just allocate...
+    else
     {
-      SIZE_T max_size;
+	SIZE_T max_size;
 #ifdef _WIN64
-      max_size = CreateData->DiskSize.QuadPart;
+	max_size = CreateData->DiskSize.QuadPart;
 #else
-      max_size = CreateData->DiskSize.LowPart;
+	max_size = CreateData->DiskSize.LowPart;
 #endif
 
-      image_buffer = NULL;
-      status =
-	ZwAllocateVirtualMemory(NtCurrentProcess(),
-				(PVOID*)&image_buffer,
-				0,
-				&max_size,
-				MEM_COMMIT,
-				PAGE_READWRITE);
-      if (!NT_SUCCESS(status))
+	image_buffer = NULL;
+	status =
+	    ZwAllocateVirtualMemory(NtCurrentProcess(),
+	    (PVOID*)&image_buffer,
+	    0,
+	    &max_size,
+	    MEM_COMMIT,
+	    PAGE_READWRITE);
+	if (!NT_SUCCESS(status))
 	{
-	  KdPrint
-	    (("PhDskMnt: Error allocating virtual memory for vm disk (%#x).\n",
-	      status));
+	    KdPrint
+		(("PhDskMnt: Error allocating virtual memory for vm disk (%#x).\n",
+		status));
 
-	  ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
-			  0,
-			  0,
-			  NULL,
-			  0,
-			  1000,
-			  status,
-			  102,
-			  status,
-			  0,
-			  0,
-			  NULL,
-			  L"Not enough free memory for VM disk."));
+	    ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+		0,
+		0,
+		NULL,
+		0,
+		1000,
+		status,
+		102,
+		status,
+		0,
+		0,
+		NULL,
+		L"Not enough free memory for VM disk."));
 
-	  return STATUS_NO_MEMORY;
+	    return STATUS_NO_MEMORY;
 	}
 
-      alignment_requirement = FILE_BYTE_ALIGNMENT;
+	alignment_requirement = FILE_BYTE_ALIGNMENT;
     }
 
-  KdPrint(("PhDskMnt: Done with file/memory checks.\n"));
+    KdPrint(("PhDskMnt: Done with file/memory checks.\n"));
 
-  // If no device-type specified and size matches common floppy sizes,
-  // auto-select FILE_DEVICE_DISK with FILE_FLOPPY_DISKETTE and
-  // FILE_REMOVABLE_MEDIA.
-  // If still no device-type specified, specify FILE_DEVICE_DISK with no
-  // particular characteristics. This will emulate a hard disk partition.
-  if (IMSCSI_DEVICE_TYPE(CreateData->Flags) == 0)
-      CreateData->Flags |= IMSCSI_DEVICE_TYPE_HD;
-	  
-  KdPrint(("PhDskMnt: Done with device type selection for floppy sizes.\n"));
+    // If no device-type specified and size matches common floppy sizes,
+    // auto-select FILE_DEVICE_DISK with FILE_FLOPPY_DISKETTE and
+    // FILE_REMOVABLE_MEDIA.
+    // If still no device-type specified, specify FILE_DEVICE_DISK with no
+    // particular characteristics. This will emulate a hard disk partition.
+    if (IMSCSI_DEVICE_TYPE(CreateData->Flags) == 0)
+	CreateData->Flags |= IMSCSI_DEVICE_TYPE_HD;
 
-  // If some parts of the DISK_GEOMETRY structure are zero, auto-fill with
-  // typical values for this type of disk.
-  if (IMSCSI_DEVICE_TYPE(CreateData->Flags) == IMSCSI_DEVICE_TYPE_CD)
+    KdPrint(("PhDskMnt: Done with device type selection for floppy sizes.\n"));
+
+    // If some parts of the DISK_GEOMETRY structure are zero, auto-fill with
+    // typical values for this type of disk.
+    if (IMSCSI_DEVICE_TYPE(CreateData->Flags) == IMSCSI_DEVICE_TYPE_CD)
     {
-      if (CreateData->BytesPerSector == 0)
-	CreateData->BytesPerSector = SECTOR_SIZE_CD_ROM;
+	if (CreateData->BytesPerSector == 0)
+	    CreateData->BytesPerSector = SECTOR_SIZE_CD_ROM;
 
-      CreateData->Flags |= IMSCSI_OPTION_REMOVABLE | IMSCSI_OPTION_RO;
+	CreateData->Flags |= IMSCSI_OPTION_REMOVABLE | IMSCSI_OPTION_RO;
     }
-  else
-      if (CreateData->BytesPerSector == 0)
-	CreateData->BytesPerSector = SECTOR_SIZE_HDD;
+    else
+	if (CreateData->BytesPerSector == 0)
+	    CreateData->BytesPerSector = SECTOR_SIZE_HDD;
 
-  KdPrint(("PhDskMnt: Done with disk geometry setup.\n"));
+    KdPrint(("PhDskMnt: Done with disk geometry setup.\n"));
 
-  // Now build real DeviceType and DeviceCharacteristics parameters.
-  if (IMSCSI_DEVICE_TYPE(CreateData->Flags) == IMSCSI_DEVICE_TYPE_CD)
-      LUExtension->DeviceType = READ_ONLY_DIRECT_ACCESS_DEVICE;
-  else
-      LUExtension->DeviceType = DIRECT_ACCESS_DEVICE;
+    // Now build real DeviceType and DeviceCharacteristics parameters.
+    if (IMSCSI_DEVICE_TYPE(CreateData->Flags) == IMSCSI_DEVICE_TYPE_CD)
+	LUExtension->DeviceType = READ_ONLY_DIRECT_ACCESS_DEVICE;
+    else
+	LUExtension->DeviceType = DIRECT_ACCESS_DEVICE;
 
-  if (IMSCSI_READONLY(CreateData->Flags))
-      LUExtension->ReadOnly = TRUE;
-  if (IMSCSI_REMOVABLE(CreateData->Flags))
-      LUExtension->RemovableMedia = TRUE;
+    if (IMSCSI_READONLY(CreateData->Flags))
+	LUExtension->ReadOnly = TRUE;
+    if (IMSCSI_REMOVABLE(CreateData->Flags))
+	LUExtension->RemovableMedia = TRUE;
 
-  if (alignment_requirement > CreateData->BytesPerSector)
-      CreateData->BytesPerSector = alignment_requirement + 1;
+    if (alignment_requirement > CreateData->BytesPerSector)
+	CreateData->BytesPerSector = alignment_requirement + 1;
 
     KdPrint
-    (("PhDskMnt: After checks and translations we got this create data:\n"
-        "DeviceNumber   = %#x\n"
-        "DiskSize       = %I64u\n"
-        "ImageOffset    = %I64u\n"
-        "SectorSize     = %u\n"
-        "Flags          = %#x\n"
-        "FileNameLength = %u\n"
-        "FileName       = '%.*ws'\n",
-        CreateData->DeviceNumber,
-        CreateData->DiskSize.QuadPart,
-        CreateData->ImageOffset.QuadPart,
-        CreateData->BytesPerSector,
-        CreateData->Flags,
-        CreateData->FileNameLength,
-        (int)(CreateData->FileNameLength / sizeof(*CreateData->FileName)),
-        CreateData->FileName));
+	(("PhDskMnt: After checks and translations we got this create data:\n"
+	"DeviceNumber   = %#x\n"
+	"DiskSize       = %I64u\n"
+	"ImageOffset    = %I64u\n"
+	"SectorSize     = %u\n"
+	"Flags          = %#x\n"
+	"FileNameLength = %u\n"
+	"FileName       = '%.*ws'\n",
+	CreateData->DeviceNumber,
+	CreateData->DiskSize.QuadPart,
+	CreateData->ImageOffset.QuadPart,
+	CreateData->BytesPerSector,
+	CreateData->Flags,
+	CreateData->FileNameLength,
+	(int)(CreateData->FileNameLength / sizeof(*CreateData->FileName)),
+	CreateData->FileName));
 
     LUExtension->ObjectName = file_name;
 
     LUExtension->DiskSize = CreateData->DiskSize;
 
     while (CreateData->BytesPerSector >>= 1)
-        LUExtension->BlockPower++;
+	LUExtension->BlockPower++;
     if (LUExtension->BlockPower == 0)
-        LUExtension->BlockPower = DEFAULT_BLOCK_POWER;
+	LUExtension->BlockPower = DEFAULT_BLOCK_POWER;
     CreateData->BytesPerSector = 1UL << LUExtension->BlockPower;
 
     LUExtension->ImageOffset = CreateData->ImageOffset;
 
     // VM disk.
     if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_VM)
-    LUExtension->VMDisk = TRUE;
+	LUExtension->VMDisk = TRUE;
     else
-    LUExtension->VMDisk = FALSE;
+	LUExtension->VMDisk = FALSE;
 
     LUExtension->ImageBuffer = image_buffer;
     LUExtension->ImageFile = file_handle;
@@ -1691,20 +1692,20 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
     // Use proxy service.
     if (IMSCSI_TYPE(CreateData->Flags) == IMSCSI_TYPE_PROXY)
     {
-        LUExtension->Proxy = proxy;
-        LUExtension->UseProxy = TRUE;
+	LUExtension->Proxy = proxy;
+	LUExtension->UseProxy = TRUE;
     }
     else
-        LUExtension->UseProxy = FALSE;
+	LUExtension->UseProxy = FALSE;
 
     // If we are going to fake a disk signature if existing one
     // is all zeroes and device is read-only, prepare that fake
     // disk sig here.
     if ((CreateData->Flags & IMSCSI_FAKE_DISK_SIG_IF_ZERO) &&
-        IMSCSI_READONLY(CreateData->Flags))
-        LUExtension->FakeDiskSignature =
-            (RtlRandomEx(&pMPDrvInfoGlobal->RandomSeed) |
-            0x80808081UL) &	0xFEFEFEFFUL;
+	IMSCSI_READONLY(CreateData->Flags))
+	LUExtension->FakeDiskSignature =
+	(RtlRandomEx(&pMPDrvInfoGlobal->RandomSeed) |
+	0x80808081UL) & 0xFEFEFEFFUL;
 
     KeInitializeSpinLock(&LUExtension->RequestListLock);
     InitializeListHead(&LUExtension->RequestList);
@@ -1717,18 +1718,18 @@ ImScsiInitializeLU(IN pHW_LU_EXTENSION LUExtension,
     KdPrint(("PhDskMnt::ImScsiCreateLU: Creating worker thread for pLUExt=0x%p.\n", LUExtension));
 
     status = PsCreateSystemThread(
-        &thread_handle,
-        (ACCESS_MASK) 0L,
-        NULL,
-        NULL,
-        NULL,
-        ImScsiWorkerThread,
-        LUExtension);
+	&thread_handle,
+	(ACCESS_MASK)0L,
+	NULL,
+	NULL,
+	NULL,
+	ImScsiWorkerThread,
+	LUExtension);
 
     if (!NT_SUCCESS(status))
     {
-        DbgPrint("PhDskMnt::ImScsiDispatchWork: Cannot create worker thread. (%#x)\n", status);
-        return status;
+	DbgPrint("PhDskMnt::ImScsiDispatchWork: Cannot create worker thread. (%#x)\n", status);
+	return status;
     }
 
     ZwClose(thread_handle);

@@ -1,5 +1,6 @@
 ﻿Imports System.ServiceProcess
 Imports Ionic.Zip
+Imports Arsenal.ImageMounter.IO
 
 ''' <summary>
 ''' Routines for installing or uninstalling Arsenal Image Mounter kernel level
@@ -36,6 +37,48 @@ Public Class DriverSetup
     End Sub
 
     ''' <summary>
+    ''' Returns version of driver located inside a setup zip archive.
+    ''' </summary>
+    ''' <param name="zipFile">ZipFile object with setup files</param>
+    Public Shared Function GetArchiveDriverVersion(zipFile As ZipFile) As Version
+
+        Using versionFile =
+            zipFile.
+                Entries().
+                Where(Function(e) e.FileName.Equals(kernel & "/phdskmnt.inf", StringComparison.OrdinalIgnoreCase)).
+                First().
+                OpenReader()
+
+            Return GetSetupFileDriverVersion(New CachedIniFile(versionFile,
+                                                               Encoding.ASCII))
+
+        End Using
+
+    End Function
+
+    ''' <summary>
+    ''' Returns version of driver located in setup files directory.
+    ''' </summary>
+    ''' <param name="setupRoot">Root directory of setup files.</param>
+    Public Shared Function GetSetupFileDriverVersion(setupRoot As String) As Version
+
+        Dim versionFile = Path.Combine(setupRoot, kernel, "phdskmnt.inf")
+
+        Return GetSetupFileDriverVersion(New CachedIniFile(versionFile, Encoding.ASCII))
+
+    End Function
+
+    ''' <summary>
+    ''' Returns version of driver located in setup files directory.
+    ''' </summary>
+    ''' <param name="infFile">.inf file used to identify version of driver.</param>
+    Public Shared Function GetSetupFileDriverVersion(infFile As CachedIniFile) As Version
+
+        Return Version.Parse(infFile!Version!DriverVer.Split(","c)(1))
+
+    End Function
+
+    ''' <summary>
     ''' Installs Arsenal Image Mounter driver components from a zip archive.
     ''' This routine automatically selects the correct driver version for
     ''' current version of Windows.
@@ -45,8 +88,8 @@ Public Class DriverSetup
     ''' console Applications, you could call
     ''' NativeFileIO.Win32API.GetConsoleWindow() to get a window handle to the
     ''' console window.</param>
-    ''' <param name="zipFile">An Ionic.Zip.ZipFile opened for reading a zip file
-    ''' containing setup source files. Directory layout in zip file needs to be
+    ''' <param name="zipFile">An Ionic.Zip.ZipFile opened for reading that
+    ''' contains setup source files. Directory layout in zip file needs to be
     ''' like in DriverSetup.zip found in DriverSetup directory in repository,
     ''' that is, one subdirectory for each kernel version followed by one
     ''' subdirectory for each architecture.</param>
@@ -99,6 +142,16 @@ Public Class DriverSetup
         End If
 
     End Sub
+
+    ''' <summary>
+    ''' Returns version of driver located inside a setup zip archive.
+    ''' </summary>
+    ''' <param name="zipStream">Stream containing a zip archive with setup files</param>
+    Public Shared Function GetArchiveDriverVersion(zipStream As Stream) As Version
+
+        Return GetArchiveDriverVersion(ZipFile.Read(zipStream))
+
+    End Function
 
     ''' <summary>
     ''' Installs Arsenal Image Mounter driver components from a zip archive.

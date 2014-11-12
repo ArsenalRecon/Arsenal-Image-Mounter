@@ -2,7 +2,7 @@
 ''''' MainModule.vb
 ''''' Console driver setup application, for scripting and similar.
 ''''' 
-''''' Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code is available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -13,6 +13,7 @@
 
 Imports Arsenal.ImageMounter.DriverSetup
 Imports Arsenal.ImageMounter.API
+Imports Arsenal.ImageMounter.IO
 
 Module MainModule
 

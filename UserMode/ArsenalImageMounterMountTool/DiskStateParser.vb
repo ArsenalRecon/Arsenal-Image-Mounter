@@ -1,6 +1,8 @@
 ﻿Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.ScsiAdapter
 Imports System.Runtime.InteropServices
+Imports Arsenal.ImageMounter.PSDisk
+Imports Arsenal.ImageMounter.IO
 
 Public Class DiskStateParser
     Implements IDisposable
