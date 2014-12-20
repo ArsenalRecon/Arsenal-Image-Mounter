@@ -30,11 +30,11 @@
 #pragma alloc_text( INIT, DriverEntry )
 #endif // ALLOC_PRAGMA
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/* Globals.                                                                                       */ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
+/**************************************************************************************************/
+/*                                                                                                */
+/* Globals.                                                                                       */
+/*                                                                                                */
+/**************************************************************************************************/
 
 #ifdef MP_DrvInfo_Inline
 
@@ -61,7 +61,7 @@ ImScsiGetAdapterDeviceObject()
     for (i = 0; i < 100; i++)
     {
         LARGE_INTEGER wait_time;
-        int r;
+        int r = 0;
 
         if ((i & 7) == 7)
         {
@@ -69,22 +69,26 @@ ImScsiGetAdapterDeviceObject()
             KeDelayExecutionThread(KernelMode, FALSE, &wait_time);
         }
 
-        _snwprintf(objstr, sizeof(objstr)/sizeof(*objstr), L"\\Device\\Scsi\\PhDskMnt%i", i);
+        _snwprintf(objstr, sizeof(objstr) / sizeof(*objstr), L"\\Device\\Scsi\\PhDskMnt%i", i);
 
         RtlInitUnicodeString(&objname, objstr);
 
-        for (r = 0; r < 120; r++)
+        for (;;)
         {
-            KdPrint2(("PhDskMnt::ImScsiGetAdapterDeviceObject: Attempt to open %ws...\n", objstr));
-    
+            KdPrint(("PhDskMnt::ImScsiGetAdapterDeviceObject: Attempt to open %ws...\n", objstr));
+
             status = IoGetDeviceObjectPointer(&objname, GENERIC_ALL, &file_object, &device_object);
 
             // Not yet ready? (In case port driver not yet intialized)
-            if (status == STATUS_DEVICE_NOT_READY)
+            if ((status == STATUS_DEVICE_NOT_READY) &&
+                (r < 120))
             {
                 DbgPrint("PhDskMnt::ImScsiGetAdapterDeviceObject: Object %ws not ready, waiting...\n", objstr);
                 wait_time.QuadPart = -5000000;
                 KeDelayExecutionThread(KernelMode, FALSE, &wait_time);
+
+                r++;
+
                 continue;
             }
 
@@ -126,26 +130,26 @@ ImScsiVirtualDrivesPresent()
 #if defined(_AMD64_)
     KLOCK_QUEUE_HANDLE    LockHandle;
     KeAcquireInStackQueuedSpinLock(                   // Serialize the linked list of HBA.
-	&pMPDrvInfoGlobal->DrvInfoLock, &LockHandle);
+        &pMPDrvInfoGlobal->DrvInfoLock, &LockHandle);
 #else
     KIRQL                 SaveIrql;
     KeAcquireSpinLock(&pMPDrvInfoGlobal->DrvInfoLock, &SaveIrql);
 #endif
 
     for (list_ptr = pMPDrvInfoGlobal->ListMPHBAObj.Flink;
-	list_ptr != &pMPDrvInfoGlobal->ListMPHBAObj;
-	list_ptr = list_ptr->Flink
-	)
+        list_ptr != &pMPDrvInfoGlobal->ListMPHBAObj;
+        list_ptr = list_ptr->Flink
+        )
     {
-	pHW_HBA_EXT pHBAExt;
+        pHW_HBA_EXT pHBAExt;
 
-	pHBAExt = CONTAINING_RECORD(list_ptr, HW_HBA_EXT, List);
+        pHBAExt = CONTAINING_RECORD(list_ptr, HW_HBA_EXT, List);
 
-	if (!IsListEmpty(&pHBAExt->LUList))
-	{
-	    result = TRUE;
-	    break;
-	}
+        if (!IsListEmpty(&pHBAExt->LUList))
+        {
+            result = TRUE;
+            break;
+        }
     }
 
     pMPDrvInfoGlobal->DrvInfoLock;
@@ -162,16 +166,21 @@ ImScsiVirtualDrivesPresent()
 VOID
 ImScsiFreeGlobalResources()
 {
-    DbgPrint("PhDskMnt::ImScsiFreeGlobalResources: Unloading.\n");
+    KdPrint(("PhDskMnt::ImScsiFreeGlobalResources: Unloading.\n"));
 
     if (pMPDrvInfoGlobal != NULL)
     {
-	KdPrint(("PhDskMnt::ImScsiFreeGlobalResources: Ready to stop worker thread and free global data.\n"));
+        KdPrint(("PhDskMnt::ImScsiFreeGlobalResources: Ready to stop worker threads and free global data.\n"));
 
-	if ((pMPDrvInfoGlobal->GlobalsInitialized) &
+        if ((pMPDrvInfoGlobal->GlobalsInitialized) &&
             (pMPDrvInfoGlobal->WorkerThread != NULL))
         {
-            KeSetEvent(&pMPDrvInfoGlobal->StopWorker, (KPRIORITY) 0, TRUE);
+
+            KdPrint(("PhDskMnt::ImScsiFreeGlobalResources: Waiting for global worker thread %p.\n",
+                pMPDrvInfoGlobal->WorkerThread));
+
+            KeSetEvent(&pMPDrvInfoGlobal->StopWorker, (KPRIORITY)0, TRUE);
+
             KeWaitForSingleObject(
                 pMPDrvInfoGlobal->WorkerThread,
                 Executive,
@@ -189,15 +198,15 @@ ImScsiFreeGlobalResources()
     }
 }
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
-NTSTATUS                                                                                                                                              
+/**************************************************************************************************/
+/*                                                                                                */
+/*                                                                                                */
+/**************************************************************************************************/
+NTSTATUS
 DriverEntry(
-            __in PDRIVER_OBJECT  pDrvObj,
-            __in PUNICODE_STRING pRegistryPath
-           )
+__in PDRIVER_OBJECT  pDrvObj,
+__in PUNICODE_STRING pRegistryPath
+)
 {
     NTSTATUS                       status = STATUS_SUCCESS;
 #ifdef USE_STORPORT
@@ -207,10 +216,10 @@ DriverEntry(
     HW_INITIALIZATION_DATA         hwInitData = { 0 };
 #endif
     pMPDriverInfo                  pMPDrvInfo;
-	LARGE_INTEGER                  liTickCount;
+    LARGE_INTEGER                  liTickCount;
 
     KdPrint2(("PhDskMnt::DriverEntry: Begin.\n"));
-    
+
 #ifdef MP_DrvInfo_Inline
 
     // Because there's no good way to clean up the allocation of the global driver information, 
@@ -238,7 +247,7 @@ DriverEntry(
 
 #endif
 
-	// Initialize driver globals structure
+    // Initialize driver globals structure
 
     pMPDrvInfoGlobal = pMPDrvInfo;                    // Save pointer in binary's storage.
 
@@ -250,8 +259,8 @@ DriverEntry(
 
     InitializeListHead(&pMPDrvInfo->ListMPHBAObj);    // Initialize list head.
 
-	KeQueryTickCount(&liTickCount);
-	pMPDrvInfo->RandomSeed = liTickCount.LowPart;     // Initialize random seed.
+    KeQueryTickCount(&liTickCount);
+    pMPDrvInfo->RandomSeed = liTickCount.LowPart;     // Initialize random seed.
 
     // Get registry parameters.
 
@@ -270,45 +279,44 @@ DriverEntry(
 #endif
 #endif
 
-    hwInitData.HwInitialize             = MpHwInitialize;           // Required for all ports.
-    hwInitData.HwStartIo                = MpHwStartIo;              // Required for all ports.
-    hwInitData.HwFindAdapter            = MpHwFindAdapter;          // Required for all ports.
-    hwInitData.HwResetBus               = MpHwResetBus;             // Required for all ports.
+    hwInitData.HwInitialize = MpHwInitialize;           // Required for all ports.
+    hwInitData.HwStartIo = MpHwStartIo;              // Required for all ports.
+    hwInitData.HwFindAdapter = MpHwFindAdapter;          // Required for all ports.
+    hwInitData.HwResetBus = MpHwResetBus;             // Required for all ports.
 #ifndef NT4_COMPATIBLE
-    hwInitData.HwAdapterControl         = MpHwAdapterControl;       // Required for all post NT4 ports.
+    hwInitData.HwAdapterControl = MpHwAdapterControl;       // Required for all post NT4 ports.
 #endif
 #ifdef USE_STORPORT
-    hwInitData.HwFreeAdapterResources   = MpHwFreeAdapterResources; // Required for virtual StorPort.
+    hwInitData.HwFreeAdapterResources = MpHwFreeAdapterResources; // Required for virtual StorPort.
 #endif
 
-    hwInitData.AutoRequestSense         = TRUE;
-    hwInitData.TaggedQueuing            = TRUE;
-    hwInitData.MultipleRequestPerLu     = TRUE;
+    hwInitData.AutoRequestSense = TRUE;
+    hwInitData.TaggedQueuing = TRUE;
+    hwInitData.MultipleRequestPerLu = TRUE;
 
-    hwInitData.MapBuffers               = STORAGE_MAP_BUFFERS_SETTING;
+    hwInitData.MapBuffers = STORAGE_MAP_BUFFERS_SETTING;
 
-    hwInitData.DeviceExtensionSize      = sizeof(HW_HBA_EXT);
-    hwInitData.SpecificLuExtensionSize  = sizeof(PVOID);
-    hwInitData.SrbExtensionSize         = sizeof(HW_SRB_EXTENSION);
+    hwInitData.DeviceExtensionSize = sizeof(HW_HBA_EXT);
+    hwInitData.SpecificLuExtensionSize = sizeof(PVOID);
+    hwInitData.SrbExtensionSize = sizeof(HW_SRB_EXTENSION);
 
-    hwInitData.AdapterInterfaceType     = STORAGE_INTERFACE_TYPE;
+    hwInitData.AdapterInterfaceType = STORAGE_INTERFACE_TYPE;
 
-    status =  StoragePortInitialize(                     // Tell port driver we're here.
-                                    pDrvObj,
-                                    pRegistryPath,
-                                    (PHW_INITIALIZATION_DATA)&hwInitData,
-                                    NULL
-                                    );
+    status = StoragePortInitialize(                     // Tell port driver we're here.
+        pDrvObj,
+        pRegistryPath,
+        (PHW_INITIALIZATION_DATA)&hwInitData,
+        NULL
+        );
 
     DbgPrint("PhDskMnt::DriverEntry: StoragePortInitialize returned 0x%X\n", status);
 
     if (NT_SUCCESS(status))
     {
-        // Register our own unload routine
+        // Register our own dispatch hooks
 
         pMPDrvInfo->pChainUnload = pDrvObj->DriverUnload;
         pDrvObj->DriverUnload = ImScsiUnload;
-
     }
     else
     {
@@ -316,58 +324,60 @@ DriverEntry(
     }
 
     KdPrint2(("PhDskMnt::DriverEntry: End. status=0x%X\n", status));
-    
+
     return status;
 }                                                     // End DriverEntry().
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/* Unload routine                                                                                 */ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
+
+/**************************************************************************************************/
+/*                                                                                                */
+/* Unload routine                                                                                 */
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ImScsiUnload(PDRIVER_OBJECT pDrvObj)
 {
-    KdPrint(("PhDskMnt::ImScsiUnload.\n"));
+    DbgPrint("PhDskMnt::ImScsiUnload.\n");
 
     if ((pMPDrvInfoGlobal != NULL) &&
-	(pMPDrvInfoGlobal->pChainUnload != NULL))
+        (pMPDrvInfoGlobal->pChainUnload != NULL))
     {
-	KdPrint(("PhDskMnt::ImScsiUnload: Calling next in chain 0x%p.\n", pMPDrvInfoGlobal->pChainUnload));
-	pMPDrvInfoGlobal->pChainUnload(pDrvObj);
+        KdPrint(("PhDskMnt::ImScsiUnload: Calling next in chain 0x%p.\n", pMPDrvInfoGlobal->pChainUnload));
+        pMPDrvInfoGlobal->pChainUnload(pDrvObj);
     }
 
     // Free our own resources
     ImScsiFreeGlobalResources();
 
-    KdPrint(("PhDskMnt::ImScsiUnload: Done.\n"));
+    DbgPrint("PhDskMnt::ImScsiUnload: Done.\n");
 }
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/* Callback for a new HBA.                                                                        */ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
+
+/**************************************************************************************************/
+/*                                                                                                */
+/* Callback for a new HBA.                                                                        */
+/*                                                                                                */
+/**************************************************************************************************/
 ULONG
 MpHwFindAdapter(
-                __in       PVOID                           DeviceExtension,
-                __in       PVOID                           pReservedArg1,
-                __in       PVOID                           pReservedArg2,
+__in       PVOID                           DeviceExtension,
+__in       PVOID                           pReservedArg1,
+__in       PVOID                           pReservedArg2,
 #ifdef USE_STORPORT
-                __in       PVOID                           pReservedArg3,
+__in       PVOID                           pReservedArg3,
 #endif
-                __in       PCHAR                           ArgumentString,
-                __in __out PPORT_CONFIGURATION_INFORMATION pConfigInfo,
-                __out      PBOOLEAN                        pBAgain
+__in       PCHAR                           ArgumentString,
+__in __out PPORT_CONFIGURATION_INFORMATION pConfigInfo,
+__out      PBOOLEAN                        pBAgain
 )
 {
     ULONG              i,
-                       len,
-                       status = SP_RETURN_FOUND;
+        len,
+        status = SP_RETURN_FOUND;
     PCHAR              pChar;
     pHW_HBA_EXT        pHBAExt = (pHW_HBA_EXT)DeviceExtension;
     NTSTATUS           ntstatus;
-    
+
 #if defined(_AMD64_)
 
     KLOCK_QUEUE_HANDLE LockHandle;
@@ -385,7 +395,7 @@ MpHwFindAdapter(
 #endif
     UNREFERENCED_PARAMETER(ArgumentString);
 
-    KdPrint2(("PhDskMnt::MpHwFindAdapter:  Arg=%s%s%s, pHBAExt = 0x%p, pConfigInfo = 0x%p, IRQL=%i\n",
+    KdPrint(("PhDskMnt::MpHwFindAdapter:  Arg=%s%s%s, pHBAExt = 0x%p, pConfigInfo = 0x%p, IRQL=%i\n",
         ArgumentString != NULL ? "\"" : "(",
         ArgumentString != NULL ? ArgumentString : "null",
         ArgumentString != NULL ? "\"" : ")",
@@ -415,16 +425,16 @@ MpHwFindAdapter(
 
     pHBAExt->HostTargetId = (UCHAR)pMPDrvInfoGlobal->MPRegInfo.InitiatorID;
 
-    pConfigInfo->WmiDataProvider                = FALSE;                       // Indicate WMI provider.
+    pConfigInfo->WmiDataProvider = FALSE;                       // Indicate WMI provider.
 
-    pConfigInfo->NumberOfPhysicalBreaks         = 4096;
+    pConfigInfo->NumberOfPhysicalBreaks = 4096;
 
-    pConfigInfo->MaximumTransferLength          = 8 << 20;                     // 8 MB.
+    pConfigInfo->MaximumTransferLength = 8 << 20;                     // 8 MB.
 
 #ifdef USE_STORPORT
 
-    pConfigInfo->VirtualDevice                  = TRUE;                        // Inidicate no real hardware.
-    pConfigInfo->SynchronizationModel           = StorSynchronizeFullDuplex;
+    pConfigInfo->VirtualDevice = TRUE;                        // Inidicate no real hardware.
+    pConfigInfo->SynchronizationModel = StorSynchronizeFullDuplex;
 
     if (pConfigInfo->Dma64BitAddresses == SCSI_DMA64_SYSTEM_SUPPORTED)
         pConfigInfo->Dma64BitAddresses = SCSI_DMA64_MINIPORT_FULL64BIT_SUPPORTED;
@@ -442,32 +452,32 @@ MpHwFindAdapter(
 
 #endif
 
-    pConfigInfo->AlignmentMask                  = 0x3;                         // Indicate DWORD alignment.
-    pConfigInfo->CachesData                     = FALSE;                       // Indicate miniport wants flush and shutdown notification.
-    pConfigInfo->MaximumNumberOfTargets         = SCSI_MAXIMUM_TARGETS;        // Indicate maximum targets.
-    pConfigInfo->NumberOfBuses                  =
-        (UCHAR) pMPDrvInfoGlobal->MPRegInfo.NumberOfBuses;                     // Indicate number of busses.
-    pConfigInfo->ScatterGather                  = TRUE;                        // Indicate scatter-gather (explicit setting needed for Win2003 at least).
-    pConfigInfo->AutoRequestSense               = TRUE;
-    pConfigInfo->TaggedQueuing                  = TRUE;
-    pConfigInfo->MultipleRequestPerLu           = TRUE;
+    pConfigInfo->AlignmentMask = 0x3;                         // Indicate DWORD alignment.
+    pConfigInfo->CachesData = FALSE;                       // Indicate miniport wants flush and shutdown notification.
+    pConfigInfo->MaximumNumberOfTargets = SCSI_MAXIMUM_TARGETS;        // Indicate maximum targets.
+    pConfigInfo->NumberOfBuses =
+        (UCHAR)pMPDrvInfoGlobal->MPRegInfo.NumberOfBuses;                     // Indicate number of busses.
+    pConfigInfo->ScatterGather = TRUE;                        // Indicate scatter-gather (explicit setting needed for Win2003 at least).
+    pConfigInfo->AutoRequestSense = TRUE;
+    pConfigInfo->TaggedQueuing = TRUE;
+    pConfigInfo->MultipleRequestPerLu = TRUE;
 
     // Save Vendor Id, Product Id, Revision in device extension.
 
     pChar = (PCHAR)pMPDrvInfoGlobal->MPRegInfo.VendorId.Buffer;
-    len = min(8, (pMPDrvInfoGlobal->MPRegInfo.VendorId.Length/2));
-    for ( i = 0; i < len; i++, pChar+=2)
-      pHBAExt->VendorId[i] = *pChar;
+    len = min(8, (pMPDrvInfoGlobal->MPRegInfo.VendorId.Length / 2));
+    for (i = 0; i < len; i++, pChar += 2)
+        pHBAExt->VendorId[i] = *pChar;
 
     pChar = (PCHAR)pMPDrvInfoGlobal->MPRegInfo.ProductId.Buffer;
-    len = min(16, (pMPDrvInfoGlobal->MPRegInfo.ProductId.Length/2));
-    for ( i = 0; i < len; i++, pChar+=2)
-      pHBAExt->ProductId[i] = *pChar;
+    len = min(16, (pMPDrvInfoGlobal->MPRegInfo.ProductId.Length / 2));
+    for (i = 0; i < len; i++, pChar += 2)
+        pHBAExt->ProductId[i] = *pChar;
 
     pChar = (PCHAR)pMPDrvInfoGlobal->MPRegInfo.ProductRevision.Buffer;
-    len = min(4, (pMPDrvInfoGlobal->MPRegInfo.ProductRevision.Length/2));
-    for ( i = 0; i < len; i++, pChar+=2)
-      pHBAExt->ProductRevision[i] = *pChar;
+    len = min(4, (pMPDrvInfoGlobal->MPRegInfo.ProductRevision.Length / 2));
+    for (i = 0; i < len; i++, pChar += 2)
+        pHBAExt->ProductRevision[i] = *pChar;
 
     // Add HBA extension to master driver object's linked list.
 
@@ -518,7 +528,7 @@ MpHwFindAdapter(
 
         ntstatus = PsCreateSystemThread(
             &thread_handle,
-            (ACCESS_MASK) 0L,
+            (ACCESS_MASK)0L,
             &object_attributes,
             NULL,
             NULL,
@@ -533,7 +543,7 @@ MpHwFindAdapter(
         }
         else
         {
-            ObReferenceObjectByHandle(
+            ntstatus = ObReferenceObjectByHandle(
                 thread_handle,
                 FILE_READ_ATTRIBUTES | SYNCHRONIZE,
                 *PsThreadType,
@@ -542,43 +552,49 @@ MpHwFindAdapter(
                 NULL
                 );
 
-            ZwClose(thread_handle);
+            if (!NT_SUCCESS(ntstatus))
+            {
+                DbgPrint("PhDskMnt::ScsiGetLUExtension: Cannot reference worker thread. (%#x)\n", ntstatus);
+                KeSetEvent(&pMPDrvInfoGlobal->StopWorker, (KPRIORITY)0, FALSE);
+                ZwWaitForSingleObject(thread_handle, FALSE, NULL);
 
-            //for (i = 0; i < pHBAExt->NbrLUNsperHBA; i++)
-            //    ImScsiCreateLU(pHBAExt, 0, (UCHAR)i, 0);
+                status = SP_RETURN_ERROR;
+            }
+
+            ZwClose(thread_handle);
         }
     }
 
-//Done:
-    *pBAgain = FALSE;    
-        
-    KdPrint2(("PhDskMnt::MpHwFindAdapter: End, status = 0x%X\n", status));
+    //Done:
+    *pBAgain = FALSE;
+
+    KdPrint(("PhDskMnt::MpHwFindAdapter: End, status = 0x%X\n", status));
 
     return status;
 }                                                     // End MpHwFindAdapter().
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 BOOLEAN
 MpHwInitialize(__in PVOID pHBAExt)
 {
-  UNREFERENCED_PARAMETER(pHBAExt);
+    UNREFERENCED_PARAMETER(pHBAExt);
 
-  KdPrint2(("PhDskMnt::MpHwInitialize:  pHBAExt = 0x%p. IRQL=%i\n", pHBAExt, KeGetCurrentIrql()));
+    KdPrint2(("PhDskMnt::MpHwInitialize:  pHBAExt = 0x%p. IRQL=%i\n", pHBAExt, KeGetCurrentIrql()));
 
-  return TRUE;
+    return TRUE;
 }                                                     // End MpHwInitialize().
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 #if 1
 BOOLEAN
 MpHwResetBus(
-             __in pHW_HBA_EXT          pHBAExt,       // Adapter device-object extension from port driver.
-             __in ULONG                BusId
-            )
+__in pHW_HBA_EXT          pHBAExt,       // Adapter device-object extension from port driver.
+__in ULONG                BusId
+)
 {
     UNREFERENCED_PARAMETER(pHBAExt);
     UNREFERENCED_PARAMETER(BusId);
@@ -596,9 +612,9 @@ MpHwResetBus(
 #else
 BOOLEAN
 MpHwResetBus(
-             __in pHW_HBA_EXT          pHBAExt,       // Adapter device-object extension from port driver.
-             __in ULONG                BusId
-            )
+__in pHW_HBA_EXT          pHBAExt,       // Adapter device-object extension from port driver.
+__in ULONG                BusId
+)
 {
     // To do: At some future point, it may be worthwhile to ensure that any SRBs being handled be completed at once.
     //        Practically speaking, however, it seems that the only SRBs that would not be completed very quickly
@@ -609,10 +625,10 @@ MpHwResetBus(
     DbgPrint("PhDskMnt::MpHwResetBus:  pHBAExt = 0x%p, BusId = %u. Calling ScsiPortCompleteRequest().\n", pHBAExt, BusId);
 
     ScsiPortCompleteRequest(pHBAExt,
-                (UCHAR) BusId,
-                SP_UNTAGGED,
-                SP_UNTAGGED,
-                SRB_STATUS_BUS_RESET);
+        (UCHAR)BusId,
+        SP_UNTAGGED,
+        SP_UNTAGGED,
+        SRB_STATUS_BUS_RESET);
 
     return TRUE;
 }                                                     // End MpHwResetBus().
@@ -621,71 +637,71 @@ MpHwResetBus(
 #ifdef USE_SCSIPORT
 LONG
 ImScsiCompletePendingSrbs(
-                          __in pHW_HBA_EXT pHBAExt  // Adapter device-object extension from port driver.
+__in pHW_HBA_EXT pHBAExt  // Adapter device-object extension from port driver.
 )
 {
-  pMP_WorkRtnParms pWkRtnParms;
-  LONG done = 0;
+    pMP_WorkRtnParms pWkRtnParms;
+    LONG done = 0;
 
-  KdPrint2(("PhDskMnt::ImScsiCompletePendingSrbs start. pHBAExt = 0x%p\n", pHBAExt));
+    KdPrint2(("PhDskMnt::ImScsiCompletePendingSrbs start. pHBAExt = 0x%p\n", pHBAExt));
 
-  for (;;)
-  {
-    PLIST_ENTRY request =
-      ExInterlockedRemoveHeadList(&pMPDrvInfoGlobal->ResponseList,
-      &pMPDrvInfoGlobal->ResponseListLock);
-
-    if (request == NULL)
+    for (;;)
     {
-      LONG was_pending = _InterlockedExchangeAdd((volatile LONG*)&pHBAExt->WorkItems, -done);
-      KdPrint2(("PhDskMnt::ImScsiCompletePendingSrbs finished.\n"));
-      return was_pending - done;
+        PLIST_ENTRY request =
+            ExInterlockedRemoveHeadList(&pMPDrvInfoGlobal->ResponseList,
+            &pMPDrvInfoGlobal->ResponseListLock);
+
+        if (request == NULL)
+        {
+            LONG was_pending = _InterlockedExchangeAdd((volatile LONG*)&pHBAExt->WorkItems, -done);
+            KdPrint2(("PhDskMnt::ImScsiCompletePendingSrbs finished.\n"));
+            return was_pending - done;
+        }
+
+        ++done;
+
+        pWkRtnParms = (pMP_WorkRtnParms)CONTAINING_RECORD(request, MP_WorkRtnParms, ResponseListEntry);
+
+        KdPrint2(("PhDskMnt::ImScsiCompletePendingSrbs: Completing pWkRtnParms = 0x%p, pSrb = 0x%p\n", pWkRtnParms, pWkRtnParms->pSrb));
+
+        ScsiPortNotification(RequestComplete, pWkRtnParms->pHBAExt, pWkRtnParms->pSrb);
+        ScsiPortNotification(NextRequest, pWkRtnParms->pHBAExt);
+
+        ExFreePoolWithTag(pWkRtnParms, MP_TAG_GENERAL);      // Free parm list.
     }
-
-    ++done;
-
-    pWkRtnParms = (pMP_WorkRtnParms)CONTAINING_RECORD(request, MP_WorkRtnParms, ResponseListEntry);
-
-    KdPrint2(("PhDskMnt::ImScsiCompletePendingSrbs: Completing pWkRtnParms = 0x%p, pSrb = 0x%p\n", pWkRtnParms, pWkRtnParms->pSrb));
-
-    ScsiPortNotification(RequestComplete, pWkRtnParms->pHBAExt, pWkRtnParms->pSrb);
-    ScsiPortNotification(NextRequest, pWkRtnParms->pHBAExt);
-
-    ExFreePoolWithTag(pWkRtnParms, MP_TAG_GENERAL);      // Free parm list.
-  }
 }
 
 VOID
 MpHwTimer(
-  __in pHW_HBA_EXT pHBAExt
+__in pHW_HBA_EXT pHBAExt
 )
 {
-  ULONG wait = 40000;
-  LONG pending;
+    ULONG wait = 40000;
+    LONG pending;
 
-  KdPrint2(("PhDskMnt::MpHwTimer start. pHBAExt = 0x%p\n", pHBAExt));
+    KdPrint2(("PhDskMnt::MpHwTimer start. pHBAExt = 0x%p\n", pHBAExt));
 
-  pending = ImScsiCompletePendingSrbs(pHBAExt);
+    pending = ImScsiCompletePendingSrbs(pHBAExt);
 
-  if (pending > 0)
-  {
-    KdPrint2(("PhDskMnt::MpHwTimer finished, %i items pending, restarting in %u µs.\n", pending, wait));
-    ScsiPortNotification(RequestTimerCall, pHBAExt, MpHwTimer, wait);
-  }
-  else
-    KdPrint2(("PhDskMnt::MpHwTimer finished, nothing left to do.\n"));
+    if (pending > 0)
+    {
+        KdPrint2(("PhDskMnt::MpHwTimer finished, %i items pending, restarting in %u µs.\n", pending, wait));
+        ScsiPortNotification(RequestTimerCall, pHBAExt, MpHwTimer, wait);
+    }
+    else
+        KdPrint2(("PhDskMnt::MpHwTimer finished, nothing left to do.\n"));
 }
 #endif
 
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 BOOLEAN
 MpHwStartIo(
-            __in       pHW_HBA_EXT          pHBAExt,  // Adapter device-object extension from port driver.
-            __in __out PSCSI_REQUEST_BLOCK  pSrb
-           )
+__in       pHW_HBA_EXT          pHBAExt,  // Adapter device-object extension from port driver.
+__in __out PSCSI_REQUEST_BLOCK  pSrb
+)
 {
     UCHAR                     Result = ResultDone;
 #ifdef USE_SCSIPORT
@@ -697,9 +713,9 @@ MpHwStartIo(
     KdPrint2(("PhDskMnt::MpHwStartIo:  pHBAExt = 0x%p, pSrb = 0x%p, Path=%i, Target=%i, Lun=%i, IRQL=%i\n",
         pHBAExt,
         pSrb,
-        (int) pSrb->PathId,
-        (int) pSrb->TargetId,
-        (int) pSrb->Lun,
+        (int)pSrb->PathId,
+        (int)pSrb->TargetId,
+        (int)pSrb->Lun,
         KeGetCurrentIrql()));
 
     pSrb->SrbStatus = SRB_STATUS_PENDING;
@@ -712,7 +728,7 @@ MpHwStartIo(
     // Next, if true, will cause port driver to remove the associated LUNs if, for example, devmgmt.msc is asked "scan for hardware changes."
     //if (pHBAExt->bDontReport)
     //{                       // Act as though the HBA/path is gone?
-    //    pSrb->SrbStatus = SRB_STATUS_INVALID_LUN;
+    //    pSrb->SrbStatus = SRB_STATUS_NO_DEVICE;
     //    goto done;
     //}
 
@@ -735,17 +751,17 @@ MpHwStartIo(
         DbgPrint("PhDskMnt::MpHwStartIo: SRB_FUNCTION_RESET_DEVICE.\n");
         pSrb->SrbStatus = ScsiResetDevice(pHBAExt, pSrb);
         break;
-            
+
     case SRB_FUNCTION_RESET_BUS:
         DbgPrint("PhDskMnt::MpHwStartIo: SRB_FUNCTION_RESET_BUS.\n");
         pSrb->SrbStatus = MpHwResetBus(pHBAExt, pSrb->PathId);
         break;
-            
-    case SRB_FUNCTION_PNP:                        
+
+    case SRB_FUNCTION_PNP:
         ScsiPnP(pHBAExt, (PSCSI_PNP_REQUEST_BLOCK)pSrb);
         break;
 
-    case SRB_FUNCTION_POWER:                      
+    case SRB_FUNCTION_POWER:
         KdPrint(("PhDskMnt::MpHwStartIo: SRB_FUNCTION_POWER.\n"));
         // Do nothing.
         pSrb->SrbStatus = SRB_STATUS_SUCCESS;
@@ -753,7 +769,7 @@ MpHwStartIo(
         break;
 
     case SRB_FUNCTION_SHUTDOWN:
-	KdPrint(("PhDskMnt::MpHwStartIo: SRB_FUNCTION_SHUTDOWN.\n"));
+        KdPrint(("PhDskMnt::MpHwStartIo: SRB_FUNCTION_SHUTDOWN.\n"));
         // Do nothing.
         pSrb->SrbStatus = SRB_STATUS_SUCCESS;
 
@@ -761,7 +777,7 @@ MpHwStartIo(
 
     default:
         KdPrint(("PhDskMnt::MpHwStartIo: Unknown pSrb Function = 0x%X\n", pSrb->Function));
-        
+
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_ILLEGAL_COMMAND, 0);
 
         break;
@@ -787,7 +803,7 @@ MpHwStartIo(
         _InterlockedExchangeAdd((volatile LONG*)&pHBAExt->WorkItems, 1);
 
         KdPrint2(("PhDskMnt::MpHwStartIo sending 'RequestTimerCall' and 'NextLuRequest' to ScsiPort.\n"));
-        ScsiPortNotification(RequestTimerCall, pHBAExt, MpHwTimer, (ULONG) 1);
+        ScsiPortNotification(RequestTimerCall, pHBAExt, MpHwTimer, (ULONG)1);
         ScsiPortNotification(NextLuRequest, pHBAExt, PathId, TargetId, Lun);
         ScsiPortNotification(NextLuRequest, pHBAExt, 0, 0, 0);
 #endif
@@ -798,15 +814,15 @@ MpHwStartIo(
     return TRUE;
 }                                                     // End MpHwStartIo().
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 SCSI_ADAPTER_CONTROL_STATUS
 MpHwAdapterControl(
-                   __in pHW_HBA_EXT               pHBAExt, // Adapter device-object extension from port driver.
-                   __in SCSI_ADAPTER_CONTROL_TYPE ControlType,
-                   __in PVOID                     pParameters
-                  )
+__in pHW_HBA_EXT               pHBAExt, // Adapter device-object extension from port driver.
+__in SCSI_ADAPTER_CONTROL_TYPE ControlType,
+__in PVOID                     pParameters
+)
 {
     PSCSI_SUPPORTED_CONTROL_TYPE_LIST pCtlTypList;
     ULONG                             i;
@@ -816,66 +832,66 @@ MpHwAdapterControl(
     pHBAExt->AdapterState = ControlType;
 
     switch (ControlType) {
-        case ScsiQuerySupportedControlTypes:
-            KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiQuerySupportedControlTypes\n"));
+    case ScsiQuerySupportedControlTypes:
+        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiQuerySupportedControlTypes\n"));
 
-            // Ggt pointer to control type list
-            pCtlTypList = (PSCSI_SUPPORTED_CONTROL_TYPE_LIST)pParameters;
+        // Ggt pointer to control type list
+        pCtlTypList = (PSCSI_SUPPORTED_CONTROL_TYPE_LIST)pParameters;
 
-            // Cycle through list to set TRUE for each type supported
-            // making sure not to go past the MaxControlType
-            for (i = 0; i < pCtlTypList->MaxControlType; i++)
-                if ( i == ScsiQuerySupportedControlTypes ||
-                     i == ScsiStopAdapter   || i == ScsiRestartAdapter ||
-                     i == ScsiSetBootConfig || i == ScsiSetRunningConfig )
-                {
-                    pCtlTypList->SupportedTypeList[i] = TRUE;
-                }
-            break;
+        // Cycle through list to set TRUE for each type supported
+        // making sure not to go past the MaxControlType
+        for (i = 0; i < pCtlTypList->MaxControlType; i++)
+            if (i == ScsiQuerySupportedControlTypes ||
+                i == ScsiStopAdapter || i == ScsiRestartAdapter ||
+                i == ScsiSetBootConfig || i == ScsiSetRunningConfig)
+            {
+                pCtlTypList->SupportedTypeList[i] = TRUE;
+            }
+        break;
 
-        case ScsiStopAdapter:
-            KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiStopAdapter\n"));
+    case ScsiStopAdapter:
+        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiStopAdapter\n"));
 
-            // Free memory allocated for disk
-            ImScsiStopAdapter(pHBAExt);
+        // Free memory allocated for disk
+        ImScsiStopAdapter(pHBAExt);
 
-            break;
+        break;
 
-        case ScsiRestartAdapter:
-            KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiRestartAdapter\n"));
+    case ScsiRestartAdapter:
+        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiRestartAdapter\n"));
 
-            /* To Do: Add some function. */
+        /* To Do: Add some function. */
 
-            break;
+        break;
 
-        case ScsiSetBootConfig:
-            KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiSetBootConfig\n"));
+    case ScsiSetBootConfig:
+        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiSetBootConfig\n"));
 
-            break;
-            
-        case ScsiSetRunningConfig:
-            KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiSetRunningConfig\n"));
+        break;
 
-            break;
+    case ScsiSetRunningConfig:
+        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiSetRunningConfig\n"));
 
-        default:
-            KdPrint2(("PhDskMnt::MpHwAdapterControl: UNKNOWN: 0x%X\n", ControlType));
+        break;
 
-            break;
-    } 
+    default:
+        KdPrint2(("PhDskMnt::MpHwAdapterControl: UNKNOWN: 0x%X\n", ControlType));
+
+        break;
+    }
 
     KdPrint2(("PhDskMnt::MpHwAdapterControl End: status=0x%X\n", ScsiAdapterControlSuccess));
 
     return ScsiAdapterControlSuccess;
 }                                                     // End MpHwAdapterControl().
 
-/**************************************************************************************************/ 
-/*                                                                                                */ 
-/**************************************************************************************************/ 
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ImScsiStopAdapter(
-                  __in pHW_HBA_EXT pHBAExt         // Adapter device-object extension from port driver.
-                  )
+__in pHW_HBA_EXT pHBAExt         // Adapter device-object extension from port driver.
+)
 {
     SRB_IMSCSI_REMOVE_DEVICE rem_data = { 0 };
 
@@ -919,15 +935,15 @@ ImScsiStopAdapter(
 //}                                                     // End ImScsiTracingCleanup().
 
 #ifdef USE_STORPORT
-/**************************************************************************************************/                         
-/*                                                                                                */                         
-/* MpHwFreeAdapterResources.                                                                      */                         
-/*                                                                                                */                         
-/**************************************************************************************************/                         
+/**************************************************************************************************/
+/*                                                                                                */
+/* MpHwFreeAdapterResources.                                                                      */
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 MpHwFreeAdapterResources(__in pHW_HBA_EXT pHBAExt)
 {
-    PLIST_ENTRY           pNextEntry; 
+    PLIST_ENTRY           pNextEntry;
     pHW_HBA_EXT           pLclHBAExt;
 #if defined(_AMD64_)
     KLOCK_QUEUE_HANDLE    LockHandle;
@@ -944,13 +960,13 @@ MpHwFreeAdapterResources(__in pHW_HBA_EXT pHBAExt)
 #endif
 
     for (                                             // Go through linked list of HBA extensions.
-         pNextEntry =  pMPDrvInfoGlobal->ListMPHBAObj.Flink;
-         pNextEntry != &pMPDrvInfoGlobal->ListMPHBAObj;
-         pNextEntry =  pNextEntry->Flink
+        pNextEntry = pMPDrvInfoGlobal->ListMPHBAObj.Flink;
+        pNextEntry != &pMPDrvInfoGlobal->ListMPHBAObj;
+    pNextEntry = pNextEntry->Flink
         ) {
         pLclHBAExt = CONTAINING_RECORD(pNextEntry, HW_HBA_EXT, List);
 
-        if (pLclHBAExt==pHBAExt) {                    // Is this entry the same as pHBAExt?
+        if (pLclHBAExt == pHBAExt) {                    // Is this entry the same as pHBAExt?
             RemoveEntryList(pNextEntry);
             pMPDrvInfoGlobal->DrvInfoNbrMPHBAObj--;
             break;
@@ -968,93 +984,93 @@ MpHwFreeAdapterResources(__in pHW_HBA_EXT pHBAExt)
 
 NTSTATUS
 ImScsiGetDiskSize(
-    IN HANDLE FileHandle,
-    IN OUT PIO_STATUS_BLOCK IoStatus,
-    IN OUT PLARGE_INTEGER DiskSize)
+IN HANDLE FileHandle,
+IN OUT PIO_STATUS_BLOCK IoStatus,
+IN OUT PLARGE_INTEGER DiskSize)
 {
     NTSTATUS status;
 
     {
-	FILE_STANDARD_INFORMATION file_standard;
+        FILE_STANDARD_INFORMATION file_standard;
 
-	status = ZwQueryInformationFile(FileHandle,
-	    IoStatus,
-	    &file_standard,
-	    sizeof(FILE_STANDARD_INFORMATION),
-	    FileStandardInformation);
+        status = ZwQueryInformationFile(FileHandle,
+            IoStatus,
+            &file_standard,
+            sizeof(FILE_STANDARD_INFORMATION),
+            FileStandardInformation);
 
-	if (NT_SUCCESS(status))
-	{
-	    *DiskSize = file_standard.EndOfFile;
-	    return status;
-	}
+        if (NT_SUCCESS(status))
+        {
+            *DiskSize = file_standard.EndOfFile;
+            return status;
+        }
 
-	KdPrint(("ImScsi: FileStandardInformation not supported for "
-	    "target device. %#x\n", status));
+        KdPrint(("ImScsi: FileStandardInformation not supported for "
+            "target device. %#x\n", status));
     }
 
     // Retry with IOCTL_DISK_GET_LENGTH_INFO instead
     {
-	GET_LENGTH_INFORMATION part_info = { 0 };
+        GET_LENGTH_INFORMATION part_info = { 0 };
 
-	status =
-	    ZwDeviceIoControlFile(FileHandle,
-	    NULL,
-	    NULL,
-	    NULL,
-	    IoStatus,
-	    IOCTL_DISK_GET_LENGTH_INFO,
-	    NULL,
-	    0,
-	    &part_info,
-	    sizeof(part_info));
+        status =
+            ZwDeviceIoControlFile(FileHandle,
+            NULL,
+            NULL,
+            NULL,
+            IoStatus,
+            IOCTL_DISK_GET_LENGTH_INFO,
+            NULL,
+            0,
+            &part_info,
+            sizeof(part_info));
 
-	if (status == STATUS_PENDING)
-	{
-	    ZwWaitForSingleObject(FileHandle, FALSE, NULL);
-	    status = IoStatus->Status;
-	}
+        if (status == STATUS_PENDING)
+        {
+            ZwWaitForSingleObject(FileHandle, FALSE, NULL);
+            status = IoStatus->Status;
+        }
 
-	if (NT_SUCCESS(status))
-	{
-	    *DiskSize = part_info.Length;
-	    return status;
-	}
+        if (NT_SUCCESS(status))
+        {
+            *DiskSize = part_info.Length;
+            return status;
+        }
 
-	KdPrint(("ImScsi: IOCTL_DISK_GET_LENGTH_INFO not supported "
-	    "for target device. %#x\n", status));
+        KdPrint(("ImScsi: IOCTL_DISK_GET_LENGTH_INFO not supported "
+            "for target device. %#x\n", status));
     }
 
     // Retry with IOCTL_DISK_GET_PARTITION_INFO instead
     {
-	PARTITION_INFORMATION part_info = { 0 };
+        PARTITION_INFORMATION part_info = { 0 };
 
-	status =
-	    ZwDeviceIoControlFile(FileHandle,
-	    NULL,
-	    NULL,
-	    NULL,
-	    IoStatus,
-	    IOCTL_DISK_GET_PARTITION_INFO,
-	    NULL,
-	    0,
-	    &part_info,
-	    sizeof(part_info));
+        status =
+            ZwDeviceIoControlFile(FileHandle,
+            NULL,
+            NULL,
+            NULL,
+            IoStatus,
+            IOCTL_DISK_GET_PARTITION_INFO,
+            NULL,
+            0,
+            &part_info,
+            sizeof(part_info));
 
-	if (status == STATUS_PENDING)
-	{
-	    ZwWaitForSingleObject(FileHandle, FALSE, NULL);
-	    status = IoStatus->Status;
-	}
+        if (status == STATUS_PENDING)
+        {
+            ZwWaitForSingleObject(FileHandle, FALSE, NULL);
+            status = IoStatus->Status;
+        }
 
-	if (NT_SUCCESS(status))
-	{
-	    *DiskSize = part_info.PartitionLength;
-	    return status;
-	}
+        if (NT_SUCCESS(status))
+        {
+            *DiskSize = part_info.PartitionLength;
+            return status;
+        }
 
-	KdPrint(("ImScsi: IOCTL_DISK_GET_PARTITION_INFO not supported "
-	    "for target device. %#x\n", status));
+        KdPrint(("ImScsi: IOCTL_DISK_GET_PARTITION_INFO not supported "
+            "for target device. %#x\n", status));
     }
 
     return status;
@@ -1062,74 +1078,74 @@ ImScsiGetDiskSize(
 
 VOID
 ImScsiLogDbgError(IN PVOID Object,
-                  IN UCHAR MajorFunctionCode,
-                  IN UCHAR RetryCount,
-                  IN PULONG DumpData,
-                  IN USHORT DumpDataSize,
-                  IN USHORT EventCategory,
-                  IN NTSTATUS ErrorCode,
-                  IN ULONG UniqueErrorValue,
-                  IN NTSTATUS FinalStatus,
-                  IN ULONG SequenceNumber,
-                  IN ULONG IoControlCode,
-                  IN PLARGE_INTEGER DeviceOffset,
-                  IN PWCHAR Message)
+IN UCHAR MajorFunctionCode,
+IN UCHAR RetryCount,
+IN PULONG DumpData,
+IN USHORT DumpDataSize,
+IN USHORT EventCategory,
+IN NTSTATUS ErrorCode,
+IN ULONG UniqueErrorValue,
+IN NTSTATUS FinalStatus,
+IN ULONG SequenceNumber,
+IN ULONG IoControlCode,
+IN PLARGE_INTEGER DeviceOffset,
+IN PWCHAR Message)
 {
-  ULONG_PTR string_byte_size;
-  ULONG_PTR packet_size;
-  PIO_ERROR_LOG_PACKET error_log_packet;
+    ULONG_PTR string_byte_size;
+    ULONG_PTR packet_size;
+    PIO_ERROR_LOG_PACKET error_log_packet;
 
-  if (KeGetCurrentIrql() > DISPATCH_LEVEL)
-    return;
+    if (KeGetCurrentIrql() > DISPATCH_LEVEL)
+        return;
 
-  string_byte_size = (wcslen(Message) + 1) << 1;
+    string_byte_size = (wcslen(Message) + 1) << 1;
 
-  packet_size =
-    sizeof(IO_ERROR_LOG_PACKET) + DumpDataSize + string_byte_size;
+    packet_size =
+        sizeof(IO_ERROR_LOG_PACKET) + DumpDataSize + string_byte_size;
 
-  if (packet_size > ERROR_LOG_MAXIMUM_SIZE)
+    if (packet_size > ERROR_LOG_MAXIMUM_SIZE)
     {
-      KdPrint(("ImScsi: Warning: Too large error log packet.\n"));
-      return;
+        KdPrint(("ImScsi: Warning: Too large error log packet.\n"));
+        return;
     }
 
-  error_log_packet =
-    (PIO_ERROR_LOG_PACKET) IoAllocateErrorLogEntry(Object,
-						   (UCHAR) packet_size);
+    error_log_packet =
+        (PIO_ERROR_LOG_PACKET)IoAllocateErrorLogEntry(Object,
+        (UCHAR)packet_size);
 
-  if (error_log_packet == NULL)
+    if (error_log_packet == NULL)
     {
-      KdPrint(("ImScsi: Warning: IoAllocateErrorLogEntry() returned NULL.\n"));
-      return;
+        KdPrint(("ImScsi: Warning: IoAllocateErrorLogEntry() returned NULL.\n"));
+        return;
     }
 
-  error_log_packet->MajorFunctionCode = MajorFunctionCode;
-  error_log_packet->RetryCount = RetryCount;
-  error_log_packet->StringOffset = sizeof(IO_ERROR_LOG_PACKET) + DumpDataSize;
-  error_log_packet->EventCategory = EventCategory;
-  error_log_packet->ErrorCode = ErrorCode;
-  error_log_packet->UniqueErrorValue = UniqueErrorValue;
-  error_log_packet->FinalStatus = FinalStatus;
-  error_log_packet->SequenceNumber = SequenceNumber;
-  error_log_packet->IoControlCode = IoControlCode;
-  if (DeviceOffset != NULL)
-    error_log_packet->DeviceOffset = *DeviceOffset;
-  error_log_packet->DumpDataSize = DumpDataSize;
+    error_log_packet->MajorFunctionCode = MajorFunctionCode;
+    error_log_packet->RetryCount = RetryCount;
+    error_log_packet->StringOffset = sizeof(IO_ERROR_LOG_PACKET) + DumpDataSize;
+    error_log_packet->EventCategory = EventCategory;
+    error_log_packet->ErrorCode = ErrorCode;
+    error_log_packet->UniqueErrorValue = UniqueErrorValue;
+    error_log_packet->FinalStatus = FinalStatus;
+    error_log_packet->SequenceNumber = SequenceNumber;
+    error_log_packet->IoControlCode = IoControlCode;
+    if (DeviceOffset != NULL)
+        error_log_packet->DeviceOffset = *DeviceOffset;
+    error_log_packet->DumpDataSize = DumpDataSize;
 
-  if (DumpDataSize != 0)
-    memcpy(error_log_packet->DumpData, DumpData, DumpDataSize);
+    if (DumpDataSize != 0)
+        memcpy(error_log_packet->DumpData, DumpData, DumpDataSize);
 
-  if (Message == NULL)
-    error_log_packet->NumberOfStrings = 0;
-  else
+    if (Message == NULL)
+        error_log_packet->NumberOfStrings = 0;
+    else
     {
-      error_log_packet->NumberOfStrings = 1;
-      memcpy((PUCHAR)error_log_packet + error_log_packet->StringOffset,
-	     Message,
-	     string_byte_size);
+        error_log_packet->NumberOfStrings = 1;
+        memcpy((PUCHAR)error_log_packet + error_log_packet->StringOffset,
+            Message,
+            string_byte_size);
     }
 
-  IoWriteErrorLogEntry(error_log_packet);
+    IoWriteErrorLogEntry(error_log_packet);
 }
 
 //
@@ -1137,98 +1153,144 @@ ImScsiLogDbgError(IN PVOID Object,
 //
 NTSTATUS
 ImScsiSafeReadFile(IN HANDLE FileHandle,
-		   OUT PIO_STATUS_BLOCK IoStatusBlock,
-		   OUT PVOID Buffer,
-		   IN SIZE_T Length,
-		   IN PLARGE_INTEGER Offset)
+OUT PIO_STATUS_BLOCK IoStatusBlock,
+OUT PVOID Buffer,
+IN SIZE_T Length,
+IN PLARGE_INTEGER Offset)
 {
-  NTSTATUS status;
-  SIZE_T LengthDone = 0;
+    NTSTATUS status = STATUS_SUCCESS;
+    SIZE_T length_done = 0;
+    PUCHAR intermediate_buffer = NULL;
+    ULONG request_length;
 
-  ASSERT(FileHandle != NULL);
-  ASSERT(IoStatusBlock != NULL);
-  ASSERT(Buffer != NULL);
+    ASSERT(FileHandle != NULL);
+    ASSERT(IoStatusBlock != NULL);
+    ASSERT(Buffer != NULL);
 
-  while (LengthDone < Length)
+    if (Length > (8UL << 20))
     {
-      SIZE_T LongRequestLength = Length - LengthDone;
-      ULONG RequestLength;
-      if (LongRequestLength > 0x0000000080000000)
-	RequestLength = 0x80000000;
-      else
-	RequestLength = (ULONG) LongRequestLength;
-
-      for (;;)
-	{
-	  LARGE_INTEGER RequestOffset;
-	  PUCHAR InterBuffer = (PUCHAR) ExAllocatePoolWithTag(
-              PagedPool, RequestLength, MP_TAG_GENERAL);
-
-	  if (InterBuffer == NULL)
-	    {
-	      KdPrint(("PhDskMnt: Insufficient paged pool to allocate "
-		       "intermediate buffer for ImScsiSafeReadFile() "
-		       "(%u bytes).\n", RequestLength));
-
-	      RequestLength >>= 2;
-	      continue;
-	    }
-
-	  RequestOffset.QuadPart = Offset->QuadPart + LengthDone;
-
-	  status = ZwReadFile(FileHandle,
-			      NULL,
-			      NULL,
-			      NULL,
-			      IoStatusBlock,
-			      InterBuffer,
-			      RequestLength,
-			      &RequestOffset,
-			      NULL);
-
-	  if ((status == STATUS_INSUFFICIENT_RESOURCES) |
-	      (status == STATUS_INVALID_BUFFER_SIZE) |
-	      (status == STATUS_INVALID_PARAMETER))
-	    {
-	      ExFreePoolWithTag(InterBuffer, MP_TAG_GENERAL);
-
-	      RequestLength >>= 2;
-	      continue;
-	    }
-
-	  if (!NT_SUCCESS(status))
-	    {
-	      ExFreePoolWithTag(InterBuffer, MP_TAG_GENERAL);
-	      break;
-	    }
-
-	  RtlCopyMemory((PUCHAR) Buffer + LengthDone, InterBuffer,
-			IoStatusBlock->Information);
-
-	  ExFreePoolWithTag(InterBuffer, MP_TAG_GENERAL);
-	  break;
-	}
-
-      if (!NT_SUCCESS(status))
-	{
-	  IoStatusBlock->Status = status;
-	  IoStatusBlock->Information = LengthDone;
-	  return IoStatusBlock->Status;
-	}
-
-      if (IoStatusBlock->Information == 0)
-	{
-	  IoStatusBlock->Status = STATUS_CONNECTION_RESET;
-	  IoStatusBlock->Information = LengthDone;
-	  return IoStatusBlock->Status;
-	}
-
-      LengthDone += IoStatusBlock->Information;
+        request_length = (8UL << 20);
+    }
+    else
+    {
+        request_length = (ULONG)Length;
     }
 
-  IoStatusBlock->Status = STATUS_SUCCESS;
-  IoStatusBlock->Information = LengthDone;
-  return IoStatusBlock->Status;
+    while (length_done < Length)
+    {
+        SIZE_T LongRequestLength = Length - length_done;
+        if (LongRequestLength < request_length)
+        {
+            request_length = (ULONG)LongRequestLength;
+        }
+
+        for (;;)
+        {
+            LARGE_INTEGER current_file_offset;
+
+            current_file_offset.QuadPart = Offset->QuadPart + length_done;
+
+            if (intermediate_buffer == NULL)
+            {
+                intermediate_buffer = ExAllocatePoolWithTag(NonPagedPool,
+                    request_length,
+                    MP_TAG_GENERAL);
+
+                if (intermediate_buffer == NULL)
+                {
+                    DbgPrint("ImScsi: ImScsiSafeReadFile: Insufficient paged pool to allocate "
+                        "intermediate buffer (%u bytes).\n", request_length);
+
+                    IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
+                    IoStatusBlock->Information = 0;
+                    return IoStatusBlock->Status;
+                }
+            }
+
+            status = ZwReadFile(FileHandle,
+                NULL,
+                NULL,
+                NULL,
+                IoStatusBlock,
+                intermediate_buffer,
+                request_length,
+                &current_file_offset,
+                NULL);
+
+            if (((status == STATUS_INSUFFICIENT_RESOURCES) |
+                (status == STATUS_INVALID_BUFFER_SIZE) |
+                (status == STATUS_INVALID_PARAMETER)) &
+                (request_length >= 2048))
+            {
+                ExFreePoolWithTag(intermediate_buffer, MP_TAG_GENERAL);
+                intermediate_buffer = NULL;
+
+                DbgPrint("ImScsi: ImScsiSafeReadFile: ZwReadFile error reading "
+                    "%u bytes. Retrying with smaller read size. (Status 0x%X)\n",
+                    request_length,
+                    status);
+
+                request_length >>= 2;
+
+                continue;
+            }
+
+            if (!NT_SUCCESS(status))
+            {
+                DbgPrint("ImScsi: ImScsiSafeReadFile: ZwReadFile error reading "
+                    "%u bytes. (Status 0x%X)\n",
+                    request_length,
+                    status);
+
+                break;
+            }
+
+            RtlCopyMemory((PUCHAR)Buffer + length_done, intermediate_buffer,
+                IoStatusBlock->Information);
+
+            break;
+        }
+
+        if (!NT_SUCCESS(status))
+        {
+            IoStatusBlock->Information = length_done;
+            break;
+        }
+
+        if (IoStatusBlock->Information == 0)
+        {
+            DbgPrint("ImScsi: ImScsiSafeReadFile: IoStatusBlock->Information == 0, "
+                "returning STATUS_CONNECTION_RESET.\n", status);
+
+            status = STATUS_CONNECTION_RESET;
+            break;
+        }
+
+        KdPrint(("ImScsi: ImScsiSafeReadFile: Done %u bytes.\n",
+            (ULONG)IoStatusBlock->Information));
+
+        length_done += IoStatusBlock->Information;
+    }
+
+    if (intermediate_buffer != NULL)
+    {
+        ExFreePoolWithTag(intermediate_buffer, MP_TAG_GENERAL);
+        intermediate_buffer = NULL;
+    }
+
+    if (!NT_SUCCESS(status))
+    {
+        DbgPrint("ImScsi: ImScsiSafeReadFile: Error return "
+            "(Status 0x%X)\n", status);
+    }
+    else
+    {
+        KdPrint(("ImScsi: ImScsiSafeReadFile: Successful.\n"));
+    }
+
+    IoStatusBlock->Status = status;
+    IoStatusBlock->Information = length_done;
+    return status;
 }
 
 NTSTATUS
@@ -1245,120 +1307,120 @@ IN ULONG Length)
     PIO_STACK_LOCATION io_stack;
     LARGE_INTEGER offset = { 0 };
     PVOID wait_object[] = {
-	&io_complete_event,
-	CancelEvent
+        &io_complete_event,
+        CancelEvent
     };
     ULONG number_of_wait_objects = CancelEvent != NULL ? 2 : 1;
 
     //PAGED_CODE();
 
     KdPrint2(("ImScsiSafeIOStream: FileObject=%#x, MajorFunction=%#x, "
-	"IoStatusBlock=%#x, Buffer=%#x, Length=%#x.\n",
-	FileObject, MajorFunction, IoStatusBlock, Buffer, Length));
+        "IoStatusBlock=%#x, Buffer=%#x, Length=%#x.\n",
+        FileObject, MajorFunction, IoStatusBlock, Buffer, Length));
 
     ASSERT(FileObject != NULL);
     ASSERT(IoStatusBlock != NULL);
     ASSERT(Buffer != NULL);
 
     KeInitializeEvent(&io_complete_event,
-	NotificationEvent,
-	FALSE);
+        NotificationEvent,
+        FALSE);
 
     while (length_done < Length)
     {
-	ULONG RequestLength = Length - length_done;
+        ULONG RequestLength = Length - length_done;
 
-	do
-	{
-	    PIRP irp;
-	    PDEVICE_OBJECT device_object = IoGetRelatedDeviceObject(FileObject);
+        do
+        {
+            PIRP irp;
+            PDEVICE_OBJECT device_object = IoGetRelatedDeviceObject(FileObject);
 
-	    KdPrint2(("ImScsiSafeIOStream: Building IRP...\n"));
+            KdPrint2(("ImScsiSafeIOStream: Building IRP...\n"));
 
-	    irp = IoBuildSynchronousFsdRequest(
-		MajorFunction,
-		device_object,
-		(PUCHAR)Buffer + length_done,
-		RequestLength,
-		&offset,
-		&io_complete_event,
-		IoStatusBlock);
+            irp = IoBuildSynchronousFsdRequest(
+                MajorFunction,
+                device_object,
+                (PUCHAR)Buffer + length_done,
+                RequestLength,
+                &offset,
+                &io_complete_event,
+                IoStatusBlock);
 
-	    if (irp == NULL)
-	    {
-		KdPrint(("ImScsiSafeIOStream: Error building IRP.\n"));
+            if (irp == NULL)
+            {
+                KdPrint(("ImScsiSafeIOStream: Error building IRP.\n"));
 
-		IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
-		IoStatusBlock->Information = length_done;
-		return IoStatusBlock->Status;
-	    }
+                IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
+                IoStatusBlock->Information = length_done;
+                return IoStatusBlock->Status;
+            }
 
-	    KdPrint2(("ImScsiSafeIOStream: Built IRP=%#x.\n", irp));
+            KdPrint2(("ImScsiSafeIOStream: Built IRP=%#x.\n", irp));
 
-	    io_stack = IoGetNextIrpStackLocation(irp);
-	    io_stack->FileObject = FileObject;
+            io_stack = IoGetNextIrpStackLocation(irp);
+            io_stack->FileObject = FileObject;
 
-	    KdPrint2(("ImScsiSafeIOStream: MajorFunction=%#x, Length=%#x\n",
-		io_stack->MajorFunction,
-		io_stack->Parameters.Read.Length));
+            KdPrint2(("ImScsiSafeIOStream: MajorFunction=%#x, Length=%#x\n",
+                io_stack->MajorFunction,
+                io_stack->Parameters.Read.Length));
 
-	    KeResetEvent(&io_complete_event);
+            KeResetEvent(&io_complete_event);
 
-	    status = IoCallDriver(device_object, irp);
+            status = IoCallDriver(device_object, irp);
 
-	    if (status == STATUS_PENDING)
-	    {
-		status = KeWaitForMultipleObjects(number_of_wait_objects,
-		    wait_object,
-		    WaitAny,
-		    Executive,
-		    KernelMode,
-		    FALSE,
-		    NULL,
-		    NULL);
+            if (status == STATUS_PENDING)
+            {
+                status = KeWaitForMultipleObjects(number_of_wait_objects,
+                    wait_object,
+                    WaitAny,
+                    Executive,
+                    KernelMode,
+                    FALSE,
+                    NULL,
+                    NULL);
 
-		if (KeReadStateEvent(&io_complete_event) == 0)
-		{
-		    IoCancelIrp(irp);
-		    KeWaitForSingleObject(&io_complete_event,
-			Executive,
-			KernelMode,
-			FALSE,
-			NULL);
-		}
-	    }
-	    else if (!NT_SUCCESS(status))
-		break;
+                if (KeReadStateEvent(&io_complete_event) == 0)
+                {
+                    IoCancelIrp(irp);
+                    KeWaitForSingleObject(&io_complete_event,
+                        Executive,
+                        KernelMode,
+                        FALSE,
+                        NULL);
+                }
+            }
+            else if (!NT_SUCCESS(status))
+                break;
 
-	    status = IoStatusBlock->Status;
+            status = IoStatusBlock->Status;
 
-	    KdPrint2(("ImScsiSafeIOStream: IRP %#x completed. Status=0x%X.\n",
-		irp, IoStatusBlock->Status));
+            KdPrint2(("ImScsiSafeIOStream: IRP %#x completed. Status=0x%X.\n",
+                irp, IoStatusBlock->Status));
 
-	    RequestLength >>= 1;
-	} while ((status == STATUS_INVALID_BUFFER_SIZE) |
-	    (status == STATUS_INVALID_PARAMETER));
+            RequestLength >>= 1;
+        } while ((status == STATUS_INVALID_BUFFER_SIZE) |
+            (status == STATUS_INVALID_PARAMETER));
 
-	if (!NT_SUCCESS(status))
-	{
-	    KdPrint2(("ImScsiSafeIOStream: I/O failed. Status=0x%X.\n", status));
+        if (!NT_SUCCESS(status))
+        {
+            KdPrint2(("ImScsiSafeIOStream: I/O failed. Status=0x%X.\n", status));
 
-	    IoStatusBlock->Status = status;
-	    IoStatusBlock->Information = 0;
-	    return IoStatusBlock->Status;
-	}
+            IoStatusBlock->Status = status;
+            IoStatusBlock->Information = 0;
+            return IoStatusBlock->Status;
+        }
 
-	KdPrint2(("ImScsiSafeIOStream: I/O done. Status=0x%X. Length=0x%X\n",
-	    status, IoStatusBlock->Information));
+        KdPrint2(("ImScsiSafeIOStream: I/O done. Status=0x%X. Length=0x%X\n",
+            status, IoStatusBlock->Information));
 
-	if (IoStatusBlock->Information == 0)
-	{
-	    IoStatusBlock->Status = STATUS_CONNECTION_RESET;
-	    IoStatusBlock->Information = 0;
-	    return IoStatusBlock->Status;
-	}
+        if (IoStatusBlock->Information == 0)
+        {
+            IoStatusBlock->Status = STATUS_CONNECTION_RESET;
+            IoStatusBlock->Information = 0;
+            return IoStatusBlock->Status;
+        }
 
-	length_done += (ULONG)IoStatusBlock->Information;
+        length_done += (ULONG)IoStatusBlock->Information;
     }
 
     KdPrint2(("ImScsiSafeIOStream: I/O complete.\n"));

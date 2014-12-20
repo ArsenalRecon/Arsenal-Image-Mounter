@@ -73,8 +73,9 @@ SOURCES = phdskmnt.c     \
           utils.c      \
           phdskmnt.rc    \
           iodisp.c     \
-	  srbioctl.c   \
-	  proxy.c
+		  workerthread.c	\
+		  srbioctl.c   \
+		  proxy.c
 
 RUN_WPP=$(SOURCES)                      \
         -km                             \

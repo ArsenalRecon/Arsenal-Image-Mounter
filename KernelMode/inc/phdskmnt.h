@@ -130,9 +130,6 @@ typedef struct _MP_REG_INFO {
 } MP_REG_INFO, * pMP_REG_INFO;
 
 typedef struct _MPDriverInfo {                        // The master miniport object. In effect, an extension of the driver object for the miniport.
-#ifdef USE_SCSIPORT
-    PDEVICE_OBJECT                 DeviceObject;
-#endif
     MP_REG_INFO                    MPRegInfo;
     KSPIN_LOCK                     DrvInfoLock;
     LIST_ENTRY                     ListMPHBAObj;      // Header of list of HW_HBA_EXT objects.
@@ -145,6 +142,7 @@ typedef struct _MPDriverInfo {                        // The master miniport obj
     KSPIN_LOCK                     RequestListLock;   
     KEVENT                         RequestEvent;
 #ifdef USE_SCSIPORT
+    PDEVICE_OBJECT                 DeviceObject;
     LIST_ENTRY                     ResponseList;
     KSPIN_LOCK                     ResponseListLock;
     KEVENT                         ResponseEvent;
@@ -152,6 +150,11 @@ typedef struct _MPDriverInfo {                        // The master miniport obj
     ULONG                          DrvInfoNbrMPHBAObj;// Count of items in ListMPHBAObj.
 	ULONG                          RandomSeed;
 } MPDriverInfo, * pMPDriverInfo;
+
+typedef struct _DEVICE_THREAD {
+    LIST_ENTRY                     ListEntry;
+    PKTHREAD                       Thread;
+} DEVICE_THREAD, *PDEVICE_THREAD;
 
 typedef struct _LUNInfo {
     UCHAR     bReportLUNsDontUse;
@@ -185,9 +188,9 @@ typedef struct _HW_LU_EXTENSION {                     // LUN extension allocated
     LIST_ENTRY            RequestList;
     KSPIN_LOCK            RequestListLock;   
     KEVENT                RequestEvent;
-    BOOLEAN               Initialized;
+    KEVENT                Initialized;
+    PKTHREAD              WorkerThread;
     KEVENT                StopThread;
-    KEVENT                Missing;
     LARGE_INTEGER         ImageOffset;
     LARGE_INTEGER         DiskSize;
     UCHAR                 BlockPower;
@@ -216,7 +219,9 @@ typedef struct _HW_SRB_EXTENSION {
 
 typedef struct _MP_WorkRtnParms {
   LIST_ENTRY           RequestListEntry;
+#ifdef USE_SCSIPORT
   LIST_ENTRY           ResponseListEntry;
+#endif
   pHW_HBA_EXT          pHBAExt;
   pHW_LU_EXTENSION     pLUExt;
   PSCSI_REQUEST_BLOCK  pSrb;
@@ -550,7 +555,7 @@ ImScsiDispatchWork(
                __in pMP_WorkRtnParms        pWkRtnParms
                );
 
-NTSTATUS
+VOID
 ImScsiCleanupLU(
                  __in pHW_LU_EXTENSION     pLUExt
                  );

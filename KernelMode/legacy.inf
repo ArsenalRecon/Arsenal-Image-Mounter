@@ -16,7 +16,7 @@
 [Version]
 signature = "$Windows NT$"
 Provider = "ARSENALRECON"
-DriverVer = 11/01/2014,1.4.0013.00013
+DriverVer = 12/20/2014,1.5.0014.00014
 
 
 [SourceDisksNames]

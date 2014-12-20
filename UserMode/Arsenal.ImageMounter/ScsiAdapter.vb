@@ -608,12 +608,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Sub UpdateDiskProperties()
 
-        For Each ScsiAddress In
-            From DeviceNumber In GetDeviceList()
-            Select New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
-
-            NativeFileIO.UpdateDiskProperties(ScsiAddress)
-        Next
+        GetDeviceList().ForEach(AddressOf UpdateDiskProperties)
 
     End Sub
 

@@ -11,28 +11,38 @@ Public Class DiskStateParser
 
     Private PSDiskParser As PSDiskParser
 
+    Private Shared ReadOnly SizeOfScsiAddress As UInt32 = CUInt(Marshal.SizeOf(GetType(NativeFileIO.Win32API.SCSI_ADDRESS)))
+
     Private Shared Function GetDriveScsiIds(portnumber As Byte) As Dictionary(Of UInteger, UInteger)
 
         Dim GetScsiAddress =
             Function(drv As String) As NativeFileIO.Win32API.SCSI_ADDRESS?
-                Using disk As New DiskDevice(drv)
-                    Dim ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS
-                    Dim rc = NativeFileIO.Win32API.
-                        DeviceIoControl(disk.SafeFileHandle,
-                                        NativeFileIO.Win32API.IOCTL_SCSI_GET_ADDRESS,
-                                        IntPtr.Zero,
-                                        0,
-                                        ScsiAddress,
-                                        CUInt(Marshal.SizeOf(GetType(NativeFileIO.Win32API.SCSI_ADDRESS))),
-                                        Nothing,
-                                        Nothing)
+                Try
+                    Using disk As New DiskDevice(drv)
+                        Dim ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS
+                        Dim rc = NativeFileIO.Win32API.
+                            DeviceIoControl(disk.SafeFileHandle,
+                                            NativeFileIO.Win32API.IOCTL_SCSI_GET_ADDRESS,
+                                            IntPtr.Zero,
+                                            0,
+                                            ScsiAddress,
+                                            SizeOfScsiAddress,
+                                            Nothing,
+                                            Nothing)
 
-                    If rc Then
-                        Return ScsiAddress
-                    Else
-                        Return Nothing
-                    End If
-                End Using
+                        If rc Then
+                            Return ScsiAddress
+                        Else
+                            Trace.WriteLine("IOCTL_SCSI_GET_ADDRESS failed for device " & drv & ": Error 0x" & Marshal.GetLastWin32Error().ToString("X"))
+                            Return Nothing
+                        End If
+                    End Using
+
+                Catch ex As Exception
+                    Trace.WriteLine("Exception attempting to find SCSI address for device " & drv & ": " & ex.ToString())
+                    Return Nothing
+
+                End Try
             End Function
 
         Dim q =

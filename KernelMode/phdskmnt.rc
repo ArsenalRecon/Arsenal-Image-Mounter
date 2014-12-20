@@ -12,7 +12,7 @@
 #undef APSTUDIO_HIDDEN_SYMBOLS
 #include "ntverp.h"
 
-#include "phdskmntver.h"
+#include "inc\phdskmntver.h"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS

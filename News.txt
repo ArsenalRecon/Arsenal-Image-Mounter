@@ -1,3 +1,27 @@
+
+-- What's new, driver version 1.0.5.014 and API library version 1.0.021
+   Bugfixes in driver. New driver embedded with Mount Tool.
+
+* Driver caused blue-screen crash when virtual SCSI port device was disabled
+  or uninstalled through Device Manager while virtual disk drives were still
+  mounted. This problem has now been corrected.
+
+* Driver optimization: Pool memory usage was very high when loading disk image
+  contents into virtual memory, which could potentially cause various problems
+  with other drivers and appications meanwhile. Rewrote image file reading
+  process completely. This is essentially same code fixed as in ImDisk Virtual
+  Disk Driver version 1.9.2.
+
+* The driver now responds with SRB_STATUS_BUSY instead of
+  SRB_STATUS_NOT_POWERED while a newly mounted virtual disk drive is becoming
+  ready. This should make drive mounting faster and more reliable.
+
+-- What's new, API library version 1.0.020
+
+* Some users reported error message dialogs when device list is refreshed in
+  Mount Tool. A possible cause has been identified and protected so that an
+  error while opening a device should not cause an unhandled exception message.
+
 -- What's new, driver version 1.0.4.013 and API library version 1.0.019
 
 * Write-temporary mode (also known as "write-overlay") is now supported for

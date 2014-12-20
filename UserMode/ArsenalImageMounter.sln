@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Arsenal.ImageMounter.Devio", "Arsenal.ImageMounter.Devio\Arsenal.ImageMounter.Devio.vbproj", "{C8131F7E-E240-4A1B-8D3D-FC4E5DBED050}"
 EndProject
@@ -22,6 +22,19 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CCDE959C-C0CA-4F98-B379-64931C7C91D0}"
 	ProjectSection(SolutionItems) = preProject
 		CommonAssemblyInfo.vb = CommonAssemblyInfo.vb
+		..\Directory_structure.txt = ..\Directory_structure.txt
+		..\How-to-build.txt = ..\How-to-build.txt
+		..\LICENSE.md = ..\LICENSE.md
+		..\News.txt = ..\News.txt
+		..\Public-API-reference.txt = ..\Public-API-reference.txt
+		..\README.md = ..\README.md
+		..\Third-party-dependencies.txt = ..\Third-party-dependencies.txt
+	EndProjectSection
+EndProject
+Project("{7CF6DF6D-3B04-46F8-A40B-537D21BCA0B4}") = "ArsenalImageMounterHelpBuilder", "ArsenalImageMounterHelpBuilder.shfbproj", "{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C8131F7E-E240-4A1B-8D3D-FC4E5DBED050} = {C8131F7E-E240-4A1B-8D3D-FC4E5DBED050}
+		{3EFCB6F8-EF7E-4F60-A0DE-BB197240FCC9} = {3EFCB6F8-EF7E-4F60-A0DE-BB197240FCC9}
 	EndProjectSection
 EndProject
 Global
@@ -123,6 +136,15 @@ Global
 		{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}.Release|x86.ActiveCfg = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -32,18 +32,18 @@
 //#include "scsi.tmh"
 
 #ifdef USE_SCSIPORT
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ScsiExecuteRaidControllerUnit(
-            __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
-            __in PSCSI_REQUEST_BLOCK  pSrb,
-            __in PUCHAR               pResult
-            )
+__in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb,
+__in PUCHAR               pResult
+)
 {
     KdPrint2(("PhDskMnt::ScsiExecuteRaidControllerUnit: pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
-                      pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
+        pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
     *pResult = ResultDone;
 
@@ -73,9 +73,9 @@ ScsiExecuteRaidControllerUnit(
 
 VOID
 ScsiOpInquiryRaidControllerUnit(
-              __in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-              __in PSCSI_REQUEST_BLOCK  pSrb
-             )
+__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+)
 {
     PINQUIRYDATA          pInqData = (PINQUIRYDATA)pSrb->DataBuffer;// Point to Inquiry buffer.
     PCDB                  pCdb;
@@ -118,28 +118,28 @@ done:
 }                                                     // End ScsiOpInquiry.
 #endif
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ScsiExecute(
-            __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
-            __in PSCSI_REQUEST_BLOCK  pSrb,
-            __in PUCHAR               pResult
-            )
+__in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb,
+__in PUCHAR               pResult
+)
 {
     pHW_LU_EXTENSION  pLUExt = NULL;
     UCHAR             status;
 
     KdPrint2(("PhDskMnt::ScsiExecute: pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
-                      pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
+        pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
 #ifdef USE_SCSIPORT
     // In case of SCSIPORT (Win XP), we need to show at least one working device connected to this
     // adapter. Otherwise, SCSIPORT may not even let control requests through, which could cause
     // a scenario where even new devices cannot be added. So, for device path 0:0:0, always answer
     // 'success' (without actual response data) to some basic requests.
-    if ((pSrb->PathId|pSrb->TargetId|pSrb->Lun) == 0)
+    if ((pSrb->PathId | pSrb->TargetId | pSrb->Lun) == 0)
     {
         ScsiExecuteRaidControllerUnit(pHBAExt, pSrb, pResult);
         goto Done;
@@ -151,22 +151,12 @@ ScsiExecute(
     // Get the LU extension from port driver.
     status = ScsiGetLUExtension(pHBAExt, &pLUExt, pSrb->PathId, pSrb->TargetId, pSrb->Lun);
 
-    // Set SCSI check conditions if LU is not ready
-    if (status == SRB_STATUS_INVALID_LUN)
+    // Set SCSI check conditions if LU is not yet ready
+    if (status == SRB_STATUS_BUSY)
     {
         ScsiSetCheckCondition(
             pSrb,
-            SRB_STATUS_INVALID_LUN,
-            SCSI_SENSE_ILLEGAL_REQUEST,
-            SCSI_ADSENSE_INVALID_LUN,
-            SCSI_SENSEQ_CAUSE_NOT_REPORTABLE
-            );
-    }
-    else if (status == SRB_STATUS_NOT_POWERED)
-    {
-        ScsiSetCheckCondition(
-            pSrb,
-            SRB_STATUS_NOT_POWERED,
+            SRB_STATUS_BUSY,
             SCSI_SENSE_NOT_READY,
             SCSI_ADSENSE_LUN_NOT_READY,
             SCSI_SENSEQ_BECOMING_READY
@@ -195,13 +185,13 @@ ScsiExecute(
         break;
 
     case SCSIOP_START_STOP_UNIT:
-	ScsiOpStartStopUnit(pHBAExt, pLUExt, pSrb);
-	break;
+        ScsiOpStartStopUnit(pHBAExt, pLUExt, pSrb);
+        break;
 
     case SCSIOP_INQUIRY:
         ScsiOpInquiry(pHBAExt, pLUExt, pSrb);
         break;
-    
+
     case SCSIOP_READ_CAPACITY:
     case SCSIOP_READ_CAPACITY16:
         ScsiOpReadCapacity(pHBAExt, pLUExt, pSrb);
@@ -219,16 +209,16 @@ ScsiExecute(
         break;
 
     case SCSIOP_GET_CONFIGURATION:
-	ScsiOpGetConfiguration(pHBAExt, pLUExt, pSrb);
-	break;
+        ScsiOpGetConfiguration(pHBAExt, pLUExt, pSrb);
+        break;
 
     case SCSIOP_READ_DISC_INFORMATION:
-	ScsiOpReadDiscInformation(pHBAExt, pLUExt, pSrb);
-	break;
+        ScsiOpReadDiscInformation(pHBAExt, pLUExt, pSrb);
+        break;
 
     case SCSIOP_READ_TRACK_INFORMATION:
-	ScsiOpReadTrackInformation(pHBAExt, pLUExt, pSrb);
-	break;
+        ScsiOpReadTrackInformation(pHBAExt, pLUExt, pSrb);
+        break;
 
     case SCSIOP_MEDIUM_REMOVAL:
         ScsiOpMediumRemoval(pHBAExt, pLUExt, pSrb);
@@ -261,9 +251,9 @@ Done:
 
 VOID
 ScsiOpStartStopUnit(
-		    __in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-		    __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-		    __in PSCSI_REQUEST_BLOCK  pSrb
+__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     PCDB                     pCdb = (PCDB)pSrb->Cdb;
@@ -273,56 +263,56 @@ ScsiOpStartStopUnit(
     UNREFERENCED_PARAMETER(pHBAExt);
 
     KdPrint(("ImScsi: ScsiOpStartStopUnit for device %i:%i:%i.\n",
-	(int)device_extension->DeviceNumber.PathId,
-	(int)device_extension->DeviceNumber.TargetId,
-	(int)device_extension->DeviceNumber.Lun));
+        (int)device_extension->DeviceNumber.PathId,
+        (int)device_extension->DeviceNumber.TargetId,
+        (int)device_extension->DeviceNumber.Lun));
 
     if ((pCdb->START_STOP.OperationCode != SCSIOP_START_STOP_UNIT) |
-	(pCdb->START_STOP.LoadEject != 1) |
-	(pCdb->START_STOP.Start != 0))
+        (pCdb->START_STOP.LoadEject != 1) |
+        (pCdb->START_STOP.Start != 0))
     {
-	KdPrint(("ImScsi: ScsiOpStartStopUnit (unknown op) for device %i:%i:%i.\n",
-	    (int)device_extension->DeviceNumber.PathId,
-	    (int)device_extension->DeviceNumber.TargetId,
-	    (int)device_extension->DeviceNumber.Lun));
+        KdPrint(("ImScsi: ScsiOpStartStopUnit (unknown op) for device %i:%i:%i.\n",
+            (int)device_extension->DeviceNumber.PathId,
+            (int)device_extension->DeviceNumber.TargetId,
+            (int)device_extension->DeviceNumber.Lun));
 
-	ScsiSetSuccess(pSrb, 0);
-	return;
+        ScsiSetSuccess(pSrb, 0);
+        return;
     }
 
     if (!device_extension->RemovableMedia)
     {
-	KdPrint(("ImScsi: ScsiOpStartStopUnit (eject) invalid for device %i:%i:%i.\n",
-	    (int)device_extension->DeviceNumber.PathId,
-	    (int)device_extension->DeviceNumber.TargetId,
-	    (int)device_extension->DeviceNumber.Lun));
+        KdPrint(("ImScsi: ScsiOpStartStopUnit (eject) invalid for device %i:%i:%i.\n",
+            (int)device_extension->DeviceNumber.PathId,
+            (int)device_extension->DeviceNumber.TargetId,
+            (int)device_extension->DeviceNumber.Lun));
 
-	ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
-	return;
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
+        return;
     }
 
     KdPrint(("ImScsi: ScsiOpStartStopUnit (eject) received for device %i:%i:%i.\n",
-	(int)device_extension->DeviceNumber.PathId,
-	(int)device_extension->DeviceNumber.TargetId,
-	(int)device_extension->DeviceNumber.Lun));
+        (int)device_extension->DeviceNumber.PathId,
+        (int)device_extension->DeviceNumber.TargetId,
+        (int)device_extension->DeviceNumber.Lun));
 
     srb_io_data.DeviceNumber = device_extension->DeviceNumber;
 
     status = ImScsiRemoveDevice(pHBAExt, &srb_io_data);
 
     KdPrint(("ImScsi: ScsiOpStartStopUnit (eject) result for device %i:%i:%i was %#x.\n",
-	(int)device_extension->DeviceNumber.PathId,
-	(int)device_extension->DeviceNumber.TargetId,
-	(int)device_extension->DeviceNumber.Lun,
-	status));
+        (int)device_extension->DeviceNumber.PathId,
+        (int)device_extension->DeviceNumber.TargetId,
+        (int)device_extension->DeviceNumber.Lun,
+        status));
 
     if (!NT_SUCCESS(status))
     {
-	ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
     }
     else
     {
-	ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+        ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
     }
 }
 
@@ -336,14 +326,14 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     UNREFERENCED_PARAMETER(device_extension);
 
     KdPrint(("ImScsi: ScsiOpMediumRemoval for device %i:%i:%i.\n",
-	(int)device_extension->DeviceNumber.PathId,
-	(int)device_extension->DeviceNumber.TargetId,
-	(int)device_extension->DeviceNumber.Lun));
+        (int)device_extension->DeviceNumber.PathId,
+        (int)device_extension->DeviceNumber.TargetId,
+        (int)device_extension->DeviceNumber.Lun));
 
     if (!device_extension->RemovableMedia)
     {
-	ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
-	return;
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
+        return;
     }
 
     RtlZeroMemory(pSrb->DataBuffer, pSrb->DataTransferLength);
@@ -353,8 +343,8 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
 VOID
 ScsiOpGetConfiguration(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-		__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-		__in PSCSI_REQUEST_BLOCK  pSrb
+__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     PGET_CONFIGURATION_HEADER output_buffer = (PGET_CONFIGURATION_HEADER)pSrb->DataBuffer;
@@ -363,15 +353,15 @@ ScsiOpGetConfiguration(__in pHW_HBA_EXT          pHBAExt,      // Adapter device
     UNREFERENCED_PARAMETER(pHBAExt);
 
     KdPrint(("ImScsi: ScsiOpGetConfiguration for device %i:%i:%i.\n",
-	(int)device_extension->DeviceNumber.PathId,
-	(int)device_extension->DeviceNumber.TargetId,
-	(int)device_extension->DeviceNumber.Lun));
+        (int)device_extension->DeviceNumber.PathId,
+        (int)device_extension->DeviceNumber.TargetId,
+        (int)device_extension->DeviceNumber.Lun));
 
     if ((device_extension->DeviceType != READ_ONLY_DIRECT_ACCESS_DEVICE) ||
-	(pSrb->DataTransferLength < sizeof(GET_CONFIGURATION_HEADER)))
+        (pSrb->DataTransferLength < sizeof(GET_CONFIGURATION_HEADER)))
     {
-	ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
-	return;
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
+        return;
     }
 
     RtlZeroMemory(output_buffer, pSrb->DataTransferLength);
@@ -396,44 +386,44 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     UNREFERENCED_PARAMETER(pHBAExt);
 
     if ((device_extension->DeviceType != READ_ONLY_DIRECT_ACCESS_DEVICE) ||
-	(pSrb->DataTransferLength < sizeof(SCSIOP_READ_DISC_INFORMATION)))
+        (pSrb->DataTransferLength < sizeof(SCSIOP_READ_DISC_INFORMATION)))
     {
-	ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
-	return;
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
+        return;
     }
 
     KdPrint(("ImScsi: ScsiOpReadTrackInformation for device %i:%i:%i. Data type req = %#x\n",
-	(int)device_extension->DeviceNumber.PathId,
-	(int)device_extension->DeviceNumber.TargetId,
-	(int)device_extension->DeviceNumber.Lun,
-	(int)cdb->READ_TRACK_INFORMATION.Lun));
+        (int)device_extension->DeviceNumber.PathId,
+        (int)device_extension->DeviceNumber.TargetId,
+        (int)device_extension->DeviceNumber.Lun,
+        (int)cdb->READ_TRACK_INFORMATION.Lun));
 
     RtlZeroMemory(output_buffer, pSrb->DataTransferLength);
 
     switch (cdb->READ_TRACK_INFORMATION.Lun)
     {
- //   case 0x00:
-	//if (pSrb->DataTransferLength < 34)
-	//{
-	//    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-	//    return;
-	//}
-	//output_buffer[2] = 0x0A;
-	//output_buffer[7] = 0x20;
+        //   case 0x00:
+        //if (pSrb->DataTransferLength < 34)
+        //{
+        //    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+        //    return;
+        //}
+        //output_buffer[2] = 0x0A;
+        //output_buffer[7] = 0x20;
 
-	//ScsiSetSuccess(pSrb, 34);
-	//return;
+        //ScsiSetSuccess(pSrb, 34);
+        //return;
 
     default:
-	ScsiSetError(pSrb, SRB_STATUS_ERROR);
-	return;
+        ScsiSetError(pSrb, SRB_STATUS_ERROR);
+        return;
     }
 }
 
 VOID
 ScsiOpReadDiscInformation(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-			__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-			__in PSCSI_REQUEST_BLOCK  pSrb
+__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     PUCHAR output_buffer = pSrb->DataBuffer;
@@ -442,48 +432,48 @@ ScsiOpReadDiscInformation(__in pHW_HBA_EXT          pHBAExt,      // Adapter dev
     UNREFERENCED_PARAMETER(pHBAExt);
 
     if ((device_extension->DeviceType != READ_ONLY_DIRECT_ACCESS_DEVICE) ||
-	(pSrb->DataTransferLength < sizeof(SCSIOP_READ_DISC_INFORMATION)))
+        (pSrb->DataTransferLength < sizeof(SCSIOP_READ_DISC_INFORMATION)))
     {
-	ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
-	return;
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
+        return;
     }
 
     KdPrint(("ImScsi: ScsiOpReadDiscInformation for device %i:%i:%i. Data type req = %#x\n",
-	(int)device_extension->DeviceNumber.PathId,
-	(int)device_extension->DeviceNumber.TargetId,
-	(int)device_extension->DeviceNumber.Lun,
-	(int)cdb->READ_DISC_INFORMATION.Lun));
+        (int)device_extension->DeviceNumber.PathId,
+        (int)device_extension->DeviceNumber.TargetId,
+        (int)device_extension->DeviceNumber.Lun,
+        (int)cdb->READ_DISC_INFORMATION.Lun));
 
     RtlZeroMemory(output_buffer, pSrb->DataTransferLength);
 
     switch (cdb->READ_DISC_INFORMATION.Lun)
     {
     case 0x00:
-	if (pSrb->DataTransferLength < 34)
-	{
-	    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-	    return;
-	}
-	output_buffer[2] = 0x0A;
-	output_buffer[7] = 0x20;
+        if (pSrb->DataTransferLength < 34)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            return;
+        }
+        output_buffer[2] = 0x0A;
+        output_buffer[7] = 0x20;
 
-	ScsiSetSuccess(pSrb, 34);
-	return;
+        ScsiSetSuccess(pSrb, 34);
+        return;
 
     default:
-	ScsiSetError(pSrb, SRB_STATUS_ERROR);
-	return;
+        ScsiSetError(pSrb, SRB_STATUS_ERROR);
+        return;
     }
 }
 
 VOID
 ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-              __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-              __in PSCSI_REQUEST_BLOCK  pSrb
-             )
+__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+)
 {
     PCDROM_TOC cdrom_toc = (PCDROM_TOC)pSrb->DataBuffer;
-    PCDB       cdb         = (PCDB)       pSrb->Cdb;
+    PCDB       cdb = (PCDB)pSrb->Cdb;
 
     UNREFERENCED_PARAMETER(pHBAExt);
 
@@ -498,13 +488,13 @@ ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object e
         return;
     }
 
-/*
-#define READ_TOC_FORMAT_TOC         0x00
-#define READ_TOC_FORMAT_SESSION     0x01
-#define READ_TOC_FORMAT_FULL_TOC    0x02
-#define READ_TOC_FORMAT_PMA         0x03
-#define READ_TOC_FORMAT_ATIP        0x04
-*/
+    /*
+    #define READ_TOC_FORMAT_TOC         0x00
+    #define READ_TOC_FORMAT_SESSION     0x01
+    #define READ_TOC_FORMAT_FULL_TOC    0x02
+    #define READ_TOC_FORMAT_PMA         0x03
+    #define READ_TOC_FORMAT_ATIP        0x04
+    */
 
     KdPrint2(("PhDskMnt::ScsiOpReadTOC: Msf = %d\n", cdb->READ_TOC.Msf));
     KdPrint2(("PhDskMnt::ScsiOpReadTOC: LogicalUnitNumber = %d\n", cdb->READ_TOC.LogicalUnitNumber));
@@ -518,37 +508,37 @@ ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object e
     {
     case READ_TOC_FORMAT_TOC:
     {
-	USHORT size = FIELD_OFFSET(CDROM_TOC, TrackData) + sizeof(TRACK_DATA);
+        USHORT size = FIELD_OFFSET(CDROM_TOC, TrackData) + sizeof(TRACK_DATA);
 
-	if (pSrb->DataTransferLength < size)
-	{
-	    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-	    break;
-	}
+        if (pSrb->DataTransferLength < size)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            break;
+        }
 
-	*(PUSHORT)cdrom_toc->Length = RtlUshortByteSwap(size);
-	cdrom_toc->FirstTrack = 1;
-	cdrom_toc->LastTrack = 1;
-	cdrom_toc->TrackData[0].Control = TOC_DATA_TRACK;
+        *(PUSHORT)cdrom_toc->Length = RtlUshortByteSwap(size);
+        cdrom_toc->FirstTrack = 1;
+        cdrom_toc->LastTrack = 1;
+        cdrom_toc->TrackData[0].Control = TOC_DATA_TRACK;
 
-	ScsiSetSuccess(pSrb, size);
+        ScsiSetSuccess(pSrb, size);
 
-	//data_buffer[0] = 0; // length MSB
-	//data_buffer[1] = 10; // length LSB
-	//data_buffer[2] = 1; // First Track
-	//data_buffer[3] = 1; // Last Track
-	//data_buffer[4] = 0; // Reserved
-	//data_buffer[5] = 0x14; // current position data + uninterrupted data
-	//data_buffer[6] = 1; // last complete track
-	//data_buffer[7] = 0; // reserved
-	//data_buffer[8] = 0; // MSB Block
-	//data_buffer[9] = 0;
-	//data_buffer[10] = 0;
-	//data_buffer[11] = 0; // LSB Block
+        //data_buffer[0] = 0; // length MSB
+        //data_buffer[1] = 10; // length LSB
+        //data_buffer[2] = 1; // First Track
+        //data_buffer[3] = 1; // Last Track
+        //data_buffer[4] = 0; // Reserved
+        //data_buffer[5] = 0x14; // current position data + uninterrupted data
+        //data_buffer[6] = 1; // last complete track
+        //data_buffer[7] = 0; // reserved
+        //data_buffer[8] = 0; // MSB Block
+        //data_buffer[9] = 0;
+        //data_buffer[10] = 0;
+        //data_buffer[11] = 0; // LSB Block
 
-	//ScsiSetSuccess(pSrb, 12);
+        //ScsiSetSuccess(pSrb, 12);
 
-	break;
+        break;
     }
 
     case READ_TOC_FORMAT_SESSION:
@@ -564,15 +554,15 @@ ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object e
     }
 }
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ScsiOpInquiry(
-              __in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-              __in pHW_LU_EXTENSION     pLUExt,       // LUN device-object extension from port driver.
-              __in PSCSI_REQUEST_BLOCK  pSrb
-             )
+__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     pLUExt,       // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+)
 {
     PINQUIRYDATA          pInqData = (PINQUIRYDATA)pSrb->DataBuffer;// Point to Inquiry buffer.
     PCDB                  pCdb;
@@ -593,28 +583,28 @@ ScsiOpInquiry(
         ScsiOpVPDRaidControllerUnit(pHBAExt, pLUExt, pSrb);
 #else
         ScsiSetCheckCondition(
-	    pSrb,
-	    SRB_STATUS_ERROR,
-	    SCSI_SENSE_ILLEGAL_REQUEST,
-	    SCSI_ADSENSE_INVALID_CDB,
-	    0);
+            pSrb,
+            SRB_STATUS_ERROR,
+            SCSI_SENSE_ILLEGAL_REQUEST,
+            SCSI_ADSENSE_INVALID_CDB,
+            0);
 #endif
 
         goto done;
     }
 
-    if (!pLUExt->Initialized)
+    if (!KeReadStateEvent(&pLUExt->Initialized))
     {
-	KdPrint(("PhDskMnt::ScsiOpInquiry: Rejected. Device not initialized.\n"));
+        KdPrint(("PhDskMnt::ScsiOpInquiry: Rejected. Device not initialized.\n"));
 
-	ScsiSetCheckCondition(
-	    pSrb,
-	    SRB_STATUS_NOT_POWERED,
-	    SCSI_SENSE_NOT_READY,
-	    SCSI_ADSENSE_LUN_NOT_READY,
-	    SCSI_SENSEQ_BECOMING_READY);
+        ScsiSetCheckCondition(
+            pSrb,
+            SRB_STATUS_BUSY,
+            SCSI_SENSE_NOT_READY,
+            SCSI_ADSENSE_LUN_NOT_READY,
+            SCSI_SENSEQ_BECOMING_READY);
 
-	goto done;
+        goto done;
     }
 
     pInqData->DeviceType = pLUExt->DeviceType;
@@ -634,17 +624,17 @@ done:
     return;
 }                                                     // End ScsiOpInquiry.
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 UCHAR
 ScsiGetLUExtension(
-              __in pHW_HBA_EXT								pHBAExt,      // Adapter device-object extension from port driver.
-              pHW_LU_EXTENSION * ppLUExt,
-              __in UCHAR									PathId,
-              __in UCHAR									TargetId,
-              __in UCHAR									Lun
-             )
+__in pHW_HBA_EXT								pHBAExt,      // Adapter device-object extension from port driver.
+pHW_LU_EXTENSION * ppLUExt,
+__in UCHAR									PathId,
+__in UCHAR									TargetId,
+__in UCHAR									Lun
+)
 {
     PLIST_ENTRY           list_ptr;
     pHW_LU_EXTENSION *    pPortLunExt = NULL;
@@ -661,12 +651,12 @@ ScsiGetLUExtension(
 
 #if defined(_AMD64_)
     KeAcquireInStackQueuedSpinLock(                   // Serialize the linked list of LUN extensions.              
-                                   &pHBAExt->LUListLock, &LockHandle);
+        &pHBAExt->LUListLock, &LockHandle);
 #else
     KeAcquireSpinLock(&pHBAExt->LUListLock, &SaveIrql);
 #endif
 
-    pPortLunExt = (pHW_LU_EXTENSION*) StoragePortGetLogicalUnit(pHBAExt, PathId, TargetId, Lun);
+    pPortLunExt = (pHW_LU_EXTENSION*)StoragePortGetLogicalUnit(pHBAExt, PathId, TargetId, Lun);
 
     if (pPortLunExt == NULL)
     {
@@ -675,7 +665,7 @@ ScsiGetLUExtension(
             TargetId,
             Lun));
 
-        status = SRB_STATUS_INVALID_LUN;
+        status = SRB_STATUS_NO_DEVICE;
         goto done;
     }
 
@@ -687,33 +677,39 @@ ScsiGetLUExtension(
             (pLUExt->DeviceNumber.TargetId != TargetId) |
             (pLUExt->DeviceNumber.Lun != Lun))
         {
-            DbgPrint("PhDskMnt::ScsiGetLUExtension: LUExt for device %i:%i:%i returned for device %i:%i:%i!\n",
+            DbgPrint("PhDskMnt::ScsiGetLUExtension: LUExt %p for device %i:%i:%i returned for device %i:%i:%i!\n",
+                pLUExt,
                 (int)pLUExt->DeviceNumber.PathId,
                 (int)pLUExt->DeviceNumber.TargetId,
                 (int)pLUExt->DeviceNumber.Lun,
-		(int)PathId,
-		(int)TargetId,
-		(int)Lun);
+                (int)PathId,
+                (int)TargetId,
+                (int)Lun);
         }
         else if (KeReadStateEvent(&pLUExt->StopThread))
         {
-            DbgPrint("PhDskMnt::ScsiGetLUExtension: Warning: Device is stopped!\n");
+            DbgPrint("PhDskMnt::ScsiGetLUExtension: Device %i:%i:%i is stopping. MP reports missing to port driver.\n",
+                (int)pLUExt->DeviceNumber.PathId,
+                (int)pLUExt->DeviceNumber.TargetId,
+                (int)pLUExt->DeviceNumber.Lun);
 
-            KeSetEvent(&pLUExt->Missing, (KPRIORITY) 0, FALSE);
+            *pPortLunExt = NULL;
 
-            status = SRB_STATUS_INVALID_LUN;
+            status = SRB_STATUS_NO_DEVICE;
 
             goto done;
         }
         else
         {
-            if (!pLUExt->Initialized)
+            if (!KeReadStateEvent(&pLUExt->Initialized))
+            {
                 DbgPrint("PhDskMnt::ScsiGetLUExtension: Warning: Device is not yet initialized!\n");
-            
+            }
+
             *ppLUExt = pLUExt;
 
             KdPrint2(("PhDskMnt::ScsiGetLUExtension: Device %d:%d:%d has pLUExt=0x%p\n",
-		PathId, TargetId, Lun, *ppLUExt));
+                PathId, TargetId, Lun, *ppLUExt));
 
             status = SRB_STATUS_SUCCESS;
 
@@ -729,9 +725,10 @@ ScsiGetLUExtension(
         pHW_LU_EXTENSION object;
         object = CONTAINING_RECORD(list_ptr, HW_LU_EXTENSION, List);
 
-        if ((object->DeviceNumber.PathId == PathId) &
-            (object->DeviceNumber.TargetId == TargetId) &
-            (object->DeviceNumber.Lun == Lun))
+        if ((object->DeviceNumber.PathId == PathId) &&
+            (object->DeviceNumber.TargetId == TargetId) &&
+            (object->DeviceNumber.Lun == Lun) &&
+            !KeReadStateEvent(&object->StopThread))
         {
             *ppLUExt = object;
             break;
@@ -742,7 +739,7 @@ ScsiGetLUExtension(
     {
         KdPrint2(("PhDskMnt::ScsiGetLUExtension: No saved data for Lun.\n"));
 
-        status = SRB_STATUS_INVALID_LUN;
+        status = SRB_STATUS_NO_DEVICE;
 
         goto done;
     }
@@ -751,12 +748,13 @@ ScsiGetLUExtension(
 
     status = SRB_STATUS_SUCCESS;
 
-    KdPrint(("PhDskMnt::ScsiGetLUExtension: Device %d:%d:%d get pLUExt=0x%p\n", PathId, TargetId, Lun, *ppLUExt));
+    KdPrint(("PhDskMnt::ScsiGetLUExtension: Device %d:%d:%d get pLUExt=0x%p\n",
+        PathId, TargetId, Lun, *ppLUExt));
 
 done:
 
 #if defined(_AMD64_)
-    KeReleaseInStackQueuedSpinLock(&LockHandle);      
+    KeReleaseInStackQueuedSpinLock(&LockHandle);
 #else
     KeReleaseSpinLock(&pHBAExt->LUListLock, SaveIrql);
 #endif
@@ -766,15 +764,15 @@ done:
     return status;
 }                                                     // End ScsiOpInquiry.
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 #ifdef USE_SCSIPORT
 VOID
 ScsiOpVPDRaidControllerUnit(
-          __in pHW_HBA_EXT          pHBAExt,          // Adapter device-object extension from port driver.
-          __in PSCSI_REQUEST_BLOCK  pSrb
-         )
+__in pHW_HBA_EXT          pHBAExt,          // Adapter device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+)
 {
     struct _CDB6INQUIRY3 * pVpdInquiry = (struct _CDB6INQUIRY3 *)&pSrb->Cdb;
 
@@ -793,114 +791,114 @@ ScsiOpVPDRaidControllerUnit(
     }
 
     RtlZeroMemory((PUCHAR)pSrb->DataBuffer,           // Clear output buffer.
-                  pSrb->DataTransferLength);
+        pSrb->DataTransferLength);
 
     switch (pVpdInquiry->PageCode)
     {
     case VPD_SUPPORTED_PAGES:
-        { // Inquiry for supported pages?
-            PVPD_SUPPORTED_PAGES_PAGE pSupportedPages;
-            ULONG len;
+    { // Inquiry for supported pages?
+        PVPD_SUPPORTED_PAGES_PAGE pSupportedPages;
+        ULONG len;
 
-            len = sizeof(VPD_SUPPORTED_PAGES_PAGE) + 8;
+        len = sizeof(VPD_SUPPORTED_PAGES_PAGE) + 8;
 
-            if (pSrb->DataTransferLength < len)
-            {
-                ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-                return;
-            }
-
-            pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE) pSrb->DataBuffer;             // Point to output buffer.
-
-            pSupportedPages->DeviceType = ARRAY_CONTROLLER_DEVICE;
-            pSupportedPages->DeviceTypeQualifier = 0;
-            pSupportedPages->PageCode = VPD_SERIAL_NUMBER;
-            pSupportedPages->PageLength = 8;                // Enough space for 4 VPD values.
-            pSupportedPages->SupportedPageList[0] =         // Show page 0x80 supported.
-                VPD_SERIAL_NUMBER;
-            pSupportedPages->SupportedPageList[1] =         // Show page 0x83 supported.
-                VPD_DEVICE_IDENTIFIERS;
-
-            ScsiSetSuccess(pSrb, len);
+        if (pSrb->DataTransferLength < len)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            return;
         }
-        break;
+
+        pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
+
+        pSupportedPages->DeviceType = ARRAY_CONTROLLER_DEVICE;
+        pSupportedPages->DeviceTypeQualifier = 0;
+        pSupportedPages->PageCode = VPD_SERIAL_NUMBER;
+        pSupportedPages->PageLength = 8;                // Enough space for 4 VPD values.
+        pSupportedPages->SupportedPageList[0] =         // Show page 0x80 supported.
+            VPD_SERIAL_NUMBER;
+        pSupportedPages->SupportedPageList[1] =         // Show page 0x83 supported.
+            VPD_DEVICE_IDENTIFIERS;
+
+        ScsiSetSuccess(pSrb, len);
+    }
+    break;
 
     case VPD_SERIAL_NUMBER:
-        {   // Inquiry for serial number?
-            PVPD_SERIAL_NUMBER_PAGE pVpd;
-            ULONG len;
-            
-            len = sizeof(VPD_SERIAL_NUMBER_PAGE) + 8 + 32;
-            if (pSrb->DataTransferLength < len)
-            {
-                ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-                return;
-            }
+    {   // Inquiry for serial number?
+        PVPD_SERIAL_NUMBER_PAGE pVpd;
+        ULONG len;
 
-            pVpd = (PVPD_SERIAL_NUMBER_PAGE) pSrb->DataBuffer;                        // Point to output buffer.
-
-            pVpd->DeviceType = ARRAY_CONTROLLER_DEVICE;
-            pVpd->DeviceTypeQualifier = 0;
-            pVpd->PageCode = VPD_SERIAL_NUMBER;                
-            pVpd->PageLength = 8 + 32;
-
-            /* Generate a changing serial number. */
-            //sprintf((char *)pVpd->SerialNumber, "%03d%02d%02d%03d0123456789abcdefghijABCDEFGH\n", 
-            //    pMPDrvInfoGlobal->DrvInfoNbrMPHBAObj, pLUExt->DeviceNumber.PathId, pLUExt->DeviceNumber.TargetId, pLUExt->DeviceNumber.Lun);
-
-            KdPrint(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  VPD Page: %X Serial No.: %s",
-                (int)pVpd->PageCode, (const char *)pVpd->SerialNumber));
-
-            ScsiSetSuccess(pSrb, len);
+        len = sizeof(VPD_SERIAL_NUMBER_PAGE) + 8 + 32;
+        if (pSrb->DataTransferLength < len)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            return;
         }
-        break;
+
+        pVpd = (PVPD_SERIAL_NUMBER_PAGE)pSrb->DataBuffer;                        // Point to output buffer.
+
+        pVpd->DeviceType = ARRAY_CONTROLLER_DEVICE;
+        pVpd->DeviceTypeQualifier = 0;
+        pVpd->PageCode = VPD_SERIAL_NUMBER;
+        pVpd->PageLength = 8 + 32;
+
+        /* Generate a changing serial number. */
+        //sprintf((char *)pVpd->SerialNumber, "%03d%02d%02d%03d0123456789abcdefghijABCDEFGH\n", 
+        //    pMPDrvInfoGlobal->DrvInfoNbrMPHBAObj, pLUExt->DeviceNumber.PathId, pLUExt->DeviceNumber.TargetId, pLUExt->DeviceNumber.Lun);
+
+        KdPrint(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  VPD Page: %X Serial No.: %s",
+            (int)pVpd->PageCode, (const char *)pVpd->SerialNumber));
+
+        ScsiSetSuccess(pSrb, len);
+    }
+    break;
 
     case VPD_DEVICE_IDENTIFIERS:
-        { // Inquiry for device ids?
-            PVPD_IDENTIFICATION_PAGE pVpid;
-            PVPD_IDENTIFICATION_DESCRIPTOR pVpidDesc;
-            ULONG len;
+    { // Inquiry for device ids?
+        PVPD_IDENTIFICATION_PAGE pVpid;
+        PVPD_IDENTIFICATION_DESCRIPTOR pVpidDesc;
+        ULONG len;
 
 #define VPIDNameSize 32
 #define VPIDName     "PSSLUNxxx"
 
-            len = sizeof(VPD_IDENTIFICATION_PAGE) + sizeof(VPD_IDENTIFICATION_DESCRIPTOR) + VPIDNameSize;
+        len = sizeof(VPD_IDENTIFICATION_PAGE) + sizeof(VPD_IDENTIFICATION_DESCRIPTOR) + VPIDNameSize;
 
-            if (pSrb->DataTransferLength < len)
-            {
-                ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-                return;
-            }
-
-            pVpid = (PVPD_IDENTIFICATION_PAGE) pSrb->DataBuffer;                     // Point to output buffer.
-
-            pVpid->PageCode = VPD_DEVICE_IDENTIFIERS;
-
-            pVpidDesc =                                   // Point to first (and only) descriptor.
-                (PVPD_IDENTIFICATION_DESCRIPTOR)pVpid->Descriptors;
-
-            pVpidDesc->CodeSet = VpdCodeSetAscii;         // Identifier contains ASCII.
-            pVpidDesc->IdentifierType =                   // 
-                VpdIdentifierTypeFCPHName;
-
-            /* Generate a changing serial number. */
-            _snprintf((char *)pVpidDesc->Identifier, pVpidDesc->IdentifierLength,
-                "%03d%02d%02d%03d0123456789abcdefgh\n", pMPDrvInfoGlobal->DrvInfoNbrMPHBAObj,
-                pSrb->PathId, pSrb->TargetId, pSrb->Lun);
-
-            pVpidDesc->IdentifierLength =                 // Size of Identifier.
-                (UCHAR)strlen((const char *)pVpidDesc->Identifier) - 1;
-            pVpid->PageLength =                           // Show length of remainder.
-                (UCHAR)(FIELD_OFFSET(VPD_IDENTIFICATION_PAGE, Descriptors) + 
-                FIELD_OFFSET(VPD_IDENTIFICATION_DESCRIPTOR, Identifier) + 
-                pVpidDesc->IdentifierLength);
-
-            KdPrint(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  VPD Page 0x83. Identifier=%.*s\n",
-                pVpidDesc->IdentifierLength, pVpidDesc->Identifier));
-
-            ScsiSetSuccess(pSrb, len);
+        if (pSrb->DataTransferLength < len)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            return;
         }
-        break;
+
+        pVpid = (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;                     // Point to output buffer.
+
+        pVpid->PageCode = VPD_DEVICE_IDENTIFIERS;
+
+        pVpidDesc =                                   // Point to first (and only) descriptor.
+            (PVPD_IDENTIFICATION_DESCRIPTOR)pVpid->Descriptors;
+
+        pVpidDesc->CodeSet = VpdCodeSetAscii;         // Identifier contains ASCII.
+        pVpidDesc->IdentifierType =                   // 
+            VpdIdentifierTypeFCPHName;
+
+        /* Generate a changing serial number. */
+        _snprintf((char *)pVpidDesc->Identifier, pVpidDesc->IdentifierLength,
+            "%03d%02d%02d%03d0123456789abcdefgh\n", pMPDrvInfoGlobal->DrvInfoNbrMPHBAObj,
+            pSrb->PathId, pSrb->TargetId, pSrb->Lun);
+
+        pVpidDesc->IdentifierLength =                 // Size of Identifier.
+            (UCHAR)strlen((const char *)pVpidDesc->Identifier) - 1;
+        pVpid->PageLength =                           // Show length of remainder.
+            (UCHAR)(FIELD_OFFSET(VPD_IDENTIFICATION_PAGE, Descriptors) +
+            FIELD_OFFSET(VPD_IDENTIFICATION_DESCRIPTOR, Identifier) +
+            pVpidDesc->IdentifierLength);
+
+        KdPrint(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  VPD Page 0x83. Identifier=%.*s\n",
+            pVpidDesc->IdentifierLength, pVpidDesc->Identifier));
+
+        ScsiSetSuccess(pSrb, len);
+    }
+    break;
 
     default:
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
@@ -912,18 +910,18 @@ ScsiOpVPDRaidControllerUnit(
 }                                                     // End ScsiOpVPDRaidControllerUnit().
 #endif
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ScsiOpReadCapacity(
-                   __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
-                   __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.
-                   __in PSCSI_REQUEST_BLOCK  pSrb
-                  )
+__in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+)
 {
-    PREAD_CAPACITY_DATA     readCapacity = (PREAD_CAPACITY_DATA) pSrb->DataBuffer;
-    PREAD_CAPACITY_DATA_EX  readCapacity16 = (PREAD_CAPACITY_DATA_EX) pSrb->DataBuffer;
+    PREAD_CAPACITY_DATA     readCapacity = (PREAD_CAPACITY_DATA)pSrb->DataBuffer;
+    PREAD_CAPACITY_DATA_EX  readCapacity16 = (PREAD_CAPACITY_DATA_EX)pSrb->DataBuffer;
     ULARGE_INTEGER          maxBlocks;
     ULONG                   blockSize;
 
@@ -931,7 +929,7 @@ ScsiOpReadCapacity(
 
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p, Action=0x%X\n", pHBAExt, pLUExt, pSrb, (int)pSrb->Cdb[0]));
 
-    RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength );
+    RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
 
     //if ((pLUExt == NULL) ? TRUE : ((pLUExt->DiskSize.QuadPart == 0) | (!pLUExt->Initialized)))
     //{
@@ -939,7 +937,7 @@ ScsiOpReadCapacity(
 
     //    ScsiSetCheckCondition(
     //        pSrb,
-    //        SRB_STATUS_NOT_POWERED,
+    //        SRB_STATUS_BUSY,
     //        SCSI_SENSE_NOT_READY,
     //        SCSI_ADSENSE_LUN_NOT_READY,
     //        SCSI_SENSEQ_BECOMING_READY);
@@ -961,7 +959,7 @@ ScsiOpReadCapacity(
             maxBlocks.QuadPart = MAXULONG;
 
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Max Blocks: 0x%I64X\n", maxBlocks));
-    
+
     if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY)
     {
         REVERSE_BYTES(&readCapacity->BytesPerBlock, &blockSize);
@@ -979,20 +977,20 @@ ScsiOpReadCapacity(
     return;
 }                                                     // End ScsiOpReadCapacity.
 
-/******************************************************************************************************/     
-/*                                                                                                    */     
-/* This routine does the setup for reading or writing. Thread ImScsiDispatchWork is going to be the   */     
-/* place to do the work since it gets control at PASSIVE_LEVEL and so could do real I/O, could        */     
-/* wait, etc, etc.                                                                                    */     
-/*                                                                                                    */     
-/******************************************************************************************************/     
+/******************************************************************************************************/
+/*                                                                                                    */
+/* This routine does the setup for reading or writing. Thread ImScsiDispatchWork is going to be the   */
+/* place to do the work since it gets control at PASSIVE_LEVEL and so could do real I/O, could        */
+/* wait, etc, etc.                                                                                    */
+/*                                                                                                    */
+/******************************************************************************************************/
 VOID
 ScsiOpReadWrite(
-                __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
-                __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.        
-                __in PSCSI_REQUEST_BLOCK  pSrb,
-                __in PUCHAR               pResult
-                )
+__in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.        
+__in PSCSI_REQUEST_BLOCK  pSrb,
+__in PUCHAR               pResult
+)
 {
     PCDB                         pCdb = (PCDB)pSrb->Cdb;
     LONGLONG                     startingSector;
@@ -1027,18 +1025,18 @@ ScsiOpReadWrite(
 
     startingOffset = startingSector << pLUExt->BlockPower;
 
-    numBlocks      = pSrb->DataTransferLength >> pLUExt->BlockPower;
+    numBlocks = pSrb->DataTransferLength >> pLUExt->BlockPower;
 
     KdPrint2(("PhDskMnt::ScsiOpReadWrite action: 0x%X, starting sector: 0x%I64X, number of blocks: 0x%X\n", (int)pSrb->Cdb[0], startingSector, numBlocks));
     KdPrint2(("PhDskMnt::ScsiOpReadWrite pSrb: 0x%p, pSrb->DataBuffer: 0x%p\n", pSrb, pSrb->DataBuffer));
 
-    if (!pLUExt->Initialized)
+    if (!KeReadStateEvent(&pLUExt->Initialized))
     {
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Device not initialized.\n"));
+        KdPrint(("PhDskMnt::ScsiOpReadWrite: Busy. Device not initialized.\n"));
 
         ScsiSetCheckCondition(
             pSrb,
-            SRB_STATUS_NOT_POWERED,
+            SRB_STATUS_BUSY,
             SCSI_SENSE_NOT_READY,
             SCSI_ADSENSE_LUN_NOT_READY,
             SCSI_SENSEQ_BECOMING_READY);
@@ -1051,19 +1049,19 @@ ScsiOpReadWrite(
     {
         KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Device shutting down.\n"));
 
-        ScsiSetError(pSrb, SRB_STATUS_INVALID_LUN);
+        ScsiSetError(pSrb, SRB_STATUS_NO_DEVICE);
 
         return;
     }
 
     // Check write protection
     if (((pSrb->Cdb[0] == SCSIOP_WRITE) |
-         (pSrb->Cdb[0] == SCSIOP_WRITE16)) &&
-         pLUExt->ReadOnly)
+        (pSrb->Cdb[0] == SCSIOP_WRITE16)) &&
+        pLUExt->ReadOnly)
     {
         KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Write attempt on read-only device.\n"));
 
-        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_WRITE_PROTECT, 0);
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_DATA_PROTECT, SCSI_ADSENSE_WRITE_PROTECT, 0);
 
         return;
     }
@@ -1081,9 +1079,9 @@ ScsiOpReadWrite(
     // Intermediate non-paged cache
 
     KeAcquireSpinLock(&pLUExt->LastIoLock, &SaveIrql);
-    
+
     if (((pSrb->Cdb[0] == SCSIOP_READ) |
-         (pSrb->Cdb[0] == SCSIOP_READ16)) &
+        (pSrb->Cdb[0] == SCSIOP_READ16)) &
         (pLUExt->LastIoBuffer != NULL) &
         (pLUExt->LastIoStartSector <= startingSector) &
         ((startingOffset - (pLUExt->LastIoStartSector << pLUExt->BlockPower) + pSrb->DataTransferLength) <= pLUExt->LastIoLength))
@@ -1114,7 +1112,7 @@ ScsiOpReadWrite(
 
                 ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
             }
-            __except(EXCEPTION_EXECUTE_HANDLER)
+            __except (EXCEPTION_EXECUTE_HANDLER)
             {
                 DbgPrint("PhDskMnt::ScsiOpReadWrite: Exception caught!\n");
 
@@ -1130,50 +1128,50 @@ ScsiOpReadWrite(
     KeReleaseSpinLock(&pLUExt->LastIoLock, SaveIrql);
 
     pWkRtnParms =                                     // Allocate parm area for work routine.
-      (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
+        (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
 
     if (pWkRtnParms == NULL)
     {
-      DbgPrint("PhDskMnt::ScsiOpReadWrite Failed to allocate work parm structure\n");
+        DbgPrint("PhDskMnt::ScsiOpReadWrite Failed to allocate work parm structure\n");
 
-      ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
-      return;
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
+        return;
     }
 
-    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms)); 
+    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms));
 
-    pWkRtnParms->pHBAExt     = pHBAExt;
-    pWkRtnParms->pLUExt      = pLUExt;
-    pWkRtnParms->pSrb        = pSrb;
+    pWkRtnParms->pHBAExt = pHBAExt;
+    pWkRtnParms->pLUExt = pLUExt;
+    pWkRtnParms->pSrb = pSrb;
 
     // Queue work item, which will run in the System process.
 
     KdPrint2(("PhDskMnt::ScsiOpReadWrite: Queueing work=0x%p\n", pWkRtnParms));
 
     ExInterlockedInsertTailList(
-      &pLUExt->RequestList,
-      &pWkRtnParms->RequestListEntry,
-      &pLUExt->RequestListLock);
-  
-    KeSetEvent(&pLUExt->RequestEvent, (KPRIORITY) 0, FALSE);
-    
+        &pLUExt->RequestList,
+        &pWkRtnParms->RequestListEntry,
+        &pLUExt->RequestListLock);
+
+    KeSetEvent(&pLUExt->RequestEvent, (KPRIORITY)0, FALSE);
+
     *pResult = ResultQueued;                          // Indicate queuing.
 
     KdPrint2(("PhDskMnt::ScsiOpReadWrite:  End. *Result=%i\n", (INT)*pResult));
 }                                                     // End ScsiReadWriteSetup.
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ScsiOpModeSense(
-                __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
-                __in pHW_LU_EXTENSION     pLUExt,     // LUN device-object extension from port driver.
-                __in PSCSI_REQUEST_BLOCK  pSrb
-               )
+__in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     pLUExt,     // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+)
 {
     PMODE_PARAMETER_HEADER mph = (PMODE_PARAMETER_HEADER)pSrb->DataBuffer;
-  
+
     UNREFERENCED_PARAMETER(pHBAExt);
 
     KdPrint2(("PhDskMnt::ScsiOpModeSense:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
@@ -1186,7 +1184,7 @@ ScsiOpModeSense(
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
     }
-    
+
     mph->ModeDataLength = sizeof(MODE_PARAMETER_HEADER);
     if (pLUExt != NULL ? pLUExt->ReadOnly : FALSE)
         mph->DeviceSpecificParameter = MODE_DSP_WRITE_PROTECT;
@@ -1197,18 +1195,18 @@ ScsiOpModeSense(
     ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 }
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ScsiOpModeSense10(
-                  __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
-                  __in pHW_LU_EXTENSION     pLUExt,     // LUN device-object extension from port driver.
-                  __in PSCSI_REQUEST_BLOCK  pSrb
-                  )
+__in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
+__in pHW_LU_EXTENSION     pLUExt,     // LUN device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK  pSrb
+)
 {
     PMODE_PARAMETER_HEADER10 mph = (PMODE_PARAMETER_HEADER10)pSrb->DataBuffer;
-  
+
     UNREFERENCED_PARAMETER(pHBAExt);
     UNREFERENCED_PARAMETER(pLUExt);
 
@@ -1233,14 +1231,14 @@ ScsiOpModeSense10(
     ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 }
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
-ScsiOpReportLuns(                                     
-                 __in __out pHW_HBA_EXT         pHBAExt,   // Adapter device-object extension from port driver.
-                 __in       PSCSI_REQUEST_BLOCK pSrb
-                )
+ScsiOpReportLuns(
+__in __out pHW_HBA_EXT         pHBAExt,   // Adapter device-object extension from port driver.
+__in       PSCSI_REQUEST_BLOCK pSrb
+)
 {
     UCHAR                 count;
     PLIST_ENTRY           list_ptr;
@@ -1260,7 +1258,7 @@ ScsiOpReportLuns(
 
 #if defined(_AMD64_)
     KeAcquireInStackQueuedSpinLock(                   // Serialize the linked list of LUN extensions.              
-                                   &pHBAExt->LUListLock, &LockHandle);
+        &pHBAExt->LUListLock, &LockHandle);
 #else
     KeAcquireSpinLock(&pHBAExt->LUListLock, &SaveIrql);
 #endif
@@ -1275,14 +1273,14 @@ ScsiOpReportLuns(
 
         if ((object->DeviceNumber.PathId == pSrb->PathId) &
             (object->DeviceNumber.TargetId == pSrb->TargetId))
-            if (pSrb->DataTransferLength>=FIELD_OFFSET(LUN_LIST, Lun) + (sizeof(pLunList->Lun[0])*count))
+            if (pSrb->DataTransferLength >= FIELD_OFFSET(LUN_LIST, Lun) + (sizeof(pLunList->Lun[0])*count))
                 pLunList->Lun[count++][1] = object->DeviceNumber.Lun;
             else
                 break;
     }
 
 #if defined(_AMD64_)
-    KeReleaseInStackQueuedSpinLock(&LockHandle);      
+    KeReleaseInStackQueuedSpinLock(&LockHandle);
 #else
     KeReleaseSpinLock(&pHBAExt->LUListLock, SaveIrql);
 #endif
@@ -1290,7 +1288,7 @@ ScsiOpReportLuns(
     KdPrint(("PhDskMnt::ScsiOpReportLuns:  Reported %i LUNs\n", (int)count));
 
     pLunList->LunListLength[3] =                  // Set length needed for LUNs.
-        (UCHAR)(8*count);
+        (UCHAR)(8 * count);
 
     // Set the LUN numbers if there is enough room, and set only those LUNs to be reported.
 
@@ -1301,12 +1299,12 @@ ScsiOpReportLuns(
 
 VOID
 ScsiSetCheckCondition(
-    IN PSCSI_REQUEST_BLOCK pSrb,
-    IN UCHAR               SrbStatus,
-    IN UCHAR               SenseKey,
-    IN UCHAR               AdditionalSenseCode,
-    IN UCHAR               AdditionalSenseCodeQualifier OPTIONAL
-    )
+IN PSCSI_REQUEST_BLOCK pSrb,
+IN UCHAR               SrbStatus,
+IN UCHAR               SenseKey,
+IN UCHAR               AdditionalSenseCode,
+IN UCHAR               AdditionalSenseCodeQualifier OPTIONAL
+)
 {
     PSENSE_DATA mph = (PSENSE_DATA)pSrb->SenseInfoBuffer;
 
@@ -1329,8 +1327,8 @@ ScsiSetCheckCondition(
 
 UCHAR
 ScsiResetLun(
-            __in PVOID               pHBAExt,
-            __in PSCSI_REQUEST_BLOCK pSrb
+__in PVOID               pHBAExt,
+__in PSCSI_REQUEST_BLOCK pSrb
 )
 {
     UNREFERENCED_PARAMETER(pHBAExt);
@@ -1349,7 +1347,7 @@ __in PSCSI_PNP_REQUEST_BLOCK pSrb
 )
 {
     SRB_IMSCSI_REMOVE_DEVICE remove_data = { 0 };
-    
+
     KdPrint(("PhDskMnt::ScsiPnPRemoveDevice:  pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
 
     remove_data.DeviceNumber.LongNumber = IMSCSI_ALL_DEVICES;
@@ -1398,7 +1396,7 @@ __in PSCSI_PNP_REQUEST_BLOCK  pSrb
     NTSTATUS	      status;
 
     KdPrint(("PhDskMnt::ScsiPnP for device %d:%d:%d:  pHBAExt = 0x%p, PnPAction = %#x, pSrb = 0x%p\n",
-	pSrb->PathId, pSrb->TargetId, pSrb->Lun, pHBAExt, pSrb->PnPAction, pSrb));
+        pSrb->PathId, pSrb->TargetId, pSrb->Lun, pHBAExt, pSrb->PnPAction, pSrb));
 
     // Handle sufficient opcodes to support a LUN suitable for a file system. Other opcodes are just completed.
 
@@ -1406,16 +1404,16 @@ __in PSCSI_PNP_REQUEST_BLOCK  pSrb
     {
 
     case StorRemoveDevice:
-	status = ScsiPnPRemoveDevice(pHBAExt, pSrb);
-	break;
+        status = ScsiPnPRemoveDevice(pHBAExt, pSrb);
+        break;
 
     case StorQueryCapabilities:
-	status = ScsiPnPQueryCapabilities(pHBAExt, pSrb);
-	break;
+        status = ScsiPnPQueryCapabilities(pHBAExt, pSrb);
+        break;
 
     default:
-	pSrb->SrbStatus = SRB_STATUS_SUCCESS;         // Do nothing.
-	status = STATUS_SUCCESS;
+        pSrb->SrbStatus = SRB_STATUS_SUCCESS;         // Do nothing.
+        status = STATUS_SUCCESS;
     }
 
     KdPrint2(("PhDskMnt::ScsiPnP:  status = 0x%X\n", status));
@@ -1425,8 +1423,8 @@ __in PSCSI_PNP_REQUEST_BLOCK  pSrb
 
 UCHAR
 ScsiResetDevice(
-            __in PVOID               pHBAExt,
-            __in PSCSI_REQUEST_BLOCK pSrb
+__in PVOID               pHBAExt,
+__in PSCSI_REQUEST_BLOCK pSrb
 )
 {
     UNREFERENCED_PARAMETER(pHBAExt);

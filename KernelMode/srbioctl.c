@@ -23,9 +23,9 @@
 #include "trace.h"
 #include "srbioctl.tmh"
 
-/**************************************************************************************************/     
-/*                                                                                                */     
-/**************************************************************************************************/     
+/**************************************************************************************************/
+/*                                                                                                */
+/**************************************************************************************************/
 VOID
 ScsiIoControl(
 __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
@@ -38,183 +38,179 @@ __in PUCHAR               pResult
     *pResult = ResultDone;
 
     if (pSrb->DataTransferLength < sizeof(SRB_IO_CONTROL)
-	? TRUE
-	: ((srb_io_control->HeaderLength != sizeof(SRB_IO_CONTROL)) |
-	(srb_io_control->HeaderLength + srb_io_control->Length > pSrb->DataTransferLength)))
+        ? TRUE
+        : ((srb_io_control->HeaderLength != sizeof(SRB_IO_CONTROL)) |
+        (srb_io_control->HeaderLength + srb_io_control->Length > pSrb->DataTransferLength)))
     {
-	KdPrint2(("PhDskMnt::ScsiIoControl: Malformed MiniportIOCtl detected.\n",
-	    sizeof(srb_io_control->Signature),
-	    srb_io_control->Signature));
+        KdPrint2(("PhDskMnt::ScsiIoControl: Malformed MiniportIOCtl detected.\n",
+            sizeof(srb_io_control->Signature),
+            srb_io_control->Signature));
 
-	ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
-	goto Done;
+        ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+        goto Done;
     }
 
     if (memcmp(srb_io_control->Signature, FUNCTION_SIGNATURE, strlen(FUNCTION_SIGNATURE)))
     {
-	KdPrint2(("PhDskMnt::ScsiIoControl: MiniportIOCtl sig '%.*s' not supported\n",
-	    sizeof(srb_io_control->Signature),
-	    srb_io_control->Signature));
+        KdPrint2(("PhDskMnt::ScsiIoControl: MiniportIOCtl sig '%.*s' not supported\n",
+            sizeof(srb_io_control->Signature),
+            srb_io_control->Signature));
 
-	ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
-	goto Done;
+        ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+        goto Done;
     }
 
     KdPrint2(("PhDskMnt::ScsiIoControl: Miniport IOCtl ControlCode = %#x\n",
-	srb_io_control->ControlCode));
+        srb_io_control->ControlCode));
 
     switch (srb_io_control->ControlCode)
     {
     case SMP_IMSCSI_CHECK:
     {
-	KdPrint2(("PhDskMnt::ScsiIoControl: Request to complete SRBs.\n"));
-	srb_io_control->ReturnCode = STATUS_SUCCESS;
-	ScsiSetSuccess(pSrb, 0);
+        KdPrint2(("PhDskMnt::ScsiIoControl: Request to complete SRBs.\n"));
+        srb_io_control->ReturnCode = STATUS_SUCCESS;
+        ScsiSetSuccess(pSrb, 0);
 
-	break;
+        break;
     }
 
     case SMP_IMSCSI_CREATE_DEVICE:
     {
-	PSRB_IMSCSI_CREATE_DATA srb_buffer = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
+        PSRB_IMSCSI_CREATE_DATA srb_buffer = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
 
-	if ((srb_buffer->SrbIoControl.HeaderLength + srb_buffer->SrbIoControl.Length <
-	    FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, FileName))
-	    ? TRUE
-	    : (srb_buffer->FileNameLength + (ULONG)FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, FileName) >
-	    pSrb->DataTransferLength))
-	{
-	    KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_CREATE_DEVICE request.\n"));
+        if ((srb_buffer->SrbIoControl.HeaderLength + srb_buffer->SrbIoControl.Length <
+            FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, FileName))
+            ? TRUE
+            : (srb_buffer->FileNameLength + (ULONG)FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, FileName) >
+            pSrb->DataTransferLength))
+        {
+            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_CREATE_DEVICE request.\n"));
 
-	    pSrb->DataTransferLength = 0;
-	    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-	    goto Done;
-	}
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            goto Done;
+        }
 
-	ImScsiCreateDevice(pHBAExt, pSrb, pResult);
+        ImScsiCreateDevice(pHBAExt, pSrb, pResult);
 
-	break;
+        break;
     }
 
     case SMP_IMSCSI_REMOVE_DEVICE:
     {
-	PSRB_IMSCSI_REMOVE_DEVICE srb_buffer = (PSRB_IMSCSI_REMOVE_DEVICE)pSrb->DataBuffer;
+        PSRB_IMSCSI_REMOVE_DEVICE srb_buffer = (PSRB_IMSCSI_REMOVE_DEVICE)pSrb->DataBuffer;
 
-	KdPrint2(("PhDskMnt::ScsiIoControl: Request to remove device.\n"));
+        KdPrint2(("PhDskMnt::ScsiIoControl: Request to remove device.\n"));
 
-	if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
-	{
-	    KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_REMOVE_DEVICE request.\n"));
+        if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
+        {
+            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_REMOVE_DEVICE request.\n"));
 
-	    pSrb->DataTransferLength = 0;
-	    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-	    goto Done;
-	}
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            goto Done;
+        }
 
-	srb_io_control->ReturnCode = ImScsiRemoveDevice(pHBAExt, srb_buffer);
+        srb_io_control->ReturnCode = ImScsiRemoveDevice(pHBAExt, srb_buffer);
 
-	ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+        ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
-	break;
+        break;
     }
 
     case SMP_IMSCSI_QUERY_VERSION:
     {
-	PSRB_IMSCSI_QUERY_VERSION srb_buffer = (PSRB_IMSCSI_QUERY_VERSION)pSrb->DataBuffer;
+        PSRB_IMSCSI_QUERY_VERSION srb_buffer = (PSRB_IMSCSI_QUERY_VERSION)pSrb->DataBuffer;
 
-	KdPrint2(("PhDskMnt::ScsiIoControl: Request for driver version.\n"));
+        KdPrint2(("PhDskMnt::ScsiIoControl: Request for driver version.\n"));
 
-	if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
-	{
-	    srb_io_control->ReturnCode = IMSCSI_DRIVER_VERSION;
-	    srb_io_control->Length = 0;
+        if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
+        {
+            srb_io_control->ReturnCode = IMSCSI_DRIVER_VERSION;
+            srb_io_control->Length = 0;
 
-	    ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+            ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
-	    break;
-	}
+            break;
+        }
 
-	srb_io_control->ReturnCode = IMSCSI_DRIVER_VERSION;
-	srb_io_control->Length = sizeof(*srb_buffer) - sizeof(srb_buffer->SrbIoControl);
-	srb_buffer->SubVersion = PHDSKMNT_VERSION_ULONG;
+        srb_io_control->ReturnCode = IMSCSI_DRIVER_VERSION;
+        srb_io_control->Length = sizeof(*srb_buffer) - sizeof(srb_buffer->SrbIoControl);
+        srb_buffer->SubVersion = PHDSKMNT_VERSION_ULONG;
 
-	ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+        ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
-	break;
+        break;
     }
 
     case SMP_IMSCSI_QUERY_DEVICE:
     {
-	PSRB_IMSCSI_CREATE_DATA srb_buffer = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
+        PSRB_IMSCSI_CREATE_DATA srb_buffer = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
 
-	KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_QUERY_DEVICE.\n"));
+        KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_QUERY_DEVICE.\n"));
 
-	if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
-	{
-	    KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_QUERY_DEVICE request.\n"));
+        if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
+        {
+            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_QUERY_DEVICE request.\n"));
 
-	    pSrb->DataTransferLength = 0;
-	    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-	    goto Done;
-	}
+            pSrb->DataTransferLength = 0;
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            goto Done;
+        }
 
-	srb_io_control->ReturnCode = ImScsiQueryDevice(pHBAExt, srb_buffer, &pSrb->DataTransferLength);
+        srb_io_control->ReturnCode = ImScsiQueryDevice(pHBAExt, srb_buffer, &pSrb->DataTransferLength);
 
-	ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+        ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
-	break;
+        break;
     }
 
     case SMP_IMSCSI_QUERY_ADAPTER:
     {
-	PSRB_IMSCSI_QUERY_ADAPTER srb_buffer = (PSRB_IMSCSI_QUERY_ADAPTER)pSrb->DataBuffer;
+        PSRB_IMSCSI_QUERY_ADAPTER srb_buffer = (PSRB_IMSCSI_QUERY_ADAPTER)pSrb->DataBuffer;
 
-	KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_QUERY_ADAPTER.\n"));
+        KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_QUERY_ADAPTER.\n"));
 
-	if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
-	{
-	    KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_QUERY_ADAPTER request.\n"));
+        if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
+        {
+            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_QUERY_ADAPTER request.\n"));
 
-	    pSrb->DataTransferLength = 0;
-	    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-	    goto Done;
-	}
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            goto Done;
+        }
 
-	srb_io_control->ReturnCode = ImScsiQueryAdapter(pHBAExt, srb_buffer, pSrb->DataTransferLength);
+        srb_io_control->ReturnCode = ImScsiQueryAdapter(pHBAExt, srb_buffer, pSrb->DataTransferLength);
 
-	ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+        ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
-	break;
+        break;
     }
 
     case SMP_IMSCSI_SET_DEVICE_FLAGS:
     {
-	PSRB_IMSCSI_SET_DEVICE_FLAGS srb_buffer = (PSRB_IMSCSI_SET_DEVICE_FLAGS)pSrb->DataBuffer;
+        PSRB_IMSCSI_SET_DEVICE_FLAGS srb_buffer = (PSRB_IMSCSI_SET_DEVICE_FLAGS)pSrb->DataBuffer;
 
-	KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_SET_DEVICE_FLAGS.\n"));
+        KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_SET_DEVICE_FLAGS.\n"));
 
-	if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
-	{
-	    KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_SET_DEVICE_FLAGS request.\n"));
+        if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
+        {
+            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_SET_DEVICE_FLAGS request.\n"));
 
-	    pSrb->DataTransferLength = 0;
-	    ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-	    goto Done;
-	}
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            goto Done;
+        }
 
-	srb_io_control->ReturnCode = ImScsiSetFlagsDevice(pHBAExt, srb_buffer);
+        srb_io_control->ReturnCode = ImScsiSetFlagsDevice(pHBAExt, srb_buffer);
 
-	ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+        ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
-	break;
+        break;
     }
 
     default:
 
-	DbgPrint("PhDskMnt::ScsiExecute: Unknown IOControl code=0x%X\n", srb_io_control->ControlCode);
+        DbgPrint("PhDskMnt::ScsiExecute: Unknown IOControl code=0x%X\n", srb_io_control->ControlCode);
 
-	ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
-	break;
+        ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+        break;
 
     } // end switch
 
@@ -226,10 +222,10 @@ Done:
 
 VOID
 ImScsiCreateDevice(
-                   __in pHW_HBA_EXT          pHBAExt,
-                   __in PSCSI_REQUEST_BLOCK  pSrb,
-                   __in __out PUCHAR         pResult
-                   )
+__in pHW_HBA_EXT          pHBAExt,
+__in PSCSI_REQUEST_BLOCK  pSrb,
+__in __out PUCHAR         pResult
+)
 {
     pHW_LU_EXTENSION        pLUExt = NULL;
     PSRB_IMSCSI_CREATE_DATA new_device = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
@@ -326,7 +322,7 @@ ImScsiCreateDevice(
     }
 
     pWkRtnParms =                                     // Allocate parm area for work routine.
-      (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
+        (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
 
     if (pWkRtnParms == NULL)
     {
@@ -337,11 +333,11 @@ ImScsiCreateDevice(
         return;
     }
 
-    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms)); 
+    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms));
 
-    pWkRtnParms->pHBAExt     = pHBAExt;
-    pWkRtnParms->pSrb        = pSrb;
-    pWkRtnParms->pReqThread  = PsGetCurrentThread();
+    pWkRtnParms->pHBAExt = pHBAExt;
+    pWkRtnParms->pSrb = pSrb;
+    pWkRtnParms->pReqThread = PsGetCurrentThread();
 
     ObReferenceObject(pWkRtnParms->pReqThread);
 
@@ -352,16 +348,16 @@ ImScsiCreateDevice(
     new_device->SrbIoControl.ReturnCode = (ULONG)STATUS_PENDING;
 
     ExInterlockedInsertTailList(
-      &pMPDrvInfoGlobal->RequestList,
-      &pWkRtnParms->RequestListEntry,
-      &pMPDrvInfoGlobal->RequestListLock);
-  
-    KeSetEvent(&pMPDrvInfoGlobal->RequestEvent, (KPRIORITY) 0, FALSE);
-    
+        &pMPDrvInfoGlobal->RequestList,
+        &pWkRtnParms->RequestListEntry,
+        &pMPDrvInfoGlobal->RequestListLock);
+
+    KeSetEvent(&pMPDrvInfoGlobal->RequestEvent, (KPRIORITY)0, FALSE);
+
     *pResult = ResultQueued;                          // Indicate queuing.
 
     StoragePortNotification(BusChangeDetected, pHBAExt, new_device->DeviceNumber.PathId);
-    
+
     KdPrint(("PhDskMnt::ImScsiCreateDevice: End: *Result=%i\n", *pResult));
 
     return;
@@ -369,10 +365,10 @@ ImScsiCreateDevice(
 
 NTSTATUS
 ImScsiQueryDevice(
-                  __in pHW_HBA_EXT               pHBAExt,
-                  __in PSRB_IMSCSI_CREATE_DATA   create_data,
-                  __in PULONG                    Length
-                  )
+__in pHW_HBA_EXT               pHBAExt,
+__in PSRB_IMSCSI_CREATE_DATA   create_data,
+__in PULONG                    Length
+)
 {
     pHW_LU_EXTENSION        device_extension = NULL;
     UCHAR                   srb_status;
@@ -457,10 +453,10 @@ ImScsiQueryDevice(
 
 NTSTATUS
 ImScsiQueryAdapter(
-                   __in pHW_HBA_EXT                 pHBAExt,
-                   __in PSRB_IMSCSI_QUERY_ADAPTER   data,
-                   __in ULONG                       max_length
-                   )
+__in pHW_HBA_EXT                 pHBAExt,
+__in PSRB_IMSCSI_QUERY_ADAPTER   data,
+__in ULONG                       max_length
+)
 {
 #if defined(_AMD64_)
     KLOCK_QUEUE_HANDLE    LockHandle;
@@ -474,25 +470,25 @@ ImScsiQueryAdapter(
 
 #if defined(_AMD64_)
     KeAcquireInStackQueuedSpinLock(                   // Serialize the linked list of LUN extensions.              
-                                   &pHBAExt->LUListLock, &LockHandle);
+        &pHBAExt->LUListLock, &LockHandle);
 #else
     KeAcquireSpinLock(&pHBAExt->LUListLock, &SaveIrql);
 #endif
 
     for (count = 0, list_ptr = pHBAExt->LUList.Flink;
         list_ptr != &pHBAExt->LUList;
-        count ++, list_ptr = list_ptr->Flink
+        count++, list_ptr = list_ptr->Flink
         )
     {
         pHW_LU_EXTENSION object;
         object = CONTAINING_RECORD(list_ptr, HW_LU_EXTENSION, List);
-        
+
         if (max_length >= FIELD_OFFSET(SRB_IMSCSI_QUERY_ADAPTER, DeviceList[count]) + sizeof(data->DeviceList[count]))
             data->DeviceList[count] = object->DeviceNumber;
     }
 
 #if defined(_AMD64_)
-    KeReleaseInStackQueuedSpinLock(&LockHandle);      
+    KeReleaseInStackQueuedSpinLock(&LockHandle);
 #else
     KeReleaseSpinLock(&pHBAExt->LUListLock, SaveIrql);
 #endif
@@ -505,9 +501,9 @@ ImScsiQueryAdapter(
 
 NTSTATUS
 ImScsiSetFlagsDevice(
-                   __in pHW_HBA_EXT                  pHBAExt,
-                   __in PSRB_IMSCSI_SET_DEVICE_FLAGS device_flags
-                   )
+__in pHW_HBA_EXT                  pHBAExt,
+__in PSRB_IMSCSI_SET_DEVICE_FLAGS device_flags
+)
 {
     NTSTATUS ntstatus = STATUS_SUCCESS;
     UCHAR status;
@@ -535,7 +531,7 @@ ImScsiSetFlagsDevice(
         device_extension->VMDisk)
     {
         device_extension->ReadOnly = FALSE;
-		    
+
         device_flags->FlagsToChange &= ~IMSCSI_OPTION_RO;
     }
 
@@ -599,9 +595,9 @@ ImScsiSetFlagsDevice(
 
 NTSTATUS
 ImScsiRemoveDevice(
-                   __in pHW_HBA_EXT          pHBAExt,
-                   __in PSRB_IMSCSI_REMOVE_DEVICE data
-                   )
+__in pHW_HBA_EXT          pHBAExt,
+__in PSRB_IMSCSI_REMOVE_DEVICE data
+)
 {
     PLIST_ENTRY             list_ptr;
     NTSTATUS                status;
@@ -618,7 +614,7 @@ ImScsiRemoveDevice(
 
 #if defined(_AMD64_)
     KeAcquireInStackQueuedSpinLock(                   // Serialize the linked list of LUN extensions.              
-                                   &pHBAExt->LUListLock, &LockHandle);
+        &pHBAExt->LUListLock, &LockHandle);
 #else
     KeAcquireSpinLock(&pHBAExt->LUListLock, &SaveIrql);
 #endif
@@ -637,13 +633,13 @@ ImScsiRemoveDevice(
             data->DeviceNumber.LongNumber))
         {
             count++;
-            KeSetEvent(&object->StopThread, (KPRIORITY) 0, FALSE);
-            KeSetEvent(&object->RequestEvent, (KPRIORITY) 0, FALSE);
+            KeSetEvent(&object->StopThread, (KPRIORITY)0, FALSE);
+            KeSetEvent(&object->RequestEvent, (KPRIORITY)0, FALSE);
         }
     }
 
 #if defined(_AMD64_)
-    KeReleaseInStackQueuedSpinLock(&LockHandle);      
+    KeReleaseInStackQueuedSpinLock(&LockHandle);
 #else
     KeReleaseSpinLock(&pHBAExt->LUListLock, SaveIrql);
 #endif
@@ -663,7 +659,7 @@ ImScsiRemoveDevice(
         pathId = 0x00;
 
     StoragePortNotification(BusChangeDetected, pHBAExt, pathId);
-    
+
 Done:
     KdPrint2(("PhDskMnt::ImScsiRemoveDevice: End: status=0x%X, *Result=%i\n", status));
 
