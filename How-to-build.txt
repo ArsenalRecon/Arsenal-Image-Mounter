@@ -1,14 +1,9 @@
 How to build user-mode tools and library
 ----------------------------------------
 
-* Download Visual Studio Express 2012 (it's free, you only need to register
-  it after using it 30 days) from
+* Required: Visual Studio 2010-2015. You can download free versions of
+  Visual Studio Express:
   http://www.microsoft.com/en-us/download/details.aspx?id=34673
-
-
-* After installation it may say VS2012 is not compatible with this version
-  of Windows. Install the update: KB2781514 from
-  http://www.microsoft.com/en-us/download/details.aspx?id=36020. 
 
 
 * Install PowerShell 3.0 from
@@ -21,18 +16,24 @@ How to build user-mode tools and library
   https://github.com/ArsenalRecon/Arsenal-Image-Mounter/archive/master.zip
 
 
-* Start Visual Studio Express 2012 and open the Visual Studio Solutions file
-  in the UserMode directory called ArsenalImageMounter.sln.
+* Start Visual Studio and open the solution .sln files in "Native Source" or
+  ".NET Source" directories.
+
+
+* The driver project requires Windows Driver Kit.
+  https://msdn.microsoft.com/en-us/library/windows/hardware/ff557573.aspx
+  If you don't need to build the driver project, you can simply exclude that
+  project from the build process or from the solution.
 
 
 * Now you can go to the Build Menu in the main screen of Visual Studio, and
-  click 'Build Project'. That's it. If successful, the binaries are placed
-  in the UserMode\*\bin\Release\ folders.
+  click 'Build Project'. If successful, the binaries are placed
+  in the Source\*\bin\Release\ folders.
 
 
 * Install the driver with the ArsenalImageMounter-DriverSetup.exe utility
   (in the DriverSetup folder). Finally, if you want to use libewf.dll, copy
-  the libewf.dll, msvcr100.dll and zlib.dll files from the MountTool
-  subdirectory in the root to the same directory as the exe file where you
-  are about to use libewf.dll.
+  the libewf.dll, msvcr100.dll and zlib.dll files from the libewf subdirectory
+  in the root to the same directory as the exe file where you are about to use
+  libewf.dll.
 

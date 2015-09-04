@@ -1,13 +1,12 @@
 
 User mode components need DiscUtils.dll and libewf.dll in order to mount
-certain virtual disk image file formats.
+certain disk image file formats.
 
 DiscUtils.dll
 -------------
 DiscUtils.dll is a .NET managed DLL that is used to access several kinds of
-virtual disk image files, such as VHD, VDI, VMDK. DiscUtils.dll is referenced
-by Arsenal.ImageMounter.Devio project. The DLL file is expected to be found in
-the UserMode\Arsenal.ImageMounter.Devio\DLL subdirectory.
+virtual disk image files, such as VHD, VDI, VMDK. DiscUtils.dll is included in
+Arsenal Image Mounter and does not need to be installed separately.
 
 Sources, as well as most recent binary version of DiscUtils.dll, can be
 downloaded from DiscUtils project website:
@@ -15,17 +14,17 @@ http://discutils.codeplex.com
 
 libewf.dll
 ----------
-libewf.dll is a native, unmanaged, DLL that is dynamically linked by
-Arsenal.ImageMounter.Devio when needed. It is primarily needed to mount EnCase
-style forensic image files. Arsenal Image Mounter works without this DLL file,
-but then without possibility to mount such image files. Because this is an
-umanaged DLL file, it needs to be located in either the same directory as the
+libewf.dll is a native, unmanaged, DLL that is dynamically linked by Arsenal
+Image Mounter when needed. It is primarily needed to mount EnCase style
+forensic image files. Arsenal Image Mounter works without this DLL file, but
+then without possibility to mount such image files. Because this is an
+unmanaged DLL file, it needs to be located in either the same directory as the
 EXE file or in any other directory referenced in the system PATH environment
 variable. It also needs to be built for the correct machine architecture, for
-example x86 or amd64.
+example x86 or x64.
 
 libewf.dll sources can be downloaded from libewf project website:
 http://code.google.com/p/libewf/
 
-There is also a 7-zip archive with DLL binaries for each of the x86, amd64 and
-ia64 architectures in the UserMode\Arsenal.ImageMounter.Devio\DLL subdirectory.
+There is also a 7-zip archive with DLL binaries for each of the x86 and x64
+architectures in the libewf subdirectory.

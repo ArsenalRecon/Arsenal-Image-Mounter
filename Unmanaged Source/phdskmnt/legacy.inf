@@ -1,0 +1,69 @@
+
+; LEGACY.INF
+; Installs "legacy", scsiport based, non-pnp version of Arsenal Image Mounter
+; miniport driver.
+; Intended for use on 32 bit editions of Windows XP, which lacks support for
+; storport based virtual miniports.
+; 
+; Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+; This source code is available under the terms of the Affero General Public
+; License v3.
+;
+; Please see LICENSE.txt for full license terms, including the availability of
+; proprietary exceptions.
+; Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+
+[Version]
+signature = "$Windows NT$"
+Provider = "ARSENALRECON"
+DriverVer = 5/4/2015,1.6.0015.00015
+
+
+[SourceDisksNames]
+1 = "Arsenal Image Mounter Setup disk"
+
+
+[SourceDisksFiles.x86]
+phdskmnt.sys = 1, x86
+
+
+[DestinationDirs]
+PhDskMntSysFiles = 12
+ 
+
+[DefaultInstall.ntx86]
+CopyFiles = PhDskMntSysFiles
+
+
+[DefaultUninstall.ntx86]
+DelFiles = PhDskMntSysFiles
+
+
+[PhDskMntSysFiles]
+phdskmnt.sys
+
+
+[DefaultInstall.ntx86.Services]
+AddService = PhDskMnt, , PhDskMntDrv
+
+
+[DefaultUninstall.ntx86.Services]
+DelService = PhDskMnt
+
+
+[PhDskMntDrv]
+DisplayName = "Arsenal Image Mounter Miniport"
+Description = "SCSI emulation miniport"
+ServiceType = 1
+StartType = 2
+ErrorControl = 0
+ServiceBinary = %12%\phdskmnt.sys
+LoadOrderGroup = SCSI Miniport
+AddReg         = legacy_addreg
+
+[legacy_addreg]
+HKR, "Parameters",        "NumberOfBuses",    0x00010001, 0x00000001
+HKR, "Parameters\Device", "NumberOfRequests", 0x00010001, 0xFF
+HKR, "Parameters\Device", "MaximumSGList",    0x00010001, 0xFF
+
+

@@ -1,49 +1,133 @@
+Description of directory structure for Arsenal Image Mounter repository.
 
-MountTool
----------
-ArsenalImageMounterMountTool.exe:
-Compiled, ready-to-run, one-piece (with the exception of libewf) simple GUI mount
-tool. Installs necessary driver components if not already installed.  Complete 
-functionality is available when run on Windows 8, but all basic functionality exists
-when run on Windows 7. This mount tool application is primarily intended to show 
-what the Arsenal Image Mounter source code can be used for.  libewf and zlib 
-binaries (to facilitate EnCase/EWF image mounting) are being included with 
-MountTool under their respective licenses - see lgpl-3.0.txt and zlib license.txt.
+libewf.dll and zlib.dll binaries (to facilitate EnCase/EWF image mounting) are
+included under their respective licenses - see lgpl-3.0.txt and
+zlib license.txt.
 
-ArsenalImageMounterControl.exe:
-Provides command line access to basic Arsenal Image Mounter features.
 
-Screenshot.png - Example of MountTool's disk signature collision reporting and 
-remediation.  Note - remediation only available in read/write mode.
 
+----------------------
+Graphical applications
+----------------------
+
+This directory contains ArsenalImageMounter.exe.
+
+One-piece (with the exception of libewf.dll) powerful tool for mounting
+disk image files as virtual drives. Supports raw disk images and various
+virtual machine image formats through integrated DiscUtils library. Also
+supports certain forensics image formats if libewf.dll is also installed.
+Automatically installs necessary driver components if not already installed.
+
+ArsenalImageMounter.exe requires .NET Framework 4.x, which is included by
+default in Windows 8 or later. Can be installed separately on Windows XP,
+Vista or 7.
+
+Tested on Windows 7, 8.1 and 10, but should also work on Windows XP or Vista.
+
+
+-------------------------
+Command line applications
+-------------------------
+
+ArsenalImageMounterService.exe:
+Command line tool for mounting various disk image formats as virtual drives in
+a way similar to the graphical ArsenalImageMounter.exe.
+
+Does not include driver setup files. Driver could be set up separately using
+either aimcmd.exe or ArsenalImageMounter.exe, or the separate packages in the
+DriverSetup directory.
+
+ArsenalImageMounter.exe requires .NET Framework 4.x, which is included by
+default in Windows 8 or later. Can be installed separately on Windows XP,
+Vista or 7.
+
+Tested on Windows 7, 8.1 and 10, but should also work on Windows XP or Vista.
+
+
+aimcmd.zip:
+Command line tools that provide access to most features of virtual SCSI
+miniport driver that is used with Arsenal Image Mounter. Command line syntax
+is very similar to that of ImDisk Virtual Disk Driver, so most commands and
+scripting work in a similar way. There are also command line switches for
+installing or uninstalling the virtual SCSI miniport driver.
+
+None of the files in this zip archive require any .NET Framework components.
+
+Tested on Windows 7, 8.1 and 10, but should also work on any Windows version
+from Windows 2000 and up.
+
+
+-----------
 DriverSetup
 -----------
+
 Setup tools and signed driver packages that can be used to install the driver
 components alone.
+
 
 ArsenalImageMounter-DriverSetup.exe:
 One-piece simple driver setup GUI application that includes everything to
 automatically install the correct driver for current version of Windows.
+
+Requires .NET Framework 4.x or later, which is included by default in Windows
+8 or later. Can be installed separately on Windows XP, Vista or 7.
+
 
 DriverSetup.7z:
 Setup tools and setup files as a 7-zip archive. Contains both GUI setup tool
 and a console based setup tool ArsenalImageMounterCLISetup.exe that could be
 used to automate driver setup, for example for use from a script.
 
+Application files in this archive require .NET Framework 4.x or later, which
+is included by default in Windows 8 or later. Can be installed separately on
+Windows XP, Vista or 7.
+
+
 DriverSetup.zip:
 Driver setup files only (sys, cat and inf files). For use when integrating
 driver setup with, for example, other driver setup packages.
 
-UserMode
---------
-Visual Studio 2010/2012/2013 solution with all user-mode components. This
-includes Arsenal.ImageMounter.dll that can be referenced from other applications
-to use the public API. It also includes driver setup applications and some debug
-tools.
 
-KernelMode
-----------
-This directory contains a WDK 7 kernel mode driver project. This builds the
-kernel mode component used to create a virtual SCSI adapter as well as other
-kernel mode components, .inf files for driver setup and similar.
+---
+API
+---
+
+Arsenal.ImageMounter.zip:
+DLL files that can be referenced from .NET applications to use the public API.
+
+API reference is available online:
+http://ltr-data.se/library/ArsenalImageMounter
+
+Requires .NET Framework 4.x or later, which is included by default in Windows
+8 or later. Can be installed separately on Windows XP, Vista or 7.
+
+
+aimapi.zip:
+DLL files that can be used form other applications to use most features of
+virtual SCSI miniport driver. Files in this archive do not require any .NET
+Framework components and should work on any Windows version from 2000 and up.
+
+There are .lib and .h files included which can be imported into C/C++ projects
+to use the API.
+
+
+--------------
+Managed Source
+--------------
+
+Visual Studio 2010-2015 solution with source projects for .NET API libraries,
+command line tools and some proof-on-concept graphical applications.
+
+
+----------------
+Unmanaged Source
+----------------
+
+Visual Studio 2013-2015 solution with source projects for native (non-.NET)
+driver, API library and command line tool. Driver project requires WDK 8.1 or
+later.
+
+The driver project directory also contains files for building with WDK 7
+build.exe environment, to support targeting older Windows versions than
+Windows 7.
 

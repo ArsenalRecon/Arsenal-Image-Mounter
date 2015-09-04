@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TARGETNAME Condition="'$(OVERRIDE_TARGETNAME)'!='true'">phdskmnt</TARGETNAME>
+    <TARGETTYPE Condition="'$(OVERRIDE_TARGETTYPE)'!='true'">DRIVER</TARGETTYPE>
+    <MSC_WARNING_LEVEL Condition="'$(OVERRIDE_MSC_WARNING_LEVEL)'!='true'">/W4 /WX</MSC_WARNING_LEVEL>
+    <C_DEFINES Condition="'$(OVERRIDE_C_DEFINES)'!='true'">$(C_DEFINES) -DMP_DrvInfo_Inline</C_DEFINES>
+    <C_DEFINES Condition="'$(OVERRIDE_C_DEFINES)'!='true'">$(C_DEFINES) -D_NT_TARGET_VERSION=$(_NT_TARGET_VERSION)</C_DEFINES>
+  </PropertyGroup>
+  <Choose>
+        <When Condition="$(_NT_TARGET_VERSION)&lt;=0x0500">
+          <PropertyGroup>
+            <C_DEFINES Condition="'$(OVERRIDE_C_DEFINES)'!='true'">$(C_DEFINES) -DRtlRandomEx=RtlRandom</C_DEFINES>
+          </PropertyGroup>
+        </When>
+  </Choose>
+  <PropertyGroup>
+    <TARGETLIBS Condition="'$(OVERRIDE_TARGETLIBS)'!='true'">$(TARGETLIBS)                                                                                $(DDK_LIB_PATH)\hal.lib                                                                      $(DDK_LIB_PATH)\ntoskrnl.lib                                                                 $(DDK_LIB_PATH)\wdm.lib</TARGETLIBS>
+    <INCLUDES Condition="'$(OVERRIDE_INCLUDES)'!='true'">.\inc;                           $(PUBLIC_ROOT)\ddk\inc;</INCLUDES>
+    <DRIVERTYPE Condition="'$(OVERRIDE_DRIVERTYPE)'!='true'">WDM</DRIVERTYPE>
+    <SOURCES Condition="'$(OVERRIDE_SOURCES)'!='true'">phdskmnt.c                scsi.c                  utils.c                 phdskmnt.rc               iodisp.c      		  workerthread.c	 		  srbioctl.c    		  proxy.c</SOURCES>
+  </PropertyGroup>
+</Project>

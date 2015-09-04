@@ -1,0 +1,54 @@
+
+; CTLUNIT.INF
+; Installs NULL device driver for Arsenal Image Mounter Control Unit.
+; 
+; Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+; This source code is available under the terms of the Affero General Public
+; License v3.
+;
+; Please see LICENSE.txt for full license terms, including the availability of
+; proprietary exceptions.
+; Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=System
+ClassGuid={4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider=%ARSENALRECON%
+CatalogFile=ctlunit.cat
+DriverVer = 5/4/2015,1.6.0015.00015
+
+[ControlFlags]
+ExcludeFromSelect = *
+
+[SourceDisksNames]
+
+[SourceDisksFiles]
+
+[Manufacturer]
+%ARSENALRECON%=ARSENALRECON
+
+[ARSENALRECON]
+%NULL.DeviceDesc% = NODRV, ScsiArray
+
+[NODRV]
+
+[NODRV.Services]
+;
+; this is blank to just allow the install to succeed
+; this is the important bit
+; you will wind up with a device string in device manager
+; and no banged out devnode
+; Null service of course does nothing.
+; You can use your device by opening the FDO via the port \\.\ScsiN
+; and passthrough commands then set the bus/target/LUN
+;
+AddService = , %SPSVCINST_ASSOCSERVICE% ; null service install
+
+[strings]
+ARSENALRECON     = "Arsenal Recon"
+NULL.DeviceDesc  = "Arsenal Image Mounter Control Unit"
+;*******************************************
+;Handy macro substitutions (non-localizable)
+SPSVCINST_ASSOCSERVICE = 0x00000002
+
