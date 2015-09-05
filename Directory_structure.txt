@@ -65,12 +65,17 @@ Setup tools and signed driver packages that can be used to install the driver
 components alone.
 
 
-ArsenalImageMounter-DriverSetup.exe:
+ArsenalImageMounterGUISetup.exe:
 One-piece simple driver setup GUI application that includes everything to
 automatically install the correct driver for current version of Windows.
 
 Requires .NET Framework 4.x or later, which is included by default in Windows
 8 or later. Can be installed separately on Windows XP, Vista or 7.
+
+
+ArsenalImageMounterCLISetup.exe:
+Command line version of ArsenalImageMounterGUISetup.exe, with same
+functionality and requirements.
 
 
 DriverSetup.7z:
