@@ -79,13 +79,10 @@ functionality and requirements.
 
 
 DriverSetup.7z:
-Setup tools and setup files as a 7-zip archive. Contains both GUI setup tool
-and a console based setup tool ArsenalImageMounterCLISetup.exe that could be
-used to automate driver setup, for example for use from a script.
+Both driver setup files and command line tool aimcmd.exe as a 7-zip archive.
+Useful for automated driver setup, for example for use from a script.
 
-Application files in this archive require .NET Framework 4.x or later, which
-is included by default in Windows 8 or later. Can be installed separately on
-Windows XP, Vista or 7.
+Application files in this archive do not require any .NET components.
 
 
 DriverSetup.zip:
