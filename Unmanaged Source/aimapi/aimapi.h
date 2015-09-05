@@ -149,7 +149,7 @@ extern "C" {
     Out: If DeviceNumber parameter is not NULL, device number
     for created device is returned in DWORD variable pointed to.
 
-    DiskSize    Size of the new virtual disk.
+    DiskSize    Size of the new virtual disk, in bytes.
 
     Size parameter can be zero if the device is backed by
     an image file or a proxy device, but not if it is virtual
@@ -162,7 +162,7 @@ extern "C" {
 
     Flags           Bitwise or-ed combination of one of the IMSCSI_TYPE_xxx
     flags, one of the IMSCSI_DEVICE_TYPE_xxx flags and any
-    number of SRB_IMSCSI_OPTION_xxx flags. The flags can often be
+    number of IMSCSI_OPTION_xxx flags. The flags can often be
     left zero and left to the driver to automatically select.
     For example, if a virtual disk size is specified to 1440 KB
     and an image file name is not specified, the driver
@@ -401,8 +401,7 @@ extern "C" {
     Returns handle to open device if successful. If an error occurs,
     INVALID_HANDLE_VALUE is returned and GetLastError returns error code.
 
-    PortNumber      If not NULL, receives SCSI port number of found virtual
-    SCSI adapter.
+    PortNumber      SCSI port number of virtual SCSI adapter to open.
     */
     AIMAPI_API HANDLE
         WINAPI
