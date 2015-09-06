@@ -868,9 +868,9 @@ IN BOOL CreatePartition)
     }
 
     // Physical memory allocation requires the AWEAlloc driver.
-    if (((IMSCSI_TYPE(Flags) == IMSCSI_TYPE_FILE) |
-        (IMSCSI_TYPE(Flags) == 0)) &
-        (IMSCSI_FILE_TYPE(Flags) == IMSCSI_FILE_TYPE_AWEALLOC))
+    if (((IMSCSI_TYPE(*Flags) == IMSCSI_TYPE_FILE) |
+        (IMSCSI_TYPE(*Flags) == 0)) &
+        (IMSCSI_FILE_TYPE(*Flags) == IMSCSI_FILE_TYPE_AWEALLOC))
     {
         HANDLE awealloc;
         UNICODE_STRING file_name;
@@ -931,9 +931,9 @@ IN BOOL CreatePartition)
         }
     }
     // Proxy reconnection types requires the user mode service.
-    else if ((IMSCSI_TYPE(Flags) == IMSCSI_TYPE_PROXY) &
-        ((IMSCSI_PROXY_TYPE(Flags) == IMSCSI_PROXY_TYPE_TCP) |
-        (IMSCSI_PROXY_TYPE(Flags) == IMSCSI_PROXY_TYPE_COMM)))
+    else if ((IMSCSI_TYPE(*Flags) == IMSCSI_TYPE_PROXY) &
+        ((IMSCSI_PROXY_TYPE(*Flags) == IMSCSI_PROXY_TYPE_TCP) |
+        (IMSCSI_PROXY_TYPE(*Flags) == IMSCSI_PROXY_TYPE_COMM)))
     {
         if (!WaitNamedPipe(IMDPROXY_SVC_PIPE_DOSDEV_NAME, 0))
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
@@ -1006,8 +1006,8 @@ IN BOOL CreatePartition)
             return FALSE;
         }
     }
-    else if ((IMSCSI_TYPE(Flags) == IMSCSI_TYPE_PROXY) &
-        (IMSCSI_PROXY_TYPE(Flags) == IMSCSI_PROXY_TYPE_SHM))
+    else if ((IMSCSI_TYPE(*Flags) == IMSCSI_TYPE_PROXY) &
+        (IMSCSI_PROXY_TYPE(*Flags) == IMSCSI_PROXY_TYPE_SHM))
     {
         LPWSTR namespace_prefix;
 
