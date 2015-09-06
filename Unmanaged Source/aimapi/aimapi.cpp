@@ -849,7 +849,7 @@ IN OUT LPDWORD Flags OPTIONAL,
 IN LPCWSTR FileName OPTIONAL,
 IN BOOL NativePath,
 IN LPWSTR MountPoint OPTIONAL,
-IN BOOL CreatePartition OPTIONAL)
+IN BOOL CreatePartition)
 {
     DWORD dw;
 
@@ -1440,7 +1440,7 @@ IN OUT LPDWORD Flags OPTIONAL,
 IN LPCWSTR FileName OPTIONAL,
 IN BOOL NativePath,
 IN LPWSTR MountPoint OPTIONAL,
-IN BOOL CreatePartition OPTIONAL)
+IN BOOL CreatePartition)
 {
     if (Adapter == INVALID_HANDLE_VALUE)
     {
