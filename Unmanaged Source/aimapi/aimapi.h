@@ -143,7 +143,7 @@ extern "C" {
 
     DeviceNumber    In: Device number for device to create. Device number must
     not be in use by an existing virtual disk. For automatic
-    allocation of device number, use SRB_IMSCSI_AUTO_DEVICE_NUMBER
+    allocation of device number, use IMSCSI_AUTO_DEVICE_NUMBER
     constant or specify a NULL pointer.
 
     Out: If DeviceNumber parameter is not NULL, device number
@@ -177,9 +177,14 @@ extern "C" {
     native path, such as \??\C:\imagefile.img or FALSE if it
     specifies a Win32/DOS-style path such as C:\imagefile.img.
 
-    MountPoint      Drive letter to assign to the new virtual device. It can be
-    specified on the form F: or F:\. It can also specify an empty directory
-    on another NTFS volume.
+    MountPoint      Drive letter to assign to the first partition on the new
+    virtual disk. It can be specified on the form F: or F:\. It can also
+    specify an empty directory on another NTFS volume.
+
+    CreatePartition Set to TRUE to automatically initialize the new virtual
+    disk with a partition table and create one partition covering all
+    available space. FALSE does not automatically initialize anything on the
+    virtual disk.
     */
     AIMAPI_API BOOL
         WINAPI
@@ -193,7 +198,7 @@ extern "C" {
         IN LPCWSTR FileName OPTIONAL CPP_DEF_ZERO,
         IN BOOL NativePath CPP_DEF_ZERO,
         IN LPWSTR MountPoint OPTIONAL CPP_DEF_ZERO,
-        IN BOOL CreatePartition OPTIONAL CPP_DEF_ZERO);
+        IN BOOL CreatePartition CPP_DEF_ZERO);
 
     /**
     This function removes (unmounts) an existing virtual disk device.
