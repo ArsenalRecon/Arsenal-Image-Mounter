@@ -809,16 +809,19 @@ __in PULONG           Length
         &byteoffset,
         NULL);
 
-    if ((status == STATUS_END_OF_FILE) &&
-        (io_status.Information == 0))
+    if (status == STATUS_END_OF_FILE)
     {
         KdPrint2(("PhDskMnt::ImScsiReadDevice pLUExt=%p, status=STATUS_END_OF_FILE, Length=0x%X. Returning zeroed buffer with requested length.\n", pLUExt, *Length));
         RtlZeroMemory(Buffer, *Length);
         status = STATUS_SUCCESS;
     }
-    else
+    else if (NT_SUCCESS(status))
     {
         *Length = (ULONG)io_status.Information;
+    }
+    else
+    {
+        *Length = 0;
     }
 
     KdPrint2(("PhDskMnt::ImScsiReadDevice Result: pLUExt=%p, status=0x%X, Length=0x%X\n", pLUExt, status, *Length));
@@ -917,7 +920,7 @@ __in __deref PETHREAD ClientThread)
         "Flags          = %#x\n"
         "FileNameLength = %u\n"
         "FileName       = '%.*ws'\n",
-        CreateData->Fields.DeviceNumber,
+        CreateData->Fields.DeviceNumber.LongNumber,
         CreateData->Fields.DiskSize.QuadPart,
         CreateData->Fields.ImageOffset.QuadPart,
         CreateData->Fields.BytesPerSector,
@@ -1425,7 +1428,7 @@ __in __deref PETHREAD ClientThread)
                 return status;
             }
 
-            KdPrint(("PhDskMnt: Got reference to proxy object %#x.\n",
+            KdPrint(("PhDskMnt: Got reference to proxy object %p.\n",
                 proxy.connection_type == PROXY_CONNECTION_DEVICE ?
                 (PVOID)proxy.device :
                 (PVOID)proxy.shared_memory));
@@ -1766,7 +1769,7 @@ __in __deref PETHREAD ClientThread)
                     L"Unsupported sizes."));
 
                 KdPrint(("PhDskMnt: Unsupported sizes. "
-                    "Got 0x%08x%08x size and 0x%08x%08x alignment.\n",
+                    "Got 0x%I64x size and 0x%I64x alignment.\n",
                     proxy_info.file_size,
                     proxy_info.req_alignment));
 
@@ -1916,7 +1919,7 @@ __in __deref PETHREAD ClientThread)
         "Flags          = %#x\n"
         "FileNameLength = %u\n"
         "FileName       = '%.*ws'\n",
-        CreateData->Fields.DeviceNumber,
+        CreateData->Fields.DeviceNumber.LongNumber,
         CreateData->Fields.DiskSize.QuadPart,
         CreateData->Fields.ImageOffset.QuadPart,
         CreateData->Fields.BytesPerSector,

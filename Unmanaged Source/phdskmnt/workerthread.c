@@ -60,7 +60,7 @@ ImScsiWorkerThread(__in PVOID Context)
     }
     else
     {
-        KdPrint(("PhDskMnt::ImScsiWorkerThread: Global worker thread start.\n",
+        KdPrint(("PhDskMnt::ImScsiWorkerThread: Global worker thread start. pLUExt=%p\n",
             pLUExt));
 
         request_list = &pMPDrvInfoGlobal->RequestList;

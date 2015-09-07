@@ -15,9 +15,10 @@
 #include "phdskmnt.h"
 
 VOID
+#pragma warning(suppress: 6101)
 MpQueryRegParameters(
-__in __deref PUNICODE_STRING pRegistryPath,
-__out __deref pMP_REG_INFO    pRegInfo
+__in __deref    PUNICODE_STRING pRegistryPath,
+__out __deref   pMP_REG_INFO    pRegInfo
 )
 /*++
 

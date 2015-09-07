@@ -118,7 +118,7 @@ extern "C" {
     image file, if any. When calling this function, set the DeviceNumber
     member to the device number to request information about.
 
-    CreateDataSize  The size in bytes of the memory the Config parameter
+    ConfigSize      The size in bytes of the memory the Config parameter
     points to. The function call will fail if the memory is not
     large enough to hold the entire IMSCSI_DEVICE_CONFIGURATION
     structure.
@@ -690,7 +690,7 @@ extern "C" {
     */
     AIMAPI_API BOOL
         WINAPI
-        ImScsiGetOSVersion(IN OUT POSVERSIONINFOW lpVersionInformation);
+        ImScsiGetOSVersion(__inout __deref POSVERSIONINFOW lpVersionInformation);
 
 #ifndef _WIN64
 

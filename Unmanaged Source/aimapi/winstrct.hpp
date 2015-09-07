@@ -513,6 +513,7 @@ public:
         else if (HeapFree(GetProcessHeap(), dwFlags, ptr))
             return ptr = NULL;
         else
+#pragma warning(suppress: 6001)
             return ptr;
     }
 

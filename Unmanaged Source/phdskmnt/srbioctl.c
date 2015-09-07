@@ -458,10 +458,10 @@ __inout __deref PKIRQL              LowestAssumedIrql
 
 NTSTATUS
 ImScsiQueryAdapter(
-__in pHW_HBA_EXT                 pHBAExt,
-__in PSRB_IMSCSI_QUERY_ADAPTER   data,
-__in ULONG                       max_length,
-__inout __deref PKIRQL                LowestAssumedIrql
+__in            pHW_HBA_EXT                 pHBAExt,
+__inout __deref PSRB_IMSCSI_QUERY_ADAPTER   data,
+__in            ULONG                       max_length,
+__inout __deref PKIRQL                      LowestAssumedIrql
 )
 {
     KLOCK_QUEUE_HANDLE    LockHandle;
@@ -495,9 +495,9 @@ __inout __deref PKIRQL                LowestAssumedIrql
 
 NTSTATUS
 ImScsiSetFlagsDevice(
-__in pHW_HBA_EXT                  pHBAExt,
-__in PSRB_IMSCSI_SET_DEVICE_FLAGS device_flags,
-__inout __deref PKIRQL                 LowestAssumedIrql
+__in            pHW_HBA_EXT                     pHBAExt,
+__inout __deref PSRB_IMSCSI_SET_DEVICE_FLAGS    device_flags,
+__inout __deref PKIRQL                          LowestAssumedIrql
 )
 {
     NTSTATUS ntstatus = STATUS_SUCCESS;
@@ -591,9 +591,9 @@ __inout __deref PKIRQL                 LowestAssumedIrql
 
 NTSTATUS
 ImScsiRemoveDevice(
-__in pHW_HBA_EXT                pHBAExt,
-__in PDEVICE_NUMBER             DeviceNumber,
-__inout __deref PKIRQL               LowestAssumedIrql
+__in            pHW_HBA_EXT     pHBAExt,
+__in            PDEVICE_NUMBER  DeviceNumber,
+__inout __deref PKIRQL          LowestAssumedIrql
 )
 {
     PLIST_ENTRY             list_ptr;

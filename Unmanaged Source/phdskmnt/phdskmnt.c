@@ -1342,6 +1342,7 @@ __in ULONG Length)
 
             KdPrint2(("ImScsiSafeIOStream: Building IRP...\n"));
 
+#pragma warning(suppress: 6102)
             irp = IoBuildSynchronousFsdRequest(
                 MajorFunction,
                 device_object,

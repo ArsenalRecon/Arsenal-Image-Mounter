@@ -84,17 +84,15 @@ __out __deref PIO_STATUS_BLOCK IoStatusBlock,
 __in __deref PKEVENT CancelEvent OPTIONAL,
 __in __deref PVOID RequestHeader,
 __in ULONG RequestHeaderSize,
-__in_opt __deref PVOID RequestData,
+__drv_when(RequestDataSize > 0, __in __deref) PVOID RequestData,
 __in ULONG RequestDataSize,
-__out_opt __deref PVOID ResponseHeader,
+__drv_when(ResponseHeaderSize > 0, __out __deref) PVOID ResponseHeader,
 __in ULONG ResponseHeaderSize,
-__out_opt __deref PVOID ResponseData,
+__drv_when(ResponseDataBufferSize > 0 && *ResponseDataSize > 0, __out) __drv_when(ResponseDataBufferSize > 0, __deref) PVOID ResponseData,
 __in ULONG ResponseDataBufferSize,
-__out_opt __deref ULONG *ResponseDataSize)
+__drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
 {
     NTSTATUS status;
-
-    //PAGED_CODE();
 
     ASSERT(Proxy != NULL);
 
@@ -102,38 +100,46 @@ __out_opt __deref ULONG *ResponseDataSize)
     {
     case PROXY_CONNECTION_DEVICE:
     {
-        if (RequestHeaderSize > 0)
+        PUCHAR io_buffer = NULL;
+        PUCHAR temp_buffer = NULL;
+        ULONG io_size = RequestHeaderSize + RequestDataSize;
+
+        if ((RequestHeaderSize > 0) &&
+            (RequestDataSize > 0))
         {
-            if (CancelEvent != NULL ?
-                KeReadStateEvent(CancelEvent) != 0 :
-                FALSE)
-            {
-                KdPrint(("PhDskMnt Proxy Client: Request cancelled.\n."));
+            temp_buffer = ExAllocatePoolWithTag(NonPagedPool, io_size, MP_TAG_GENERAL);
 
-                IoStatusBlock->Status = STATUS_CANCELLED;
+            if (temp_buffer == NULL)
+            {
+                KdPrint(("ImScsi Proxy Client: Memory allocation failed.\n."));
+
+                IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
                 IoStatusBlock->Information = 0;
                 return IoStatusBlock->Status;
             }
 
-            status = ImScsiSafeIOStream(Proxy->device,
-                IRP_MJ_WRITE,
-                IoStatusBlock,
-                CancelEvent,
-                RequestHeader,
-                RequestHeaderSize);
-
-            if (!NT_SUCCESS(status))
+            if (RequestHeaderSize > 0)
             {
-                KdPrint(("ImScsi Proxy Client: Request header error %#x\n.",
-                    status));
-
-                IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
-                IoStatusBlock->Information = 0;
-                return IoStatusBlock->Status;
+                RtlCopyMemory(temp_buffer, RequestHeader, RequestHeaderSize);
             }
+
+            if (RequestDataSize > 0)
+            {
+                RtlCopyMemory(temp_buffer + RequestHeaderSize, RequestData, RequestDataSize);
+            }
+
+            io_buffer = temp_buffer;
+        }
+        else if (RequestHeaderSize > 0)
+        {
+            io_buffer = RequestHeader;
+        }
+        else if (RequestDataSize > 0)
+        {
+            io_buffer = RequestData;
         }
 
-        if (RequestDataSize > 0)
+        if (io_size > 0)
         {
             if (CancelEvent != NULL ?
                 KeReadStateEvent(CancelEvent) != 0 :
@@ -141,37 +147,42 @@ __out_opt __deref ULONG *ResponseDataSize)
             {
                 KdPrint(("ImScsi Proxy Client: Request cancelled.\n."));
 
+                if (temp_buffer != NULL)
+                {
+                    ExFreePoolWithTag(temp_buffer, MP_TAG_GENERAL);
+                }
+
                 IoStatusBlock->Status = STATUS_CANCELLED;
                 IoStatusBlock->Information = 0;
                 return IoStatusBlock->Status;
             }
 
-            KdPrint2
-                (("ImScsi Proxy Client: Sent req. Sending data stream.\n"));
-
             status = ImScsiSafeIOStream(Proxy->device,
                 IRP_MJ_WRITE,
                 IoStatusBlock,
                 CancelEvent,
-                RequestData,
-                RequestDataSize);
+                io_buffer,
+                io_size);
 
             if (!NT_SUCCESS(status))
             {
-                KdPrint(("ImScsi Proxy Client: Data stream send failed. "
-                    "Sent %u bytes with I/O status %#x.\n",
-                    IoStatusBlock->Information, IoStatusBlock->Status));
+                KdPrint(("ImScsi Proxy Client: Request error %#x\n.",
+                    status));
+
+                if (temp_buffer != NULL)
+                {
+                    ExFreePoolWithTag(temp_buffer, MP_TAG_GENERAL);
+                }
 
                 IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
                 IoStatusBlock->Information = 0;
                 return IoStatusBlock->Status;
             }
+        }
 
-            KdPrint2
-                (("ImScsi Proxy Client: Data stream of %u bytes sent with I/O "
-                "status %#x. Status returned by stream writer is %#x. "
-                "Waiting for IMDPROXY_RESP_WRITE.\n",
-                IoStatusBlock->Information, IoStatusBlock->Status, status));
+        if (temp_buffer != NULL)
+        {
+            ExFreePoolWithTag(temp_buffer, MP_TAG_GENERAL);
         }
 
         if (ResponseHeaderSize > 0)
@@ -205,7 +216,7 @@ __out_opt __deref ULONG *ResponseDataSize)
             }
         }
 
-        if ((ResponseDataSize != NULL) && (*ResponseDataSize > 0))
+        if (ResponseDataSize != NULL && *ResponseDataSize > 0)
         {
             if (*ResponseDataSize > ResponseDataBufferSize)
             {
@@ -256,18 +267,24 @@ __out_opt __deref ULONG *ResponseDataSize)
 
             KdPrint2
                 (("ImScsi Proxy Client: Received %u byte data stream.\n",
-                IoStatusBlock->Information));
+                    IoStatusBlock->Information));
         }
 
         IoStatusBlock->Status = STATUS_SUCCESS;
-        if ((RequestDataSize > 0) & (IoStatusBlock->Information == 0))
-            IoStatusBlock->Information = RequestDataSize;
+
+        IoStatusBlock->Information = RequestDataSize;
+
+        if (ResponseDataSize != NULL)
+        {
+            IoStatusBlock->Information += *ResponseDataSize;
+        }
+
         return IoStatusBlock->Status;
     }
 
     case PROXY_CONNECTION_SHM:
     {
-        PVOID wait_objects[] = {
+        PKEVENT wait_objects[] = {
             Proxy->response_event,
             CancelEvent
         };
@@ -278,7 +295,7 @@ __out_opt __deref ULONG *ResponseDataSize)
         if ((RequestHeaderSize > IMDPROXY_HEADER_SIZE) |
             (ResponseHeaderSize > IMDPROXY_HEADER_SIZE) |
             ((RequestDataSize + IMDPROXY_HEADER_SIZE) >
-            Proxy->shared_memory_size))
+                Proxy->shared_memory_size))
         {
             KdPrint(("ImScsi Proxy Client: "
                 "Parameter values not supported.\n."));
@@ -292,13 +309,13 @@ __out_opt __deref ULONG *ResponseDataSize)
 
         if (RequestHeaderSize > 0)
             RtlCopyMemory(Proxy->shared_memory,
-            RequestHeader,
-            RequestHeaderSize);
+                RequestHeader,
+                RequestHeaderSize);
 
         if (RequestDataSize > 0)
             RtlCopyMemory(Proxy->shared_memory + IMDPROXY_HEADER_SIZE,
-            RequestData,
-            RequestDataSize);
+                RequestData,
+                RequestDataSize);
 
 #pragma warning(suppress: 28160)
         KeSetEvent(Proxy->request_event, (KPRIORITY)0, TRUE);
@@ -323,15 +340,15 @@ __out_opt __deref ULONG *ResponseDataSize)
 
         if (ResponseHeaderSize > 0)
             RtlCopyMemory(ResponseHeader,
-            Proxy->shared_memory,
-            ResponseHeaderSize);
+                Proxy->shared_memory,
+                ResponseHeaderSize);
 
         // If server end requests to send more data than we requested, we
         // treat that as an unrecoverable device error and exit.
         if (ResponseDataSize != NULL ? *ResponseDataSize > 0 : FALSE)
             if ((*ResponseDataSize > ResponseDataBufferSize) |
                 ((*ResponseDataSize + IMDPROXY_HEADER_SIZE) >
-                Proxy->shared_memory_size))
+                    Proxy->shared_memory_size))
             {
                 KdPrint(("ImScsi Proxy Client: Invalid response size %u.\n.",
                     *ResponseDataSize));
@@ -652,7 +669,7 @@ __in ULONG ProxyInfoResponseLength)
     if (ProxyInfoResponse->req_alignment - 1 > FILE_512_BYTE_ALIGNMENT)
     {
         KdPrint(("ImScsi IMDPROXY_INFO_RESP: Unsupported sizes. "
-            "Got %p-%p size and %p-%p alignment.\n",
+            "Got %#I64x size and %#I64x alignment.\n",
             ProxyInfoResponse->file_size,
             ProxyInfoResponse->req_alignment));
 
@@ -738,7 +755,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
 
         if (read_resp.errorno != 0)
         {
-            KdPrint(("ImScsi Proxy Client: Server returned error %p-%p.\n",
+            KdPrint(("ImScsi Proxy Client: Server returned error %#I64x.\n",
                 read_resp.errorno));
             IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
             IoStatusBlock->Information = length_done;
@@ -830,7 +847,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
 
         if (write_resp.errorno != 0)
         {
-            KdPrint(("ImScsi Proxy Client: Server returned error 0x%.8x%.8x.\n",
+            KdPrint(("ImScsi Proxy Client: Server returned error 0x%I64x.\n",
                 write_resp.errorno));
             IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
             IoStatusBlock->Information = length_done;

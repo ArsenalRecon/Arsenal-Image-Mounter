@@ -231,6 +231,10 @@ typedef struct _SRB_IMSCSI_CREATE_DATA
 
 } SRB_IMSCSI_CREATE_DATA, *PSRB_IMSCSI_CREATE_DATA;
 
+// This is an old structure definition. Only used in some compiler
+// compatibility test scenarios to verify that compiler uses same byte offsets
+// for each field as a sequential structure would have.
+#if 0
 ///
 /// Structure used with SMP_IMSCSI_CREATE_DEVICE and
 /// SMP_IMSCSI_QUERY_DEVICE calls.
@@ -262,6 +266,7 @@ typedef struct _SRB_IMSCSI_CREATE_DATA2
     WCHAR           FileName[];
 
 } SRB_IMSCSI_CREATE_DATA2, *PSRB_IMSCSI_CREATE_DATA2;
+#endif
 
 typedef struct _SRB_IMSCSI_QUERY_ADAPTER
 {

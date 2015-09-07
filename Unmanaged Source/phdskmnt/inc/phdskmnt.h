@@ -428,9 +428,9 @@ ScsiOpModeSense10(
 
 VOID                                                                        
 ScsiOpReportLuns(                                 
-    __in pHW_HBA_EXT          DevExt,
-    __in __deref PSCSI_REQUEST_BLOCK  Srb,
-    __in __deref PKIRQL               LowestAssumedIrql
+    __inout         pHW_HBA_EXT          DevExt,
+    __in __deref    PSCSI_REQUEST_BLOCK  Srb,
+    __inout __deref PKIRQL               LowestAssumedIrql
     );                                                                                   
 
 VOID
@@ -853,8 +853,8 @@ VOID
 __drv_maxIRQL(DISPATCH_LEVEL)
 __drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_setsIRQL(DISPATCH_LEVEL))
 ImScsiAcquireLock_x86(__inout __deref __drv_acquiresExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
-__out __deref __drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_savesIRQL) PKIRQL OldIrql,
-__in KIRQL LowestAssumedIrql)
+    __drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __out __deref __drv_savesIRQL) PKIRQL OldIrql,
+    __in KIRQL LowestAssumedIrql)
 {
     if (LowestAssumedIrql >= DISPATCH_LEVEL)
     {

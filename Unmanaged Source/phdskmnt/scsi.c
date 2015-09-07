@@ -907,7 +907,7 @@ VOID
 ScsiOpReadCapacity(
 __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
 __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.
-__in PSCSI_REQUEST_BLOCK  pSrb
+__in __deref PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     PREAD_CAPACITY_DATA     readCapacity = (PREAD_CAPACITY_DATA)pSrb->DataBuffer;
@@ -1164,7 +1164,7 @@ VOID
 ScsiOpModeSense(
 __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
 __in pHW_LU_EXTENSION     pLUExt,     // LUN device-object extension from port driver.
-__in PSCSI_REQUEST_BLOCK  pSrb
+__in __deref PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     PMODE_PARAMETER_HEADER mph = (PMODE_PARAMETER_HEADER)pSrb->DataBuffer;
@@ -1199,7 +1199,7 @@ VOID
 ScsiOpModeSense10(
 __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
 __in pHW_LU_EXTENSION     pLUExt,     // LUN device-object extension from port driver.
-__in PSCSI_REQUEST_BLOCK  pSrb
+__in __deref PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     PMODE_PARAMETER_HEADER10 mph = (PMODE_PARAMETER_HEADER10)pSrb->DataBuffer;
@@ -1233,8 +1233,8 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 /**************************************************************************************************/
 VOID
 ScsiOpReportLuns(
-__inout pHW_HBA_EXT         pHBAExt,   // Adapter device-object extension from port driver.
-__in       PSCSI_REQUEST_BLOCK pSrb,
+__inout         pHW_HBA_EXT         pHBAExt,   // Adapter device-object extension from port driver.
+__in    __deref PSCSI_REQUEST_BLOCK pSrb,
 __inout __deref PKIRQL              LowestAssumedIrql
 )
 {

@@ -139,6 +139,9 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip">
+      <Link>DriverFiles.zip</Link>
+    </EmbeddedResource>
     <None Include="app.config" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\Application.myapp">
@@ -164,7 +167,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if "$(ConfigurationName)" == "Release" signtool sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://arsenalrecon.com" /ac Z:\Kod\cert\MSCV-GlobalSign.cer /t "http://timestamp.comodoca.com/authenticode" "$(TargetDir)*.exe" "$(TargetDir)*.dll"</PostBuildEvent>
+    <PostBuildEvent>if "$(ConfigurationName)" == "Release" "C:\Program Files (x86)\Eziriz\.NET Reactor\dotNET_Reactor.Console.exe" -file "$(TargetPath)" -project "$(ProjectDir)reactor.nrproj" -output "C:\Users\olof.OLOFDOM\SkyDrive\Dokument\GitHub\Arsenal-Image-Mounter\DriverSetup\$(TargetFileName)"
+if "$(ConfigurationName)" == "Release" signtool sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /t "http://timestamp.comodoca.com/authenticode" "C:\Users\olof.OLOFDOM\SkyDrive\Dokument\GitHub\Arsenal-Image-Mounter\DriverSetup\$(TargetFileName)"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
