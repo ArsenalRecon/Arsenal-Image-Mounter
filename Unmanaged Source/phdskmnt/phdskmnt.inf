@@ -5,7 +5,7 @@
 ; or Windows Vista or newer.
 ; 
 ; Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-; This source code is available under the terms of the Affero General Public
+; This source code and API are available under the terms of the Affero General Public
 ; License v3.
 ;
 ; Please see LICENSE.txt for full license terms, including the availability of
@@ -17,7 +17,7 @@ Signature = "$WINDOWS NT$"
 Class = SCSIAdapter
 ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
 Provider = %ARSENALRECON%
-DriverVer = 5/4/2015,1.6.0015.00015
+DriverVer = 5/4/2015,1.6.0018.00018
 CatalogFile = phdskmnt.cat
 
 [SourceDisksFiles.x86]

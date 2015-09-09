@@ -3,7 +3,7 @@
 /// Command line access to Arsenal Image Mounter features.
 /// 
 /// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-/// This source code is available under the terms of the Affero General Public
+/// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
 /// Please see LICENSE.txt for full license terms, including the availability of
@@ -86,29 +86,31 @@ enum
 void __declspec(noreturn)
 ImScsiSyntaxHelp()
 {
-    int rc = fputs
-        ("Control program for the Arsenal Image Mounter.\r\n"
-        "For version information, license, copyrights and credits, type aimcmd --version\r\n"
+    int rc = fputs(
+        "Low-level command line interface to Arsenal Image Mounter virtual\r\n"
+        "SCSI miniport driver.\r\n"
+        "\n"
+        "For version information, license, copyrights and credits, type aim_ll --version\r\n"
         "\n"
         "Setup syntax:\r\n"
-        "aimcmd --install setup_directory\r\n"
+        "aim_ll --install setup_directory\r\n"
         "        Installs Arsenal Image Mounter driver from a directory with setup\r\n"
         "        files.\r\n"
         "\n"
-        "aimcmd --uninstall\r\n"
+        "aim_ll --uninstall\r\n"
         "        Uninstalls Arsenal Image Mounter driver.\r\n"
         "\n"
-        "aimcmd --rescan\r\n"
+        "aim_ll --rescan\r\n"
         "        Rescans SCSI bus on installed adapter.\r\n"
         "\n"
         "Manage virtual disks:\r\n"
-        "aimcmd -a -t type [-n] [-o opt1[,opt2 ...]] [-f|-F file] [-s size] [-b offset]\r\n"
+        "aim_ll -a -t type [-n] [-o opt1[,opt2 ...]] [-f|-F file] [-s size] [-b offset]\r\n"
         "       [-S sectorsize] [-u devicenumber] [-m mountpoint]\r\n"
         "       [-p \"format-parameters\"] [-P]\r\n"
-        "aimcmd -d|-D [-u devicenumber | -m mountpoint] [-P]\r\n"
-        "aimcmd -R -u unit\r\n"
-        "aimcmd -l [-u devicenumber | -m mountpoint]\r\n"
-        "aimcmd -e [-s size] [-o opt1[,opt2 ...]] [-u devicenumber | -m mountpoint]\r\n"
+        "aim_ll -d|-D [-u devicenumber | -m mountpoint] [-P]\r\n"
+        "aim_ll -R -u unit\r\n"
+        "aim_ll -l [-u devicenumber | -m mountpoint]\r\n"
+        "aim_ll -e [-s size] [-o opt1[,opt2 ...]] [-u devicenumber | -m mountpoint]\r\n"
         "\n"
         "-a      Attach a virtual disk. This will configure and attach a virtual disk\r\n"
         "        with the parameters specified and attach it to the system.\r\n"
@@ -1696,7 +1698,8 @@ wmain(int argc, LPWSTR argv[])
     if ((argc == 2) && (_wcsicmp(argv[1], L"--version") == 0))
     {
         puts(
-            "Control program for the Arsenal Image Mounter.\r\n"
+            "Low-level command line interface to Arsenal Image Mounter virtual\r\n"
+            "SCSI miniport driver.\r\n"
             "\n"
             "Version " PHDSKMNT_RC_VERSION_STR " - (Compiled " __DATE__ ")\r\n"
             "\n"
@@ -1706,7 +1709,7 @@ wmain(int argc, LPWSTR argv[])
             "http://www.ArsenalRecon.com\r\n"
             "\n"
             "Arsenal Image Mounter including its kernel driver, API library,\r\n"
-            "MountTool and Control program (\"the Software\")\r\n"
+            "command line and graphical user applications (\"the Software\")\r\n"
             "are provided \"AS IS\" and \"WITH ALL FAULTS,\" without warranty\r\n"
             "of any kind, including without limitation the warranties of\r\n"
             "merchantability, fitness for a particular purpose and\r\n"

@@ -4,7 +4,7 @@
 /// routines.
 /// 
 /// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-/// This source code is available under the terms of the Affero General Public
+/// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
 /// Please see LICENSE.txt for full license terms, including the availability of
@@ -270,7 +270,7 @@ __in PUNICODE_STRING pRegistryPath
     hwInitData.HwStartIo = MpHwStartIo;              // Required for all ports.
     hwInitData.HwFindAdapter = MpHwFindAdapter;          // Required for all ports.
     hwInitData.HwResetBus = MpHwResetBus;             // Required for all ports.
-#ifdef NT4_COMPATIBLE
+#ifndef NT4_COMPATIBLE
     hwInitData.HwAdapterControl = MpHwAdapterControl;       // Required for all > NT4 ports.
 #endif
 #ifdef USE_STORPORT
@@ -360,32 +360,6 @@ __inout __deref PPORT_CONFIGURATION_INFORMATION pConfigInfo,
 __out      PBOOLEAN                        pBAgain
 )
 {
-#if 0 // _NT_TARGET_VERSION <= 0x0500
-
-    UNREFERENCED_PARAMETER(DeviceExtension);
-    UNREFERENCED_PARAMETER(pReservedArg1);
-    UNREFERENCED_PARAMETER(pReservedArg2);
-    UNREFERENCED_PARAMETER(ArgumentString);
-
-    pConfigInfo->NumberOfBuses = 1;
-    pConfigInfo->Master = TRUE;
-    pConfigInfo->InitiatorBusId[0] = 8;
-    pConfigInfo->MaximumNumberOfTargets = 1;
-    pConfigInfo->MultipleRequestPerLu = TRUE;
-    pConfigInfo->AutoRequestSense = TRUE;
-    pConfigInfo->AdapterInterfaceType = STORAGE_INTERFACE_TYPE;
-    pConfigInfo->Dma32BitAddresses = TRUE;
-    pConfigInfo->TaggedQueuing = TRUE;
-    pConfigInfo->MultipleRequestPerLu = TRUE;
-    pConfigInfo->AlignmentMask = 0x0;
-    pConfigInfo->MaximumNumberOfTargets = 8;
-    pConfigInfo->MaximumNumberOfLogicalUnits = 1;
-    *pBAgain = FALSE;
-
-    return SP_RETURN_FOUND;
-
-#else
-
     ULONG              i,
         len,
         status = SP_RETURN_FOUND;
@@ -402,7 +376,7 @@ __out      PBOOLEAN                        pBAgain
 #endif
     UNREFERENCED_PARAMETER(ArgumentString);
 
-    KdPrint(("PhDskMnt::MpHwFindAdapter:  Arg=%s%s%s, pHBAExt = 0x%p, pConfigInfo = 0x%p, IRQL=%i\n",
+    KdPrint(("PhDskMnt::MpHwFindAdapter: Arg=%s%s%s, pHBAExt = 0x%p, pConfigInfo = 0x%p, IRQL=%i\n",
         ArgumentString != NULL ? "\"" : "(",
         ArgumentString != NULL ? ArgumentString : "null",
         ArgumentString != NULL ? "\"" : ")",
@@ -442,7 +416,7 @@ __out      PBOOLEAN                        pBAgain
 
 #ifdef USE_STORPORT
 
-    pConfigInfo->VirtualDevice = TRUE;                        // Inidicate no real hardware.
+    pConfigInfo->VirtualDevice = TRUE;                        // Indicate no real hardware.
     pConfigInfo->SynchronizationModel = StorSynchronizeFullDuplex;
 
     if (pConfigInfo->Dma64BitAddresses == SCSI_DMA64_SYSTEM_SUPPORTED)
@@ -465,7 +439,7 @@ __out      PBOOLEAN                        pBAgain
     pConfigInfo->CachesData = FALSE;                       // Indicate miniport wants flush and shutdown notification.
     pConfigInfo->MaximumNumberOfTargets = SCSI_MAXIMUM_TARGETS;        // Indicate maximum targets.
     pConfigInfo->NumberOfBuses =
-        (UCHAR)pMPDrvInfoGlobal->MPRegInfo.NumberOfBuses;                     // Indicate number of busses.
+        (UCHAR)pMPDrvInfoGlobal->MPRegInfo.NumberOfBuses;                     // Indicate number of buses.
     pConfigInfo->ScatterGather = TRUE;                        // Indicate scatter-gather (explicit setting needed for Win2003 at least).
     pConfigInfo->AutoRequestSense = TRUE;
     pConfigInfo->TaggedQueuing = TRUE;
@@ -564,7 +538,6 @@ __out      PBOOLEAN                        pBAgain
     KdPrint(("PhDskMnt::MpHwFindAdapter: End, status = 0x%X\n", status));
 
     return status;
-#endif
 }                                                     // End MpHwFindAdapter().
 
 /**************************************************************************************************/
@@ -838,7 +811,6 @@ __in SCSI_ADAPTER_CONTROL_TYPE ControlType,
 __in PVOID                     pParameters
 )
 {
-    PSCSI_SUPPORTED_CONTROL_TYPE_LIST pCtlTypList;
     ULONG                             i;
     KIRQL                             lowest_assumed_irql = PASSIVE_LEVEL;
 
@@ -846,23 +818,29 @@ __in PVOID                     pParameters
 
     pHBAExt->AdapterState = ControlType;
 
-    switch (ControlType) {
+    switch (ControlType)
+    {
     case ScsiQuerySupportedControlTypes:
+    {
+        PSCSI_SUPPORTED_CONTROL_TYPE_LIST pCtlTypList =
+            (PSCSI_SUPPORTED_CONTROL_TYPE_LIST)pParameters;
+
         KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiQuerySupportedControlTypes\n"));
 
-        // Ggt pointer to control type list
-        pCtlTypList = (PSCSI_SUPPORTED_CONTROL_TYPE_LIST)pParameters;
-
+        // Get pointer to control type list
         // Cycle through list to set TRUE for each type supported
         // making sure not to go past the MaxControlType
         for (i = 0; i < pCtlTypList->MaxControlType; i++)
+        {
             if (i == ScsiQuerySupportedControlTypes ||
                 i == ScsiStopAdapter || i == ScsiRestartAdapter ||
                 i == ScsiSetBootConfig || i == ScsiSetRunningConfig)
             {
                 pCtlTypList->SupportedTypeList[i] = TRUE;
             }
+        }
         break;
+    }
 
     case ScsiStopAdapter:
         KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiStopAdapter\n"));
@@ -1197,7 +1175,7 @@ __in __deref PLARGE_INTEGER Offset)
 
             if (intermediate_buffer == NULL)
             {
-                intermediate_buffer = ExAllocatePoolWithTag(NonPagedPool,
+                intermediate_buffer = (PUCHAR)ExAllocatePoolWithTag(NonPagedPool,
                     request_length,
                     MP_TAG_GENERAL);
 

@@ -5,7 +5,7 @@ Imports System.Runtime.InteropServices
 <Assembly: AssemblyCompany("Arsenal Recon")> 
 <Assembly: AssemblyProduct("Arsenal Image Mounter")> 
 <Assembly: AssemblyCopyright("Copyright: (c) Arsenal Recon 2013-2015")> 
-<Assembly: AssemblyTrademark("")> 
+<Assembly: AssemblyTrademark("")>
 
 ' Version information for an assembly consists of the following four values:
 '
@@ -18,5 +18,5 @@ Imports System.Runtime.InteropServices
 ' by using the '*' as shown below:
 ' <Assembly: AssemblyVersion("1.0.*")> 
 
-<Assembly: AssemblyVersion("1.0.0.0")> 
-<Assembly: AssemblyFileVersion("1.0.022.0")> 
+<Assembly: AssemblyVersion("1.0.0.0")>
+<Assembly: AssemblyFileVersion("2.0.009.0")>

@@ -18,7 +18,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "phdskmnt", "phdskmnt\phdskm
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "aimapi", "aimapi\aimapi.vcxproj", "{737768E7-956F-46DE-9C4B-40D6536E2118}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "aimcmd", "aimcmd\aimcmd.vcxproj", "{E55519E4-180A-4732-A328-9DE219007C32}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "aim_ll", "aim_ll\aim_ll.vcxproj", "{E55519E4-180A-4732-A328-9DE219007C32}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -97,17 +97,29 @@ Global
 		{E55519E4-180A-4732-A328-9DE219007C32}.Release|x64.ActiveCfg = Release|x64
 		{E55519E4-180A-4732-A328-9DE219007C32}.Release|x64.Build.0 = Release|x64
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win7 Debug|Win32.ActiveCfg = Debug|Win32
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win7 Debug|Win32.Build.0 = Debug|Win32
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win7 Debug|x64.ActiveCfg = Debug|x64
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win7 Debug|x64.Build.0 = Debug|x64
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win7 Release|Win32.ActiveCfg = Release|Win32
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win7 Release|Win32.Build.0 = Release|Win32
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win7 Release|x64.ActiveCfg = Release|x64
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win7 Release|x64.Build.0 = Release|x64
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win8 Debug|Win32.ActiveCfg = Debug|Win32
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win8 Debug|Win32.Build.0 = Debug|Win32
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win8 Debug|x64.ActiveCfg = Debug|x64
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win8 Debug|x64.Build.0 = Debug|x64
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win8 Release|Win32.ActiveCfg = Release|Win32
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win8 Release|Win32.Build.0 = Release|Win32
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win8 Release|x64.ActiveCfg = Release|x64
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win8 Release|x64.Build.0 = Release|x64
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win8.1 Debug|Win32.ActiveCfg = Debug|Win32
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win8.1 Debug|Win32.Build.0 = Debug|Win32
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win8.1 Debug|x64.ActiveCfg = Debug|x64
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win8.1 Debug|x64.Build.0 = Debug|x64
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win8.1 Release|Win32.ActiveCfg = Release|Win32
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win8.1 Release|Win32.Build.0 = Release|Win32
 		{E55519E4-180A-4732-A328-9DE219007C32}.Win8.1 Release|x64.ActiveCfg = Release|x64
+		{E55519E4-180A-4732-A328-9DE219007C32}.Win8.1 Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

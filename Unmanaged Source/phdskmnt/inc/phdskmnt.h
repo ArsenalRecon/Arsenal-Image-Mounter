@@ -4,7 +4,7 @@
 /// components.
 /// 
 /// Copyright (c) 2012-2013, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-/// This source code is available under the terms of the Affero General Public
+/// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
 /// Please see LICENSE.txt for full license terms, including the availability of
@@ -181,7 +181,7 @@ typedef struct _HW_HBA_EXT {                          // Adapter device-object e
     PDRIVER_OBJECT                 DriverObject;
     ULONG                          SRBsSeen;
     UCHAR                          HostTargetId;
-    UCHAR                          AdapterState;
+    SCSI_ADAPTER_CONTROL_TYPE      AdapterState;
     UCHAR                          VendorId[9];
     UCHAR                          ProductId[17];
     UCHAR                          ProductRevision[5];
@@ -263,7 +263,7 @@ ImScsiIoCtlCallCompletion;
 DRIVER_UNLOAD
 ImScsiUnload;
 
-DRIVER_INITIALIZE
+EXTERN_C DRIVER_INITIALIZE
 DriverEntry;
 
 ULONG

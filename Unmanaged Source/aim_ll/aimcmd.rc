@@ -82,9 +82,9 @@ BEGIN
             VALUE "CompanyName", "Arsenal Recon\0"
             VALUE "FileDescription", "Arsenal Image Mounter Command Line Interface\0"
 	    VALUE "FileVersion", PHDSKMNT_RC_VERSION_STR "\0"
-            VALUE "InternalName", "aimcmd\0"
+            VALUE "InternalName", "aim_ll\0"
             VALUE "LegalCopyright", "Copyright: (c) Arsenal Recon. All Rights Reserved.\0"
-            VALUE "OriginalFilename", "aimcmd.exe\0"
+            VALUE "OriginalFilename", "aim_ll.exe\0"
             VALUE "ProductName", "Arsenal Image Mounter\0"
 	    VALUE "ProductVersion", PHDSKMNT_RC_VERSION_STR "\0"
         END

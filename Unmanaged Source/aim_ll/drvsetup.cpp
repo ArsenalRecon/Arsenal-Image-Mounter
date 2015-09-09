@@ -3,7 +3,7 @@
 /// Driver setup routines for command line use.
 /// 
 /// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-/// This source code is available under the terms of the Affero General Public
+/// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
 /// Please see LICENSE.txt for full license terms, including the availability of
@@ -94,9 +94,9 @@ wmainSetup(int, wchar_t **argv)
     {
         fprintf(stderr,
             "Syntax:\r\n"
-            "aimcmp --install source_directory\r\n"
-            "aimcmp --uninstall\r\n"
-            "aimcmp --rescan\r\n");
+            "aim_ll --install source_directory\r\n"
+            "aim_ll --uninstall\r\n"
+            "aim_ll --rescan\r\n");
 
         return -1;
     }

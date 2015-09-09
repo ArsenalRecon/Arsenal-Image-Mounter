@@ -2,8 +2,8 @@
 ''''' ServerModule.vb
 ''''' Main module for PhysicalDiskMounterService application.
 ''''' 
-''''' Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-''''' This source code is available under the terms of the Affero General Public
+''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
 ''''' Please see LICENSE.txt for full license terms, including the availability of
@@ -46,6 +46,56 @@ Module ServerModule
 
     End Sub
 
+    Sub ShowVersionInfo()
+
+        Dim asm_file = Assembly.GetExecutingAssembly().Location
+        Dim file_ver = FileVersionInfo.GetVersionInfo(asm_file)
+
+        Console.WriteLine(
+            "Low-level command line interface to Arsenal Image Mounter virtual" & Environment.NewLine &
+            "SCSI miniport driver." & Environment.NewLine &
+            Environment.NewLine &
+            "Version " & file_ver.FileVersion.ToString() & Environment.NewLine &
+            Environment.NewLine &
+            "Copyright (C) 2012-2015 Arsenal Recon." & Environment.NewLine &
+            Environment.NewLine &
+            Environment.NewLine &
+            "http://www.ArsenalRecon.com" & Environment.NewLine &
+            Environment.NewLine &
+            "Arsenal Image Mounter including its kernel driver, API library," & Environment.NewLine &
+            "command line and graphical user applications (""the Software"")" & Environment.NewLine &
+            "are provided ""AS Is"" and ""WITH ALL FAULTS,"" without warranty" & Environment.NewLine &
+            "of any kind, including without limitation the warranties of" & Environment.NewLine &
+            "merchantability, fitness for a particular purpose and" & Environment.NewLine &
+            "non - infringement.Arsenal makes no warranty that the Software" & Environment.NewLine &
+            "is free of defects or is suitable for any particular purpose." & Environment.NewLine &
+            "In no event shall Arsenal be responsible for loss or damages" & Environment.NewLine &
+            "arising from the installation or use of the Software, including" & Environment.NewLine &
+            "but not limited to any indirect, punitive, special, incidental" & Environment.NewLine &
+            "or consequential damages of any character including, without" & Environment.NewLine &
+            "limitation, damages for loss of goodwill, work stoppage," & Environment.NewLine &
+            "computer failure or malfunction, or any and all other" & Environment.NewLine &
+            "commercial damages or losses.The entire risk as to the" & Environment.NewLine &
+            "quality and performance of the Software is borne by you.Should" & Environment.NewLine &
+            "the Software prove defective, you and not Arsenal assume the" & Environment.NewLine &
+            "entire cost of any service and repair." & Environment.NewLine &
+            Environment.NewLine &
+            "Arsenal Consulting, Inc. (d/b/a Arsenal Recon) retains the copyright to the" & Environment.NewLine &
+            "Arsenal Image Mounter source code being made available under terms of the" & Environment.NewLine &
+            "Affero General Public License v3." & Environment.NewLine &
+            "(http://www.fsf.org/licensing/licenses/agpl-3.0.html). This source code may" & Environment.NewLine &
+            "be used in projects that are licensed so as to be compatible with AGPL v3." & Environment.NewLine &
+            Environment.NewLine &
+            "Contributors to Arsenal Image Mounter must sign the Arsenal Contributor" & Environment.NewLine &
+            "Agreement(""ACA"").The ACA gives Arsenal and the contributor joint" & Environment.NewLine &
+            "copyright interests in the code." & Environment.NewLine &
+            Environment.NewLine &
+            "If your project is not licensed under an AGPL v3 compatible license," & Environment.NewLine &
+            "contact us directly regarding alternative licensing.")
+
+
+    End Sub
+
     Sub SafeMain(args As String())
 
         Dim DeviceName As String = Nothing
@@ -82,6 +132,9 @@ Module ServerModule
             ElseIf arg = "/?" OrElse arg.Equals("/help", StringComparison.OrdinalIgnoreCase) Then
                 ShowHelp = True
                 Exit For
+            ElseIf arg.Equals("/version", StringComparison.OrdinalIgnoreCase) Then
+                ShowVersionInfo()
+                Return
             Else
                 Console.WriteLine("Unsupported switch: " & arg)
                 ShowHelp = True
@@ -97,9 +150,14 @@ Module ServerModule
 
             Console.WriteLine(asmname & "." & Environment.NewLine &
                               Environment.NewLine &
+                              "Integrated command line interface to Arsenal Image Mounter virtual SCSI" & Environment.NewLine &
+                              "miniport driver." & Environment.NewLine &
+                              Environment.NewLine &
+                              "For version information, license, copyrights and credits, type aim_cli /version" & Environment.NewLine &
+                              Environment.NewLine &
                               "Syntax, automatically select object name and mount:" & Environment.NewLine &
-                              asmname & " /mount [/readonly] [/buffersize=bytes] /filename=imagefilename" & Environment.NewLine &
-                              "    [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
+                              asmname & " /mount [/readonly] [/buffersize=bytes]" & Environment.NewLine &
+                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, start shared memory service mode, for mounting from other applications:" & Environment.NewLine &
                               asmname & " /name=objectname [/mount] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
@@ -107,7 +165,11 @@ Module ServerModule
                               Environment.NewLine &
                               "Syntax, start TCP/IP service mode, for mounting from other computers:" & Environment.NewLine &
                               asmname & " [/ipaddress=address] /port=tcpport [/mount] [/readonly]" & Environment.NewLine &
-                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]")
+                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
+                              Environment.NewLine &
+                              "DiscUtils and MultiPartRaw support libraries are included embedded in this" & Environment.NewLine &
+                              "application. Libewf support needs libewf.dll, zlib.dll and msvcr100.dll as" & Environment.NewLine &
+                              "external dll files.")
 
             Return
 
@@ -134,7 +196,7 @@ Module ServerModule
                 Provider = DevioServiceFactory.GetProviderMultiPartRaw(DeviceName, DiskAccess)
 
             Case Else
-                Console.WriteLine("Provider names can be DiscUtils, LibEwf or MultiPartRaw.")
+                Console.WriteLine("Provider names can be DiscUtils, LibEwf Or MultiPartRaw.")
                 Return
 
         End Select
@@ -156,15 +218,15 @@ Module ServerModule
         Else
 
             Provider.Dispose()
-            Console.WriteLine("Shared memory object name, TCP/IP port or /mount switch must be specified.")
+            Console.WriteLine("Shared memory object name, TCP/IP port Or /mount switch must be specified.")
             Return
 
         End If
 
         If Mount Then
-            Console.WriteLine("Opening image file and mounting as virtual disk...")
+            Console.WriteLine("Opening image file And mounting as virtual disk...")
             Service.StartServiceThreadAndMount(New ScsiAdapter, 0)
-            Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
+            Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk And exit.")
         Else
             Console.WriteLine("Opening image file...")
             Service.StartServiceThread()

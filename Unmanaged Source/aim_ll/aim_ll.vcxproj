@@ -22,7 +22,7 @@
     <ProjectGuid>{E55519E4-180A-4732-A328-9DE219007C32}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>cli</RootNamespace>
-    <ProjectName>aimcmd</ProjectName>
+    <ProjectName>aim_ll</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

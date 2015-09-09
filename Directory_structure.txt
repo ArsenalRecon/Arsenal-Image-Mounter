@@ -29,22 +29,22 @@ Tested on Windows 7, 8.1 and 10, but should also work on Windows XP or Vista.
 Command line applications
 -------------------------
 
-ArsenalImageMounterService.exe:
+aim_cli.exe:
 Command line tool for mounting various disk image formats as virtual drives in
 a way similar to the graphical ArsenalImageMounter.exe.
 
 Does not include driver setup files. Driver could be set up separately using
-either aimcmd.exe or ArsenalImageMounter.exe, or the separate packages in the
-DriverSetup directory.
+either command line tool aim_ll.exe or graphical ArsenalImageMounter.exe, or
+the separate packages in the DriverSetup directory.
 
-ArsenalImageMounter.exe requires .NET Framework 4.x, which is included by
+aim_cli.exe requires .NET Framework 4.x, which is included by
 default in Windows 8 or later. Can be installed separately on Windows XP,
 Vista or 7.
 
 Tested on Windows 7, 8.1 and 10, but should also work on Windows XP or Vista.
 
 
-aimcmd.zip:
+aim_ll.zip:
 Command line tools that provide access to most features of virtual SCSI
 miniport driver that is used with Arsenal Image Mounter. Command line syntax
 is very similar to that of ImDisk Virtual Disk Driver, so most commands and
@@ -69,17 +69,18 @@ ArsenalImageMounterGUISetup.exe:
 One-piece simple driver setup GUI application that includes everything to
 automatically install the correct driver for current version of Windows.
 
-Requires .NET Framework 4.x or later, which is included by default in Windows
-8 or later. Can be installed separately on Windows XP, Vista or 7.
-
-
 ArsenalImageMounterCLISetup.exe:
 Command line version of ArsenalImageMounterGUISetup.exe, with same
 functionality and requirements.
 
 
+Both ArsenalImageMounterGUISetup.exe and ArsenalImageMounterCLISetup.exe
+require .NET Framework 4.x or later, which is included by default in Windows
+8 or later. Can be installed separately on Windows XP, Vista or 7.
+
+
 DriverSetup.7z:
-Both driver setup files and command line tool aimcmd.exe as a 7-zip archive.
+Both driver setup files and command line tool aim_ll.exe as a 7-zip archive.
 Useful for automated driver setup, for example for use from a script.
 
 Application files in this archive do not require any .NET components.

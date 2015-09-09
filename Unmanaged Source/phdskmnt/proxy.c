@@ -4,7 +4,7 @@
 /// components.
 /// 
 /// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-/// This source code is available under the terms of the Affero General Public
+/// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
 /// Please see LICENSE.txt for full license terms, including the availability of
@@ -107,7 +107,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
         if ((RequestHeaderSize > 0) &&
             (RequestDataSize > 0))
         {
-            temp_buffer = ExAllocatePoolWithTag(NonPagedPool, io_size, MP_TAG_GENERAL);
+            temp_buffer = (PUCHAR)ExAllocatePoolWithTag(NonPagedPool, io_size, MP_TAG_GENERAL);
 
             if (temp_buffer == NULL)
             {
@@ -132,11 +132,11 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
         }
         else if (RequestHeaderSize > 0)
         {
-            io_buffer = RequestHeader;
+            io_buffer = (PUCHAR)RequestHeader;
         }
         else if (RequestDataSize > 0)
         {
-            io_buffer = RequestData;
+            io_buffer = (PUCHAR)RequestData;
         }
 
         if (io_size > 0)
@@ -321,7 +321,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
         KeSetEvent(Proxy->request_event, (KPRIORITY)0, TRUE);
 
         status = KeWaitForMultipleObjects(number_of_wait_objects,
-            wait_objects,
+            (PVOID*)wait_objects,
             WaitAny,
             Executive,
             KernelMode,
@@ -450,7 +450,7 @@ __in USHORT ConnectionStringLength)
             EVENT_ALL_ACCESS,
             *ExEventObjectType,
             KernelMode,
-            &Proxy->request_event,
+            (PVOID*)&Proxy->request_event,
             NULL);
 
         if (!NT_SUCCESS(status))
@@ -484,7 +484,7 @@ __in USHORT ConnectionStringLength)
             EVENT_ALL_ACCESS,
             *ExEventObjectType,
             KernelMode,
-            &Proxy->response_event,
+            (PVOID*)&Proxy->response_event,
             NULL);
 
         if (!NT_SUCCESS(status))

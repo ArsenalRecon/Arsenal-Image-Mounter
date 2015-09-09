@@ -5,8 +5,8 @@
 ''''' for directly examining virtual disk contents directly in an application,
 ''''' even if that disk contents is accessed through a proxy.
 ''''' 
-''''' Copyright (c) 2012-2014, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-''''' This source code is available under the terms of the Affero General Public
+''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
 ''''' Please see LICENSE.txt for full license terms, including the availability of

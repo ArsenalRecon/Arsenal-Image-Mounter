@@ -6,7 +6,7 @@
 /// PASSIVE_LEVEL.
 /// 
 /// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-/// This source code is available under the terms of the Affero General Public
+/// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
 /// Please see LICENSE.txt for full license terms, including the availability of
@@ -373,7 +373,7 @@ __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension
 __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
-    PUCHAR output_buffer = pSrb->DataBuffer;
+    PUCHAR output_buffer = (PUCHAR)pSrb->DataBuffer;
     PCDB   cdb = (PCDB)pSrb->Cdb;
 
     UNREFERENCED_PARAMETER(pHBAExt);
@@ -393,8 +393,10 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
     RtlZeroMemory(output_buffer, pSrb->DataTransferLength);
 
-    switch (cdb->READ_TRACK_INFORMATION.Lun)
-    {
+    cdb;
+
+    //switch (cdb->READ_TRACK_INFORMATION.Lun)
+    //{
         //   case 0x00:
         //if (pSrb->DataTransferLength < 34)
         //{
@@ -407,10 +409,10 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         //ScsiSetSuccess(pSrb, 34);
         //return;
 
-    default:
+    //default:
         ScsiSetError(pSrb, SRB_STATUS_ERROR);
         return;
-    }
+    //}
 }
 
 VOID
@@ -419,7 +421,7 @@ __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension
 __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
-    PUCHAR output_buffer = pSrb->DataBuffer;
+    PUCHAR output_buffer = (PUCHAR)pSrb->DataBuffer;
     PCDB   cdb = (PCDB)pSrb->Cdb;
 
     UNREFERENCED_PARAMETER(pHBAExt);
