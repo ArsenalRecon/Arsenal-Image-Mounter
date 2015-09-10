@@ -812,7 +812,6 @@ __in PVOID                     pParameters
 )
 {
     ULONG                             i;
-    KIRQL                             lowest_assumed_irql = PASSIVE_LEVEL;
 
     KdPrint2(("PhDskMnt::MpHwAdapterControl:  pHBAExt = 0x%p, ControlType = 0x%p, pParameters=0x%p\n", pHBAExt, ControlType, pParameters));
 
@@ -844,9 +843,6 @@ __in PVOID                     pParameters
 
     case ScsiStopAdapter:
         KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiStopAdapter\n"));
-
-        // Free memory allocated for disk
-        ImScsiStopAdapter(pHBAExt, &lowest_assumed_irql);
 
         break;
 
@@ -944,16 +940,21 @@ MpHwFreeAdapterResources(__in pHW_HBA_EXT pHBAExt)
 
     KdPrint2(("PhDskMnt::MpHwFreeAdapterResources:  pHBAExt = 0x%p\n", pHBAExt));
 
+    // Free memory allocated for disk
+    ImScsiStopAdapter(pHBAExt, &lowest_assumed_irql);
+
     ImScsiAcquireLock(&pMPDrvInfoGlobal->DrvInfoLock, &LockHandle, lowest_assumed_irql);
 
     for (                                             // Go through linked list of HBA extensions.
         pNextEntry = pMPDrvInfoGlobal->ListMPHBAObj.Flink;
         pNextEntry != &pMPDrvInfoGlobal->ListMPHBAObj;
-    pNextEntry = pNextEntry->Flink
-        ) {
+        pNextEntry = pNextEntry->Flink
+        )
+    {
         pLclHBAExt = CONTAINING_RECORD(pNextEntry, HW_HBA_EXT, List);
 
-        if (pLclHBAExt == pHBAExt) {                    // Is this entry the same as pHBAExt?
+        if (pLclHBAExt == pHBAExt)
+        {                    // Is this entry the same as pHBAExt?
             RemoveEntryList(pNextEntry);
             pMPDrvInfoGlobal->DrvInfoNbrMPHBAObj--;
             break;
