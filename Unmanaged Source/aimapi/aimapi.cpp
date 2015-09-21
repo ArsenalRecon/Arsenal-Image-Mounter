@@ -1162,7 +1162,7 @@ IN BOOL CreatePartition)
         }
     }
 
-    WMem<WCHAR> disk_path(ImDiskAllocPrintF(L"\\\\?\\PhysicalDrive%u",
+    WMem<WCHAR> disk_path(ImDiskAllocPrintF(L"\\\\?\\PhysicalDrive%1!u!",
         disk_number));
 
     if (!disk_path)

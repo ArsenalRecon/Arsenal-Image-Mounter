@@ -17,8 +17,8 @@
 
 #include "aimapi.h"
 
-pfImScsiDebugMessageCallback DebugMessageCallback;
-LPVOID DebugMessageCallbackContext;
+pfImScsiDebugMessageCallback DebugMessageCallback = NULL;
+LPVOID DebugMessageCallbackContext = NULL;
 
 AIMAPI_API
 VOID

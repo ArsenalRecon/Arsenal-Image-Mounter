@@ -745,9 +745,11 @@ LPWSTR FormatOptions)
 
         HANDLE event = ImScsiRescanScsiAdapterAsync(TRUE);
 
+        Sleep(400);
+
         if (event == NULL)
         {
-            Sleep(600);
+            Sleep(200);
         }
         else
         {
