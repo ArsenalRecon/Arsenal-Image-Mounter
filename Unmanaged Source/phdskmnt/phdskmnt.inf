@@ -29,11 +29,14 @@ phdskmnt.sys = 1, 64
 [SourceDisksFiles.amd64]
 phdskmnt.sys = 1, x64
 
+[SourceDisksFiles.arm]
+phdskmnt.sys = 1, arm
+
 [DestinationDirs]
 DefaultDestDir = 12
 
 [Manufacturer]
-%ARSENALRECON%=ARSENALRECON, NTx86, NTia64, NTamd64
+%ARSENALRECON%=ARSENALRECON, NTx86, NTia64, NTamd64, NTARM
 
 [ARSENALRECON.NTx86]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
@@ -42,6 +45,9 @@ DefaultDestDir = 12
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [ARSENALRECON.NTamd64]
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+
+[ARSENALRECON.NTARM]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [PhysicalDiskMounterDevice]

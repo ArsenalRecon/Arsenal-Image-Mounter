@@ -15,6 +15,10 @@
 #ifndef _MP_H_
 #define _MP_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef VERBOSE_DEBUG_TRACE
 #define VERBOSE_DEBUG_TRACE 0
 #endif
@@ -28,6 +32,8 @@
 #if !defined(_MP_User_Mode_Only)                      // User-mode only.
 
 #if !defined(_MP_H_skip_WDM_includes)
+
+#pragma warning(disable: 4482)
 
 #pragma warning(push)
 #pragma warning(disable: 20051)
@@ -70,6 +76,7 @@
 #endif
 
 #pragma warning(disable: 28719)
+#pragma warning(disable: 4201)
 
 #include "common.h"
 #include "imdproxy.h"
@@ -107,6 +114,9 @@
 #define BUF_SIZE                    (1540 * 1024)
 #define MAX_BLOCKS                  (BUF_SIZE >> MP_BLOCK_POWER)
 
+#define DEFAULT_SECTOR_SIZE_CD_ROM  2048
+#define DEFAULT_SECTOR_SIZE_HDD     512
+
 #define DEFAULT_BREAK_ON_ENTRY      0                // No break
 #define DEFAULT_DEBUG_LEVEL         2               
 #define DEFAULT_INITIATOR_ID        7
@@ -120,333 +130,357 @@
 #define SCSIOP_UNMAP 0x42
 #endif
 
-typedef struct _MPDriverInfo         MPDriverInfo, *pMPDriverInfo;
-typedef struct _MP_REG_INFO          MP_REG_INFO, *pMP_REG_INFO;
-typedef struct _HW_LU_EXTENSION      HW_LU_EXTENSION, *pHW_LU_EXTENSION;
-typedef struct _LBA_LIST             LBA_LIST, *PLBA_LIST;
+    typedef struct _MPDriverInfo         MPDriverInfo, *pMPDriverInfo;
+    typedef struct _MP_REG_INFO          MP_REG_INFO, *pMP_REG_INFO;
+    typedef struct _HW_LU_EXTENSION      HW_LU_EXTENSION, *pHW_LU_EXTENSION;
+    typedef struct _LBA_LIST             LBA_LIST, *PLBA_LIST;
 
-extern 
-pMPDriverInfo pMPDrvInfoGlobal;  
+    extern
+        pMPDriverInfo pMPDrvInfoGlobal;
 
-extern
-BOOLEAN PortSupportsGetOriginalMdl;
+    extern
+        BOOLEAN PortSupportsGetOriginalMdl;
 
-typedef struct _MP_REG_INFO {
-    UNICODE_STRING   VendorId;
-    UNICODE_STRING   ProductId;
-    UNICODE_STRING   ProductRevision;
-    ULONG            NumberOfBuses;       // Number of buses (paths) supported by this adapter
-    ULONG            InitiatorID;        // Adapter's target ID
-} MP_REG_INFO, * pMP_REG_INFO;
+    typedef struct _MP_REG_INFO {
+        UNICODE_STRING   VendorId;
+        UNICODE_STRING   ProductId;
+        UNICODE_STRING   ProductRevision;
+        ULONG            NumberOfBuses;       // Number of buses (paths) supported by this adapter
+        ULONG            InitiatorID;        // Adapter's target ID
+    } MP_REG_INFO, *pMP_REG_INFO;
 
-typedef struct _MPDriverInfo {                        // The master miniport object. In effect, an extension of the driver object for the miniport.
-    MP_REG_INFO                    MPRegInfo;
-    KSPIN_LOCK                     DrvInfoLock;
-    LIST_ENTRY                     ListMPHBAObj;      // Header of list of HW_HBA_EXT objects.
-    PDRIVER_OBJECT                 pDriverObj;
-    PDRIVER_UNLOAD                 pChainUnload;
-    UCHAR                          GlobalsInitialized;
-    KEVENT                         StopWorker;
-    PKTHREAD                       WorkerThread;
-    LIST_ENTRY                     RequestList;
-    KSPIN_LOCK                     RequestListLock;   
-    KEVENT                         RequestEvent;
+    typedef struct _MPDriverInfo {                        // The master miniport object. In effect, an extension of the driver object for the miniport.
+        MP_REG_INFO                    MPRegInfo;
+        KSPIN_LOCK                     DrvInfoLock;
+        LIST_ENTRY                     ListMPHBAObj;      // Header of list of HW_HBA_EXT objects.
+        PDRIVER_OBJECT                 pDriverObj;
+        PDRIVER_UNLOAD                 pChainUnload;
+        UCHAR                          GlobalsInitialized;
+        KEVENT                         StopWorker;
+        PKTHREAD                       WorkerThread;
+        LIST_ENTRY                     RequestList;
+        KSPIN_LOCK                     RequestListLock;
+        KEVENT                         RequestEvent;
 #ifdef USE_SCSIPORT
-    PDEVICE_OBJECT                 ControllerObject;
-    LIST_ENTRY                     ResponseList;
-    KSPIN_LOCK                     ResponseListLock;
-    KEVENT                         ResponseEvent;
+        PDEVICE_OBJECT                 ControllerObject;
+        LIST_ENTRY                     ResponseList;
+        KSPIN_LOCK                     ResponseListLock;
+        KEVENT                         ResponseEvent;
 #endif
-    ULONG                          DrvInfoNbrMPHBAObj;// Count of items in ListMPHBAObj.
-	ULONG                          RandomSeed;
-} MPDriverInfo, * pMPDriverInfo;
+        ULONG                          DrvInfoNbrMPHBAObj;// Count of items in ListMPHBAObj.
+        ULONG                          RandomSeed;
+    } MPDriverInfo, *pMPDriverInfo;
 
-typedef struct _DEVICE_THREAD {
-    LIST_ENTRY                     ListEntry;
-    PKTHREAD                       Thread;
-} DEVICE_THREAD, *PDEVICE_THREAD;
+    typedef struct _DEVICE_THREAD {
+        LIST_ENTRY                     ListEntry;
+        PKTHREAD                       Thread;
+    } DEVICE_THREAD, *PDEVICE_THREAD;
 
-typedef struct _LUNInfo {
-    UCHAR     bReportLUNsDontUse;
-    UCHAR     bIODontUse;
-} LUNInfo, *pLUNInfo;
+    typedef struct _LUNInfo {
+        UCHAR     bReportLUNsDontUse;
+        UCHAR     bIODontUse;
+    } LUNInfo, *pLUNInfo;
 
-typedef struct _HW_HBA_EXT {                          // Adapter device-object extension allocated by port driver.
-    LIST_ENTRY                     List;              // Pointers to next and previous HW_HBA_EXT objects.
-    LIST_ENTRY                     LUList;
-    KSPIN_LOCK                     LUListLock;
+    typedef struct _HW_HBA_EXT {                          // Adapter device-object extension allocated by port driver.
+        LIST_ENTRY                     List;              // Pointers to next and previous HW_HBA_EXT objects.
+        LIST_ENTRY                     LUList;
+        KSPIN_LOCK                     LUListLock;
 #ifdef USE_SCSIPORT
-    LONG                           WorkItems;
+        LONG                           WorkItems;
 #endif
-    PDRIVER_OBJECT                 DriverObject;
-    ULONG                          SRBsSeen;
-    UCHAR                          HostTargetId;
-    SCSI_ADAPTER_CONTROL_TYPE      AdapterState;
-    UCHAR                          VendorId[9];
-    UCHAR                          ProductId[17];
-    UCHAR                          ProductRevision[5];
-    BOOLEAN                        bReportAdapterDone;
-} HW_HBA_EXT, * pHW_HBA_EXT;
+        PDRIVER_OBJECT                 DriverObject;
+        ULONG                          SRBsSeen;
+        UCHAR                          HostTargetId;
+        SCSI_ADAPTER_CONTROL_TYPE      AdapterState;
+        UCHAR                          VendorId[9];
+        UCHAR                          ProductId[17];
+        UCHAR                          ProductRevision[5];
+        BOOLEAN                        bReportAdapterDone;
+    } HW_HBA_EXT, *pHW_HBA_EXT;
 
-// Flag definitions for LUFlags.
+    // Flag definitions for LUFlags.
 
 #define LU_DEVICE_INITIALIZED   0x0001
 
-typedef struct _HW_LU_EXTENSION {                     // LUN extension allocated by port driver.
-    LIST_ENTRY            List;                       // Pointers to next and previous HW_LU_EXTENSION objects, used in HW_HBA_EXT.
-    pHW_HBA_EXT           pHBAExt;
-    LIST_ENTRY            RequestList;
-    KSPIN_LOCK            RequestListLock;   
-    KEVENT                RequestEvent;
-    KEVENT                Initialized;
-    PKTHREAD              WorkerThread;
-    KEVENT                StopThread;
-    LARGE_INTEGER         ImageOffset;
-    LARGE_INTEGER         DiskSize;
-    UCHAR                 BlockPower;
-    ULONG                 Flags;
-    UCHAR                 DeviceType;
-    BOOLEAN               RemovableMedia;
-    BOOLEAN               ReadOnly;
-    ULONG                 FakeDiskSignature;
-    PVOID                 LastIoBuffer;
-    LONGLONG              LastIoStartSector;
-    ULONG                 LastIoLength;
-    KSPIN_LOCK            LastIoLock;
-    DEVICE_NUMBER         DeviceNumber;
-    UNICODE_STRING        ObjectName;
-    HANDLE                ImageFile;
-    PROXY_CONNECTION      Proxy;
-    BOOLEAN               VMDisk;
-    BOOLEAN               AWEAllocDisk;
-    BOOLEAN               Modified;
-    PUCHAR                ImageBuffer;
-    BOOLEAN               UseProxy;
-    PFILE_OBJECT          FileObject;
-} HW_LU_EXTENSION, * pHW_LU_EXTENSION;
+    typedef struct _PROXY_CONNECTION
+    {
+        enum PROXY_CONNECTION_TYPE
+        {
+            PROXY_CONNECTION_DEVICE,
+            PROXY_CONNECTION_SHM
+        } connection_type;       // Connection type
 
-typedef struct _HW_SRB_EXTENSION {
-    SCSIWMI_REQUEST_CONTEXT WmiRequestContext;
-} HW_SRB_EXTENSION, * PHW_SRB_EXTENSION;
+        union
+        {
+            // Valid if connection_type is PROXY_CONNECTION_DEVICE
+            PFILE_OBJECT device;     // Pointer to proxy communication object
 
-typedef struct _MP_WorkRtnParms {
-  LIST_ENTRY           RequestListEntry;
+                                     // Valid if connection_type is PROXY_CONNECTION_SHM
+            struct
+            {
+                HANDLE request_event_handle;
+                PKEVENT request_event;
+                HANDLE response_event_handle;
+                PKEVENT response_event;
+                PUCHAR shared_memory;
+                ULONG_PTR shared_memory_size;
+            };
+        };
+    } PROXY_CONNECTION, *PPROXY_CONNECTION;
+
+    typedef struct _HW_LU_EXTENSION {                     // LUN extension allocated by port driver.
+        LIST_ENTRY            List;                       // Pointers to next and previous HW_LU_EXTENSION objects, used in HW_HBA_EXT.
+        pHW_HBA_EXT           pHBAExt;
+        LIST_ENTRY            RequestList;
+        KSPIN_LOCK            RequestListLock;
+        KEVENT                RequestEvent;
+        KEVENT                Initialized;
+        PKTHREAD              WorkerThread;
+        KEVENT                StopThread;
+        LARGE_INTEGER         ImageOffset;
+        LARGE_INTEGER         DiskSize;
+        UCHAR                 BlockPower;
+        ULONG                 Flags;
+        UCHAR                 DeviceType;
+        BOOLEAN               RemovableMedia;
+        BOOLEAN               ReadOnly;
+        ULONG                 FakeDiskSignature;
+        PVOID                 LastIoBuffer;
+        LONGLONG              LastIoStartSector;
+        ULONG                 LastIoLength;
+        KSPIN_LOCK            LastIoLock;
+        DEVICE_NUMBER         DeviceNumber;
+        UNICODE_STRING        ObjectName;
+        HANDLE                ImageFile;
+        PROXY_CONNECTION      Proxy;
+        BOOLEAN               VMDisk;
+        BOOLEAN               AWEAllocDisk;
+        BOOLEAN               Modified;
+        BOOLEAN               SupportsUnmap;
+        BOOLEAN               SupportsZero;
+        BOOLEAN               NoFileLevelTrim;
+        PUCHAR                ImageBuffer;
+        BOOLEAN               UseProxy;
+        PFILE_OBJECT          FileObject;
+    } HW_LU_EXTENSION, *pHW_LU_EXTENSION;
+
+    typedef struct _HW_SRB_EXTENSION {
+        SCSIWMI_REQUEST_CONTEXT WmiRequestContext;
+    } HW_SRB_EXTENSION, *PHW_SRB_EXTENSION;
+
+    typedef struct _MP_WorkRtnParms {
+        LIST_ENTRY           RequestListEntry;
 #ifdef USE_SCSIPORT
-  LIST_ENTRY           ResponseListEntry;
+        LIST_ENTRY           ResponseListEntry;
 #endif
-  pHW_HBA_EXT          pHBAExt;
-  pHW_LU_EXTENSION     pLUExt;
-  PSCSI_REQUEST_BLOCK  pSrb;
-  PMDL                 pOriginalMdl;
-  PETHREAD             pReqThread;
-  KIRQL                LowestAssumedIrql;
-  PVOID                MappedSystemBuffer;
-  PVOID                AllocatedBuffer;
-  BOOLEAN              CopyBack;
-} MP_WorkRtnParms, * pMP_WorkRtnParms;
+        pHW_HBA_EXT          pHBAExt;
+        pHW_LU_EXTENSION     pLUExt;
+        PSCSI_REQUEST_BLOCK  pSrb;
+        PMDL                 pOriginalMdl;
+        PETHREAD             pReqThread;
+        KIRQL                LowestAssumedIrql;
+        PVOID                MappedSystemBuffer;
+        PVOID                AllocatedBuffer;
+        BOOLEAN              CopyBack;
+        PKEVENT              CallerWaitEvent;
+    } MP_WorkRtnParms, *pMP_WorkRtnParms;
 
-enum ResultType {
-  ResultDone,
-  ResultQueued
-} ;
+    enum ResultType {
+        ResultDone,
+        ResultQueued
+    };
 
 #define RegWkBfrSz  0x1000
 
-typedef struct _RegWorkBuffer {
-  pHW_HBA_EXT          pAdapterExt;
-  UCHAR                Work[256];
-} RegWorkBuffer, * pRegWorkBuffer;
+    typedef struct _RegWorkBuffer {
+        pHW_HBA_EXT          pAdapterExt;
+        UCHAR                Work[256];
+    } RegWorkBuffer, *pRegWorkBuffer;
 
-IO_COMPLETION_ROUTINE
-ImScsiIoCtlCallCompletion;
+    IO_COMPLETION_ROUTINE
+        ImScsiIoCtlCallCompletion;
 
-DRIVER_UNLOAD
-ImScsiUnload;
+    DRIVER_UNLOAD
+        ImScsiUnload;
 
-EXTERN_C DRIVER_INITIALIZE
-DriverEntry;
+    EXTERN_C DRIVER_INITIALIZE
+        DriverEntry;
 
-ULONG
-MpHwFindAdapter(
-                __in       PVOID                           DeviceExtension,
-                __in       PVOID                           pReservedArg1,
-                __in       PVOID                           pReservedArg2,
+    ULONG
+        MpHwFindAdapter(
+            __in       PVOID                           DeviceExtension,
+            __in       PVOID                           pReservedArg1,
+            __in       PVOID                           pReservedArg2,
 #ifdef USE_STORPORT
-                __in       PVOID                           pReservedArg3,
+            __in       PVOID                           pReservedArg3,
 #endif
-                __in       PCHAR                           ArgumentString,
-                __inout __deref PPORT_CONFIGURATION_INFORMATION pConfigInfo,
-                __out      PBOOLEAN                        pBAgain
-);
+            __in       PCHAR                           ArgumentString,
+            __inout __deref PPORT_CONFIGURATION_INFORMATION pConfigInfo,
+            __out      PBOOLEAN                        pBAgain
+            );
 
-VOID
-MpHwTimer(
-    __in pHW_HBA_EXT DevExt
-);
+    VOID
+        MpHwTimer(
+            __in pHW_HBA_EXT DevExt
+            );
 
-BOOLEAN
-MpHwInitialize(
-    __in PVOID 
-);
+    BOOLEAN
+        MpHwInitialize(
+            __in PVOID
+            );
 
-void
-MpHwReportAdapter(
-                  __in pHW_HBA_EXT
-                 );
+    void
+        MpHwReportAdapter(
+            __in pHW_HBA_EXT
+            );
 
-void
-MpHwReportLink(
-               __in pHW_HBA_EXT
-              );
+    void
+        MpHwReportLink(
+            __in pHW_HBA_EXT
+            );
 
-void
-MpHwReportLog(__in pHW_HBA_EXT);
+    void
+        MpHwReportLog(__in pHW_HBA_EXT);
 
-VOID
-MpHwFreeAdapterResources(
-    __in PVOID
-);
+    VOID
+        MpHwFreeAdapterResources(
+            __in PVOID DeviceExtension
+            );
 
-BOOLEAN
-MpHwStartIo(
-            __in PVOID,
-            __inout __deref PSCSI_REQUEST_BLOCK
-);
+    BOOLEAN
+        MpHwStartIo(
+            __in PVOID DeviceExtension,
+            __inout __deref PSCSI_REQUEST_BLOCK Srb
+            );
 
-BOOLEAN
-MpHwDummyStartIo(
+    UCHAR
+        ScsiResetLun(
             __in PVOID,
             __in PSCSI_REQUEST_BLOCK
             );
 
-UCHAR
-ScsiResetLun(
+    UCHAR
+        ScsiResetDevice(
             __in PVOID,
             __in PSCSI_REQUEST_BLOCK
-);
-
-UCHAR
-ScsiResetDevice(
-            __in PVOID,
-            __in PSCSI_REQUEST_BLOCK
-);
-
-BOOLEAN 
-MpHwResetBus(
-             __in PVOID,
-             __in ULONG       
             );
 
-BOOLEAN
-MpHwAdapterState(
-  __in  PVOID HwDeviceExtension,
-  __in  PVOID Context,
-  __in  BOOLEAN SaveState
-);
+    BOOLEAN
+        MpHwResetBus(
+            __in PVOID DeviceExtension,
+            __in ULONG PathId
+            );
 
-SCSI_ADAPTER_CONTROL_STATUS
-MpHwAdapterControl(
-    __in PVOID DevExt,
-    __in SCSI_ADAPTER_CONTROL_TYPE ControlType, 
-    __in PVOID Parameters 
-);
+    BOOLEAN
+        MpHwAdapterState(
+            __in  PVOID HwDeviceExtension,
+            __in  PVOID Context,
+            __in  BOOLEAN SaveState
+            );
 
-VOID
-ScsiIoControl(
-              __in pHW_HBA_EXT DevExt,
-              __in PSCSI_REQUEST_BLOCK,
-              __in PUCHAR             ,
-              __inout __deref PKIRQL
-              );
+    SCSI_ADAPTER_CONTROL_STATUS
+        MpHwAdapterControl(
+            __in PVOID DeviceExtension,
+            __in SCSI_ADAPTER_CONTROL_TYPE ControlType,
+            __in PVOID Parameters
+            );
 
-VOID
-ScsiExecute(
+    VOID
+        ScsiIoControl(
             __in pHW_HBA_EXT DevExt,
             __in PSCSI_REQUEST_BLOCK,
-            __in PUCHAR   ,
+            __in PUCHAR,
+            __inout __deref PKIRQL
+            );
+
+    VOID
+        ScsiExecute(
+            __in pHW_HBA_EXT DevExt,
+            __in PSCSI_REQUEST_BLOCK,
+            __in PUCHAR,
             __in PKIRQL
             );
 
-VOID
-ScsiPnP(
-	__in pHW_HBA_EXT              pHBAExt,
-	__in PSCSI_PNP_REQUEST_BLOCK  pSrb,
-    __inout __deref PKIRQL             LowestAssumedIrql
-	);
+    VOID
+        ScsiPnP(
+            __in pHW_HBA_EXT              pHBAExt,
+            __in PSCSI_PNP_REQUEST_BLOCK  pSrb,
+            __inout __deref PKIRQL             LowestAssumedIrql
+            );
 
-VOID
-ScsiOpStartStopUnit(
-__in pHW_HBA_EXT DevExt,
-__in pHW_LU_EXTENSION LuExt,
-__in PSCSI_REQUEST_BLOCK Srb,
-__inout __deref PKIRQL
-);
+    VOID
+        ScsiOpStartStopUnit(
+            __in pHW_HBA_EXT DevExt,
+            __in pHW_LU_EXTENSION LuExt,
+            __in PSCSI_REQUEST_BLOCK Srb,
+            __inout __deref PKIRQL
+            );
 
-VOID
-ScsiOpInquiry(
-__in pHW_HBA_EXT DevExt,
-__in pHW_LU_EXTENSION LuExt,
-__in PSCSI_REQUEST_BLOCK Srb
-);
+    VOID
+        ScsiOpInquiry(
+            __in pHW_HBA_EXT DevExt,
+            __in pHW_LU_EXTENSION LuExt,
+            __in PSCSI_REQUEST_BLOCK Srb
+            );
 
-VOID
-ScsiOpInquiryRaidControllerUnit(
-              __in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-              __in PSCSI_REQUEST_BLOCK  pSrb
-             );
+    VOID
+        ScsiOpInquiryRaidControllerUnit(
+            __in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-UCHAR
-ScsiGetLUExtension(
-              __in pHW_HBA_EXT								pHBAExt,      // Adapter device-object extension from port driver.
-			  pHW_LU_EXTENSION * ppLUExt,
-              __in UCHAR									PathId,
-              __in UCHAR									TargetId,
-              __in UCHAR									Lun,
-              __in PKIRQL                                   LowestAssumedIrql
-             );
+    UCHAR
+        ScsiGetLUExtension(
+            __in pHW_HBA_EXT								pHBAExt,      // Adapter device-object extension from port driver.
+            pHW_LU_EXTENSION * ppLUExt,
+            __in UCHAR									PathId,
+            __in UCHAR									TargetId,
+            __in UCHAR									Lun,
+            __in PKIRQL                                   LowestAssumedIrql
+            );
 
-VOID
-ScsiOpReadCapacity(
-    __in pHW_HBA_EXT DevExt,
-    __in pHW_LU_EXTENSION LuExt,
-    __in __deref PSCSI_REQUEST_BLOCK Srb
-    );
+    VOID
+        ScsiOpReadCapacity(
+            __in pHW_HBA_EXT DevExt,
+            __in pHW_LU_EXTENSION LuExt,
+            __in __deref PSCSI_REQUEST_BLOCK Srb
+            );
 
-VOID
-ScsiOpModeSense(
-    __in pHW_HBA_EXT         DevExt,
-    __in pHW_LU_EXTENSION    LuExt,
-    __in __deref PSCSI_REQUEST_BLOCK pSrb
-    );
+    VOID
+        ScsiOpModeSense(
+            __in pHW_HBA_EXT         DevExt,
+            __in pHW_LU_EXTENSION    LuExt,
+            __in __deref PSCSI_REQUEST_BLOCK pSrb
+            );
 
-VOID
-ScsiOpModeSense10(
-    __in pHW_HBA_EXT         DevExt,
-    __in pHW_LU_EXTENSION    LuExt,
-    __in __deref PSCSI_REQUEST_BLOCK pSrb
-    );
+    VOID
+        ScsiOpModeSense10(
+            __in pHW_HBA_EXT         DevExt,
+            __in pHW_LU_EXTENSION    LuExt,
+            __in __deref PSCSI_REQUEST_BLOCK pSrb
+            );
 
-VOID                                                                        
-ScsiOpReportLuns(                                 
-    __inout         pHW_HBA_EXT          DevExt,
-    __in __deref    PSCSI_REQUEST_BLOCK  Srb,
-    __inout __deref PKIRQL               LowestAssumedIrql
-    );                                                                                   
+    VOID
+        ScsiOpReportLuns(
+            __inout         pHW_HBA_EXT          DevExt,
+            __in __deref    PSCSI_REQUEST_BLOCK  Srb,
+            __inout __deref PKIRQL               LowestAssumedIrql
+            );
 
-VOID
-MpQueryRegParameters(
-    __in __deref PUNICODE_STRING,
-    __out __deref pMP_REG_INFO       
-    );
+    VOID
+        MpQueryRegParameters(
+            __in __deref PUNICODE_STRING,
+            __out __deref pMP_REG_INFO
+            );
 
-VOID
-ScsiSetCheckCondition(
-    __in __deref PSCSI_REQUEST_BLOCK pSrb,
-    __in UCHAR               SrbStatus,
-    __in UCHAR               SenseKey,
-    __in UCHAR               AdditionalSenseCode,
-    __in UCHAR               AdditionalSenseCodeQualifier OPTIONAL
-    );
+    VOID
+        ScsiSetCheckCondition(
+            __in __deref PSCSI_REQUEST_BLOCK pSrb,
+            __in UCHAR               SrbStatus,
+            __in UCHAR               SenseKey,
+            __in UCHAR               AdditionalSenseCode,
+            __in UCHAR               AdditionalSenseCodeQualifier OPTIONAL
+            );
 
 #define ScsiSetSuccess(pSrb, Length) \
 { \
@@ -471,17 +505,28 @@ ScsiSetCheckCondition(
 #define STORAGE_INTERFACE_TYPE                                  Isa
 
 #define STORAGE_STATUS_SUCCESS                                  (0x00000000L)
-#define StoragePortGetSystemAddress(pHBAExt, pSrb, pPtr)        ((ULONG_PTR)(*(pPtr)=(pSrb)->DataBuffer) & 0 | STORAGE_STATUS_SUCCESS)
 
-NTSTATUS
-ImScsiGetControllerObject(
-    );
+    ULONG
+        inline
+        StoragePortGetSystemAddress(
+            __in PVOID /*pHBAExt*/,
+            __in __deref PSCSI_REQUEST_BLOCK pSrb,
+            __out PVOID *pPtr
+            )
+    {
+        *pPtr = pSrb->DataBuffer;
+        return STORAGE_STATUS_SUCCESS;
+    }
 
-LONG
-ImScsiCompletePendingSrbs(
-                          __in pHW_HBA_EXT pHBAExt,  // Adapter device-object extension from port driver.
-                          __inout __deref PKIRQL LowestAssumedIrql
-);
+    NTSTATUS
+        ImScsiGetControllerObject(
+            );
+
+    LONG
+        ImScsiCompletePendingSrbs(
+            __in pHW_HBA_EXT pHBAExt,  // Adapter device-object extension from port driver.
+            __inout __deref PKIRQL LowestAssumedIrql
+            );
 
 #define StoragePortInitialize                                   ScsiPortInitialize
 
@@ -513,9 +558,9 @@ ImScsiCompletePendingSrbs(
 #endif
 
 #if VER_PRODUCTBUILD < 7600
-typedef VOID
-KSTART_ROUTINE(
-__in PVOID StartContext);
+    typedef VOID
+        KSTART_ROUTINE(
+            __in PVOID StartContext);
 
 #define PsDereferenceImpersonationToken(T)	\
   ((ARGUMENT_PRESENT((T))) ?			\
@@ -528,6 +573,15 @@ __in PVOID StartContext);
 #endif
 #ifndef __drv_requiresIRQL
 #define __drv_requiresIRQL(i)
+#endif
+#ifndef __drv_savesIRQLGlobal
+#define __drv_savesIRQLGlobal(i,n)
+#endif
+#ifndef __drv_setsIRQL
+#define __drv_setsIRQL(i)
+#endif
+#ifndef __drv_restoresIRQLGlobal
+#define __drv_restoresIRQLGlobal(i,n)
 #endif
 #ifndef __drv_when
 #define __drv_when(c,s)
@@ -552,342 +606,460 @@ __in PVOID StartContext);
 #endif
 #endif
 
-UCHAR MpFindRemovedDevice(
-    __in pHW_HBA_EXT,
-    __in PSCSI_REQUEST_BLOCK
-    );
+    UCHAR MpFindRemovedDevice(
+        __in pHW_HBA_EXT,
+        __in PSCSI_REQUEST_BLOCK
+        );
 
-VOID ImScsiStopAdapter(
-    __in pHW_HBA_EXT DevExt,
-    __inout __deref PKIRQL
-    );
+    VOID ImScsiStopAdapter(
+        __in pHW_HBA_EXT DevExt,
+        __inout __deref PKIRQL
+        );
 
-VOID                                                                                                                         
-ImScsiTracingInit(                                                                                                            
-              __in PVOID,                                                                                  
-              __in PVOID
-             );
+    VOID
+        ImScsiTracingInit(
+            __in PVOID,
+            __in PVOID
+            );
 
-VOID                                                                                                                         
-ImScsiTracingCleanup(__in PVOID);
+    VOID
+        ImScsiTracingCleanup(__in PVOID);
 
-VOID
-ScsiOpVPDRaidControllerUnit(
-    __in pHW_HBA_EXT,
-    __in PSCSI_REQUEST_BLOCK
-    );
+    VOID
+        ScsiOpVPDCdRomUnit(
+            __in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     pLUExt,       // LUN device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-void
-InitializeWmiContext(__in pHW_HBA_EXT);
+    VOID
+        ScsiOpVPDDiskUnit(
+            __in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     pLUExt,       // LUN device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-BOOLEAN
-HandleWmiSrb(
-    __in       pHW_HBA_EXT,
-    __inout __deref PSCSI_WMI_REQUEST_BLOCK
-    );
+    VOID
+        ScsiOpVPDRaidControllerUnit(
+            __in pHW_HBA_EXT,
+            __in PSCSI_REQUEST_BLOCK
+            );
 
-VOID
-ScsiOpMediumRemoval(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-                    __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-                    __in PSCSI_REQUEST_BLOCK  pSrb
-                    );
+    void
+        InitializeWmiContext(__in pHW_HBA_EXT);
 
-VOID
-ScsiOpReadDiscInformation(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-__in PSCSI_REQUEST_BLOCK  pSrb
-);
+    BOOLEAN
+        HandleWmiSrb(
+            __in       pHW_HBA_EXT,
+            __inout __deref PSCSI_WMI_REQUEST_BLOCK
+            );
 
-VOID
-ScsiOpReadTrackInformation(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-__in PSCSI_REQUEST_BLOCK  pSrb
-);
+    VOID
+        ScsiOpMediumRemoval(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-VOID
-ScsiOpGetConfiguration(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-__in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-__in PSCSI_REQUEST_BLOCK  pSrb
-);
+    VOID
+        ScsiOpReadDiscInformation(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-VOID
-ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
-              __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
-              __in PSCSI_REQUEST_BLOCK  pSrb
-             );
+    VOID
+        ScsiOpReadTrackInformation(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-VOID
-ScsiOpReadWrite(
-           __in pHW_HBA_EXT          pDevExt,
-           __in pHW_LU_EXTENSION     pLUExt,
-           __in PSCSI_REQUEST_BLOCK  pSrb,
-           __in PUCHAR               pResult,
-           __in PKIRQL               LowestAssumedIrql
-          );
+    VOID
+        ScsiOpGetConfiguration(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-VOID                                                                                                                                               
-ImScsiDispatchWork(
-               __in pMP_WorkRtnParms        pWkRtnParms
-               );
+    VOID
+        ScsiOpGetEventStatus(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-NTSTATUS
-ImScsiCallDriverAndWait(__in PDEVICE_OBJECT DeviceObject,
-                        __in PIRP Irp,
-                        __in PKEVENT FinishedEvent);
+    VOID
+        ScsiOpUnmap(
+            __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.        
+            __in PSCSI_REQUEST_BLOCK  pSrb,
+            __in PUCHAR               pResult,
+            __in PKIRQL               LowestAssumedIrql
+            );
 
-VOID
-ImScsiCleanupLU(
-                 __in pHW_LU_EXTENSION     pLUExt,
-                 __inout __deref PKIRQL
-                 );
+    VOID
+        ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension from port driver.
+            __in PSCSI_REQUEST_BLOCK  pSrb
+            );
 
-KSTART_ROUTINE
-ImScsiWorkerThread;
+    VOID
+        ScsiOpReadWrite(
+            __in pHW_HBA_EXT          pDevExt,
+            __in pHW_LU_EXTENSION     pLUExt,
+            __in PSCSI_REQUEST_BLOCK  pSrb,
+            __in PUCHAR               pResult,
+            __in PKIRQL               LowestAssumedIrql
+            );
 
-VOID
-ImScsiCreateLU(
-                         __in pHW_HBA_EXT             pHBAExt,
-                         __in PSCSI_REQUEST_BLOCK     pSrb,
-                         __in PETHREAD                pReqThread,
-                         __inout __deref PKIRQL
-                         );
+    VOID
+        ImScsiDispatchWork(
+            __in pMP_WorkRtnParms        pWkRtnParms
+            );
 
-VOID
-ImScsiCreateDevice(
-                   __in pHW_HBA_EXT          pHBAExt,
-                   __in PSCSI_REQUEST_BLOCK  pSrb,
-                   __inout __deref PUCHAR         pResult,
-                   __inout __deref PKIRQL         LowestAssumedIrql
-                   );
+    NTSTATUS
+        ImScsiCallDriverAndWait(__in PDEVICE_OBJECT DeviceObject,
+            __in PIRP Irp,
+            __in PKEVENT FinishedEvent);
 
-NTSTATUS
-ImScsiRemoveDevice(
-                   __in pHW_HBA_EXT          pDevExt,
-                   __in PDEVICE_NUMBER       DeviceNumber,
-                   __inout __deref PKIRQL         LowestAssumedIrql
-                   );
+    VOID
+        ImScsiCleanupLU(
+            __in pHW_LU_EXTENSION     pLUExt,
+            __inout __deref PKIRQL
+            );
 
-NTSTATUS
-ImScsiQueryDevice(
-                  __in pHW_HBA_EXT               pHBAExt,
-                  __in PSRB_IMSCSI_CREATE_DATA   create_data,
-                  __in PULONG                    Length,
-                  __inout __deref PKIRQL              LowestAssumedIrql
-                  );
+    KSTART_ROUTINE
+        ImScsiWorkerThread;
 
-NTSTATUS
-ImScsiQueryAdapter(
-                   __in pHW_HBA_EXT                     pDevExt,
-                   __inout __deref PSRB_IMSCSI_QUERY_ADAPTER query_data,
-                   __in ULONG                           max_length,
-                   __inout __deref PKIRQL                    LowestAssumedIrql
-                   );
+    VOID
+        ImScsiCreateLU(
+            __in pHW_HBA_EXT             pHBAExt,
+            __in PSCSI_REQUEST_BLOCK     pSrb,
+            __in PETHREAD                pReqThread,
+            __inout __deref PKIRQL
+            );
 
-NTSTATUS
-ImScsiSetFlagsDevice(
-                     __in pHW_HBA_EXT          pDevExt,
-                     __inout __deref PSRB_IMSCSI_SET_DEVICE_FLAGS set_flags_data,
-                     __inout __deref PKIRQL          LowestAssumedIrql
-                     );
+    VOID
+        ImScsiCreateDevice(
+            __in pHW_HBA_EXT          pHBAExt,
+            __in PSCSI_REQUEST_BLOCK  pSrb,
+            __inout __deref PUCHAR         pResult,
+            __inout __deref PKIRQL         LowestAssumedIrql
+            );
 
-NTSTATUS
-ImScsiInitializeLU(__inout __deref pHW_LU_EXTENSION LUExtension,
-		 __inout __deref PSRB_IMSCSI_CREATE_DATA CreateData,
-		 __in __deref PETHREAD ClientThread);
+    NTSTATUS
+        ImScsiRemoveDevice(
+            __in pHW_HBA_EXT          pDevExt,
+            __in PDEVICE_NUMBER       DeviceNumber,
+            __inout __deref PKIRQL         LowestAssumedIrql
+            );
 
-NTSTATUS
-ImScsiCloseDevice(
-                 __in pHW_LU_EXTENSION pLUExt,
-                 __inout __deref PKIRQL LowestAssumedIrql
-                 );
+    NTSTATUS
+        ImScsiExtendLU(
+            pHW_HBA_EXT pHBAExt,
+            pHW_LU_EXTENSION device_extension,
+            PSRB_IMSCSI_EXTEND_DEVICE extend_device_data);
 
-IO_COMPLETION_ROUTINE
-ImScsiParallelReadWriteImageCompletion;
+    NTSTATUS
+        ImScsiQueryDevice(
+            __in pHW_HBA_EXT               pHBAExt,
+            __in PSRB_IMSCSI_CREATE_DATA   create_data,
+            __in PULONG                    Length,
+            __inout __deref PKIRQL              LowestAssumedIrql
+            );
 
-VOID
-ImScsiParallelReadWriteImage(
-                __in pMP_WorkRtnParms    pWkRtnParms,
-                __inout __deref PUCHAR        pResult,
-                __inout __deref PKIRQL        LowestAssumedIrql
-                );
+    NTSTATUS
+        ImScsiQueryAdapter(
+            __in pHW_HBA_EXT                     pDevExt,
+            __inout __deref PSRB_IMSCSI_QUERY_ADAPTER query_data,
+            __in ULONG                           max_length,
+            __inout __deref PKIRQL                    LowestAssumedIrql
+            );
 
-NTSTATUS
-ImScsiReadDevice(
-                 __in pHW_LU_EXTENSION pLUExt,
-                 __in PVOID            Buffer,
-                 __in PLARGE_INTEGER   ByteOffset,
-                 __in PULONG           Length
-                 );
+    NTSTATUS
+        ImScsiSetFlagsDevice(
+            __in pHW_HBA_EXT          pDevExt,
+            __inout __deref PSRB_IMSCSI_SET_DEVICE_FLAGS set_flags_data,
+            __inout __deref PKIRQL          LowestAssumedIrql
+            );
 
-NTSTATUS
-ImScsiWriteDevice(
-                 __in pHW_LU_EXTENSION pLUExt,
-                 __in PVOID            Buffer,
-                 __in PLARGE_INTEGER   ByteOffset,
-                 __in PULONG           Length
-                 );
+    VOID
+        ImScsiExtendDevice(
+            __in pHW_HBA_EXT          pHBAExt,
+            __in PSCSI_REQUEST_BLOCK  pSrb,
+            __inout __deref PUCHAR         pResult,
+            __inout __deref PKIRQL         LowestAssumedIrql,
+            __inout __deref PSRB_IMSCSI_EXTEND_DEVICE       extend_device_data
+            );
 
-NTSTATUS
-ImScsiSafeIOStream(__in PFILE_OBJECT FileObject,
-                __in UCHAR MajorFunction,
-                __out __deref PIO_STATUS_BLOCK IoStatusBlock,
-                __in PKEVENT CancelEvent,
-                PVOID Buffer,
-                __in ULONG Length);
+    NTSTATUS
+        ImScsiInitializeLU(__inout __deref pHW_LU_EXTENSION LUExtension,
+            __inout __deref PSRB_IMSCSI_CREATE_DATA CreateData,
+            __in __deref PETHREAD ClientThread);
 
-NTSTATUS
-ImScsiGetDiskSize(__in HANDLE FileHandle,
-		  __out __deref PIO_STATUS_BLOCK IoStatus,
-		  __inout __deref PLARGE_INTEGER DiskSize);
+    NTSTATUS
+        ImScsiCloseDevice(
+            __in pHW_LU_EXTENSION pLUExt,
+            __inout __deref PKIRQL LowestAssumedIrql
+            );
 
-VOID
-ImScsiLogDbgError(__in __deref PVOID Object,
-                   UCHAR MajorFunctionCode,
-                   UCHAR RetryCount,
-                   PULONG DumpData,
-                   USHORT DumpDataSize,
-                   USHORT EventCategory,
-                   NTSTATUS ErrorCode,
-                   ULONG UniqueErrorValue,
-                   NTSTATUS FinalStatus,
-                   ULONG SequenceNumber,
-                   ULONG IoControlCode,
-                   PLARGE_INTEGER DeviceOffset,
-                   PWCHAR Message);
+    VOID
+        ImScsiCloseProxy(__in __deref PPROXY_CONNECTION Proxy);
 
-BOOLEAN
-ImScsiFillMemoryDisk(pHW_LU_EXTENSION LUExtension);
+    NTSTATUS
+        ImScsiCallProxy(__in __deref PPROXY_CONNECTION Proxy,
+            __out __deref PIO_STATUS_BLOCK IoStatusBlock,
+            __in __deref PKEVENT CancelEvent OPTIONAL,
+            __in __deref PVOID RequestHeader,
+            __in ULONG RequestHeaderSize,
+            __drv_when(RequestDataSize > 0, __in __deref) PVOID RequestData,
+            __in ULONG RequestDataSize,
+            __drv_when(ResponseHeaderSize > 0, __out __deref) PVOID ResponseHeader,
+            __in ULONG ResponseHeaderSize,
+            __drv_when(ResponseDataBufferSize > 0 && *ResponseDataSize > 0, __out) __drv_when(ResponseDataBufferSize > 0, __deref) PVOID ResponseData,
+            __in ULONG ResponseDataBufferSize,
+            __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize);
 
-NTSTATUS
-ImScsiSafeReadFile(__in HANDLE FileHandle,
-		   __out __deref PIO_STATUS_BLOCK IoStatusBlock,
-		   PVOID Buffer,
-		   __in SIZE_T Length,
-		   __in __deref PLARGE_INTEGER Offset);
+    NTSTATUS
+        ImScsiConnectProxy(__inout __deref PPROXY_CONNECTION Proxy,
+            __out __deref PIO_STATUS_BLOCK IoStatusBlock,
+            __in __deref PKEVENT CancelEvent OPTIONAL,
+            __in ULONG Flags,
+            __in __deref PWSTR ConnectionString,
+            __in USHORT ConnectionStringLength);
 
-PIRP
-ImScsiBuildCompletionIrp();
+    NTSTATUS
+        ImScsiQueryInformationProxy(__in __deref PPROXY_CONNECTION Proxy,
+            __out __deref PIO_STATUS_BLOCK IoStatusBlock,
+            __in __deref PKEVENT CancelEvent,
+            __out __deref PIMDPROXY_INFO_RESP ProxyInfoResponse,
+            __in ULONG ProxyInfoResponseLength);
 
-NTSTATUS
-ImScsiCallForCompletion(PIRP Irp,
-pMP_WorkRtnParms pWkRtnParms,
-PKIRQL LowestAssumedIrql);
+    NTSTATUS
+        ImScsiReadProxy(__in __deref PPROXY_CONNECTION Proxy,
+            __out __deref PIO_STATUS_BLOCK IoStatusBlock,
+            __in __deref PKEVENT CancelEvent,
+            PVOID Buffer,
+            __in ULONG Length,
+            __in __deref PLARGE_INTEGER ByteOffset);
+
+    NTSTATUS
+        ImScsiWriteProxy(__in __deref PPROXY_CONNECTION Proxy,
+            __out __deref PIO_STATUS_BLOCK IoStatusBlock,
+            __in __deref PKEVENT CancelEvent,
+            PVOID Buffer,
+            __in ULONG Length,
+            __in __deref PLARGE_INTEGER ByteOffset);
+    
+    IO_COMPLETION_ROUTINE
+        ImScsiParallelReadWriteImageCompletion;
+
+    VOID
+        ImScsiParallelReadWriteImage(
+            __in pMP_WorkRtnParms    pWkRtnParms,
+            __inout __deref PUCHAR        pResult,
+            __inout __deref PKIRQL        LowestAssumedIrql
+            );
+
+    NTSTATUS
+        ImScsiReadDevice(
+            __in pHW_LU_EXTENSION pLUExt,
+            __in PVOID            Buffer,
+            __in PLARGE_INTEGER   ByteOffset,
+            __in PULONG           Length
+            );
+
+    NTSTATUS
+        ImScsiWriteDevice(
+            __in pHW_LU_EXTENSION pLUExt,
+            __in PVOID            Buffer,
+            __in PLARGE_INTEGER   ByteOffset,
+            __in PULONG           Length
+            );
+
+    VOID
+        ImScsiUnmapDevice(
+            __in pHW_HBA_EXT pHBAExt,
+            __in pHW_LU_EXTENSION pLUExt,
+            __in PSCSI_REQUEST_BLOCK pSrb);
+
+    NTSTATUS
+        ImScsiSafeIOStream(__in PFILE_OBJECT FileObject,
+            __in UCHAR MajorFunction,
+            __out __deref PIO_STATUS_BLOCK IoStatusBlock,
+            __in PKEVENT CancelEvent,
+            PVOID Buffer,
+            __in ULONG Length);
+
+    NTSTATUS
+        ImScsiGetDiskSize(__in HANDLE FileHandle,
+            __out __deref PIO_STATUS_BLOCK IoStatus,
+            __inout __deref PLARGE_INTEGER DiskSize);
+
+    VOID
+        ImScsiLogDbgError(__in __deref PVOID Object,
+            UCHAR MajorFunctionCode,
+            UCHAR RetryCount,
+            PULONG DumpData,
+            USHORT DumpDataSize,
+            USHORT EventCategory,
+            NTSTATUS ErrorCode,
+            ULONG UniqueErrorValue,
+            NTSTATUS FinalStatus,
+            ULONG SequenceNumber,
+            ULONG IoControlCode,
+            PLARGE_INTEGER DeviceOffset,
+            PWCHAR Message);
+
+    BOOLEAN
+        ImScsiFillMemoryDisk(pHW_LU_EXTENSION LUExtension);
+
+    NTSTATUS
+        ImScsiSafeReadFile(__in HANDLE FileHandle,
+            __out __deref PIO_STATUS_BLOCK IoStatusBlock,
+            PVOID Buffer,
+            __in SIZE_T Length,
+            __in __deref PLARGE_INTEGER Offset);
+
+    PIRP
+        ImScsiBuildCompletionIrp();
+
+    NTSTATUS
+        ImScsiCallForCompletion(PIRP Irp,
+            pMP_WorkRtnParms pWkRtnParms,
+            PKIRQL LowestAssumedIrql);
+
+    FORCEINLINE
+        BOOLEAN
+        ImScsiIsBufferZero(PVOID Buffer, ULONG Length)
+    {
+        PULONGLONG ptr;
+
+        if (Length < sizeof(ULONGLONG))
+            return FALSE;
+
+        for (ptr = (PULONGLONG)Buffer;
+        (ptr <= (PULONGLONG)((PUCHAR)Buffer + Length - sizeof(ULONGLONG))) &&
+            (*ptr == 0); ptr++);
+
+            return (BOOLEAN)(ptr == (PULONGLONG)((PUCHAR)Buffer + Length));
+    }
 
 #define ImScsiLogError(x) ImScsiLogDbgError x
 
-FORCEINLINE
-VOID
-ImScsiFreeIrpWithMdls(__in __deref PIRP Irp)
-{
-    if (Irp->MdlAddress != NULL)
+    FORCEINLINE
+        VOID
+        ImScsiFreeIrpWithMdls(__in __deref PIRP Irp)
     {
-        PMDL mdl;
-        PMDL nextMdl;
-        for (mdl = Irp->MdlAddress; mdl != NULL; mdl = nextMdl)
+        if (Irp->MdlAddress != NULL)
         {
-            nextMdl = mdl->Next;
-
-            if (mdl->MdlFlags & MDL_PAGES_LOCKED)
+            PMDL mdl;
+            PMDL nextMdl;
+            for (mdl = Irp->MdlAddress; mdl != NULL; mdl = nextMdl)
             {
-                MmUnlockPages(mdl);
+                nextMdl = mdl->Next;
+
+                if (mdl->MdlFlags & MDL_PAGES_LOCKED)
+                {
+                    MmUnlockPages(mdl);
+                }
+
+                IoFreeMdl(mdl);
             }
-
-            IoFreeMdl(mdl);
+            Irp->MdlAddress = NULL;
         }
-        Irp->MdlAddress = NULL;
-    }
 
-    IoFreeIrp(Irp);
-}
+        IoFreeIrp(Irp);
+    }
 
 #if _NT_TARGET_VERSION >= 0x501
 
-FORCEINLINE
-VOID
-__drv_maxIRQL(DISPATCH_LEVEL)
-__drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_savesIRQLGlobal(QueuedSpinLock,LockHandle))
-__drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_setsIRQL(DISPATCH_LEVEL))
-ImScsiAcquireLock_x64(__inout __deref PKSPIN_LOCK SpinLock,
-__out __deref __drv_acquiresExclusiveResource(KeQueuedSpinLockType)
-PKLOCK_QUEUE_HANDLE LockHandle,
-__in KIRQL LowestAssumedIrql)
-{
-    if (LowestAssumedIrql >= DISPATCH_LEVEL)
+    FORCEINLINE
+        VOID
+        __drv_maxIRQL(DISPATCH_LEVEL)
+        __drv_savesIRQLGlobal(QueuedSpinLock, LockHandle)
+        __drv_setsIRQL(DISPATCH_LEVEL)
+        ImScsiAcquireLock_x64(__inout __deref PKSPIN_LOCK SpinLock,
+            __out __deref __drv_acquiresExclusiveResource(KeQueuedSpinLockType)
+            PKLOCK_QUEUE_HANDLE LockHandle,
+            __in KIRQL LowestAssumedIrql)
+    {
+        if (LowestAssumedIrql >= DISPATCH_LEVEL)
+        {
+            ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+            KeAcquireInStackQueuedSpinLockAtDpcLevel(SpinLock, LockHandle);
+        }
+        else
+        {
+            KeAcquireInStackQueuedSpinLock(SpinLock, LockHandle);
+        }
+    }
+
+    FORCEINLINE
+        VOID
+        __drv_requiresIRQL(DISPATCH_LEVEL)
+        __drv_restoresIRQLGlobal(QueuedSpinLock, LockHandle)
+        ImScsiReleaseLock_x64(
+            __in __deref __drv_releasesExclusiveResource(KeQueuedSpinLockType)
+            PKLOCK_QUEUE_HANDLE LockHandle,
+            __inout __deref PKIRQL LowestAssumedIrql)
     {
         ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
 
-        KeAcquireInStackQueuedSpinLockAtDpcLevel(SpinLock, LockHandle);
+        if (*LowestAssumedIrql >= DISPATCH_LEVEL)
+        {
+            KeReleaseInStackQueuedSpinLockFromDpcLevel(LockHandle);
+        }
+        else
+        {
+            KeReleaseInStackQueuedSpinLock(LockHandle);
+            *LowestAssumedIrql = LockHandle->OldIrql;
+        }
     }
-    else
+
+#endif >= XP
+
+    FORCEINLINE
+        VOID
+        __drv_maxIRQL(DISPATCH_LEVEL)
+        __drv_savesIRQLGlobal(SpinLock, OldIrql)
+        __drv_setsIRQL(DISPATCH_LEVEL)
+        ImScsiAcquireLock_x86(__inout __deref __drv_acquiresExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
+            __out __deref __drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_savesIRQL) PKIRQL OldIrql,
+            __in KIRQL LowestAssumedIrql)
     {
-        KeAcquireInStackQueuedSpinLock(SpinLock, LockHandle);
+        if (LowestAssumedIrql >= DISPATCH_LEVEL)
+        {
+            ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+            *OldIrql = DISPATCH_LEVEL;
+
+            KeAcquireSpinLockAtDpcLevel(SpinLock);
+        }
+        else
+        {
+            KeAcquireSpinLock(SpinLock, OldIrql);
+        }
     }
-}
 
-FORCEINLINE
-VOID
-__drv_requiresIRQL(DISPATCH_LEVEL)
-__drv_when(*LowestAssumedIrql < DISPATCH_LEVEL, __drv_restoresIRQLGlobal(QueuedSpinLock,LockHandle))
-ImScsiReleaseLock_x64(
-__in __deref __drv_releasesExclusiveResource(KeQueuedSpinLockType)
-PKLOCK_QUEUE_HANDLE LockHandle,
-__inout __deref PKIRQL LowestAssumedIrql)
-{
-    ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
-
-    if (*LowestAssumedIrql >= DISPATCH_LEVEL)
-    {
-        KeReleaseInStackQueuedSpinLockFromDpcLevel(LockHandle);
-    }
-    else
-    {
-        KeReleaseInStackQueuedSpinLock(LockHandle);
-        *LowestAssumedIrql = LockHandle->OldIrql;
-    }
-}
-
-#endif
-
-FORCEINLINE
-VOID
-__drv_maxIRQL(DISPATCH_LEVEL)
-__drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_setsIRQL(DISPATCH_LEVEL))
-ImScsiAcquireLock_x86(__inout __deref __drv_acquiresExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
-    __drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __out __deref __drv_savesIRQL) PKIRQL OldIrql,
-    __in KIRQL LowestAssumedIrql)
-{
-    if (LowestAssumedIrql >= DISPATCH_LEVEL)
+    FORCEINLINE
+        VOID
+        __drv_requiresIRQL(DISPATCH_LEVEL)
+        __drv_restoresIRQLGlobal(SpinLock, OldIrql)
+        ImScsiReleaseLock_x86(
+            __inout __deref __drv_releasesExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
+            __in KIRQL OldIrql,
+            __inout __deref PKIRQL LowestAssumedIrql)
     {
         ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
 
-        KeAcquireSpinLockAtDpcLevel(SpinLock);
+        if (*LowestAssumedIrql >= DISPATCH_LEVEL)
+        {
+            KeReleaseSpinLockFromDpcLevel(SpinLock);
+        }
+        else
+        {
+            KeReleaseSpinLock(SpinLock, OldIrql);
+            *LowestAssumedIrql = OldIrql;
+        }
     }
-    else
-    {
-        KeAcquireSpinLock(SpinLock, OldIrql);
-    }
-}
-
-FORCEINLINE
-VOID
-__drv_requiresIRQL(DISPATCH_LEVEL)
-ImScsiReleaseLock_x86(
-__inout __deref __drv_releasesExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
-__in __drv_when(*LowestAssumedIrql < DISPATCH_LEVEL, __drv_restoresIRQL) KIRQL OldIrql,
-__inout __deref PKIRQL LowestAssumedIrql)
-{
-    ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
-
-    if (*LowestAssumedIrql >= DISPATCH_LEVEL)
-    {
-        KeReleaseSpinLockFromDpcLevel(SpinLock);
-    }
-    else
-    {
-        KeReleaseSpinLock(SpinLock, OldIrql);
-        *LowestAssumedIrql = OldIrql;
-    }
-}
 
 #ifdef _AMD64_
 
@@ -911,6 +1083,19 @@ __inout __deref PKIRQL LowestAssumedIrql)
 #endif
 
 #endif    //   #if !defined(_MP_User_Mode_Only)
+
+#ifdef __cplusplus
+}
+
+#if !defined(_MP_User_Mode_Only)
+
+#define POOL_TAG MP_TAG_GENERAL
+
+#include <wkmem.hpp>
+
+#endif
+
+#endif
 
 #endif    // _MP_H_
 

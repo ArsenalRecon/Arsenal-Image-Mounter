@@ -290,7 +290,7 @@ ImScsiSyntaxHelp()
         "        image file name, a physical memory block will be used without loading\r\n"
         "        an image file onto it. In that case, -s parameter is needed to specify\r\n"
         "        size of memory block. This option requires awealloc driver, which\r\n"
-        "        requires Windows 2000 or later.\r\n"
+        "        is installed with ImDisk Virtual Disk Driver.\r\n"
         "\n"
         "bswap   Instructs driver to swap each pair of bytes read from or written to\r\n"
         "        image file. Useful when examining images from some embedded systems\r\n"
@@ -693,7 +693,7 @@ LPWSTR FormatOptions)
     *DeviceNumber = create_data->Fields.DeviceNumber;
 
     if (NumericPrint)
-        printf("%u\n", *DeviceNumber);
+        printf("%u\n", DeviceNumber->LongNumber);
     else
     {
         ImScsiOemPrintF(stdout,
@@ -802,6 +802,34 @@ LPWSTR FormatOptions)
         PrintLastError(L"Cannot set disk in writable online mode:");
     }
 
+    DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
+        &dw, NULL);
+
+    GET_LENGTH_INFORMATION disk_size;
+    if (!DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
+        &disk_size, sizeof(disk_size), &dw, NULL))
+    {
+        WErrMsg errmsg;
+
+        ImScsiDebugMessage(
+            L"Cannot query size of disk %1!ws!: %2!ws!",
+            (LPCWSTR)dev_path, (LPCWSTR)errmsg);
+
+        FormatOptions = NULL;
+    }
+
+    LONGLONG diff = disk_size.Length.QuadPart -
+        create_data->Fields.DiskSize.QuadPart;
+    if ((diff > create_data->Fields.BytesPerSector) ||
+        (diff < -(LONG)create_data->Fields.BytesPerSector))
+    {
+        ImScsiDebugMessage(
+            L"Disk %1!ws! has unexpected size: %2!I64u!",
+            (LPCWSTR)dev_path, disk_size.Length.QuadPart);
+
+        FormatOptions = NULL;
+    }
+
     if (((FormatOptions != NULL) ||
         (create_data->Fields.FileNameLength == 0)) &&
         !IMSCSI_READONLY(create_data->Fields.Flags))
@@ -841,10 +869,10 @@ LPWSTR FormatOptions)
                 return IMSCSI_CLI_ERROR_FORMAT;
             }
 
-            printf("Disk not yet ready, waiting... %wc\r",
+            printf("Disk not yet ready, waiting... %c\r",
                 NextWaitChar(&wait_char));
 
-            SET_DISK_ATTRIBUTES disk_attributes = { sizeof(disk_attributes) };
+            ZeroMemory(&disk_attributes, sizeof(disk_attributes));
             disk_attributes.AttributesMask =
                 DISK_ATTRIBUTE_OFFLINE | DISK_ATTRIBUTE_READ_ONLY;
 
@@ -946,7 +974,7 @@ LPWSTR FormatOptions)
             {
                 format_done = true;
 
-                puts("Formatting disk volume...");
+                printf("Formatting disk volume %ws...\n", (LPCWSTR)vol_name);
 
                 WMem<WCHAR> format_cmd(ImDiskAllocPrintF(
                     L"format.com %1!ws! %2!ws!",
@@ -1065,7 +1093,7 @@ LPWSTR FormatOptions)
                     WErrMsg errmsg;
 
                     ImScsiOemPrintF(stderr,
-                        "Error setting volume '%1!ws!' mount point to '%2!ws!':",
+                        "Error setting volume '%1!ws!' mount point to '%2!ws!': %3!ws!",
                         vol_name, MountPoint, (LPCWSTR)errmsg);
                 }
                 else
@@ -1182,7 +1210,7 @@ BOOL RemoveSettings)
         if (RemoveSettings)
         {
             printf("Removing registry settings for device %.6X...\n",
-                DeviceNumber);
+                DeviceNumber.LongNumber);
 
             if (!ImScsiRemoveRegistrySettings(DeviceNumber))
                 PrintLastError(L"Registry edit failed");
@@ -1260,7 +1288,7 @@ BOOL RemoveSettings)
         if (RemoveSettings)
         {
             printf("Removing registry settings for device %.6X...\n",
-                DeviceNumber);
+                DeviceNumber.LongNumber);
 
             if (!ImScsiRemoveRegistrySettings(DeviceNumber))
                 PrintLastError(L"Registry edit failed");
@@ -1678,14 +1706,34 @@ DWORD FlagsToChange, DWORD Flags)
 // mount point.
 int
 ImScsiCliExtendDevice(DEVICE_NUMBER DeviceNumber,
-LARGE_INTEGER ExtendSize)
+PLARGE_INTEGER ExtendSize)
 {
-    DeviceNumber;
-    ExtendSize;
+    HANDLE adapter = ImScsiOpenScsiAdapter();
 
-    fprintf(stderr, "Not implemented.\n");
+    if (adapter == INVALID_HANDLE_VALUE)
+    {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+        {
+            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            return IMSCSI_CLI_ERROR_DRIVER_NOT_INSTALLED;
+        }
+        else
+        {
+            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            return IMSCSI_CLI_ERROR_DRIVER_INACCESSIBLE;
+        }
+    }
 
-    return IMSCSI_CLI_ERROR_FATAL;
+    if (!ImScsiExtendDevice(NULL, adapter, DeviceNumber, ExtendSize))
+    {
+        NtClose(adapter);
+        PrintLastError();
+        return IMSCSI_CLI_ERROR_DEVICE_INACCESSIBLE;
+    }
+
+    NtClose(adapter);
+
+    return 0;
 }
 
 // Entry function. Translates command line switches and parameters and calls
@@ -2038,7 +2086,7 @@ wmain(int argc, LPWSTR argv[])
                     WCHAR suffix = 0;
 
                     (void)swscanf(argv[1], L"%I64i%c",
-                        &disk_geometry, &suffix);
+                        &disk_geometry.QuadPart, &suffix);
 
                     switch (suffix)
                     {
@@ -2141,7 +2189,7 @@ wmain(int argc, LPWSTR argv[])
                     WCHAR suffix = 0;
 
                     (void)swscanf(argv[1], L"%I64u%c",
-                        &image_offset, &suffix);
+                        &image_offset.QuadPart, &suffix);
 
                     switch (suffix)
                     {
@@ -2291,7 +2339,7 @@ wmain(int argc, LPWSTR argv[])
                 ImScsiSyntaxHelp();
 
             ret = ImScsiCliExtendDevice(device_number,
-                disk_geometry);
+                &disk_geometry);
         }
 
         return ret;
@@ -2346,7 +2394,7 @@ ExceptionFilter(LPEXCEPTION_POINTERS ExceptionInfo)
         fprintf(stderr,
             "Parameter %u: 0x%p\n",
             i + 1,
-            ExceptionInfo->ExceptionRecord->ExceptionInformation[i]);
+            (LPVOID)ExceptionInfo->ExceptionRecord->ExceptionInformation[i]);
     }
 
     flushall();
@@ -2356,6 +2404,7 @@ ExceptionFilter(LPEXCEPTION_POINTERS ExceptionInfo)
 // We have our own EXE entry to be less dependent of
 // specific MSVCRT code that may not be available in older Windows versions.
 // It also saves some EXE file size.
+#ifndef _M_ARM
 extern "C"
 __declspec(noreturn)
 void
@@ -2379,5 +2428,6 @@ wmainCRTStartup()
 
     exit(wmain(argc, argv));
 }
+#endif
 
 #endif

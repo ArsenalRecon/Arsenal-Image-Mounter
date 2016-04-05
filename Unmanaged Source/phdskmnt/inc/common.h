@@ -304,6 +304,16 @@ typedef struct {
     /// SRB_IO_CONTROL header
     SRB_IO_CONTROL  SrbIoControl;
 
+    DEVICE_NUMBER   DeviceNumber;
+
+    LARGE_INTEGER   ExtendSize;
+
+} SRB_IMSCSI_EXTEND_DEVICE, *PSRB_IMSCSI_EXTEND_DEVICE;
+
+typedef struct {
+    /// SRB_IO_CONTROL header
+    SRB_IO_CONTROL  SrbIoControl;
+
     // API compatibility version is returned in SrbIoControl.ReturnCode.
     // SubVersion contains, in newer versions, a revision version that
     // applications can check to see if latest version is loaded.
@@ -344,14 +354,15 @@ ULONG Timeout)
 ///
 /// Control codes for IOCTL_SCSI_MINIPORT requests.
 ///
-#define SMP_IMSCSI                   0x83730000
-#define SMP_IMSCSI_QUERY_VERSION     ((ULONG) (SMP_IMSCSI | 0x800))
-#define SMP_IMSCSI_CREATE_DEVICE     ((ULONG) (SMP_IMSCSI | 0x801))
-#define SMP_IMSCSI_QUERY_DEVICE      ((ULONG) (SMP_IMSCSI | 0x802))
-#define SMP_IMSCSI_QUERY_ADAPTER     ((ULONG) (SMP_IMSCSI | 0x803))
-#define SMP_IMSCSI_CHECK             ((ULONG) (SMP_IMSCSI | 0x804))
-#define SMP_IMSCSI_SET_DEVICE_FLAGS  ((ULONG) (SMP_IMSCSI | 0x805))
-#define SMP_IMSCSI_REMOVE_DEVICE     ((ULONG) (SMP_IMSCSI | 0x806))
+#define SMP_IMSCSI                      0x83730000
+#define SMP_IMSCSI_QUERY_VERSION        ((ULONG) (SMP_IMSCSI | 0x800))
+#define SMP_IMSCSI_CREATE_DEVICE        ((ULONG) (SMP_IMSCSI | 0x801))
+#define SMP_IMSCSI_QUERY_DEVICE         ((ULONG) (SMP_IMSCSI | 0x802))
+#define SMP_IMSCSI_QUERY_ADAPTER        ((ULONG) (SMP_IMSCSI | 0x803))
+#define SMP_IMSCSI_CHECK                ((ULONG) (SMP_IMSCSI | 0x804))
+#define SMP_IMSCSI_SET_DEVICE_FLAGS     ((ULONG) (SMP_IMSCSI | 0x805))
+#define SMP_IMSCSI_REMOVE_DEVICE        ((ULONG) (SMP_IMSCSI | 0x806))
+#define SMP_IMSCSI_EXTEND_DEVICE        ((ULONG) (SMP_IMSCSI | 0x807))
 
 #define IMSCSI_API_NO_BROADCAST_NOTIFY  0x00000001
 #define IMSCSI_API_FORCE_DISMOUNT       0x00000002

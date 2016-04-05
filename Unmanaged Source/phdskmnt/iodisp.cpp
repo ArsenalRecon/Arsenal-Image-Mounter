@@ -16,6 +16,8 @@
 
 #include "phdskmnt.h"
 
+#include "legacycompat.h"
+
 //#pragma warning(push)
 //#pragma warning(disable : 4204)                       /* Prevent C4204 messages from stortrce.h. */
 //#include <stortrce.h>
@@ -23,9 +25,6 @@
 //
 //#include "trace.h"
 //#include "iodisp.tmh"
-
-#define SECTOR_SIZE_CD_ROM     4096
-#define SECTOR_SIZE_HDD        512
 
 /**************************************************************************************************/
 /*                                                                                                */
@@ -122,7 +121,7 @@ __inout __deref PKIRQL         LowestAssumedIrql
 
     ImScsiReleaseLock(&LockHandle, LowestAssumedIrql);
 
-    /// ToDo: Cleanup all file handles, object name buffers,
+    /// Cleanup all file handles, object name buffers,
     /// proxy refs etc.
     if (pLUExt->UseProxy)
     {
@@ -290,6 +289,8 @@ PDEVICE_OBJECT DeviceObject,
 PIRP Irp,
 PVOID Context)
 {
+    __analysis_assume(Context != NULL);
+
     pMP_WorkRtnParms pWkRtnParms = (pMP_WorkRtnParms)Context;
     PKTHREAD thread = NULL;
     KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
@@ -444,7 +445,7 @@ PVOID Context)
         }
         else
         {
-            KdPrint2(("PhDskMnt::ImScsiParallelReadWriteImageCompletion: IRQL too high to call for Srb completion through SMP_IMSCSI_CHECK. Queueing for timer instead.\n"));
+            KdPrint2(("PhDskMnt::ImScsiParallelReadWriteImageCompletion: IRQL too high to call for Srb completion through SMP_IMSCSI_CHECK. Queuing for timer instead.\n"));
         }
 
         KdPrint2(("PhDskMnt::ImScsiParallelReadWriteImageCompletion calling for Srb completion.\n"));
@@ -474,7 +475,7 @@ ImScsiBuildCompletionIrp()
     PIO_STACK_LOCATION ioctl_stack;
     PSRB_IMSCSI_CHECK completion_srb;
 
-    completion_srb = ExAllocatePoolWithTag(NonPagedPool,
+    completion_srb = (PSRB_IMSCSI_CHECK)ExAllocatePoolWithTag(NonPagedPool,
         sizeof(*completion_srb), MP_TAG_GENERAL);
 
     if (completion_srb == NULL)
@@ -830,6 +831,76 @@ __in PULONG           Length
 }
 
 NTSTATUS
+ImScsiZeroDevice(
+    __in pHW_LU_EXTENSION pLUExt,
+    __in PLARGE_INTEGER   Offset,
+    __in ULONG            Length
+    )
+{
+    IO_STATUS_BLOCK io_status = { 0 };
+    NTSTATUS status = STATUS_NOT_IMPLEMENTED;
+    LARGE_INTEGER byteoffset;
+
+    byteoffset.QuadPart = Offset->QuadPart + pLUExt->ImageOffset.QuadPart;
+
+    KdPrint2(("PhDskMnt::ImScsiZeroDevice: pLUExt=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n",
+        pLUExt, *Offset, byteoffset, Length));
+
+    pLUExt->Modified = TRUE;
+
+    if (pLUExt->VMDisk)
+    {
+#ifdef _WIN64
+        ULONG_PTR vm_offset = Offset->QuadPart;
+#else
+        ULONG_PTR vm_offset = Offset->LowPart;
+#endif
+
+        RtlZeroMemory(pLUExt->ImageBuffer + vm_offset,
+            Length);
+
+        status = STATUS_SUCCESS;
+    }
+    else if (pLUExt->UseProxy)
+    {
+        DEVICE_DATA_SET_RANGE range;
+        range.StartingOffset = Offset->QuadPart;
+        range.LengthInBytes = Length;
+
+        status = ImScsiUnmapOrZeroProxy(
+            &pLUExt->Proxy,
+            IMDPROXY_REQ_ZERO,
+            &io_status,
+            &pLUExt->StopThread,
+            1,
+            &range);
+    }
+    else if (pLUExt->ImageFile != NULL)
+    {
+        FILE_ZERO_DATA_INFORMATION zerodata;
+        zerodata.FileOffset = *Offset;
+        zerodata.BeyondFinalZero.QuadPart = Offset->QuadPart + Length;
+
+        status = ZwFsControlFile(
+            pLUExt->ImageFile,
+            NULL,
+            NULL,
+            NULL,
+            &io_status,
+            FSCTL_SET_ZERO_DATA,
+            &zerodata,
+            sizeof(zerodata),
+            NULL,
+            0);
+    }
+
+    KdPrint2(("PhDskMnt::ImScsiZeroDevice Result: pLUExt=%p, status=0x%X\n",
+        pLUExt, status));
+
+    return status;
+}
+
+NTSTATUS
 ImScsiWriteDevice(
 __in pHW_LU_EXTENSION pLUExt,
 __in PVOID            Buffer,
@@ -841,9 +912,29 @@ __in PULONG           Length
     NTSTATUS status = STATUS_NOT_IMPLEMENTED;
     LARGE_INTEGER byteoffset;
 
+    if (pLUExt->SupportsZero &&
+        ImScsiIsBufferZero(Buffer, *Length))
+    {
+        status = ImScsiZeroDevice(pLUExt, Offset, *Length);
+
+        if (NT_SUCCESS(status))
+        {
+            KdPrint2(("PhDskMnt::ImScsiWriteDevice: Zero block set at %I64i, bytes: %u.\n",
+                Offset->QuadPart, *Length));
+
+            return status;
+        }
+
+        KdPrint(("PhDskMnt::ImScsiWriteDevice: Volume does not support "
+            "FSCTL_SET_ZERO_DATA: 0x%#X\n", status));
+
+        pLUExt->SupportsZero = FALSE;
+    }
+
     byteoffset.QuadPart = Offset->QuadPart + pLUExt->ImageOffset.QuadPart;
 
-    KdPrint2(("PhDskMnt::ImScsiWriteDevice: pLUExt=%p, Buffer=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n", pLUExt, Buffer, *Offset, byteoffset, *Length));
+    KdPrint2(("PhDskMnt::ImScsiWriteDevice: pLUExt=%p, Buffer=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n",
+        pLUExt, Buffer, *Offset, byteoffset, *Length));
 
     pLUExt->Modified = TRUE;
 
@@ -864,24 +955,29 @@ __in PULONG           Length
         io_status.Information = *Length;
     }
     else if (pLUExt->UseProxy)
+    {
         status = ImScsiWriteProxy(
-        &pLUExt->Proxy,
-        &io_status,
-        &pLUExt->StopThread,
-        Buffer,
-        *Length,
-        &byteoffset);
+            &pLUExt->Proxy,
+            &io_status,
+            &pLUExt->StopThread,
+            Buffer,
+            *Length,
+            &byteoffset);
+    }
     else if (pLUExt->ImageFile != NULL)
+    {
         status = NtWriteFile(
-        pLUExt->ImageFile,
-        NULL,
-        NULL,
-        NULL,
-        &io_status,
-        Buffer,
-        *Length,
-        &byteoffset,
-        NULL);
+            pLUExt->ImageFile,
+            NULL,
+            NULL,
+            NULL,
+            &io_status,
+            Buffer,
+            *Length,
+            &byteoffset,
+            NULL);
+    }
+
     if (NT_SUCCESS(status))
     {
         *Length = (ULONG)io_status.Information;
@@ -897,6 +993,160 @@ __in PULONG           Length
 }
 
 NTSTATUS
+ImScsiExtendLU(
+    pHW_HBA_EXT pHBAExt,
+    pHW_LU_EXTENSION device_extension,
+    PSRB_IMSCSI_EXTEND_DEVICE extend_device_data)
+{
+    NTSTATUS status;
+    FILE_END_OF_FILE_INFORMATION new_size;
+    FILE_STANDARD_INFORMATION file_standard_information;
+
+    UNREFERENCED_PARAMETER(pHBAExt);
+
+    new_size.EndOfFile.QuadPart =
+        device_extension->DiskSize.QuadPart +
+        extend_device_data->ExtendSize.QuadPart;
+
+    KdPrint(("ImScsi: New size of device %i:%i:%i will be %I64i bytes.\n",
+        (int)extend_device_data->DeviceNumber.PathId,
+        (int)extend_device_data->DeviceNumber.TargetId,
+        (int)extend_device_data->DeviceNumber.Lun,
+        new_size.EndOfFile.QuadPart));
+
+    if (new_size.EndOfFile.QuadPart <= 0)
+    {
+        status = STATUS_END_OF_MEDIA;
+        goto done;
+    }
+
+    if (device_extension->VMDisk)
+    {
+        PVOID new_image_buffer = NULL;
+        SIZE_T free_size = 0;
+#ifdef _WIN64
+        ULONG_PTR old_size =
+            device_extension->DiskSize.QuadPart;
+        SIZE_T max_size = new_size.EndOfFile.QuadPart;
+#else
+        ULONG_PTR old_size =
+            device_extension->DiskSize.LowPart;
+        SIZE_T max_size = new_size.EndOfFile.LowPart;
+
+        // A vm type disk cannot be extended to a larger size than
+        // 2 GB.
+        if (new_size.EndOfFile.QuadPart & 0xFFFFFFFF80000000)
+        {
+            status = STATUS_INVALID_DEVICE_REQUEST;
+            goto done;
+        }
+#endif // _WIN64
+
+        KdPrint(("ImScsi: Allocating %I64u bytes.\n",
+            max_size));
+
+        status = ZwAllocateVirtualMemory(NtCurrentProcess(),
+            &new_image_buffer,
+            0,
+            &max_size,
+            MEM_COMMIT,
+            PAGE_READWRITE);
+
+        if (!NT_SUCCESS(status))
+        {
+            status = STATUS_NO_MEMORY;
+            goto done;
+        }
+
+        RtlCopyMemory(new_image_buffer,
+            device_extension->ImageBuffer,
+            min(old_size, max_size));
+
+        ZwFreeVirtualMemory(NtCurrentProcess(),
+            (PVOID*)&device_extension->ImageBuffer,
+            &free_size,
+            MEM_RELEASE);
+
+        device_extension->ImageBuffer = (PUCHAR)new_image_buffer;
+        device_extension->DiskSize = new_size.EndOfFile;
+
+        status = STATUS_SUCCESS;
+        goto done;
+    }
+
+    // For proxy-type disks the new size is just accepted and
+    // that's it.
+    if (device_extension->UseProxy)
+    {
+        device_extension->DiskSize =
+            new_size.EndOfFile;
+
+        status = STATUS_SUCCESS;
+        goto done;
+    }
+
+    // Image file backed disks left to do.
+
+    // For disks with offset, refuse to extend size. Otherwise we
+    // could break compatibility with the header data we have
+    // skipped and we don't know about.
+    if (device_extension->ImageOffset.QuadPart != 0)
+    {
+        status = STATUS_INVALID_DEVICE_REQUEST;
+        goto done;
+    }
+
+    IO_STATUS_BLOCK io_status;
+
+    status =
+        ZwQueryInformationFile(device_extension->ImageFile,
+            &io_status,
+            &file_standard_information,
+            sizeof file_standard_information,
+            FileStandardInformation);
+
+    if (!NT_SUCCESS(status))
+    {
+        goto done;
+    }
+
+    KdPrint(("ImScsi: Current image size is %I64u bytes.\n",
+        file_standard_information.EndOfFile.QuadPart));
+
+    if (file_standard_information.EndOfFile.QuadPart >=
+        new_size.EndOfFile.QuadPart)
+    {
+        device_extension->DiskSize = new_size.EndOfFile;
+
+        status = STATUS_SUCCESS;
+        goto done;
+    }
+
+    // For other, fixed file-backed disks we need to adjust the
+    // physical file size.
+
+    KdPrint(("ImScsi: Setting new image size to %I64u bytes.\n",
+        new_size.EndOfFile.QuadPart));
+
+    status = ZwSetInformationFile(device_extension->ImageFile,
+        &io_status,
+        &new_size,
+        sizeof new_size,
+        FileEndOfFileInformation);
+
+    if (NT_SUCCESS(status))
+    {
+        device_extension->DiskSize = new_size.EndOfFile;
+        goto done;
+    }
+
+done:
+    KdPrint(("ImScsi: SMP_IMSCSI_EXTEND_DEVICE result: %#x\n", status));
+
+    return status;
+}
+
+NTSTATUS
 ImScsiInitializeLU(__inout __deref pHW_LU_EXTENSION LUExtension,
 __inout __deref PSRB_IMSCSI_CREATE_DATA CreateData,
 __in __deref PETHREAD ClientThread)
@@ -906,8 +1156,10 @@ __in __deref PETHREAD ClientThread)
     NTSTATUS status;
     HANDLE file_handle = NULL;
     PUCHAR image_buffer = NULL;
-    PROXY_CONNECTION proxy = { 0 };
+    PROXY_CONNECTION proxy = { };
     ULONG alignment_requirement;
+    BOOLEAN proxy_supports_unmap = FALSE;
+    BOOLEAN proxy_supports_zero = FALSE;
 
     ASSERT(CreateData != NULL);
 
@@ -1033,16 +1285,16 @@ __in __deref PETHREAD ClientThread)
 
         // If no device-type specified, check if filename ends with .iso or .nrg.
         // In that case, set device-type automatically to FILE_DEVICE_CDROM
-        //if ((IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) == 0) &
-        //    (CreateData->Fields.FileNameLength >= (4 * sizeof(*CreateData->Fields.FileName))))
-        //{
-        //    LPWSTR name = CreateData->Fields.FileName +
-        //	(CreateData->Fields.FileNameLength / sizeof(*CreateData->Fields.FileName)) - 4;
-        //    if ((_wcsnicmp(name, L".iso", 4) == 0) ||
-        //	(_wcsnicmp(name, L".bin", 4) == 0) ||
-        //	(_wcsnicmp(name, L".nrg", 4) == 0))
-        //	CreateData->Fields.Flags |= IMSCSI_DEVICE_TYPE_CD | IMSCSI_OPTION_RO;
-        //}
+        if ((IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) == 0) &
+            (CreateData->Fields.FileNameLength >= (4 * sizeof(*CreateData->Fields.FileName))))
+        {
+            LPWSTR name = CreateData->Fields.FileName +
+        	(CreateData->Fields.FileNameLength / sizeof(*CreateData->Fields.FileName)) - 4;
+            if ((_wcsnicmp(name, L".iso", 4) == 0) ||
+        	(_wcsnicmp(name, L".bin", 4) == 0) ||
+        	(_wcsnicmp(name, L".nrg", 4) == 0))
+        	CreateData->Fields.Flags |= IMSCSI_DEVICE_TYPE_CD | IMSCSI_OPTION_RO;
+        }
 
         if (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) ==
             IMSCSI_DEVICE_TYPE_CD)
@@ -1180,7 +1432,7 @@ __in __deref PETHREAD ClientThread)
             (IMSCSI_PROXY_TYPE(CreateData->Fields.Flags) ==
             IMSCSI_PROXY_TYPE_SHM))
         {
-            proxy.connection_type = PROXY_CONNECTION_SHM;
+            proxy.connection_type = PROXY_CONNECTION::PROXY_CONNECTION_SHM;
 
             status =
                 ZwOpenSection(&file_handle,
@@ -1274,14 +1526,16 @@ __in __deref PETHREAD ClientThread)
 #endif
 
         if (!NT_SUCCESS(status))
+        {
             KdPrint(("PhDskMnt: Error opening file '%.*ws'. Status: %#x SpecSize: %i WritableFile: %i DevTypeFile: %i Flags: %#x\n",
-            (int)(real_file_name.Length / sizeof(WCHAR)),
-            real_file_name.Buffer,
-            status,
-            CreateData->Fields.DiskSize.QuadPart != 0,
-            !IMSCSI_READONLY(CreateData->Fields.Flags),
-            IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE,
-            CreateData->Fields.Flags));
+                (int)(real_file_name.Length / sizeof(WCHAR)),
+                real_file_name.Buffer,
+                status,
+                CreateData->Fields.DiskSize.QuadPart != 0,
+                !IMSCSI_READONLY(CreateData->Fields.Flags),
+                IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE,
+                CreateData->Fields.Flags));
+        }
 
         // If not found we will create the file if a new non-zero size is
         // specified, read-only virtual disk is not specified and we are
@@ -1429,7 +1683,7 @@ __in __deref PETHREAD ClientThread)
             }
 
             KdPrint(("PhDskMnt: Got reference to proxy object %p.\n",
-                proxy.connection_type == PROXY_CONNECTION_DEVICE ?
+                proxy.connection_type == PROXY_CONNECTION::PROXY_CONNECTION_DEVICE ?
                 (PVOID)proxy.device :
                 (PVOID)proxy.shared_memory));
 
@@ -1781,6 +2035,12 @@ __in __deref PETHREAD ClientThread)
             if (proxy_info.flags & IMDPROXY_FLAG_RO)
                 CreateData->Fields.Flags |= IMSCSI_OPTION_RO;
 
+            if (proxy_info.flags & IMDPROXY_FLAG_SUPPORTS_UNMAP)
+                proxy_supports_unmap = TRUE;
+
+            if (proxy_info.flags & IMDPROXY_FLAG_SUPPORTS_ZERO)
+                proxy_supports_zero = TRUE;
+
             KdPrint(("PhDskMnt: Got from proxy: Siz=0x%08x%08x Flg=%#x Alg=%#x.\n",
                 CreateData->Fields.DiskSize.HighPart,
                 CreateData->Fields.DiskSize.LowPart,
@@ -1882,28 +2142,37 @@ __in __deref PETHREAD ClientThread)
     if (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) == IMSCSI_DEVICE_TYPE_CD)
     {
         if (CreateData->Fields.BytesPerSector == 0)
-            CreateData->Fields.BytesPerSector = SECTOR_SIZE_CD_ROM;
+            CreateData->Fields.BytesPerSector = DEFAULT_SECTOR_SIZE_CD_ROM;
 
         CreateData->Fields.Flags |= IMSCSI_OPTION_REMOVABLE | IMSCSI_OPTION_RO;
     }
     else
     {
         if (CreateData->Fields.BytesPerSector == 0)
-            CreateData->Fields.BytesPerSector = SECTOR_SIZE_HDD;
+            CreateData->Fields.BytesPerSector = DEFAULT_SECTOR_SIZE_HDD;
     }
 
     KdPrint(("PhDskMnt: Done with disk geometry setup.\n"));
 
     // Now build real DeviceType and DeviceCharacteristics parameters.
-    if (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) == IMSCSI_DEVICE_TYPE_CD)
+    switch (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags))
+    {
+    case IMSCSI_DEVICE_TYPE_CD:
         LUExtension->DeviceType = READ_ONLY_DIRECT_ACCESS_DEVICE;
-    else if (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) == IMSCSI_DEVICE_TYPE_RAW)
+        CreateData->Fields.Flags |= IMSCSI_OPTION_REMOVABLE;
+        break;
+
+    case IMSCSI_DEVICE_TYPE_RAW:
         LUExtension->DeviceType = ARRAY_CONTROLLER_DEVICE;
-    else
+        break;
+
+    default:
         LUExtension->DeviceType = DIRECT_ACCESS_DEVICE;
+    }
 
     if (IMSCSI_READONLY(CreateData->Fields.Flags))
         LUExtension->ReadOnly = TRUE;
+
     if (IMSCSI_REMOVABLE(CreateData->Fields.Flags))
         LUExtension->RemovableMedia = TRUE;
 
@@ -1970,9 +2239,29 @@ __in __deref PETHREAD ClientThread)
     // disk sig here.
     if ((CreateData->Fields.Flags & IMSCSI_FAKE_DISK_SIG_IF_ZERO) &&
         IMSCSI_READONLY(CreateData->Fields.Flags))
+    {
         LUExtension->FakeDiskSignature =
-        (RtlRandomEx(&pMPDrvInfoGlobal->RandomSeed) |
-        0x80808081UL) & 0xFEFEFEFFUL;
+            (RtlRandomEx(&pMPDrvInfoGlobal->RandomSeed) |
+                0x80808081UL) & 0xFEFEFEFFUL;
+    }
+
+    if ((LUExtension->FileObject == NULL) &&
+        (!LUExtension->AWEAllocDisk) &&
+        (!LUExtension->VMDisk) &&
+        ((!LUExtension->UseProxy) ||
+            proxy_supports_unmap))
+    {
+        LUExtension->SupportsUnmap = TRUE;
+    }
+
+    if ((LUExtension->FileObject == NULL) &&
+        (!LUExtension->AWEAllocDisk) &&
+        (!LUExtension->VMDisk) &&
+        ((!LUExtension->UseProxy) ||
+            proxy_supports_zero))
+    {
+        LUExtension->SupportsZero = TRUE;
+    }
 
     KeInitializeSpinLock(&LUExtension->RequestListLock);
     InitializeListHead(&LUExtension->RequestList);
@@ -2097,3 +2386,163 @@ ImScsiFillMemoryDisk(pHW_LU_EXTENSION LUExtension)
 
     return TRUE;
 }
+
+VOID
+ImScsiUnmapDevice(
+    __in pHW_HBA_EXT pHBAExt,
+    __in pHW_LU_EXTENSION pLUExt,
+    __in PSCSI_REQUEST_BLOCK pSrb)
+{
+    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
+    USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
+
+    UNREFERENCED_PARAMETER(pHBAExt);
+    UNREFERENCED_PARAMETER(pLUExt);
+
+    if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) >
+        pSrb->DataTransferLength)
+    {
+        KdBreakPoint();
+        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+        return;
+    }
+
+    USHORT items = descrlength / sizeof(*list->Descriptors);
+
+    NTSTATUS status = STATUS_SUCCESS;
+
+    IO_STATUS_BLOCK io_status;
+
+    if (pLUExt->UseProxy)
+    {
+        WPoolMem<DEVICE_DATA_SET_RANGE, PagedPool> range(sizeof(DEVICE_DATA_SET_RANGE) * items);
+
+        if (!range)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_ERROR);
+            return;
+        }
+
+        for (USHORT i = 0; i < items; i++)
+        {
+            LONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
+            ULONG numBlocks = RtlUlongByteSwap(*(PULONG)list->Descriptors[i].LbaCount);
+
+            range[i].StartingOffset = (startingSector << pLUExt->BlockPower) + pLUExt->ImageOffset.QuadPart;
+            range[i].LengthInBytes = (ULONGLONG)numBlocks << pLUExt->BlockPower;
+
+            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: Offset: %I64i, bytes: %I64u\n",
+                range[i].StartingOffset, range[i].LengthInBytes));
+        }
+
+        status = ImScsiUnmapOrZeroProxy(
+            &pLUExt->Proxy,
+            IMDPROXY_REQ_UNMAP,
+            &io_status,
+            &pLUExt->StopThread,
+            items,
+            range);
+    }
+    else if (pLUExt->ImageFile != NULL)
+    {
+        FILE_ZERO_DATA_INFORMATION zerodata;
+
+#if _NT_TARGET_VERSION >= 0x602
+        ULONG fltrim_size = FIELD_OFFSET(FILE_LEVEL_TRIM, Ranges) +
+            (items * sizeof(FILE_LEVEL_TRIM_RANGE));
+
+        WPoolMem<FILE_LEVEL_TRIM, PagedPool> fltrim;
+
+        if (!pLUExt->NoFileLevelTrim)
+        {
+            fltrim.Alloc(fltrim_size);
+
+            if (!fltrim)
+            {
+                ScsiSetError(pSrb, SRB_STATUS_ERROR);
+                return;
+            }
+
+            fltrim->NumRanges = items;
+        }
+#endif
+
+        for (int i = 0; i < items; i++)
+        {
+            LONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
+            ULONG numBlocks = RtlUlongByteSwap(*(PULONG)list->Descriptors[i].LbaCount);
+
+            zerodata.FileOffset.QuadPart = (startingSector << pLUExt->BlockPower) + pLUExt->ImageOffset.QuadPart;
+            zerodata.BeyondFinalZero.QuadPart = ((LONGLONG)numBlocks << pLUExt->BlockPower) +
+                zerodata.FileOffset.QuadPart;
+
+            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: Zero data request from 0x%I64X to 0x%I64X\n",
+                zerodata.FileOffset.QuadPart, zerodata.BeyondFinalZero.QuadPart));
+
+#if _NT_TARGET_VERSION >= 0x602
+            if (!pLUExt->NoFileLevelTrim)
+            {
+                fltrim->Ranges[i].Offset = zerodata.FileOffset.QuadPart;
+                fltrim->Ranges[i].Length = (LONGLONG)numBlocks << pLUExt->BlockPower;
+
+                KdPrint(("PhDskMnt::ImScsiDispatchUnmap: File level trim request 0x%I64X bytes at 0x%I64X\n",
+                    fltrim->Ranges[i].Length, fltrim->Ranges[i].Offset));
+            }
+#endif
+
+            status = ZwFsControlFile(
+                pLUExt->ImageFile,
+                NULL,
+                NULL,
+                NULL,
+                &io_status,
+                FSCTL_SET_ZERO_DATA,
+                &zerodata,
+                sizeof(zerodata),
+                NULL,
+                0);
+
+            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: FSCTL_SET_ZERO_DATA result: 0x%#X\n", status));
+
+            if (!NT_SUCCESS(status))
+            {
+                goto done;
+            }
+        }
+
+#if _NT_TARGET_VERSION >= 0x602
+        if (!pLUExt->NoFileLevelTrim)
+        {
+            status = ZwFsControlFile(
+                pLUExt->ImageFile,
+                NULL,
+                NULL,
+                NULL,
+                &io_status,
+                FSCTL_FILE_LEVEL_TRIM,
+                fltrim,
+                fltrim_size,
+                NULL,
+                0);
+
+            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: FSCTL_FILE_LEVEL_TRIM result: %#x\n", status));
+
+            if (!NT_SUCCESS(status))
+            {
+                pLUExt->NoFileLevelTrim = TRUE;
+            }
+        }
+#endif
+    }
+    else
+    {
+        status = STATUS_NOT_SUPPORTED;
+    }
+
+done:
+
+    KdPrint(("PhDskMnt::ImScsiDispatchUnmap: Result: %#x\n", status));
+
+    ScsiSetSuccess(pSrb, 0);
+}
+

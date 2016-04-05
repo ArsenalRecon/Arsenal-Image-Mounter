@@ -29,6 +29,7 @@
 #include <shlobj.h>
 #include <dbt.h>
 
+#pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "imdisk.lib")
 #pragma comment(lib, "ntdll.lib")
 
@@ -823,7 +824,7 @@ IN ULONG ConfigSize)
         return FALSE;
     }
 
-    if (dw < FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, Fields.FileName))
+    if (dw < (DWORD)FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, Fields.FileName))
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
@@ -1181,7 +1182,35 @@ IN BOOL CreatePartition)
     }
     else
     {
-        if (CreatePartition != NULL)
+        DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
+            &dw, NULL);
+
+        GET_LENGTH_INFORMATION disk_size;
+        if (!DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
+            &disk_size, sizeof(disk_size), &dw, NULL))
+        {
+            WErrMsg errmsg;
+
+            ImScsiDebugMessage(
+                L"Cannot query size of disk %1!ws!: %2!ws!",
+                (LPCWSTR)disk_path, (LPCWSTR)errmsg);
+
+            CreatePartition = FALSE;
+        }
+
+        LONGLONG diff = disk_size.Length.QuadPart -
+            create_data->Fields.DiskSize.QuadPart;
+        if ((diff > create_data->Fields.BytesPerSector) ||
+            (diff < -(LONG)create_data->Fields.BytesPerSector))
+        {
+            ImScsiDebugMessage(
+                L"Disk %1!ws! has unexpected size: %2!I64u!",
+                (LPCWSTR)disk_path, disk_size.Length.QuadPart);
+
+            CreatePartition = FALSE;
+        }
+
+        if (CreatePartition)
         {
             ImScsiSetStatusMsg(hWnd, L"Creating partition...");
 
@@ -1797,6 +1826,38 @@ DWORD Flags)
     {
 
         ImScsiMsgBoxLastError(hWnd, L"Error setting device flags:");
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+AIMAPI_API BOOL
+WINAPI
+ImScsiExtendDevice(HWND hWnd,
+    HANDLE Adapter,
+    DEVICE_NUMBER DeviceNumber,
+    PLARGE_INTEGER ExtendSize)
+{
+    DWORD dw;
+
+
+    ImScsiSetStatusMsg(hWnd, L"Extending virtual disk size...");
+
+    SRB_IMSCSI_EXTEND_DEVICE device_flags;
+
+    device_flags.DeviceNumber = DeviceNumber;
+    device_flags.ExtendSize = *ExtendSize;
+
+    if (!ImScsiDeviceIoControl(Adapter,
+        SMP_IMSCSI_EXTEND_DEVICE,
+        &device_flags.SrbIoControl,
+        sizeof(device_flags),
+        0, &dw))
+    {
+
+        ImScsiMsgBoxLastError(hWnd, L"Error extending disk size:");
 
         return FALSE;
     }

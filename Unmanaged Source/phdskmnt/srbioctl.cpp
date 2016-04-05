@@ -198,6 +198,25 @@ __inout __deref PKIRQL         LowestAssumedIrql
         break;
     }
 
+    case SMP_IMSCSI_EXTEND_DEVICE:
+    {
+        PSRB_IMSCSI_EXTEND_DEVICE srb_buffer = (PSRB_IMSCSI_EXTEND_DEVICE)pSrb->DataBuffer;
+
+        KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_EXTEND_DEVICE.\n"));
+
+        if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
+        {
+            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_EXTEND_DEVICE request.\n"));
+
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            goto Done;
+        }
+
+        ImScsiExtendDevice(pHBAExt, pSrb, pResult, LowestAssumedIrql, srb_buffer);
+
+        break;
+    }
+
     default:
 
         DbgPrint("PhDskMnt::ScsiExecute: Unknown IOControl code=0x%X\n", srb_io_control->ControlCode);
@@ -340,7 +359,7 @@ __inout __deref PKIRQL         LowestAssumedIrql
 
     // Queue work item, which will run in the System process.
 
-    KdPrint2(("PhDskMnt::ImScsiCreateDevice: Queueing work=0x%p\n", pWkRtnParms));
+    KdPrint2(("PhDskMnt::ImScsiCreateDevice: Queuing work=0x%p\n", pWkRtnParms));
 
     new_device->SrbIoControl.ReturnCode = (ULONG)STATUS_PENDING;
 
@@ -504,9 +523,6 @@ __inout __deref PKIRQL                          LowestAssumedIrql
     UCHAR status;
     pHW_LU_EXTENSION device_extension;
 
-    if (KeGetCurrentIrql() >= DISPATCH_LEVEL)
-        return STATUS_ACCESS_DENIED;
-
     status = ScsiGetLUExtension(
         pHBAExt,
         &device_extension,
@@ -523,7 +539,7 @@ __inout __deref PKIRQL                          LowestAssumedIrql
     // writable on the fly. (A physical image file or the proxy
     // comm channel might not be opened for writing.)
     if (IMSCSI_READONLY(device_flags->FlagsToChange) &&
-        (device_extension->DeviceType == DIRECT_ACCESS_DEVICE) &&
+        (device_extension->DeviceType != READ_ONLY_DIRECT_ACCESS_DEVICE) &&
         device_extension->VMDisk)
     {
         device_extension->ReadOnly = FALSE;
@@ -532,7 +548,7 @@ __inout __deref PKIRQL                          LowestAssumedIrql
     }
 
     if (IMSCSI_REMOVABLE(device_flags->FlagsToChange) &&
-        (device_extension->DeviceType == DIRECT_ACCESS_DEVICE))
+        (device_extension->DeviceType != READ_ONLY_DIRECT_ACCESS_DEVICE))
     {
         if (IMSCSI_REMOVABLE(device_flags->FlagValues))
             device_extension->RemovableMedia = TRUE;
@@ -587,6 +603,98 @@ __inout __deref PKIRQL                          LowestAssumedIrql
         ntstatus = STATUS_INVALID_DEVICE_REQUEST;
 
     return ntstatus;
+}
+
+VOID
+ImScsiExtendDevice(
+    __in pHW_HBA_EXT          pHBAExt,
+    __in PSCSI_REQUEST_BLOCK  pSrb,
+    __inout __deref PUCHAR         pResult,
+    __inout __deref PKIRQL         LowestAssumedIrql,
+    __inout __deref PSRB_IMSCSI_EXTEND_DEVICE       extend_device_data
+    )
+{
+    UCHAR scsi_status;
+    pHW_LU_EXTENSION device_extension;
+
+    KdPrint(("ImScsi: Request to grow device %i:%i:%i by %I64i bytes.\n",
+        (int)extend_device_data->DeviceNumber.PathId,
+        (int)extend_device_data->DeviceNumber.TargetId,
+        (int)extend_device_data->DeviceNumber.Lun,
+        extend_device_data->ExtendSize.QuadPart));
+
+    scsi_status = ScsiGetLUExtension(
+        pHBAExt,
+        &device_extension,
+        extend_device_data->DeviceNumber.PathId,
+        extend_device_data->DeviceNumber.TargetId,
+        extend_device_data->DeviceNumber.Lun,
+        LowestAssumedIrql
+        );
+
+    if ((scsi_status != SRB_STATUS_SUCCESS) | (device_extension == NULL))
+    {
+        extend_device_data->SrbIoControl.ReturnCode = (ULONG)STATUS_OBJECT_NAME_NOT_FOUND;
+        ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+        return;
+    }
+
+    if (device_extension->ReadOnly)
+    {
+        extend_device_data->SrbIoControl.ReturnCode = (ULONG)STATUS_MEDIA_WRITE_PROTECTED;
+        ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+        return;
+    }
+
+    pMP_WorkRtnParms pWkRtnParms =                                     // Allocate parm area for work routine.
+        (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
+
+    if (pWkRtnParms == NULL)
+    {
+        DbgPrint("ImScsi::ImScsiExtendDevice Failed to allocate work parm structure\n");
+
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
+        return;
+    }
+
+    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms));
+
+    pWkRtnParms->pHBAExt = pHBAExt;
+    pWkRtnParms->pLUExt = device_extension;
+    pWkRtnParms->pSrb = pSrb;
+
+    KEVENT wait_event;
+    BOOLEAN wait_result = KeGetCurrentIrql() < DISPATCH_LEVEL;
+
+    if (wait_result)
+    {
+        KeInitializeEvent(&wait_event, EVENT_TYPE::NotificationEvent, FALSE);
+        pWkRtnParms->CallerWaitEvent = &wait_event;
+    }
+
+    // Queue work item, which will run in the System process.
+    KLOCK_QUEUE_HANDLE           lock_handle;
+
+    KdPrint2(("PhDskMnt::ImScsiExtendDevice: Queuing work=0x%p\n", pWkRtnParms));
+
+    ImScsiAcquireLock(&device_extension->RequestListLock, &lock_handle, *LowestAssumedIrql);
+
+    InsertTailList(&device_extension->RequestList, &pWkRtnParms->RequestListEntry);
+
+    ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
+
+    KeSetEvent(&device_extension->RequestEvent, (KPRIORITY)0, FALSE);
+
+    *pResult = ResultQueued;                          // Indicate queuing.
+
+    if (wait_result)
+    {
+        KeWaitForSingleObject(&wait_event, KWAIT_REASON::Executive, MODE::KernelMode, FALSE, NULL);
+    }
+
+    StoragePortNotification(BusChangeDetected, pHBAExt, extend_device_data->DeviceNumber.PathId);
+
+    return;
 }
 
 NTSTATUS

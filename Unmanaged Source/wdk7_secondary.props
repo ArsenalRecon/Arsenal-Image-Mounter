@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_PropertySheetDisplayName>wdk7_secondary</_PropertySheetDisplayName>
+    <IncludePath>C:\WINDDK\7600.16385.1\inc\api\crt\stl60;C:\WINDDK\7600.16385.1\inc\api;C:\WINDDK\7600.16385.1\inc\ddk;C:\WINDDK\7600.16385.1\inc\crt;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath);C:\WINDDK\7600.16385.1\lib\Win7\$(PlatformTarget)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>vsnprintf=_vsnprintf;snwprintf=_snwprintf;open=_open;read=_read;close=_close;write=_write;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>false</ExceptionHandling>
+    </ClCompile>
+    <Link />
+    <Link>
+      <MinimumRequiredVersion>5.02</MinimumRequiredVersion>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

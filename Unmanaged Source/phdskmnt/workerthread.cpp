@@ -17,9 +17,6 @@
 
 #include "phdskmnt.h"
 
-#define SECTOR_SIZE_CD_ROM     4096
-#define SECTOR_SIZE_HDD        512
-
 /**************************************************************************************************/
 /*                                                                                                */
 /* Globals, forward definitions, etc.                                                             */
@@ -170,6 +167,16 @@ ImScsiWorkerThread(__in PVOID Context)
 
         ImScsiDispatchWork(pWkRtnParms);
 
+        if (pWkRtnParms->pReqThread != NULL)
+        {
+            ObDereferenceObject(pWkRtnParms->pReqThread);
+        }
+
+        if (pWkRtnParms->CallerWaitEvent != NULL)
+        {
+            KeSetEvent(pWkRtnParms->CallerWaitEvent, (KPRIORITY)0, FALSE);
+        }
+
 #ifdef USE_SCSIPORT
 
         KdPrint2(("PhDskMnt::ImScsiWorkerThread: Calling SMB_IMSCSI_CHECK for work: 0x%p.\n", pWkRtnParms));
@@ -199,6 +206,168 @@ ImScsiWorkerThread(__in PVOID Context)
 }
 
 VOID
+ImScsiDispatchReadWrite(
+    __in pHW_HBA_EXT pHBAExt,
+    __in pHW_LU_EXTENSION pLUExt,
+    __in PSCSI_REQUEST_BLOCK pSrb)
+{
+    PCDB pCdb = (PCDB)pSrb->Cdb;
+    PVOID sysaddress;
+    PVOID buffer;
+    ULONG status;
+    LARGE_INTEGER startingSector;
+    LARGE_INTEGER startingOffset;
+    KLOCK_QUEUE_HANDLE LockHandle;
+    KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
+
+    if ((pCdb->AsByte[0] == SCSIOP_READ16) |
+        (pCdb->AsByte[0] == SCSIOP_WRITE16))
+    {
+        REVERSE_BYTES_QUAD(&startingSector, pCdb->CDB16.LogicalBlock);
+    }
+    else
+    {
+        startingSector.QuadPart = 0;
+        REVERSE_BYTES(&startingSector, &pCdb->CDB10.LogicalBlockByte0);
+    }
+
+    startingOffset.QuadPart = startingSector.QuadPart << pLUExt->BlockPower;
+
+    KdPrint2(("PhDskMnt::ImScsiDispatchWork starting sector: 0x%I64X\n", startingSector));
+
+    status = StoragePortGetSystemAddress(pHBAExt, pSrb, &sysaddress);
+
+    if ((status != STORAGE_STATUS_SUCCESS) | (sysaddress == NULL))
+    {
+        DbgPrint("PhDskMnt::ImScsiDispatchWork: StorPortGetSystemAddress failed: status=0x%X address=0x%p translated=0x%p\n",
+            status,
+            pSrb->DataBuffer,
+            sysaddress);
+
+        pSrb->SrbStatus = SRB_STATUS_ERROR;
+        pSrb->ScsiStatus = SCSISTAT_GOOD;
+
+        return;
+    }
+
+    buffer = ExAllocatePoolWithTag(NonPagedPool, pSrb->DataTransferLength, MP_TAG_GENERAL);
+
+    if (buffer == NULL)
+    {
+        DbgPrint("PhDskMnt::ImScsiDispatchWork: Memory allocation failed.\n");
+
+        pSrb->SrbStatus = SRB_STATUS_ERROR;
+        pSrb->ScsiStatus = SCSISTAT_GOOD;
+
+        return;
+    }
+    else
+    {
+        NTSTATUS status = STATUS_NOT_IMPLEMENTED;
+
+        /// For write operations, prepare temporary buffer
+        if ((pSrb->Cdb[0] == SCSIOP_WRITE) | (pSrb->Cdb[0] == SCSIOP_WRITE16))
+        {
+            RtlMoveMemory(buffer, sysaddress, pSrb->DataTransferLength);
+        }
+
+        if ((pSrb->Cdb[0] == SCSIOP_READ) | (pSrb->Cdb[0] == SCSIOP_READ16))
+        {
+            status = ImScsiReadDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
+        }
+        else if ((pSrb->Cdb[0] == SCSIOP_WRITE) | (pSrb->Cdb[0] == SCSIOP_WRITE16))
+        {
+            status = ImScsiWriteDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
+        }
+
+        if (!NT_SUCCESS(status))
+        {
+            ExFreePoolWithTag(buffer, MP_TAG_GENERAL);
+
+            DbgPrint("PhDskMnt::ImScsiDispatchWork: I/O error status=0x%X\n", status);
+            switch (status)
+            {
+            case STATUS_INVALID_BUFFER_SIZE:
+            {
+                DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
+                ScsiSetCheckCondition(
+                    pSrb,
+                    SRB_STATUS_ERROR,
+                    SCSI_SENSE_ILLEGAL_REQUEST,
+                    SCSI_ADSENSE_INVALID_CDB,
+                    0);
+                return;
+            }
+            case STATUS_DEVICE_BUSY:
+            {
+                DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_DEVICE_BUSY from image I/O. Reporting SRB_STATUS_BUSY/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_BECOMING_READY.\n");
+                ScsiSetCheckCondition(
+                    pSrb,
+                    SRB_STATUS_BUSY,
+                    SCSI_SENSE_NOT_READY,
+                    SCSI_ADSENSE_LUN_NOT_READY,
+                    SCSI_SENSEQ_BECOMING_READY
+                    );
+                return;
+            }
+            default:
+            {
+                ScsiSetError(pSrb, SRB_STATUS_PARITY_ERROR);
+                return;
+            }
+            }
+
+            return;
+        }
+
+        /// Fake random disk signature in case mounted read-only, 0xAA55 at end of mbr and 0x00000000 in disk id field.
+        /// Compatibility fix for mounting Windows Backup vhd files in read-only.
+        if ((pLUExt->FakeDiskSignature != 0) &&
+            ((pSrb->Cdb[0] == SCSIOP_READ) |
+                (pSrb->Cdb[0] == SCSIOP_READ16)) &&
+            (startingSector.QuadPart == 0) &&
+            (pSrb->DataTransferLength >= 512) &&
+            (pLUExt->ReadOnly))
+        {
+            PUCHAR mbr = (PUCHAR)buffer;
+
+            if ((*(PUSHORT)(mbr + 0x01FE) == 0xAA55) &
+                (*(PUSHORT)(mbr + 0x01BC) == 0x0000) &
+                ((*(mbr + 0x01BE) & 0x7F) == 0x00) &
+                ((*(mbr + 0x01CE) & 0x7F) == 0x00) &
+                ((*(mbr + 0x01DE) & 0x7F) == 0x00) &
+                ((*(mbr + 0x01EE) & 0x7F) == 0x00) &
+                ((*(PULONG)(mbr + 0x01B8) == 0x00000000UL)))
+            {
+                DbgPrint("PhDskMnt::ImScsiDispatchWork: Faking disk signature as %#X.\n", pLUExt->FakeDiskSignature);
+
+                *(PULONG)(mbr + 0x01B8) = pLUExt->FakeDiskSignature;
+            }
+        }
+
+        /// For write operations, temporary buffer holds read data.
+        /// Copy that to system buffer.
+        if ((pSrb->Cdb[0] == SCSIOP_READ) | (pSrb->Cdb[0] == SCSIOP_READ16))
+        {
+            RtlMoveMemory(sysaddress, buffer, pSrb->DataTransferLength);
+        }
+    }
+
+    ImScsiAcquireLock(&pLUExt->LastIoLock, &LockHandle, lowest_assumed_irql);
+
+    if (pLUExt->LastIoBuffer != NULL)
+        ExFreePoolWithTag(pLUExt->LastIoBuffer, MP_TAG_GENERAL);
+
+    pLUExt->LastIoStartSector = startingSector.QuadPart;
+    pLUExt->LastIoLength = pSrb->DataTransferLength;
+    pLUExt->LastIoBuffer = buffer;
+
+    ImScsiReleaseLock(&LockHandle, &lowest_assumed_irql);
+
+    ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+}
+
+VOID
 ImScsiDispatchWork(
 __in pMP_WorkRtnParms        pWkRtnParms
 )
@@ -207,7 +376,6 @@ __in pMP_WorkRtnParms        pWkRtnParms
     pHW_LU_EXTENSION          pLUExt = pWkRtnParms->pLUExt;
     PSCSI_REQUEST_BLOCK       pSrb = pWkRtnParms->pSrb;
     PETHREAD                  pReqThread = pWkRtnParms->pReqThread;
-    PCDB                      pCdb = (PCDB)pSrb->Cdb;
 
     KdPrint2(("PhDskMnt::ImScsiDispatchWork Action: 0x%X, pSrb: 0x%p, pSrb->DataBuffer: 0x%p pSrb->DataTransferLength: 0x%X\n",
         (int)pSrb->Cdb[0], pSrb, pSrb->DataBuffer, pSrb->DataTransferLength));
@@ -224,11 +392,21 @@ __in pMP_WorkRtnParms        pWkRtnParms
         {                       // Create new?
             KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
 
-            KdPrint(("PhDskMnt::ImScsiDispatchWork: Request to create new device.\n"));
+            KdPrint(("PhDskMnt::ImScsiDispatchWork: Request SMP_IMSCSI_CREATE_DEVICE.\n"));
 
             ImScsiCreateLU(pHBAExt, pSrb, pReqThread, &lowest_assumed_irql);
+        }
+        break;
 
-            ObDereferenceObject(pReqThread);
+        case SMP_IMSCSI_EXTEND_DEVICE:
+        {
+            PSRB_IMSCSI_EXTEND_DEVICE srb_buffer = (PSRB_IMSCSI_EXTEND_DEVICE)pSrb->DataBuffer;
+
+            KdPrint(("PhDskMnt::ImScsiDispatchWork: Request SMP_IMSCSI_EXTEND_DEVICE.\n"));
+
+            srb_io_control->ReturnCode = ImScsiExtendLU(pHBAExt, pLUExt, srb_buffer);
+
+            ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
         }
         break;
 
@@ -245,163 +423,14 @@ __in pMP_WorkRtnParms        pWkRtnParms
         case SCSIOP_WRITE:
         case SCSIOP_READ16:
         case SCSIOP_WRITE16:
-        {
             // Read/write?
-            PVOID sysaddress;
-            PVOID buffer;
-            ULONG status;
-            LARGE_INTEGER startingSector;
-            LARGE_INTEGER startingOffset;
-            KLOCK_QUEUE_HANDLE LockHandle;
-            KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
+            ImScsiDispatchReadWrite(pHBAExt, pLUExt, pSrb);
+            break;
 
-            if ((pCdb->AsByte[0] == SCSIOP_READ16) |
-                (pCdb->AsByte[0] == SCSIOP_WRITE16))
-            {
-                REVERSE_BYTES_QUAD(&startingSector, pCdb->CDB16.LogicalBlock);
-            }
-            else
-            {
-                startingSector.QuadPart = 0;
-                REVERSE_BYTES(&startingSector, &pCdb->CDB10.LogicalBlockByte0);
-            }
-
-            startingOffset.QuadPart = startingSector.QuadPart << pLUExt->BlockPower;
-
-            KdPrint2(("PhDskMnt::ImScsiDispatchWork starting sector: 0x%I64X\n", startingSector));
-
-            status = StoragePortGetSystemAddress(pHBAExt, pSrb, &sysaddress);
-
-            if ((status != STORAGE_STATUS_SUCCESS) | (sysaddress == NULL))
-            {
-                DbgPrint("PhDskMnt::ImScsiDispatchWork: StorPortGetSystemAddress failed: status=0x%X address=0x%p translated=0x%p\n",
-                    status,
-                    pSrb->DataBuffer,
-                    sysaddress);
-
-                pSrb->SrbStatus = SRB_STATUS_ERROR;
-                pSrb->ScsiStatus = SCSISTAT_GOOD;
-
-                break;
-            }
-
-            buffer = ExAllocatePoolWithTag(NonPagedPool, pSrb->DataTransferLength, MP_TAG_GENERAL);
-
-            if (buffer == NULL)
-            {
-                DbgPrint("PhDskMnt::ImScsiDispatchWork: Memory allocation failed.\n");
-
-                pSrb->SrbStatus = SRB_STATUS_ERROR;
-                pSrb->ScsiStatus = SCSISTAT_GOOD;
-
-                break;
-            }
-            else
-            {
-                NTSTATUS status = STATUS_NOT_IMPLEMENTED;
-
-                /// For write operations, prepare temporary buffer
-                if ((pSrb->Cdb[0] == SCSIOP_WRITE) | (pSrb->Cdb[0] == SCSIOP_WRITE16))
-                {
-                    RtlMoveMemory(buffer, sysaddress, pSrb->DataTransferLength);
-                }
-
-                if ((pSrb->Cdb[0] == SCSIOP_READ) | (pSrb->Cdb[0] == SCSIOP_READ16))
-                {
-                    status = ImScsiReadDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
-                }
-                else if ((pSrb->Cdb[0] == SCSIOP_WRITE) | (pSrb->Cdb[0] == SCSIOP_WRITE16))
-                {
-                    status = ImScsiWriteDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
-                }
-
-                if (!NT_SUCCESS(status))
-                {
-                    ExFreePoolWithTag(buffer, MP_TAG_GENERAL);
-
-                    DbgPrint("PhDskMnt::ImScsiDispatchWork: I/O error status=0x%X\n", status);
-                    switch (status)
-                    {
-                    case STATUS_INVALID_BUFFER_SIZE:
-                    {
-                        DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
-                        ScsiSetCheckCondition(
-                            pSrb,
-                            SRB_STATUS_ERROR,
-                            SCSI_SENSE_ILLEGAL_REQUEST,
-                            SCSI_ADSENSE_INVALID_CDB,
-                            0);
-                        break;
-                    }
-                    case STATUS_DEVICE_BUSY:
-                    {
-                        DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_DEVICE_BUSY from image I/O. Reporting SRB_STATUS_BUSY/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_BECOMING_READY.\n");
-                        ScsiSetCheckCondition(
-                            pSrb,
-                            SRB_STATUS_BUSY,
-                            SCSI_SENSE_NOT_READY,
-                            SCSI_ADSENSE_LUN_NOT_READY,
-                            SCSI_SENSEQ_BECOMING_READY
-                            );
-                        break;
-                    }
-                    default:
-                    {
-                        ScsiSetError(pSrb, SRB_STATUS_PARITY_ERROR);
-                        break;
-                    }
-                    }
-
-                    break;
-                }
-
-                /// Fake random disk signature in case mounted read-only, 0xAA55 at end of mbr and 0x00000000 in disk id field.
-                /// Compatibility fix for mounting Windows Backup vhd files in read-only.
-                if ((pLUExt->FakeDiskSignature != 0) &&
-                    ((pSrb->Cdb[0] == SCSIOP_READ) |
-                    (pSrb->Cdb[0] == SCSIOP_READ16)) &&
-                    (startingSector.QuadPart == 0) &&
-                    (pSrb->DataTransferLength >= 512) &&
-                    (pLUExt->ReadOnly))
-                {
-                    PUCHAR mbr = (PUCHAR)buffer;
-
-                    if ((*(PUSHORT)(mbr + 0x01FE) == 0xAA55) &
-                        (*(PUSHORT)(mbr + 0x01BC) == 0x0000) &
-                        ((*(mbr + 0x01BE) & 0x7F) == 0x00) &
-                        ((*(mbr + 0x01CE) & 0x7F) == 0x00) &
-                        ((*(mbr + 0x01DE) & 0x7F) == 0x00) &
-                        ((*(mbr + 0x01EE) & 0x7F) == 0x00) &
-                        ((*(PULONG)(mbr + 0x01B8) == 0x00000000UL)))
-                    {
-                        DbgPrint("PhDskMnt::ImScsiDispatchWork: Faking disk signature as %#X.\n", pLUExt->FakeDiskSignature);
-
-                        *(PULONG)(mbr + 0x01B8) = pLUExt->FakeDiskSignature;
-                    }
-                }
-
-                /// For write operations, temporary buffer holds read data.
-                /// Copy that to system buffer.
-                if ((pSrb->Cdb[0] == SCSIOP_READ) | (pSrb->Cdb[0] == SCSIOP_READ16))
-                {
-                    RtlMoveMemory(sysaddress, buffer, pSrb->DataTransferLength);
-                }
-            }
-
-            ImScsiAcquireLock(&pLUExt->LastIoLock, &LockHandle, lowest_assumed_irql);
-
-            if (pLUExt->LastIoBuffer != NULL)
-                ExFreePoolWithTag(pLUExt->LastIoBuffer, MP_TAG_GENERAL);
-
-            pLUExt->LastIoStartSector = startingSector.QuadPart;
-            pLUExt->LastIoLength = pSrb->DataTransferLength;
-            pLUExt->LastIoBuffer = buffer;
-
-            ImScsiReleaseLock(&LockHandle, &lowest_assumed_irql);
-
-            ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
-        }
-        break;
+        case SCSIOP_UNMAP:
+            // UNMAP/TRIM
+            ImScsiUnmapDevice(pHBAExt, pLUExt, pSrb);
+            break;
 
         default:
         {

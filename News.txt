@@ -1,6 +1,31 @@
 
+-- What's new, driver and low level API/tools version 1.0.7.22
+
+* Driver now supports CD/DVD emulation.
+
+* Corrected some problems with missing paths etc in driver source project
+  files. Driver source code changed from C to C++. Use WDK 7.1.0 or Visual
+  Studio 2015 with WDK 10 to build the driver.
+
+* A few corrections to message texts and similar in low level API and command
+  line tool. Also a safer way for the API to recognize the correct disk object
+  as a particular virtual disk, to avoid confusion and the risk of formatting
+  the wrong drive when creating and formatting a new virtual disk from command
+  line.
+
+* ARM architecture versions of driver and unmanaged command line tool and API.
+  Can be used on Windows 10 IoT versions, for example on Raspberry Pi. Run
+  "devcon install" to install driver, or use "dism" tool to include driver
+  package in a distribution image.
+
+* For directly mounted (raw) image files or RAM disks, the driver now supports
+  live extending of disk size. Use for instance aim_ll -e -u 000000 -s 1G
+  command line to extend device 000000 by 1 GB. You can then create a new
+  partition in the new space, or extend an existing partition over it using
+  Disk Management, diskpart or similar tools.
+
 -- What's new, driver version 1.0.5.014 and API library version 1.0.021
-   Bugfixes in driver. New driver embedded with Mount Tool.
+   Bug fixes in driver. New driver embedded with Mount Tool.
 
 * Driver caused blue-screen crash when virtual SCSI port device was disabled
   or uninstalled through Device Manager while virtual disk drives were still
@@ -8,7 +33,7 @@
 
 * Driver optimization: Pool memory usage was very high when loading disk image
   contents into virtual memory, which could potentially cause various problems
-  with other drivers and appications meanwhile. Rewrote image file reading
+  with other drivers and applications meanwhile. Rewrote image file reading
   process completely. This is essentially same code fixed as in ImDisk Virtual
   Disk Driver version 1.9.2.
 
@@ -77,7 +102,7 @@
 * Driver now supports up to 8 MB transfer size instead of old limit of 64 KB.
   For compatibility with existing proxy service providers, large I/O requests
   are automatically split into several smaller requests if proxy service uses
-  smaller buffer size. This could severly degrade performance, so when
+  smaller buffer size. This could severely degrade performance, so when
   developing proxy service providers, use at least 8 MB buffer size.
 
 * Some users have experienced extremely bad performance on Windows XP. A

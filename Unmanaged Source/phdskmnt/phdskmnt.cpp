@@ -66,8 +66,9 @@ ImScsiGetControllerObject()
 
 #if DBG
             {
-                POBJECT_NAME_INFORMATION objstr = ExAllocatePoolWithTag(NonPagedPool,
-                    1024, MP_TAG_GENERAL);
+                POBJECT_NAME_INFORMATION objstr = (POBJECT_NAME_INFORMATION)
+                    ExAllocatePoolWithTag(NonPagedPool,
+                        1024, MP_TAG_GENERAL);
 
                 if (objstr != NULL)
                 {
@@ -273,6 +274,7 @@ __in PUNICODE_STRING pRegistryPath
 #ifndef NT4_COMPATIBLE
     hwInitData.HwAdapterControl = MpHwAdapterControl;       // Required for all > NT4 ports.
 #endif
+
 #ifdef USE_STORPORT
     hwInitData.HwFreeAdapterResources = MpHwFreeAdapterResources; // Required for virtual StorPort.
 #endif
@@ -559,11 +561,11 @@ MpHwInitialize(__in PVOID pHBAExt)
 #if 1
 BOOLEAN
 MpHwResetBus(
-__in pHW_HBA_EXT          pHBAExt,       // Adapter device-object extension from port driver.
-__in ULONG                BusId
-)
+    __in PVOID              DeviceExtension,       // Adapter device-object extension from port driver.
+    __in ULONG              BusId
+    )
 {
-    UNREFERENCED_PARAMETER(pHBAExt);
+    UNREFERENCED_PARAMETER(DeviceExtension);
     UNREFERENCED_PARAMETER(BusId);
 
     // To do: At some future point, it may be worthwhile to ensure that any SRBs being handled be completed at once.
@@ -572,16 +574,16 @@ __in ULONG                BusId
     //        set here to instruct the thread to complete outstanding I/Os as they appear; but a period for that
     //        happening would have to be devised (such completion shouldn't be unbounded).
 
-    DbgPrint("PhDskMnt::MpHwResetBus:  pHBAExt = 0x%p, BusId = %u. Ignored.\n", pHBAExt, BusId);
+    DbgPrint("PhDskMnt::MpHwResetBus:  pHBAExt = 0x%p, BusId = %u. Ignored.\n", DeviceExtension, BusId);
 
     return TRUE;
 }                                               // End MpHwResetBus().
 #else
 BOOLEAN
 MpHwResetBus(
-__in pHW_HBA_EXT          pHBAExt,       // Adapter device-object extension from port driver.
-__in ULONG                BusId
-)
+    __in PVOID              DeviceExtension,       // Adapter device-object extension from port driver.
+    __in ULONG              BusId
+    )
 {
     // To do: At some future point, it may be worthwhile to ensure that any SRBs being handled be completed at once.
     //        Practically speaking, however, it seems that the only SRBs that would not be completed very quickly
@@ -589,9 +591,9 @@ __in ULONG                BusId
     //        set here to instruct the thread to complete outstanding I/Os as they appear; but a period for that
     //        happening would have to be devised (such completion shouldn't be unbounded).
 
-    DbgPrint("PhDskMnt::MpHwResetBus:  pHBAExt = 0x%p, BusId = %u. Calling ScsiPortCompleteRequest().\n", pHBAExt, BusId);
+    DbgPrint("PhDskMnt::MpHwResetBus:  pHBAExt = 0x%p, BusId = %u. Calling ScsiPortCompleteRequest().\n", DeviceExtension, BusId);
 
-    ScsiPortCompleteRequest(pHBAExt,
+    ScsiPortCompleteRequest(DeviceExtension,
         (UCHAR)BusId,
         SP_UNTAGGED,
         SP_UNTAGGED,
@@ -672,22 +674,22 @@ __in pHW_HBA_EXT pHBAExt
 }
 #endif
 
-
 /**************************************************************************************************/
 /*                                                                                                */
 /**************************************************************************************************/
 BOOLEAN
 MpHwStartIo(
-__in                pHW_HBA_EXT          pHBAExt,  // Adapter device-object extension from port driver.
-__inout __deref  PSCSI_REQUEST_BLOCK  pSrb
+__in                PVOID                DeviceExtension,  // Adapter device-object extension from port driver.
+__inout __deref     PSCSI_REQUEST_BLOCK  pSrb
 )
 {
-    KIRQL                     lowest_assumed_irql = PASSIVE_LEVEL;
-    UCHAR                     Result = ResultDone;
+    KIRQL                   lowest_assumed_irql = PASSIVE_LEVEL;
+    UCHAR                   Result = ResultDone;
+    pHW_HBA_EXT             pHBAExt = (pHW_HBA_EXT)DeviceExtension;
 #ifdef USE_SCSIPORT
-    UCHAR                     PathId = pSrb->PathId;
-    UCHAR                     TargetId = pSrb->TargetId;
-    UCHAR                     Lun = pSrb->Lun;
+    UCHAR                   PathId = pSrb->PathId;
+    UCHAR                   TargetId = pSrb->TargetId;
+    UCHAR                   Lun = pSrb->Lun;
 #endif
 
     KdPrint2(("PhDskMnt::MpHwStartIo:  pHBAExt = 0x%p, pSrb = 0x%p, Path=%i, Target=%i, Lun=%i, IRQL=%i\n",
@@ -765,6 +767,8 @@ __inout __deref  PSCSI_REQUEST_BLOCK  pSrb
     default:
         KdPrint(("PhDskMnt::MpHwStartIo: Unknown pSrb Function = 0x%X\n", pSrb->Function));
 
+        //StorPortLogError(pHBAExt, pSrb, pSrb->PathId, pSrb->TargetId, pSrb->Lun, SP_PROTOCOL_ERROR, 0x0200 | pSrb->Cdb[0]);
+
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_ILLEGAL_COMMAND, 0);
 
         break;
@@ -806,12 +810,13 @@ __inout __deref  PSCSI_REQUEST_BLOCK  pSrb
 /**************************************************************************************************/
 SCSI_ADAPTER_CONTROL_STATUS
 MpHwAdapterControl(
-__in pHW_HBA_EXT               pHBAExt, // Adapter device-object extension from port driver.
-__in SCSI_ADAPTER_CONTROL_TYPE ControlType,
-__in PVOID                     pParameters
+__in PVOID                      DeviceExtension, // Adapter device-object extension from port driver.
+__in SCSI_ADAPTER_CONTROL_TYPE  ControlType,
+__in PVOID                      pParameters
 )
 {
-    ULONG                             i;
+    pHW_HBA_EXT                 pHBAExt = (pHW_HBA_EXT)DeviceExtension;
+    ULONG                       i;
 
     KdPrint2(("PhDskMnt::MpHwAdapterControl:  pHBAExt = 0x%p, ControlType = 0x%p, pParameters=0x%p\n", pHBAExt, ControlType, pParameters));
 
@@ -931,12 +936,13 @@ __inout __deref PKIRQL LowestAssumedIrql
 /*                                                                                                */
 /**************************************************************************************************/
 VOID
-MpHwFreeAdapterResources(__in pHW_HBA_EXT pHBAExt)
+MpHwFreeAdapterResources(__in PVOID DeviceExtension)
 {
-    PLIST_ENTRY           pNextEntry;
-    pHW_HBA_EXT           pLclHBAExt;
-    KLOCK_QUEUE_HANDLE    LockHandle;
-    KIRQL                 lowest_assumed_irql = PASSIVE_LEVEL;
+    PLIST_ENTRY         pNextEntry;
+    pHW_HBA_EXT         pLclHBAExt;
+    KLOCK_QUEUE_HANDLE  LockHandle;
+    KIRQL               lowest_assumed_irql = PASSIVE_LEVEL;
+    pHW_HBA_EXT         pHBAExt = (pHW_HBA_EXT)DeviceExtension;
 
     KdPrint2(("PhDskMnt::MpHwFreeAdapterResources:  pHBAExt = 0x%p\n", pHBAExt));
 

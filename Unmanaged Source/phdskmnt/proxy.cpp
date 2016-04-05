@@ -14,7 +14,11 @@
 
 #include "phdskmnt.h"
 
+#include "legacycompat.h"
+
 #include "imdproxy.h"
+
+#include "imdisk.h"
 
 #pragma warning(disable : 4204)
 #pragma warning(disable : 4221)
@@ -28,14 +32,14 @@ ImScsiCloseProxy(__in __deref PPROXY_CONNECTION Proxy)
 
     switch (Proxy->connection_type)
     {
-    case PROXY_CONNECTION_DEVICE:
+    case PROXY_CONNECTION::PROXY_CONNECTION_DEVICE:
         if (Proxy->device != NULL)
             ObDereferenceObject(Proxy->device);
 
         Proxy->device = NULL;
         break;
 
-    case PROXY_CONNECTION_SHM:
+    case PROXY_CONNECTION::PROXY_CONNECTION_SHM:
         if ((Proxy->request_event != NULL) &
             (Proxy->response_event != NULL) &
             (Proxy->shared_memory != NULL))
@@ -98,7 +102,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
 
     switch (Proxy->connection_type)
     {
-    case PROXY_CONNECTION_DEVICE:
+    case PROXY_CONNECTION::PROXY_CONNECTION_DEVICE:
     {
         PUCHAR io_buffer = NULL;
         PUCHAR temp_buffer = NULL;
@@ -282,7 +286,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
         return IoStatusBlock->Status;
     }
 
-    case PROXY_CONNECTION_SHM:
+    case PROXY_CONNECTION::PROXY_CONNECTION_SHM:
     {
         PKEVENT wait_objects[] = {
             Proxy->response_event,
@@ -704,7 +708,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
     ASSERT(Buffer != NULL);
     ASSERT(ByteOffset != NULL);
 
-    if (Proxy->connection_type == PROXY_CONNECTION_SHM)
+    if (Proxy->connection_type == PROXY_CONNECTION::PROXY_CONNECTION_SHM)
         max_transfer_size = Proxy->shared_memory_size - IMDPROXY_HEADER_SIZE;
     else
         max_transfer_size = Length;
@@ -797,7 +801,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
     ASSERT(Buffer != NULL);
     ASSERT(ByteOffset != NULL);
 
-    if (Proxy->connection_type == PROXY_CONNECTION_SHM)
+    if (Proxy->connection_type == PROXY_CONNECTION::PROXY_CONNECTION_SHM)
         max_transfer_size = Proxy->shared_memory_size - IMDPROXY_HEADER_SIZE;
     else
         max_transfer_size = Length;
@@ -892,3 +896,76 @@ __in __deref PLARGE_INTEGER ByteOffset)
     //return IoStatusBlock->Status;
 }
 
+NTSTATUS
+ImScsiUnmapOrZeroProxy(
+    __in __deref PPROXY_CONNECTION Proxy,
+    __in ULONGLONG RequestCode,
+    __out __deref PIO_STATUS_BLOCK IoStatusBlock,
+    __in __deref PKEVENT CancelEvent,
+    __in ULONG Items,
+    __in __deref PDEVICE_DATA_SET_RANGE Ranges)
+{
+    IMDPROXY_UNMAP_REQ unmap_req;
+    IMDPROXY_UNMAP_RESP unmap_resp;
+    NTSTATUS status;
+    ULONG byte_size = (ULONG)(Items * sizeof(DEVICE_DATA_SET_RANGE));
+
+    ASSERT(Proxy != NULL);
+    ASSERT(IoStatusBlock != NULL);
+    ASSERT(Ranges != NULL);
+
+    if ((Proxy->connection_type == PROXY_CONNECTION::PROXY_CONNECTION_SHM) &&
+        (byte_size >= (Proxy->shared_memory_size - IMDPROXY_HEADER_SIZE)))
+    {
+        status = STATUS_BUFFER_OVERFLOW;
+        IoStatusBlock->Information = 0;
+        IoStatusBlock->Status = status;
+        return status;
+    }
+
+    status = STATUS_SUCCESS;
+
+    unmap_req.request_code = RequestCode;
+    unmap_req.length = byte_size;
+
+#pragma warning(suppress: 6064)
+#pragma warning(suppress: 6328)
+    KdPrint(("ImDisk Proxy Client: Unmap/Zero 0x%.8x%.8x\n", RequestCode));
+
+    status = ImScsiCallProxy(Proxy,
+        IoStatusBlock,
+        CancelEvent,
+        &unmap_req,
+        sizeof(unmap_req),
+        (PUCHAR)Ranges,
+        (ULONG)unmap_req.length,
+        &unmap_resp,
+        sizeof(unmap_resp),
+        NULL,
+        0,
+        NULL);
+
+    if (!NT_SUCCESS(status))
+    {
+        IoStatusBlock->Status = status;
+        IoStatusBlock->Information = 0;
+        return status;
+    }
+
+    if (unmap_resp.errorno != 0)
+    {
+#pragma warning(suppress: 6064)
+#pragma warning(suppress: 6328)
+        KdPrint(("ImDisk Proxy Client: Server returned error 0x%.8x%.8x.\n",
+            unmap_resp.errorno));
+        IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
+        IoStatusBlock->Information = 0;
+        return IoStatusBlock->Status;
+    }
+
+    KdPrint(("ImDisk Proxy Client: Server replied OK.\n"));
+
+    IoStatusBlock->Status = STATUS_SUCCESS;
+    IoStatusBlock->Information = 0;
+    return IoStatusBlock->Status;
+}
