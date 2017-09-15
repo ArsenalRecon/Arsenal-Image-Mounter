@@ -8,6 +8,8 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("Arsenal Image Mounter Mount Tool")> 
+<Assembly: AssemblyTitle("Arsenal Image Mounter Mount Tool")>
 
-<Assembly: ComVisible(False)> 
+<Assembly: ObfuscateAssembly(False)>
+
+<Assembly: ComVisible(False)>

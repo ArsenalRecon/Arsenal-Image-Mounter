@@ -3,7 +3,7 @@
 /// Routines called from worker thread at PASSIVE_LEVEL to complete work items
 /// queued form miniport dispatch routines.
 /// 
-/// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -142,9 +142,9 @@ __inout __deref PKIRQL         LowestAssumedIrql
             ZwFreeVirtualMemory(NtCurrentProcess(),
                 (PVOID*)&pLUExt->ImageBuffer,
                 &free_size, MEM_RELEASE);
-        }
 
-        pLUExt->ImageBuffer = NULL;
+            pLUExt->ImageBuffer = NULL;
+        }
     }
     else
     {
@@ -154,14 +154,17 @@ __inout __deref PKIRQL         LowestAssumedIrql
             pLUExt->FileObject = NULL;
         }
 
-        pLUExt->FileObject = NULL;
-
         if (pLUExt->ImageFile != NULL)
         {
             ZwClose(pLUExt->ImageFile);
+            pLUExt->ImageFile = NULL;
         }
 
-        pLUExt->ImageFile = NULL;
+        if (pLUExt->ReservationKeyFile != NULL)
+        {
+            ZwClose(pLUExt->ReservationKeyFile);
+            pLUExt->ReservationKeyFile = NULL;
+        }
     }
     
     if (pLUExt->ObjectName.Buffer != NULL)
@@ -543,8 +546,8 @@ __inout __deref PKIRQL LowestAssumedIrql)
 VOID
 ImScsiParallelReadWriteImage(
 __in pMP_WorkRtnParms       pWkRtnParms,
-__inout __deref PUCHAR   pResult,
-__inout __deref PKIRQL   LowestAssumedIrql
+__inout __deref pResultType pResult,
+__inout __deref PKIRQL      LowestAssumedIrql
 )
 {
     PCDB pCdb = (PCDB)pWkRtnParms->pSrb->Cdb;
@@ -1043,7 +1046,7 @@ ImScsiExtendLU(
 #endif // _WIN64
 
         KdPrint(("ImScsi: Allocating %I64u bytes.\n",
-            max_size));
+            (ULONGLONG)max_size));
 
         status = ZwAllocateVirtualMemory(NtCurrentProcess(),
             &new_image_buffer,
@@ -1144,6 +1147,83 @@ done:
     KdPrint(("ImScsi: SMP_IMSCSI_EXTEND_DEVICE result: %#x\n", status));
 
     return status;
+}
+
+VOID
+ImScsiGenerateUniqueId(pHW_LU_EXTENSION LUExtension)
+{
+    IO_STATUS_BLOCK io_status;
+    NTSTATUS status = STATUS_SUCCESS;
+
+    if (LUExtension->ImageFile != NULL &&
+        !LUExtension->UseProxy)
+    {
+        KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Image file, attempting to generate UID from volume/file ids\n"));
+
+        WPoolMem<FILE_FS_VOLUME_INFORMATION, NonPagedPool> volume_info(
+            sizeof(FILE_FS_VOLUME_INFORMATION) + MAXIMUM_VOLUME_LABEL_LENGTH);
+
+        if (!volume_info)
+        {
+            status = STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        if (NT_SUCCESS(status))
+        {
+            status = ZwQueryVolumeInformationFile(
+                LUExtension->ImageFile,
+                &io_status,
+                volume_info,
+                (ULONG)volume_info.GetSize(),
+                FS_INFORMATION_CLASS::FileFsVolumeInformation);
+        }
+
+        FILE_INTERNAL_INFORMATION internal_info = { 0 };
+
+        if (NT_SUCCESS(status))
+        {
+            status = ZwQueryInformationFile(
+                LUExtension->ImageFile,
+                &io_status,
+                &internal_info,
+                sizeof(internal_info),
+                FILE_INFORMATION_CLASS::FileInternalInformation);
+        }
+
+        if (NT_SUCCESS(status))
+        {
+            RtlCopyMemory(LUExtension->UniqueId, "AIMF", 4);
+            *(PULONG)(LUExtension->UniqueId + 4) = volume_info->VolumeSerialNumber;
+            *(PLARGE_INTEGER)(LUExtension->UniqueId + 8) = internal_info.IndexNumber;
+
+            KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Successfully generated UID from volume/file ids\n"));
+
+            return;
+        }
+
+        KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Failed generating UID from volume/file ids: 0x%X\n",
+            status));
+    }
+
+    KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Generating UID from new GUID\n"));
+
+    for (;;)
+    {
+        status = ExUuidCreate((PGUID)LUExtension->UniqueId);
+
+        if (NT_SUCCESS(status))
+        {
+            KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Error generating GUID: 0x%X\n",
+                status));
+
+            return;
+        }
+
+        LARGE_INTEGER interval;
+        interval.QuadPart = -10000L * 20;
+        
+        KeDelayExecutionThread(KernelMode, FALSE, &interval);
+    }
 }
 
 NTSTATUS
@@ -1446,14 +1526,19 @@ __in __deref PETHREAD ClientThread)
             if ((IMSCSI_TYPE(CreateData->Fields.Flags) ==
                 IMSCSI_TYPE_PROXY) ||
                 ((IMSCSI_TYPE(CreateData->Fields.Flags) != IMSCSI_TYPE_VM) &&
-                !IMSCSI_READONLY(CreateData->Fields.Flags)))
+                    !IMSCSI_READONLY(CreateData->Fields.Flags)))
+            {
                 desired_access |= GENERIC_WRITE;
+            }
 
             share_access = FILE_SHARE_READ | FILE_SHARE_DELETE;
 
             if (IMSCSI_READONLY(CreateData->Fields.Flags) ||
-                (IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM))
+                (IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM) ||
+                IMSCSI_SHARED_IMAGE(CreateData->Fields.Flags))
+            {
                 share_access |= FILE_SHARE_WRITE;
+            }
 
             create_options = FILE_NON_DIRECTORY_FILE |
                 FILE_NO_INTERMEDIATE_BUFFERING |
@@ -1466,6 +1551,12 @@ __in __deref PETHREAD ClientThread)
                 create_options |= FILE_SEQUENTIAL_ONLY;
             else
                 create_options |= FILE_RANDOM_ACCESS;
+
+            if (IMSCSI_SHARED_IMAGE(CreateData->Fields.Flags) &&
+                !IMSCSI_READONLY(CreateData->Fields.Flags))
+            {
+                create_options |= FILE_WRITE_THROUGH;
+            }
 
             KdPrint(("PhDskMnt::ImScsiCreateLU: Passing DesiredAccess=%#x ShareAccess=%#x CreateOptions=%#x\n",
                 desired_access, share_access, create_options));
@@ -2041,6 +2132,9 @@ __in __deref PETHREAD ClientThread)
             if (proxy_info.flags & IMDPROXY_FLAG_SUPPORTS_ZERO)
                 proxy_supports_zero = TRUE;
 
+            if ((proxy_info.flags & IMDPROXY_FLAG_SUPPORTS_SHARED) == 0)
+                CreateData->Fields.Flags &= ~IMSCSI_OPTION_SHARED_IMAGE;
+
             KdPrint(("PhDskMnt: Got from proxy: Siz=0x%08x%08x Flg=%#x Alg=%#x.\n",
                 CreateData->Fields.DiskSize.HighPart,
                 CreateData->Fields.DiskSize.LowPart,
@@ -2263,6 +2357,28 @@ __in __deref PETHREAD ClientThread)
         LUExtension->SupportsZero = TRUE;
     }
 
+    // Image opened for shared writing
+    if (IMSCSI_SHARED_IMAGE(CreateData->Fields.Flags))
+    {
+        LUExtension->SharedImage = TRUE;
+    }
+    else
+    {
+        LUExtension->SharedImage = FALSE;
+    }
+
+    ImScsiGenerateUniqueId(LUExtension);
+
+#if DBG
+    UNICODE_STRING guid;
+    status = RtlStringFromGUID(*(PGUID)LUExtension->UniqueId, &guid);
+    if (NT_SUCCESS(status))
+    {
+        DbgPrint("PhDskMnt::ImScsiInitializeLU: Unique id: %wZ\n", &guid);
+        RtlFreeUnicodeString(&guid);
+    }
+#endif
+
     KeInitializeSpinLock(&LUExtension->RequestListLock);
     InitializeListHead(&LUExtension->RequestList);
     KeInitializeEvent(&LUExtension->RequestEvent, SynchronizationEvent, FALSE);
@@ -2273,7 +2389,7 @@ __in __deref PETHREAD ClientThread)
 
     KeSetEvent(&LUExtension->Initialized, (KPRIORITY)0, FALSE);
 
-    KdPrint(("PhDskMnt::ImScsiCreateLU: Creating worker thread for pLUExt=0x%p.\n",
+    KdPrint(("PhDskMnt::ImScsiInitializeLU: Creating worker thread for pLUExt=0x%p.\n",
         LUExtension));
 
     // Get FILE_OBJECT if we will need that later
@@ -2388,7 +2504,7 @@ ImScsiFillMemoryDisk(pHW_LU_EXTENSION LUExtension)
 }
 
 VOID
-ImScsiUnmapDevice(
+ImScsiDispatchUnmapDevice(
     __in pHW_HBA_EXT pHBAExt,
     __in pHW_LU_EXTENSION pLUExt,
     __in PSCSI_REQUEST_BLOCK pSrb)

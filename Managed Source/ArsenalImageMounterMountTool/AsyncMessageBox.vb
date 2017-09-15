@@ -24,10 +24,8 @@ Public Class AsyncMessageBox
         End Get
         Set(ByVal value As String)
             m_Text = value
-            If CurrentFont IsNot Nothing Then
-                CurrentFont.Dispose()
-                CurrentFont = Nothing
-            End If
+            CurrentFont?.Dispose()
+            CurrentFont = Nothing
             OnResize(EventArgs.Empty)
         End Set
     End Property
@@ -90,10 +88,8 @@ Public Class AsyncMessageBox
 
                 g.FillRectangle(m_BackgroundBrush, New Rectangle(Point.Empty, m_ImageBuffer.Size))
 
-                If CurrentFont IsNot Nothing Then
-                    CurrentFont.Dispose()
-                    CurrentFont = Nothing
-                End If
+                CurrentFont?.Dispose()
+                CurrentFont = Nothing
 
                 If String.IsNullOrEmpty(m_Text) Then
                     Return
@@ -168,10 +164,8 @@ Public Class AsyncMessageBox
             Return MyBase.ForeColor
         End Get
         Set(ByVal value As Color)
-            If m_ForegroundBrush IsNot Nothing Then
-                m_ForegroundBrush.Dispose()
-                m_ForegroundBrush = Nothing
-            End If
+            m_ForegroundBrush?.Dispose()
+            m_ForegroundBrush = Nothing
             MyBase.ForeColor = value
             m_ForegroundBrush = New SolidBrush(value)
         End Set
@@ -182,10 +176,8 @@ Public Class AsyncMessageBox
             Return MyBase.BackColor
         End Get
         Set(value As Color)
-            If m_BackgroundBrush IsNot Nothing Then
-                m_BackgroundBrush.Dispose()
-                m_BackgroundBrush = Nothing
-            End If
+            m_BackgroundBrush?.Dispose()
+            m_BackgroundBrush = Nothing
             MyBase.BackColor = value
             m_BackgroundBrush = New SolidBrush(value)
         End Set

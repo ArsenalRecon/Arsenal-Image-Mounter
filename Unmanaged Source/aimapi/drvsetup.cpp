@@ -3,7 +3,7 @@
 /// Driver setup routines. Usually ImScsiInstsallDriver() or ImScsiUninstallDriver() are
 /// called from applications.
 /// 
-/// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -342,7 +342,11 @@ ImScsiInitializeSystemVersionInfo()
     auto version_number = (os_version.dwMajorVersion << 8) |
         os_version.dwMinorVersion;
 
-    if (version_number >= 0x0603) {
+    if (version_number >= 0x0A00) {
+        KernelPlatformCode = L"Win10";
+        KernelSupportsStorPort = true;
+    }
+    else if (version_number >= 0x0603) {
         KernelPlatformCode = L"Win8.1";
         KernelSupportsStorPort = true;
     }

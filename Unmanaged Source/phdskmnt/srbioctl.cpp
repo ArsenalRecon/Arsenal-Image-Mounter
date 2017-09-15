@@ -4,7 +4,7 @@
 /// requests are used for example to add or remove virtual disks and similar
 /// tasks.
 /// 
-/// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -20,10 +20,10 @@
 /**************************************************************************************************/
 VOID
 ScsiIoControl(
-__in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
-__in PSCSI_REQUEST_BLOCK  pSrb,
-__in PUCHAR               pResult,
-__inout __deref PKIRQL         LowestAssumedIrql
+__in pHW_HBA_EXT            pHBAExt,    // Adapter device-object extension from port driver.
+__in PSCSI_REQUEST_BLOCK    pSrb,
+__in pResultType            pResult,
+__inout __deref PKIRQL      LowestAssumedIrql
 )
 {
     PSRB_IO_CONTROL  srb_io_control = (PSRB_IO_CONTROL)pSrb->DataBuffer;
@@ -234,16 +234,15 @@ Done:
 
 VOID
 ImScsiCreateDevice(
-__in pHW_HBA_EXT          pHBAExt,
-__in PSCSI_REQUEST_BLOCK  pSrb,
-__inout __deref PUCHAR         pResult,
-__inout __deref PKIRQL         LowestAssumedIrql
+__in pHW_HBA_EXT            pHBAExt,
+__in PSCSI_REQUEST_BLOCK    pSrb,
+__inout __deref pResultType pResult,
+__inout __deref PKIRQL      LowestAssumedIrql
 )
 {
     pHW_LU_EXTENSION        pLUExt = NULL;
     PSRB_IMSCSI_CREATE_DATA new_device = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
     pMP_WorkRtnParms        pWkRtnParms;
-    KLOCK_QUEUE_HANDLE      lock_handle;
 
     // If auto-selecting device number
     if (new_device->Fields.DeviceNumber.LongNumber == IMSCSI_AUTO_DEVICE_NUMBER)
@@ -337,8 +336,7 @@ __inout __deref PKIRQL         LowestAssumedIrql
         }
     }
 
-    pWkRtnParms =                                     // Allocate parm area for work routine.
-        (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
+    pWkRtnParms = ImScsiCreateWorkItem(pHBAExt, NULL, pSrb);
 
     if (pWkRtnParms == NULL)
     {
@@ -349,27 +347,15 @@ __inout __deref PKIRQL         LowestAssumedIrql
         return;
     }
 
-    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms));
-
-    pWkRtnParms->pHBAExt = pHBAExt;
-    pWkRtnParms->pSrb = pSrb;
     pWkRtnParms->pReqThread = PsGetCurrentThread();
 
     ObReferenceObject(pWkRtnParms->pReqThread);
 
     // Queue work item, which will run in the System process.
 
-    KdPrint2(("PhDskMnt::ImScsiCreateDevice: Queuing work=0x%p\n", pWkRtnParms));
-
     new_device->SrbIoControl.ReturnCode = (ULONG)STATUS_PENDING;
 
-    ImScsiAcquireLock(&pMPDrvInfoGlobal->RequestListLock, &lock_handle, *LowestAssumedIrql);
-
-    InsertTailList(&pMPDrvInfoGlobal->RequestList, &pWkRtnParms->RequestListEntry);
-
-    ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
-
-    KeSetEvent(&pMPDrvInfoGlobal->RequestEvent, (KPRIORITY)0, FALSE);
+    ImScsiScheduleWorkItem(pWkRtnParms, LowestAssumedIrql);
 
     *pResult = ResultQueued;                          // Indicate queuing.
 
@@ -457,6 +443,15 @@ __inout __deref PKIRQL              LowestAssumedIrql
 
     if (device_extension->Modified)
         create_data->Fields.Flags |= IMSCSI_IMAGE_MODIFIED;
+
+    if (device_extension->Modified)
+        create_data->Fields.Flags |= IMSCSI_IMAGE_MODIFIED;
+
+    if (device_extension->SupportsZero)
+        create_data->Fields.Flags |= IMSCSI_OPTION_SPARSE_FILE;
+
+    if (device_extension->SharedImage)
+        create_data->Fields.Flags |= IMSCSI_OPTION_SHARED_IMAGE;
 
     create_data->Fields.ImageOffset = device_extension->ImageOffset;
 
@@ -607,10 +602,10 @@ __inout __deref PKIRQL                          LowestAssumedIrql
 
 VOID
 ImScsiExtendDevice(
-    __in pHW_HBA_EXT          pHBAExt,
-    __in PSCSI_REQUEST_BLOCK  pSrb,
-    __inout __deref PUCHAR         pResult,
-    __inout __deref PKIRQL         LowestAssumedIrql,
+    __in pHW_HBA_EXT            pHBAExt,
+    __in PSCSI_REQUEST_BLOCK    pSrb,
+    __inout __deref pResultType pResult,
+    __inout __deref PKIRQL      LowestAssumedIrql,
     __inout __deref PSRB_IMSCSI_EXTEND_DEVICE       extend_device_data
     )
 {
@@ -646,8 +641,7 @@ ImScsiExtendDevice(
         return;
     }
 
-    pMP_WorkRtnParms pWkRtnParms =                                     // Allocate parm area for work routine.
-        (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
+    pMP_WorkRtnParms pWkRtnParms = ImScsiCreateWorkItem(pHBAExt, device_extension, pSrb);
 
     if (pWkRtnParms == NULL)
     {
@@ -656,12 +650,6 @@ ImScsiExtendDevice(
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
         return;
     }
-
-    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms));
-
-    pWkRtnParms->pHBAExt = pHBAExt;
-    pWkRtnParms->pLUExt = device_extension;
-    pWkRtnParms->pSrb = pSrb;
 
     KEVENT wait_event;
     BOOLEAN wait_result = KeGetCurrentIrql() < DISPATCH_LEVEL;
@@ -673,17 +661,8 @@ ImScsiExtendDevice(
     }
 
     // Queue work item, which will run in the System process.
-    KLOCK_QUEUE_HANDLE           lock_handle;
 
-    KdPrint2(("PhDskMnt::ImScsiExtendDevice: Queuing work=0x%p\n", pWkRtnParms));
-
-    ImScsiAcquireLock(&device_extension->RequestListLock, &lock_handle, *LowestAssumedIrql);
-
-    InsertTailList(&device_extension->RequestList, &pWkRtnParms->RequestListEntry);
-
-    ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
-
-    KeSetEvent(&device_extension->RequestEvent, (KPRIORITY)0, FALSE);
+    ImScsiScheduleWorkItem(pWkRtnParms, LowestAssumedIrql);
 
     *pResult = ResultQueued;                          // Indicate queuing.
 

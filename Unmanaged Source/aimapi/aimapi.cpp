@@ -2,7 +2,7 @@
 /// aimapi.cpp
 /// Implementation of public API routines.
 /// 
-/// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -515,8 +515,36 @@ OUT LPDWORD DiskNumber OPTIONAL)
 
     if (!QueryDosDevice(NULL, dosdevs, UNICODE_STRING_MAX_CHARS))
     {
+        WPreserveLastError lasterror;
+
+        WErrMsg errmsg;
+
+        ImScsiDebugMessage(L"Error opening SCSI port %1!i!: %2!ws!",
+            PortNumber & 0xFF, (LPCWSTR)errmsg);
+
         return INVALID_HANDLE_VALUE;
     }
+
+    HANDLE adapter = ImScsiOpenScsiAdapterByScsiPortNumber((BYTE)PortNumber);
+
+    if (adapter == INVALID_HANDLE_VALUE)
+    {
+        return INVALID_HANDLE_VALUE;
+    }
+
+    WHeapMem<IMSCSI_DEVICE_CONFIGURATION> config(
+        UNICODE_STRING_MAX_BYTES,
+        HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY);
+
+    config->DeviceNumber = DeviceNumber;
+
+    if (!ImScsiQueryDevice(adapter, config, (ULONG)config.GetSize()))
+    {
+        CloseHandle(adapter);
+        return INVALID_HANDLE_VALUE;
+    }
+
+    CloseHandle(adapter);
 
     size_t length = 0;
     for (LPWSTR ptr = dosdevs;
@@ -537,7 +565,7 @@ OUT LPDWORD DiskNumber OPTIONAL)
 
         dev_path = ImDiskAllocPrintF(L"\\\\?\\%1!ws!", ptr);
 
-        disk = CreateFile(dev_path, 0,
+        disk = CreateFile(dev_path, GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
         if (disk == INVALID_HANDLE_VALUE)
@@ -555,6 +583,7 @@ OUT LPDWORD DiskNumber OPTIONAL)
         if (!DeviceIoControl(disk, IOCTL_SCSI_GET_ADDRESS, NULL, 0,
             &address, sizeof(address), &dw, NULL))
         {
+#ifndef _DEBUG
             switch (GetLastError())
             {
             case ERROR_INVALID_PARAMETER:
@@ -564,13 +593,16 @@ OUT LPDWORD DiskNumber OPTIONAL)
                 break;
 
             default:
+#endif
             {
                 WErrMsg errmsg;
 
                 ImScsiDebugMessage(L"Cannot get SCSI address of '%1!ws!': %2!ws!",
-                    dev_path, (LPCWSTR)errmsg);
+                    (LPCWSTR)dev_path, (LPCWSTR)errmsg);
             }
+#ifndef _DEBUG
             }
+#endif
 
             CloseHandle(disk);
             disk = INVALID_HANDLE_VALUE;
@@ -582,6 +614,13 @@ OUT LPDWORD DiskNumber OPTIONAL)
             (address.TargetId != DeviceNumber.TargetId) ||
             (address.Lun != DeviceNumber.Lun))
         {
+#ifdef _DEBUG
+            ImScsiDebugMessage(
+                L"Disk %1!ws! has port:path:target:lun %2!i!:%3!i!:%4!i!:%5!i!, looking for %6!i!:%7!i!:%8!i!:%9!i!.",
+                (LPCWSTR)dev_path,
+                (int)address.PortNumber, (int)address.PathId, (int)address.TargetId, (int)address.Lun,
+                (int)PortNumber, (int)DeviceNumber.PathId, (int)DeviceNumber.TargetId, (int)DeviceNumber.Lun);
+#endif
             CloseHandle(disk);
             disk = INVALID_HANDLE_VALUE;
             continue;
@@ -597,7 +636,7 @@ OUT LPDWORD DiskNumber OPTIONAL)
 
             ImScsiDebugMessage(
                 L"Cannot get storage device number of '%1!ws!': %2!ws!",
-                dev_path, (LPCWSTR)errmsg);
+                (LPCWSTR)dev_path, (LPCWSTR)errmsg);
 
             CloseHandle(disk);
             disk = INVALID_HANDLE_VALUE;
@@ -612,6 +651,40 @@ OUT LPDWORD DiskNumber OPTIONAL)
                 L"Disk %1!ws! has some unexpected properties: DeviceNumber=%2!u! DeviceType=%3!#x! PartitionNumber=%4!i!",
                 (LPCWSTR)dev_path, device_number.DeviceNumber,
                 device_number.DeviceType, device_number.PartitionNumber);
+
+            CloseHandle(disk);
+            disk = INVALID_HANDLE_VALUE;
+
+            continue;
+        }
+
+        DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
+            &dw, NULL);
+
+        GET_LENGTH_INFORMATION disk_size;
+        if (!DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
+            &disk_size, sizeof(disk_size), &dw, NULL))
+        {
+            WErrMsg errmsg;
+
+            ImScsiDebugMessage(
+                L"Cannot query size of disk %1!ws!: %2!ws!",
+                (LPCWSTR)dev_path, (LPCWSTR)errmsg);
+
+            CloseHandle(disk);
+            disk = INVALID_HANDLE_VALUE;
+
+            continue;
+        }
+
+        LONGLONG diff = disk_size.Length.QuadPart -
+            config->DiskSize.QuadPart;
+        if ((diff > config->BytesPerSector) ||
+            (diff < -(LONG)config->BytesPerSector))
+        {
+            ImScsiDebugMessage(
+                L"Disk %1!ws! has unexpected size: %2!I64u!",
+                (LPCWSTR)dev_path, disk_size.Length.QuadPart);
 
             CloseHandle(disk);
             disk = INVALID_HANDLE_VALUE;

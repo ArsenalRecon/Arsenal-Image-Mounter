@@ -10,6 +10,8 @@
 '''''
 
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports Arsenal.ImageMounter.Devio.Server.Interaction
+Imports Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory
 
 Namespace Server.Services
 
@@ -41,8 +43,20 @@ Namespace Server.Services
             MyBase.New(New DevioProviderFromStream(New FileStream(Imagefile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete), ownsStream:=True), OwnsProvider:=True)
 
             Offset = API.GetOffsetByFileExt(Imagefile)
+            SectorSize = API.GetSectorSizeFromFileName(Imagefile)
             Me.DiskAccess = DiskAccess
             Me.Imagefile = Imagefile
+
+        End Sub
+
+        ''' <summary>
+        ''' Creates a DevioServiceBase compatible object, but without providing a proxy service.
+        ''' Instead, it just passes a disk image file name for direct mounting internally in
+        ''' SCSI Adapter.
+        ''' </summary>
+        ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+        Public Sub New(Imagefile As String, DiskAccess As VirtualDiskAccess)
+            Me.New(Imagefile, DevioServiceFactory.GetDirectFileAccessFlags(DiskAccess))
 
         End Sub
 

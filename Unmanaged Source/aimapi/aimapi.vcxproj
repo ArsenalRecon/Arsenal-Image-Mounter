@@ -81,6 +81,7 @@
     <Import Project="..\\wdk7_w2k_x86.props" />
     <Import Project="..\..\..\imdisk\imdiskimp.props" />
     <Import Project="pecompat.props" />
+    <Import Project="..\vs2013_sse.props" />
     <Import Project="..\aim_um.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
@@ -102,6 +103,7 @@
     <Import Project="..\\wdk7_w2k_x86.props" />
     <Import Project="..\..\..\imdisk\imdiskimp.props" />
     <Import Project="..\\signltr.props" />
+    <Import Project="..\vs2013_sse.props" />
     <Import Project="pecompat.props" />
     <Import Project="..\aim_um.props" />
   </ImportGroup>

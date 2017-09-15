@@ -49,12 +49,12 @@
                     End If
                 End SyncLock
             End Get
-            Set(value As TValue)
+            Set
                 SyncLock SyncRoot
                     If m_Dictionary.ContainsKey(key) Then
-                        m_Dictionary.Item(key) = value
+                        m_Dictionary.Item(key) = Value
                     Else
-                        m_Dictionary.Add(key, value)
+                        m_Dictionary.Add(key, Value)
                     End If
                 End SyncLock
             End Set

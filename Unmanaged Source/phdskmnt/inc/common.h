@@ -109,6 +109,13 @@
 /// Report a fake disk signature if zero
 #define IMSCSI_FAKE_DISK_SIG_IF_ZERO    0x00020000
 
+/// This flag causes the driver to open image files in shared write mode even
+/// if the image is opened for writing. This could be useful in some cases,
+/// but could easily corrupt filesystems on image files if used incorrectly.
+#define IMSCSI_OPTION_SHARED_IMAGE      0x00040000
+/// Check if flags indicate shared write mode
+#define IMSCSI_SHARED_IMAGE(x)          ((ULONG)(x) & 0x00040000)
+
 /// Specify as device number to remove all devices.
 #define IMSCSI_ALL_DEVICES              (0x00FFFFFFUL)
 

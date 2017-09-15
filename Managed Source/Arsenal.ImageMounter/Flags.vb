@@ -115,6 +115,11 @@ Public Enum DeviceFlags As UInt32
     ''' </summary>
     FakeDiskSignatureIfZero = &H20000UI
 
+    ''' <summary>
+    ''' Open image in shared mode.
+    ''' </summary>
+    SharedImage = &H40000UI
+
 End Enum
 
 

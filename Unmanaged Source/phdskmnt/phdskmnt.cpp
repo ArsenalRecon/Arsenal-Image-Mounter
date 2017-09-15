@@ -3,7 +3,7 @@
 /// Driver entry routines, miniport callback definitions and other support
 /// routines.
 /// 
-/// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -198,7 +198,7 @@ __in PUNICODE_STRING pRegistryPath
 
     KdPrint2(("PhDskMnt::DriverEntry: Begin.\n"));
     
-#if DBG
+#if 0 //DBG
 
 #if (NTDDI_VERSION >= NTDDI_WS03)
     KdRefreshDebuggerNotPresent();
@@ -684,7 +684,7 @@ __inout __deref     PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     KIRQL                   lowest_assumed_irql = PASSIVE_LEVEL;
-    UCHAR                   Result = ResultDone;
+    ResultType              Result = ResultDone;
     pHW_HBA_EXT             pHBAExt = (pHW_HBA_EXT)DeviceExtension;
 #ifdef USE_SCSIPORT
     UCHAR                   PathId = pSrb->PathId;
@@ -1419,4 +1419,55 @@ __in ULONG Length)
     IoStatusBlock->Status = STATUS_SUCCESS;
     IoStatusBlock->Information = length_done;
     return IoStatusBlock->Status;
+}
+
+pMP_WorkRtnParms ImScsiCreateWorkItem(pHW_HBA_EXT pHBAExt,
+    pHW_LU_EXTENSION pLUExt,
+    PSCSI_REQUEST_BLOCK pSrb)
+{
+    pMP_WorkRtnParms pWkRtnParms =                                     // Allocate parm area for work routine.
+        (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
+
+    if (pWkRtnParms == NULL)
+    {
+        DbgPrint("PhDskMnt::ImScsiCreateWorkItem Failed to allocate work parm structure\n");
+        return NULL;
+    }
+
+    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms));
+
+    pWkRtnParms->pHBAExt = pHBAExt;
+    pWkRtnParms->pLUExt = pLUExt;
+    pWkRtnParms->pSrb = pSrb;
+
+    return pWkRtnParms;
+}
+
+VOID ImScsiScheduleWorkItem(pMP_WorkRtnParms pWkRtnParms, PKIRQL LowestAssumedIrql)
+{
+    KdPrint2(("PhDskMnt::ImScsiScheduleWorkItem: Queuing work=0x%p\n", pWkRtnParms));
+
+    KLOCK_QUEUE_HANDLE lock_handle;
+
+    if (pWkRtnParms->pLUExt == NULL)
+    {
+        ImScsiAcquireLock(&pMPDrvInfoGlobal->RequestListLock, &lock_handle, *LowestAssumedIrql);
+
+        InsertTailList(&pMPDrvInfoGlobal->RequestList, &pWkRtnParms->RequestListEntry);
+
+        ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
+
+        KeSetEvent(&pMPDrvInfoGlobal->RequestEvent, (KPRIORITY)0, FALSE);
+
+    }
+    else
+    {
+        ImScsiAcquireLock(&pWkRtnParms->pLUExt->RequestListLock, &lock_handle, *LowestAssumedIrql);
+
+        InsertTailList(&pWkRtnParms->pLUExt->RequestList, &pWkRtnParms->RequestListEntry);
+
+        ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
+
+        KeSetEvent(&pWkRtnParms->pLUExt->RequestEvent, (KPRIORITY)0, FALSE);
+    }
 }

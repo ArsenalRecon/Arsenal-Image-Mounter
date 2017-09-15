@@ -106,9 +106,7 @@ Namespace Client
 
             For Each obj In New IDisposable() {ServerMutex, MapView, RequestEvent, ResponseEvent}
                 Try
-                    If obj IsNot Nothing Then
-                        obj.Dispose()
-                    End If
+                    obj?.Dispose()
 
                 Catch
 

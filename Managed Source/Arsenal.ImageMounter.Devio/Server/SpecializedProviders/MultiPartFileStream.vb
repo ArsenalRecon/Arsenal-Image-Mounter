@@ -14,22 +14,27 @@ Namespace Server.SpecializedProviders
     Public Class MultiPartFileStream
         Inherits Stream
 
-        Private ReadOnly _SegmentSize As Long
+        Public ReadOnly Property SegmentSize As Long
 
         Private ReadOnly _Streams As New List(Of FileStream)
 
         Public Sub New(Imagefiles As String(), DiskAccess As FileAccess)
+            Me.New(Imagefiles, DiskAccess, Nothing)
+
+        End Sub
+
+        Public Sub New(Imagefiles As String(), DiskAccess As FileAccess, ShareMode As FileShare?)
             If Imagefiles Is Nothing Then
                 Throw New ArgumentNullException("Imagefiles")
             End If
             If Imagefiles.Length = 0 Then
-                Throw New ArgumentException("No image files found.", "Imagefiles")
+                Throw New ArgumentException("No image file names provided.", "Imagefiles")
             End If
 
             Try
                 For Each Imagefile In Imagefiles
                     Trace.WriteLine("Opening image " & Imagefile)
-                    _Streams.Add(New FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete))
+                    _Streams.Add(New FileStream(Imagefile, FileMode.Open, DiskAccess, ShareMode.GetValueOrDefault(FileShare.Read Or FileShare.Delete)))
                 Next
 
                 _SegmentSize = _Streams(0).Length
@@ -38,15 +43,23 @@ Namespace Server.SpecializedProviders
                 Trace.WriteLine("Segment size: " & _SegmentSize)
                 Trace.WriteLine("Length: " & _Length)
 
-            Catch ex As Exception
-                Close()
-                Throw New TargetInvocationException(ex)
+            Catch When (
+                Function()
+                    Close()
+                    Return False
+                End Function)()
+
+                Throw
 
             End Try
         End Sub
 
         Public Sub New(FirstImagefile As String, DiskAccess As FileAccess)
             Me.New(GetMultiSegmentFiles(FirstImagefile), DiskAccess)
+        End Sub
+
+        Public Sub New(FirstImagefile As String, DiskAccess As FileAccess, ShareMode As FileShare?)
+            Me.New(GetMultiSegmentFiles(FirstImagefile), DiskAccess, ShareMode)
         End Sub
 
         Private Shared Function GetMultiSegmentFiles(FirstFile As String) As String()
@@ -105,12 +118,7 @@ Namespace Server.SpecializedProviders
             Next
         End Sub
 
-        Private ReadOnly _Length As Long
         Public Overrides ReadOnly Property Length As Long
-            Get
-                Return _Length
-            End Get
-        End Property
 
         Private _Position As Long
         Public Overrides Property Position As Long

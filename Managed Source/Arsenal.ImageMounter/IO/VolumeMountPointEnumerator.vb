@@ -85,13 +85,11 @@ Namespace IO
                 If Not Me.disposedValue Then
                     If disposing Then
                         ' TODO: dispose managed state (managed objects).
+                        _handle?.Dispose()
                     End If
 
                     ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-                    If _handle IsNot Nothing Then
-                        _handle.Dispose()
-                        _handle = Nothing
-                    End If
+                    _handle = Nothing
 
                     ' TODO: set large fields to null.
                     _sb.Clear()

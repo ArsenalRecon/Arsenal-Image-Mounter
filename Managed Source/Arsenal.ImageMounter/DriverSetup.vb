@@ -14,9 +14,12 @@ Public Class DriverSetup
 
     Shared Sub New()
 
-        Dim os_version = NativeFileIO.GetOSVersion()
+        Dim os_version = NativeFileIO.GetOSVersion().Version
 
-        If os_version >= New Version(6, 3) Then
+        If os_version >= New Version(10, 0) Then
+            kernel = "Win10"
+            hasStorPort = True
+        ElseIf os_version >= New Version(6, 3) Then
             kernel = "Win8.1"
             hasStorPort = True
         ElseIf os_version >= New Version(6, 2) Then
@@ -51,16 +54,20 @@ Public Class DriverSetup
     ''' <param name="zipFile">ZipFile object with setup files</param>
     Public Shared Function GetArchiveDriverVersion(zipFile As ZipFile) As Version
 
+        Dim infpath1 = kernel & "\phdskmnt.inf"
+        Dim infpath2 = kernel & "/phdskmnt.inf"
+
         Dim entry =
-            zipFile.
-            Entries().
-            FirstOrDefault(
-                Function(e) e.FileName.Equals(
-                    kernel & "/phdskmnt.inf", StringComparison.OrdinalIgnoreCase))
+            Aggregate e In zipFile
+            Into FirstOrDefault(
+                e.FileName.Equals(
+                    infpath1, StringComparison.OrdinalIgnoreCase) OrElse
+                e.FileName.Equals(
+                    infpath2, StringComparison.OrdinalIgnoreCase))
 
         If entry Is Nothing Then
 
-            Return Nothing
+            Throw New KeyNotFoundException("File '" & infpath1 & "' missing in zip archive.")
 
         End If
 
@@ -131,14 +138,14 @@ Public Class DriverSetup
             Dim directoryRemover =
                 Sub()
 
-                    Dim start = TimeSpan.FromMilliseconds(Environment.TickCount)
+                    Dim start = Stopwatch.StartNew()
 
                     While Directory.Exists(temppath)
 
                         Try
                             Directory.Delete(temppath, recursive:=True)
 
-                        Catch ex As IOException When TimeSpan.FromMilliseconds(Environment.TickCount).Subtract(start).TotalMinutes < 15
+                        Catch ex As IOException When start.Elapsed.TotalMinutes < 15
                             Trace.WriteLine("I/O Error removing temporary directory: " & ex.ToString())
                             Thread.Sleep(TimeSpan.FromSeconds(10))
                             Continue While

@@ -4,7 +4,15 @@
 #pragma warning(disable: 4200)
 
 #ifndef TOC_DATA_TRACK
-#define TOC_DATA_TRACK                   0x04
+#define TOC_DATA_TRACK                      0x04
+#endif
+
+#ifndef SCSI_ADSENSE_RESOURCE_FAILURE
+#define SCSI_ADSENSE_RESOURCE_FAILURE       0x55
+#endif
+
+#ifndef STATUS_DEVICE_FEATURE_NOT_SUPPORTED
+#define STATUS_DEVICE_FEATURE_NOT_SUPPORTED ((NTSTATUS)0xC0000463L)
 #endif
 
 // We can support SCSIOP_UNMAP and friends even on older Windows versions, so

@@ -3,8 +3,22 @@
 Public Class FormMountOptions
 
     Public Property SelectedFakeSignature As Boolean
+        Get
+            Return cbFakeDiskSig.Checked
+        End Get
+        Set
+            cbFakeDiskSig.Checked = Value
+        End Set
+    End Property
 
     Public Property SelectedRemovable As Boolean
+        Get
+            Return cbRemovable.Checked
+        End Get
+        Set
+            cbRemovable.Checked = Value
+        End Set
+    End Property
 
     Public Property SelectedReadOnly As Boolean
         Get
@@ -70,14 +84,6 @@ Public Class FormMountOptions
             Next
         End Set
     End Property
-
-    Protected Overrides Sub OnClosing(e As CancelEventArgs)
-        MyBase.OnClosing(e)
-
-        SelectedFakeSignature = cbFakeDiskSig.Checked
-        SelectedRemovable = cbRemovable.Checked
-
-    End Sub
 
     Private Sub rbReadOnly_CheckedChanged() Handles rbReadOnly.CheckedChanged
 

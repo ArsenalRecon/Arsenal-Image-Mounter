@@ -187,7 +187,7 @@ Public Class MainForm
                 ServiceItems = ServiceList.ToArray()
             End SyncLock
             For Each Item In ServiceItems
-                If Item.Service IsNot Nothing AndAlso Item.Service.HasDiskDevice Then
+                If Item?.Service?.HasDiskDevice Then
                     Trace.WriteLine("Requesting service for device " & Item.Service.DiskDeviceNumber.ToString("X6") & " to shut down...")
                     Item.Service.DismountAndStopServiceThread(TimeSpan.FromSeconds(10))
                 Else
@@ -313,21 +313,9 @@ Public Class MainForm
             End If
 
             If obj.IsOffline.GetValueOrDefault() Then
-                If obj.DiskState Is Nothing OrElse (Not obj.DiskState.OfflineReason.HasValue) OrElse obj.DiskState.OfflineReason.Value <> PSDiskParser.OfflineReason.SignatureConflict Then
+                If _
                     MessageBox.Show(Me,
-                                    "The new virtual disk was mounted in offline mode. Please use Disk Management to analyze why disk is offline and for bringing it online.",
-                                    "Disk offline",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Exclamation)
-                ElseIf obj.IsReadOnly OrElse Not obj.DriveNumber.HasValue Then
-                    MessageBox.Show(Me,
-                                    "The new virtual disk was mounted in offline mode due to a signature conflict with another disk.",
-                                    "Disk offline",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Exclamation)
-                ElseIf _
-                    MessageBox.Show(Me,
-                                    "The new virtual disk was mounted in offline mode due to a signature conflict with another disk. Do you wish to let Windows create a new disk signature and bring the virtual disk online?",
+                                    "The new virtual disk was mounted in offline mode. Do you wish to bring the virtual disk online?",
                                     "Disk offline",
                                     MessageBoxButtons.YesNo,
                                     MessageBoxIcon.Exclamation) = DialogResult.Yes Then
@@ -335,9 +323,13 @@ Public Class MainForm
                     Try
                         Update()
 
-                        Using New AsyncMessageBox("Please wait...")
-                            PSDiskAPI.SetDiskOffline(obj.DriveNumber.Value, False)
-                        End Using
+                        If obj.DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.Ordinal) Then
+                            Using New AsyncMessageBox("Please wait...")
+                                Using device As New DiskDevice(obj.DevicePath, FileAccess.ReadWrite)
+                                    device.DiskOffline = False
+                                End Using
+                            End Using
+                        End If
 
                         MessageBox.Show(Me,
                                         "The virtual disk was successfully brought online.",
@@ -348,7 +340,7 @@ Public Class MainForm
                     Catch ex As Exception
                         Trace.WriteLine(ex.ToString())
                         MessageBox.Show(Me,
-                                        "An error occured: " & ex.JoinMessages(),
+                                        "An error occurred: " & ex.JoinMessages(),
                                         ex.GetBaseException().GetType().Name,
                                         MessageBoxButtons.OK,
                                         MessageBoxIcon.Hand)
@@ -367,74 +359,72 @@ Public Class MainForm
     Private Sub DeviceListRefreshThread()
         Try
 
-            Using parser As New DiskStateParser()
+            Dim parser As New DiskStateParser()
 
-                Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.GetDeviceProperties)
+            Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.GetDeviceProperties)
 
-                Dim simpleviewtask = Task.Factory.StartNew(Function() parser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result))
+            Dim simpleviewtask = Task.Factory.StartNew(Function() parser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result))
 
-                Dim fullviewtask = Task.Factory.StartNew(Function() parser.GetFullView(Adapter.ScsiPortNumber, devicelist.Result))
+            'Dim fullviewtask = Task.Factory.StartNew(Function() parser.GetFullView(Adapter.ScsiPortNumber, devicelist.Result))
 
-                While Not IsHandleCreated
-                    If IsClosing OrElse Disposing OrElse IsDisposed Then
-                        Return
-                    End If
-                    Thread.Sleep(300)
-                End While
+            While Not IsHandleCreated
+                If IsClosing OrElse Disposing OrElse IsDisposed Then
+                    Return
+                End If
+                Thread.Sleep(300)
+            End While
+
+            Invoke(New Action(AddressOf SetLabelBusy))
+
+            Dim simpleview = simpleviewtask.Result
+
+            If IsClosing OrElse Disposing OrElse IsDisposed Then
+                Return
+            End If
+
+            Invoke(Sub() SetDiskView(simpleview, finished:=False))
+
+            Dim listFunction As Func(Of Byte, List(Of ScsiAdapter.DeviceProperties), List(Of DiskStateView))
+
+            'Try
+            '    Dim fullview = fullviewtask.Result
+
+            '    If IsClosing OrElse Disposing OrElse IsDisposed Then
+            '        Return
+            '    End If
+
+            '    Invoke(Sub() SetDiskView(fullview, finished:=True))
+
+            '    listFunction = AddressOf parser.GetFullView
+
+            'Catch ex As Exception
+            '    Trace.WriteLine("Full disk state view not supported on this platform: " & ex.ToString())
+
+            listFunction = AddressOf parser.GetSimpleView
+
+            Invoke(Sub() SetDiskView(simpleview, finished:=True))
+
+            'End Try
+
+            Do
+
+                DeviceListRefreshEvent.WaitOne()
+
+                If IsClosing OrElse Disposing OrElse IsDisposed Then
+                    Exit Do
+                End If
 
                 Invoke(New Action(AddressOf SetLabelBusy))
 
-                Dim simpleview = simpleviewtask.Result
+                Dim view = listFunction(Adapter.ScsiPortNumber, Adapter.GetDeviceProperties())
 
                 If IsClosing OrElse Disposing OrElse IsDisposed Then
                     Return
                 End If
 
-                Invoke(Sub() SetDiskView(simpleview, finished:=False))
+                Invoke(Sub() SetDiskView(view, finished:=True))
 
-                Dim listFunction As Func(Of Byte, List(Of ScsiAdapter.DeviceProperties), List(Of DiskStateView))
-
-                Try
-                    Dim fullview = fullviewtask.Result
-
-                    If IsClosing OrElse Disposing OrElse IsDisposed Then
-                        Return
-                    End If
-
-                    Invoke(Sub() SetDiskView(fullview, finished:=True))
-
-                    listFunction = AddressOf parser.GetFullView
-
-                Catch ex As Exception
-                    Trace.WriteLine("Full disk state view not supported on this platform: " & ex.ToString())
-
-                    listFunction = AddressOf parser.GetSimpleView
-
-                    Invoke(Sub() SetDiskView(simpleview, finished:=True))
-
-                End Try
-
-                Do
-
-                    DeviceListRefreshEvent.WaitOne()
-
-                    If IsClosing OrElse Disposing OrElse IsDisposed Then
-                        Exit Do
-                    End If
-
-                    Invoke(New Action(AddressOf SetLabelBusy))
-
-                    Dim view = listFunction(Adapter.ScsiPortNumber, Adapter.GetDeviceProperties())
-
-                    If IsClosing OrElse Disposing OrElse IsDisposed Then
-                        Return
-                    End If
-
-                    Invoke(Sub() SetDiskView(view, finished:=True))
-
-                Loop
-
-            End Using
+            Loop
 
         Catch ex As Exception
             Trace.WriteLine("Device list view thread caught exception: " & ex.ToString())
@@ -818,7 +808,7 @@ Public Class MainForm
         End If
 
         Try
-            DiscUtilsInteraction.CreateRamDisk(Adapter, size << 20, DeviceNumber)
+            DiscUtilsInteraction.CreateRamDisk(Me, Adapter, size << 20, DeviceNumber)
 
             RefreshDeviceList()
 

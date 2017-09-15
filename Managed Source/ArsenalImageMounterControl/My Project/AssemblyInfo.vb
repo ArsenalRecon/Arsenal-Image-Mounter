@@ -8,7 +8,9 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("Arsenal Image Mounter Control Application")> 
+<Assembly: AssemblyTitle("Arsenal Image Mounter Control Application")>
 
-<Assembly: ComVisible(False)> 
+<Assembly: ObfuscateAssembly(False)>
+
+<Assembly: ComVisible(False)>
 

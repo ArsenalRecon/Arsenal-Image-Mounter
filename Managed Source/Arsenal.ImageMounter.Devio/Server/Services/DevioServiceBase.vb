@@ -23,28 +23,21 @@ Namespace Server.Services
     Public MustInherit Class DevioServiceBase
         Implements IDisposable
 
-        Private _ScsiAdapter As ScsiAdapter
-
-        Private _ServiceThread As Thread
-
         Public Property Exception As Exception
 
         Protected ReadOnly Property ServiceThread As Thread
-            Get
-                Return _ServiceThread
-            End Get
-        End Property
-
-        Private _DevioProvider As IDevioProvider
 
         ''' <summary>
         ''' IDevioProvider object used by this instance.
         ''' </summary>
         Public ReadOnly Property DevioProvider As IDevioProvider
-            Get
-                Return _DevioProvider
-            End Get
-        End Property
+
+        ''' <summary>
+        ''' ScsiAdapter object used when StartServiceThreadAndMount was called. This object
+        ''' is used to remove the device when DismountAndStopServiceThread is called.
+        ''' </summary>
+        ''' <returns></returns>
+        Public ReadOnly Property ScsiAdapter As ScsiAdapter
 
         ''' <summary>
         ''' Indicates whether DevioProvider will be automatically closed when this instance
@@ -432,6 +425,14 @@ Namespace Server.Services
         End Property
 
         ''' <summary>
+        ''' Opens a DiskDevice object for direct access to a mounted device provided by
+        ''' this service instance.
+        ''' </summary>
+        Public Overridable Function OpenDiskDevice(access As FileAccess) As DiskDevice
+            Return _ScsiAdapter.OpenDevice(DiskDeviceNumber, access)
+        End Function
+
+        ''' <summary>
         ''' Indicates whether Arsenal Image Mounter Disk Device created by this instance will be automatically
         ''' forcefully removed if a crash occurs in service thread of this instance. Default is True.
         ''' </summary>
@@ -465,16 +466,15 @@ Namespace Server.Services
                         End Try
                     End If
 
-                    If _DevioProvider IsNot Nothing Then
-                        If OwnsProvider Then
-                            _DevioProvider.Dispose()
-                        End If
-                        _DevioProvider = Nothing
+                    If OwnsProvider Then
+                        _DevioProvider?.Dispose()
                     End If
                 End If
 
                 ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
+
                 ' TODO: set large fields to null.
+                _DevioProvider = Nothing
             End If
             Me.disposedValue = True
         End Sub

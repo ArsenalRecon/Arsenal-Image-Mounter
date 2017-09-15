@@ -111,6 +111,7 @@
     <Compile Include="..\CommonAssemblyInfo.vb">
       <Link>CommonAssemblyInfo.vb</Link>
     </Compile>
+    <Compile Include="Client\DevioDirectStream.vb" />
     <Compile Include="Client\DevioShmStream.vb" />
     <Compile Include="Client\DevioStream.vb" />
     <Compile Include="DiscUtilsInteraction.vb" />

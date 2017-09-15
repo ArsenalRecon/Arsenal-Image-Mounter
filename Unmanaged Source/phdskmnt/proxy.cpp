@@ -3,7 +3,7 @@
 /// Client components for ImDisk/devio proxy services, for use with kernel level
 /// components.
 /// 
-/// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -347,15 +347,19 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
                 Proxy->shared_memory,
                 ResponseHeaderSize);
 
-        // If server end requests to send more data than we requested, we
-        // treat that as an unrecoverable device error and exit.
-        if (ResponseDataSize != NULL ? *ResponseDataSize > 0 : FALSE)
-            if ((*ResponseDataSize > ResponseDataBufferSize) |
+        if (ResponseDataSize != NULL && *ResponseDataSize > 0)
+        {
+            // If server end requests to send more data than we requested, we
+            // treat that as an unrecoverable device error and exit.
+
+            if ((*ResponseDataSize > ResponseDataBufferSize) ||
                 ((*ResponseDataSize + IMDPROXY_HEADER_SIZE) >
                     Proxy->shared_memory_size))
             {
-                KdPrint(("ImScsi Proxy Client: Invalid response size %u.\n.",
-                    *ResponseDataSize));
+                DbgPrint("ImScsi Proxy Client: Invalid response size %u expected at most %u.\n.",
+                    *ResponseDataSize, ResponseDataBufferSize);
+
+                KdBreakPoint();
 
                 IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
                 IoStatusBlock->Information = 0;
@@ -369,6 +373,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
 
                 IoStatusBlock->Information = *ResponseDataSize;
             }
+        }
 
         IoStatusBlock->Status = STATUS_SUCCESS;
         if ((RequestDataSize > 0) & (IoStatusBlock->Information == 0))
@@ -408,17 +413,14 @@ __in USHORT ConnectionStringLength)
     if (IMSCSI_PROXY_TYPE(Flags) == IMSCSI_PROXY_TYPE_SHM)
     {
         OBJECT_ATTRIBUTES object_attributes;
+
         UNICODE_STRING base_name = { 0 };
-        UNICODE_STRING event_name = { 0 };
         base_name.Buffer = ConnectionString;
         base_name.Length = ConnectionStringLength;
         base_name.MaximumLength = ConnectionStringLength;
-        event_name.MaximumLength = ConnectionStringLength + 20;
-        event_name.Buffer = (PWCHAR)ExAllocatePoolWithTag(
-            PagedPool,
-            event_name.MaximumLength,
-            MP_TAG_GENERAL);
-        if (event_name.Buffer == NULL)
+
+        WUnicodeString<PagedPool> event_name(ConnectionStringLength + 20);
+        if (!event_name)
         {
             status = STATUS_INSUFFICIENT_RESOURCES;
 
@@ -443,7 +445,6 @@ __in USHORT ConnectionStringLength)
         if (!NT_SUCCESS(status))
         {
             Proxy->request_event_handle = NULL;
-            ExFreePoolWithTag(event_name.Buffer, MP_TAG_GENERAL);
 
             IoStatusBlock->Status = status;
             IoStatusBlock->Information = 0;
@@ -460,8 +461,7 @@ __in USHORT ConnectionStringLength)
         if (!NT_SUCCESS(status))
         {
             Proxy->request_event = NULL;
-            ExFreePoolWithTag(event_name.Buffer, MP_TAG_GENERAL);
-
+            
             IoStatusBlock->Status = status;
             IoStatusBlock->Information = 0;
             return IoStatusBlock->Status;
@@ -477,8 +477,7 @@ __in USHORT ConnectionStringLength)
         if (!NT_SUCCESS(status))
         {
             Proxy->response_event_handle = NULL;
-            ExFreePoolWithTag(event_name.Buffer, MP_TAG_GENERAL);
-
+            
             IoStatusBlock->Status = status;
             IoStatusBlock->Information = 0;
             return IoStatusBlock->Status;
@@ -494,8 +493,7 @@ __in USHORT ConnectionStringLength)
         if (!NT_SUCCESS(status))
         {
             Proxy->response_event = NULL;
-            ExFreePoolWithTag(event_name.Buffer, MP_TAG_GENERAL);
-
+            
             IoStatusBlock->Status = status;
             IoStatusBlock->Information = 0;
             return IoStatusBlock->Status;

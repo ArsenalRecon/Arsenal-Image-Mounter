@@ -531,6 +531,34 @@ Public Class ScsiAdapter
     End Sub
 
     ''' <summary>
+    ''' Extends size of an existing virtual disk.
+    ''' </summary>
+    ''' <param name="DeviceNumber">Device number of virtual disk to modify.</param>
+    ''' <param name="ExtendSize">Number of bytes to extend.</param>
+    Public Sub ChangeFlags(DeviceNumber As UInt32,
+                           ExtendSize As Int64)
+
+        Dim FillRequestData =
+          Sub(Request As BinaryWriter)
+              Request.Write(DeviceNumber)
+              Request.Write(ExtendSize)
+          End Sub
+
+        Dim ReturnCode As Int32
+
+        Dim Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                                   NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_EXTEND_DEVICE,
+                                                                   0,
+                                                                   FillRequestData,
+                                                                   ReturnCode)
+
+        If ReturnCode <> 0 Then
+            Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
+        End If
+
+    End Sub
+
+    ''' <summary>
     ''' Checks if version of running Arsenal Image Mounter SCSI miniport servicing this device object is compatible with this API
     ''' library. If this device object is not created by Arsenal Image Mounter SCSI miniport, an exception is thrown.
     ''' </summary>

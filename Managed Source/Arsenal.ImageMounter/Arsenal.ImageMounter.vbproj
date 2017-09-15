@@ -26,7 +26,7 @@
     <NoWarn>
     </NoWarn>
     <WarningsAsErrors>41999,42016,42017,42018,42019,42020,42021,42022,42032,42036</WarningsAsErrors>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <RegisterForComInterop>false</RegisterForComInterop>
     <IntermediateOutputPath>C:\Users\Niklas\AppData\Local\Temp\vsEB45.tmp\Debug\</IntermediateOutputPath>
   </PropertyGroup>
@@ -92,10 +92,6 @@
       <HintPath>DLL\Ionic.Zip.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Management.Automation, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\WindowsPowerShell\3.0\System.Management.Automation.dll</HintPath>
-    </Reference>
     <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
@@ -117,21 +113,19 @@
     <Compile Include="..\CommonAssemblyInfo.vb">
       <Link>CommonAssemblyInfo.vb</Link>
     </Compile>
+    <Compile Include="IO\BufferedBinaryWriter.vb" />
     <Compile Include="IO\CachedIniFile.vb" />
     <Compile Include="DriverSetup.vb" />
     <Compile Include="Extensions\Extensions.vb" />
+    <Compile Include="IO\DisposableDictionary.vb" />
+    <Compile Include="IO\DisposableList.vb" />
     <Compile Include="IO\VolumeMountPointEnumerator.vb" />
     <Compile Include="IO\VolumeEnumerator.vb" />
     <Compile Include="PSDisk\DiskStateParser.vb" />
     <Compile Include="PSDisk\DiskStateView.vb" />
-    <Compile Include="PSDisk\FieldAssigner.vb" />
     <Compile Include="Flags.vb" />
     <Compile Include="API.vb" />
     <Compile Include="IO\NullSafeDictionary.vb" />
-    <Compile Include="PSDisk\PSDiskAPI.vb" />
-    <Compile Include="PSDisk\PSDiskParser.vb" />
-    <Compile Include="PSDisk\PSPartitionParser.vb" />
-    <Compile Include="PSDisk\PSPhysicalDiskParser.vb" />
     <Compile Include="ScsiAdapter.vb" />
     <Compile Include="DiskStream.vb" />
     <Compile Include="DiskDevice.vb" />

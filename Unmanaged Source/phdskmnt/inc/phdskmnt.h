@@ -255,6 +255,13 @@ extern "C" {
         PROXY_CONNECTION      Proxy;
         BOOLEAN               VMDisk;
         BOOLEAN               AWEAllocDisk;
+        BOOLEAN               SharedImage;
+        HANDLE                ReservationKeyFile;
+        ULONG                 Generation;
+        ULONGLONG             RegistrationKey;
+        ULONGLONG             ReservationKey;
+        UCHAR                 ReservationType;
+        UCHAR                 ReservationScope;
         BOOLEAN               Modified;
         BOOLEAN               SupportsUnmap;
         BOOLEAN               SupportsZero;
@@ -262,6 +269,7 @@ extern "C" {
         PUCHAR                ImageBuffer;
         BOOLEAN               UseProxy;
         PFILE_OBJECT          FileObject;
+        UCHAR                 UniqueId[16];
     } HW_LU_EXTENSION, *pHW_LU_EXTENSION;
 
     typedef struct _HW_SRB_EXTENSION {
@@ -285,10 +293,10 @@ extern "C" {
         PKEVENT              CallerWaitEvent;
     } MP_WorkRtnParms, *pMP_WorkRtnParms;
 
-    enum ResultType {
+    typedef enum ResultType {
         ResultDone,
         ResultQueued
-    };
+    } *pResultType;
 
 #define RegWkBfrSz  0x1000
 
@@ -389,7 +397,7 @@ extern "C" {
         ScsiIoControl(
             __in pHW_HBA_EXT DevExt,
             __in PSCSI_REQUEST_BLOCK,
-            __in PUCHAR,
+            __in pResultType,
             __inout __deref PKIRQL
             );
 
@@ -397,7 +405,7 @@ extern "C" {
         ScsiExecute(
             __in pHW_HBA_EXT DevExt,
             __in PSCSI_REQUEST_BLOCK,
-            __in PUCHAR,
+            __in pResultType,
             __in PKIRQL
             );
 
@@ -458,7 +466,21 @@ extern "C" {
             __in pHW_HBA_EXT         DevExt,
             __in pHW_LU_EXTENSION    LuExt,
             __in __deref PSCSI_REQUEST_BLOCK pSrb
-            );
+        );
+
+    VOID
+        ImScsiDispatchPersistentReserveIn(
+            __in pHW_HBA_EXT         DevExt,
+            __in pHW_LU_EXTENSION    LuExt,
+            __in __deref PSCSI_REQUEST_BLOCK pSrb
+        );
+
+    VOID
+        ImScsiDispatchPersistentReserveOut(
+            __in pHW_HBA_EXT         DevExt,
+            __in pHW_LU_EXTENSION    LuExt,
+            __in __deref PSCSI_REQUEST_BLOCK pSrb
+        );
 
     VOID
         ScsiOpReportLuns(
@@ -494,6 +516,14 @@ extern "C" {
 { \
     (pSrb)->SrbStatus = (Status); \
     (pSrb)->ScsiStatus = SCSISTAT_GOOD; \
+    (pSrb)->DataTransferLength = 0; \
+    (pSrb)->SenseInfoBufferLength = 0; \
+}
+
+#define ScsiSetErrorScsiStatus(pSrb, Status, ScsiStat) \
+{ \
+    (pSrb)->SrbStatus = (Status); \
+    (pSrb)->ScsiStatus = (ScsiStat); \
     (pSrb)->DataTransferLength = 0; \
     (pSrb)->SenseInfoBufferLength = 0; \
 }
@@ -689,9 +719,18 @@ extern "C" {
             __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
             __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.        
             __in PSCSI_REQUEST_BLOCK  pSrb,
-            __in PUCHAR               pResult,
+            __in pResultType          pResult,
             __in PKIRQL               LowestAssumedIrql
-            );
+        );
+
+    VOID
+        ScsiOpPersistentReserveInOut(
+            __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
+            __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.        
+            __in PSCSI_REQUEST_BLOCK  pSrb,
+            __in pResultType          pResult,
+            __in PKIRQL               LowestAssumedIrql
+        );
 
     VOID
         ScsiOpReadTOC(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-object extension from port driver.
@@ -704,7 +743,7 @@ extern "C" {
             __in pHW_HBA_EXT          pDevExt,
             __in pHW_LU_EXTENSION     pLUExt,
             __in PSCSI_REQUEST_BLOCK  pSrb,
-            __in PUCHAR               pResult,
+            __in pResultType          pResult,
             __in PKIRQL               LowestAssumedIrql
             );
 
@@ -737,10 +776,10 @@ extern "C" {
 
     VOID
         ImScsiCreateDevice(
-            __in pHW_HBA_EXT          pHBAExt,
-            __in PSCSI_REQUEST_BLOCK  pSrb,
-            __inout __deref PUCHAR         pResult,
-            __inout __deref PKIRQL         LowestAssumedIrql
+            __in pHW_HBA_EXT            pHBAExt,
+            __in PSCSI_REQUEST_BLOCK    pSrb,
+            __inout __deref pResultType pResult,
+            __inout __deref PKIRQL      LowestAssumedIrql
             );
 
     NTSTATUS
@@ -781,10 +820,10 @@ extern "C" {
 
     VOID
         ImScsiExtendDevice(
-            __in pHW_HBA_EXT          pHBAExt,
-            __in PSCSI_REQUEST_BLOCK  pSrb,
-            __inout __deref PUCHAR         pResult,
-            __inout __deref PKIRQL         LowestAssumedIrql,
+            __in pHW_HBA_EXT            pHBAExt,
+            __in PSCSI_REQUEST_BLOCK    pSrb,
+            __inout __deref pResultType pResult,
+            __inout __deref PKIRQL      LowestAssumedIrql,
             __inout __deref PSRB_IMSCSI_EXTEND_DEVICE       extend_device_data
             );
 
@@ -846,15 +885,24 @@ extern "C" {
             PVOID Buffer,
             __in ULONG Length,
             __in __deref PLARGE_INTEGER ByteOffset);
-    
+
+    IMDPROXY_SHARED_RESP_CODE
+        ImScsiSharedKeyProxy(__in __deref pHW_LU_EXTENSION LuExt,
+            __in __deref PIMDPROXY_SHARED_REQ Request,
+            PULONGLONG KeyList,
+            PULONG KeyItems);
+
+    NTSTATUS
+        ImScsiConnectReservationKeyStore(pHW_LU_EXTENSION LuExt);
+
     IO_COMPLETION_ROUTINE
         ImScsiParallelReadWriteImageCompletion;
 
     VOID
         ImScsiParallelReadWriteImage(
-            __in pMP_WorkRtnParms    pWkRtnParms,
-            __inout __deref PUCHAR        pResult,
-            __inout __deref PKIRQL        LowestAssumedIrql
+            __in pMP_WorkRtnParms       pWkRtnParms,
+            __inout __deref pResultType pResult,
+            __inout __deref PKIRQL      LowestAssumedIrql
             );
 
     NTSTATUS
@@ -874,7 +922,7 @@ extern "C" {
             );
 
     VOID
-        ImScsiUnmapDevice(
+        ImScsiDispatchUnmapDevice(
             __in pHW_HBA_EXT pHBAExt,
             __in pHW_LU_EXTENSION pLUExt,
             __in PSCSI_REQUEST_BLOCK pSrb);
@@ -925,6 +973,13 @@ extern "C" {
             pMP_WorkRtnParms pWkRtnParms,
             PKIRQL LowestAssumedIrql);
 
+    pMP_WorkRtnParms ImScsiCreateWorkItem(pHW_HBA_EXT pHBAExt,
+        pHW_LU_EXTENSION pLUExt,
+        PSCSI_REQUEST_BLOCK pSrb);
+
+    VOID ImScsiScheduleWorkItem(pMP_WorkRtnParms pWkRtnParms,
+        PKIRQL LowestAssumedIrql);
+
     FORCEINLINE
         BOOLEAN
         ImScsiIsBufferZero(PVOID Buffer, ULONG Length)
@@ -940,6 +995,12 @@ extern "C" {
 
             return (BOOLEAN)(ptr == (PULONGLONG)((PUCHAR)Buffer + Length));
     }
+
+#if DBG
+
+    char *DbgGetScsiOpStr(PSCSI_REQUEST_BLOCK Srb);
+
+#endif
 
 #define ImScsiLogError(x) ImScsiLogDbgError x
 

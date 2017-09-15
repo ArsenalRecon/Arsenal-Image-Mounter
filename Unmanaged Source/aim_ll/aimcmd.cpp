@@ -2,7 +2,7 @@
 /// aimcmd.cpp
 /// Command line access to Arsenal Image Mounter features.
 /// 
-/// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -731,8 +731,8 @@ LPWSTR FormatOptions)
 
     for (;;)
     {
-        disk =
-            ImScsiOpenDiskByDeviceNumber(create_data->Fields.DeviceNumber,
+        disk = ImScsiOpenDiskByDeviceNumber(
+            create_data->Fields.DeviceNumber,
             port_number, &disk_number);
 
         if (disk != INVALID_HANDLE_VALUE)
@@ -1434,7 +1434,9 @@ LPWSTR MountPoint)
             _h(config->DiskSize.QuadPart),
             _p(config->DiskSize.QuadPart));
 
-        printf("%s%s%s%s%s.\n",
+        printf("%s%s%s%s%s%s.\n",
+            IMSCSI_SHARED_IMAGE(config->Flags) ?
+            ", Shared image" : "",
             IMSCSI_READONLY(config->Flags) ?
             ", ReadOnly" : "",
             IMSCSI_REMOVABLE(config->Flags) ?
@@ -2041,6 +2043,10 @@ wmain(int argc, LPWSTR argv[])
                         else if (wcscmp(opt, L"bswap") == 0)
                         {
                             flags |= IMSCSI_OPTION_BYTE_SWAP;
+                        }
+                        else if (wcscmp(opt, L"shared") == 0)
+                        {
+                            flags |= IMSCSI_OPTION_SHARED_IMAGE;
                         }
                         else if (IMSCSI_DEVICE_TYPE(flags) != 0)
                             ImScsiSyntaxHelp();

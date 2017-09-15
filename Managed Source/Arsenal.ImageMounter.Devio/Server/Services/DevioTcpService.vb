@@ -26,7 +26,7 @@ Namespace Server.Services
         ''' <summary>
         ''' Server endpoint where this service listens for client connection.
         ''' </summary>
-        Public ReadOnly ListenEndPoint As IPEndPoint
+        Public ReadOnly Property ListenEndPoint As IPEndPoint
 
         Private InternalShutdownRequestAction As action
 
@@ -259,10 +259,7 @@ Namespace Server.Services
 
         Protected Overrides Sub EmergencyStopServiceThread()
 
-            Dim routine = InternalShutdownRequestAction
-            If routine IsNot Nothing Then
-                routine()
-            End If
+            InternalShutdownRequestAction?()
 
         End Sub
     End Class

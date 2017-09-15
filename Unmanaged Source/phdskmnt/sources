@@ -69,14 +69,18 @@ INCLUDES=.\inc;                 \
 
 DRIVERTYPE=WDM
 
-SOURCES = phdskmnt.cpp     \
-          scsi.cpp       \
-          utils.cpp      \
-          phdskmnt.rc    \
-          iodisp.cpp     \
+SOURCES = phdskmnt.cpp		\
+          scsi.cpp		\
+          utils.cpp		\
+          phdskmnt.rc		\
+          iodisp.cpp		\
 	  workerthread.cpp	\
-	  srbioctl.cpp   \
+	  srbioctl.cpp		\
 	  proxy.cpp
+
+!IF "$(NTDEBUG)" == "ntsd"
+SOURCES = $(SOURCES) debug.cpp
+!ENDIF
 
 #RUN_WPP=$(SOURCES)                      \
 #        -km                             \

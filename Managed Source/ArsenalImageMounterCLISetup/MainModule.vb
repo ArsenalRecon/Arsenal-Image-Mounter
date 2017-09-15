@@ -29,13 +29,13 @@ Module MainModule
 
         Dim opMode As OpMode = opMode.Status
 
-        If args IsNot Nothing AndAlso args.Length > 0 Then
+        If args?.Length > 0 Then
             If args(0).Equals("/install", StringComparison.OrdinalIgnoreCase) Then
                 opMode = OpMode.Install
             ElseIf args(0).Equals("/uninstall", StringComparison.OrdinalIgnoreCase) Then
                 opMode = OpMode.Uninstall
             ElseIf args(0).Equals("/status", StringComparison.OrdinalIgnoreCase) Then
-                opMode = opMode.Status
+                opMode = OpMode.Status
             Else
                 Trace.WriteLine("Syntax: PDMSetup /install|/uninstall|/status")
             End If

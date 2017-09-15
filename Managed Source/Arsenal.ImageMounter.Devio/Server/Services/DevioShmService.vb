@@ -26,12 +26,12 @@ Namespace Server.Services
         ''' <summary>
         ''' Object name of shared memory file mapping object created by this instance.
         ''' </summary>
-        Public ReadOnly ObjectName As String
+        Public ReadOnly Property ObjectName As String
 
         ''' <summary>
         ''' Buffer size used by this instance.
         ''' </summary>
-        Public ReadOnly BufferSize As Long
+        Public ReadOnly Property BufferSize As Long
 
         Private InternalShutdownRequestAction As action
 
@@ -218,6 +218,9 @@ Namespace Server.Services
                                     Trace.WriteLine("Closing connection.")
                                     Return
 
+                                Case IMDPROXY_REQ.IMDPROXY_REQ_SHARED
+                                    SharedKeys(MapView)
+
                                 Case Else
                                     Trace.WriteLine("Unsupported request code: " & RequestCode.ToString())
                                     Return
@@ -251,10 +254,13 @@ Namespace Server.Services
 
         Private Sub SendInfo(MapView As SafeBuffer)
 
-            Dim Info As IMDPROXY_INFO_RESP
-            Info.file_size = CULng(DevioProvider.Length)
-            Info.req_alignment = CULng(REQUIRED_ALIGNMENT)
-            Info.flags = If(DevioProvider.CanWrite, IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE, IMDPROXY_FLAGS.IMDPROXY_FLAG_RO)
+            Dim Info As New IMDPROXY_INFO_RESP With {
+                .file_size = CULng(DevioProvider.Length),
+                .req_alignment = CULng(REQUIRED_ALIGNMENT),
+                .flags =
+                If(DevioProvider.CanWrite, IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE, IMDPROXY_FLAGS.IMDPROXY_FLAG_RO) Or
+                If(DevioProvider.SupportsShared, IMDPROXY_FLAGS.IMDPROXY_FLAG_SUPPORTS_SHARED, IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE)
+            }
 
             MapView.Write(&H0, Info)
 
@@ -336,6 +342,33 @@ Namespace Server.Services
 
         End Sub
 
+        Private Sub SharedKeys(MapView As SafeBuffer)
+
+            Dim Request = MapView.Read(Of IMDPROXY_SHARED_REQ)(&H0)
+
+            Dim Response As IMDPROXY_SHARED_RESP
+
+            Try
+                Dim Keys As ULong() = Nothing
+                DevioProvider.SharedKeys(Request, Response, Keys)
+                If Keys Is Nothing Then
+                    Response.length = 0
+                Else
+                    Response.length = CULng(Keys.Length * Marshal.SizeOf(GetType(ULong)))
+                    MapView.WriteArray(IMDPROXY_HEADER_SIZE, Keys, 0, Keys.Length)
+                End If
+
+            Catch ex As Exception
+                Trace.WriteLine(ex.ToString())
+                Response.errorno = IMDPROXY_SHARED_RESP_CODE.IOError
+                Response.length = 0
+
+            End Try
+
+            MapView.Write(&H0, Response)
+
+        End Sub
+
         Protected Overrides ReadOnly Property ProxyObjectName As String
             Get
                 Return ObjectName
@@ -350,10 +383,7 @@ Namespace Server.Services
 
         Protected Overrides Sub EmergencyStopServiceThread()
 
-            Dim routine = InternalShutdownRequestAction
-            If routine IsNot Nothing Then
-                routine()
-            End If
+            InternalShutdownRequestAction?.Invoke()
 
         End Sub
 
@@ -375,14 +405,14 @@ Namespace Server.Services
                 If Not Me.disposedValue Then
                     If disposing Then
                         ' TODO: free managed resources when explicitly called
+                        For Each obj In Me
+                            obj.Dispose()
+                        Next
                     End If
                 End If
                 Me.disposedValue = True
 
                 ' TODO: free shared unmanaged resources
-                For Each obj In Me
-                    obj.Dispose()
-                Next
 
                 Clear()
             End Sub

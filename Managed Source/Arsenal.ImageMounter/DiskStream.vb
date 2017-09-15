@@ -35,9 +35,7 @@ Public Class DiskStream
     ''' </summary>
     Public Overrides ReadOnly Property Length As Long
         Get
-            Dim Size As Int64
-            NativeFileIO.GetDiskSize(SafeFileHandle)
-            Return Size
+            Return NativeFileIO.GetDiskSize(SafeFileHandle)
         End Get
     End Property
 

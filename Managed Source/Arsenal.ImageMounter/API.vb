@@ -174,6 +174,55 @@ Public Class API
     End Function
 
     ''' <summary>
+    ''' Returns sector size typically used for image file name extensions. Returns 2048 for
+    ''' .iso, .nrg and .bin. Returns 512 for all other file name extensions.
+    ''' </summary>
+    ''' <param name="ImageFile">Name of disk image file.</param>
+    Public Shared Function GetSectorSizeFromFileName(imagefile As String) As UInteger
+        If imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) OrElse
+                    imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) OrElse
+                    imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) Then
+
+            Return 2048
+        Else
+            Return 512
+        End If
+    End Function
+
+    Private Shared ReadOnly multipliers As New Dictionary(Of ULong, String) From
+            {{1UL << 60, " EB"},
+             {1UL << 50, " PB"},
+             {1UL << 40, " TB"},
+             {1UL << 30, " GB"},
+             {1UL << 20, " MB"},
+             {1UL << 10, " KB"},
+             {2UL, " bytes"}}
+
+    Public Shared Function FormatFileSize(size As ULong) As String
+
+        For Each m In multipliers
+            If size >= m.Key Then
+                Return (size / m.Key).ToString("0.000") & m.Value
+            End If
+        Next
+
+        Return size.ToString() & " byte"
+
+    End Function
+
+    Public Shared Function FormatFileSize(size As Long) As String
+
+        For Each m In multipliers
+            If Math.Abs(size) >= m.Key Then
+                Return (size / m.Key).ToString("0.000") & m.Value
+            End If
+        Next
+
+        Return size.ToString() & " byte"
+
+    End Function
+
+    ''' <summary>
     ''' Checks if Flags specifies a read only virtual disk.
     ''' </summary>
     ''' <param name="Flags">Flag field to check.</param>

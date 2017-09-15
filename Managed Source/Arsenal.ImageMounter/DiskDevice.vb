@@ -21,7 +21,6 @@ Public Class DiskDevice
 
     Private _RawDiskStream As DiskStream
 
-    Private _DevicePath As String
     Private _CachedDeviceNumber As UInteger?
     Private _CachedPortNumber As Byte?
 
@@ -31,10 +30,6 @@ Public Class DiskDevice
     ''' open handle, this property returns null/Nothing.
     ''' </summary>
     Public ReadOnly Property DevicePath As String
-        Get
-            Return _DevicePath
-        End Get
-    End Property
 
     Private Sub AllowExtendedDasdIo()
         NativeFileIO.Win32API.DeviceIoControl(SafeFileHandle, NativeFileIO.Win32API.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
@@ -141,6 +136,16 @@ Public Class DiskDevice
     End Sub
 
     ''' <summary>
+    ''' Retrieves the physical location of a specified volume on one or more disks. 
+    ''' </summary>
+    ''' <returns></returns>
+    Public ReadOnly Property VolumeDiskExtents As NativeFileIO.DiskExtent()
+        Get
+            Return NativeFileIO.GetVolumeDiskExtents(SafeFileHandle)
+        End Get
+    End Property
+
+    ''' <summary>
     ''' Gets or sets disk signature stored in boot record.
     ''' </summary>
     Public Property DiskSignature As UInt32
@@ -152,8 +157,8 @@ Public Class DiskDevice
             End With
             Return BitConverter.ToUInt32(rawsig, &H1B8)
         End Get
-        Set(value As UInt32)
-            Dim newvalue = BitConverter.GetBytes(value)
+        Set
+            Dim newvalue = BitConverter.GetBytes(Value)
             Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
             With GetRawDiskStream()
                 .Position = 0
@@ -166,6 +171,13 @@ Public Class DiskDevice
     End Property
 
     ''' <summary>
+    ''' Flush buffers for a disk or volume.
+    ''' </summary>
+    Public Sub FlushBuffers()
+        NativeFileIO.FlushBuffers(SafeFileHandle)
+    End Sub
+
+    ''' <summary>
     ''' Gets or sets physical disk offline attribute. Only valid for
     ''' physical disk objects, not volumes or partitions.
     ''' </summary>
@@ -173,9 +185,9 @@ Public Class DiskDevice
         Get
             Return NativeFileIO.GetDiskOffline(SafeFileHandle)
         End Get
-        Set(value As Boolean?)
-            If value.HasValue Then
-                NativeFileIO.SetDiskOffline(SafeFileHandle, value.Value)
+        Set
+            If Value.HasValue Then
+                NativeFileIO.SetDiskOffline(SafeFileHandle, Value.Value)
             End If
         End Set
     End Property
@@ -188,9 +200,9 @@ Public Class DiskDevice
         Get
             Return NativeFileIO.GetDiskReadOnly(SafeFileHandle)
         End Get
-        Set(value As Boolean?)
-            If value.HasValue Then
-                NativeFileIO.SetDiskReadOnly(SafeFileHandle, value.Value)
+        Set
+            If Value.HasValue Then
+                NativeFileIO.SetDiskReadOnly(SafeFileHandle, Value.Value)
             End If
         End Set
     End Property
@@ -200,8 +212,8 @@ Public Class DiskDevice
     ''' disk volumes, not physical disk drives.
     ''' </summary>
     Public WriteOnly Property VolumeOffline As Boolean
-        Set(value As Boolean)
-            NativeFileIO.SetVolumeOffline(SafeFileHandle, value)
+        Set
+            NativeFileIO.SetVolumeOffline(SafeFileHandle, Value)
         End Set
     End Property
 
@@ -316,23 +328,7 @@ Public Class DiskDevice
 
         Using adapter As New ScsiAdapter(scsi_address.PortNumber)
 
-            Dim FillRequestData =
-              Sub(Request As BinaryWriter)
-                  Request.Write(scsi_address.DWordDeviceNumber)
-              End Sub
-
-            Dim ReturnCode As Int32
-
-            Dim Response =
-              NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
-                                                          NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_REMOVE_DEVICE,
-                                                          0,
-                                                          FillRequestData,
-                                                          ReturnCode)
-
-            If ReturnCode <> 0 Then
-                Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
-            End If
+            adapter.RemoveDevice(scsi_address.DWordDeviceNumber)
 
         End Using
 
@@ -392,10 +388,10 @@ Public Class DiskDevice
     End Function
 
     Protected Overrides Sub Dispose(disposing As Boolean)
-        If _RawDiskStream IsNot Nothing Then
-            _RawDiskStream.Dispose()
-            _RawDiskStream = Nothing
+        If disposing Then
+            _RawDiskStream?.Dispose()
         End If
+        _RawDiskStream = Nothing
 
         MyBase.Dispose(disposing)
     End Sub

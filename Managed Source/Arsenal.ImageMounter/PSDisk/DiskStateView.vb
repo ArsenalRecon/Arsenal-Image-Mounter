@@ -7,16 +7,16 @@ Namespace PSDisk
 
         Private _DetailsVisible As Boolean
         Private _Selected As Boolean
-        Public DiskState As PSDiskParser.DiskState
-        Public PhysicalDiskState As PSPhysicalDiskParser.PhysicalDiskState
         Public DeviceProperties As ScsiAdapter.DeviceProperties
-        Public DevicePath As String
         Public RawDiskSignature As UInt32?
-        Public DriveNumber As UInteger?
 
         Friend Sub New()
 
         End Sub
+
+        Public Property DevicePath As String
+
+        Public Property DeviceName As String
 
         Public ReadOnly Property ScsiId As String
             Get
@@ -34,22 +34,7 @@ Namespace PSDisk
 
         Public ReadOnly Property IsOffline As Boolean?
             Get
-                If DiskState IsNot Nothing Then
-                    Return DiskState.IsOffline
-                ElseIf PhysicalDiskState IsNot Nothing Then
-                    If PhysicalDiskState.CanPool OrElse
-                        Not PhysicalDiskState.CannotPoolReason.
-                        Contains(PSPhysicalDiskParser.CannotPoolReason.Offline) Then
-
-                        Return False
-                    Else
-                        Return True
-                    End If
-                ElseIf NativePropertyDiskOffline IsNot Nothing Then
-                    Return NativePropertyDiskOffline.Value
-                Else
-                    Return Nothing
-                End If
+                Return NativePropertyDiskOffline
             End Get
         End Property
 
@@ -66,64 +51,38 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public NativePartitionLayout As PSDiskParser.PartitionStyle?
+        Public NativePartitionLayout As IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE?
 
-        Public ReadOnly Property PartitionLayout As PSDiskParser.PartitionStyle?
+        Public ReadOnly Property PartitionLayout As String
             Get
-                If DiskState IsNot Nothing AndAlso DiskState.PartitionStyle.HasValue Then
-                    Return DiskState.PartitionStyle
-                ElseIf NativePartitionLayout.HasValue Then
-                    Return NativePartitionLayout
-                Else
-                    Return Nothing
-                End If
-            End Get
-        End Property
-
-        Public ReadOnly Property DriveNumberString As String
-            Get
-                If DriveNumber.HasValue Then
-                    Return DriveNumber.ToString()
-                Else
-                    Return Nothing
-                End If
+                Select Case NativePartitionLayout.GetValueOrDefault()
+                    Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_GPT
+                        Return "GPT"
+                    Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        Return "MBR"
+                    Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_RAW
+                        Return "RAW"
+                    Case Else
+                        Return "Unknown"
+                End Select
             End Get
         End Property
 
         Public ReadOnly Property Signature As String
             Get
-                If DiskState IsNot Nothing AndAlso DiskState.Signature.HasValue Then
-                    Return DiskState.Signature.Value.ToString("X8")
-                ElseIf RawDiskSignature.HasValue Then
-                    Return RawDiskSignature.Value.ToString("X8")
-                Else
-                    Return Nothing
-                End If
+                Return RawDiskSignature?.ToString("X8")
             End Get
         End Property
 
         Public ReadOnly Property DiskSizeNumeric As ULong?
             Get
-                If DiskState IsNot Nothing AndAlso DiskState.Size.HasValue Then
-                    Return DiskState.Size
-                ElseIf PhysicalDiskState IsNot Nothing AndAlso PhysicalDiskState.Size.HasValue Then
-                    Return PhysicalDiskState.Size
-                ElseIf DeviceProperties IsNot Nothing Then
+                If DeviceProperties IsNot Nothing Then
                     Return Convert.ToUInt64(DeviceProperties.DiskSize)
                 Else
                     Return Nothing
                 End If
             End Get
         End Property
-
-        Private Shared ReadOnly multipliers As New Dictionary(Of ULong, String) From
-            {{1UL << 60, " EB"},
-             {1UL << 50, " PB"},
-             {1UL << 40, " TB"},
-             {1UL << 30, " GB"},
-             {1UL << 20, " MB"},
-             {1UL << 10, " KB"},
-             {0UL, " bytes"}}
 
         Public ReadOnly Property DiskSize As String
             Get
@@ -132,13 +91,7 @@ Namespace PSDisk
                     Return Nothing
                 End If
 
-                Dim multiplier =
-                    Aggregate m In multipliers.Keys
-                    Where size.Value >= m
-                    Into Max()
-
-                Return (size.Value / multiplier).ToString("0.000") & multipliers(multiplier)
-
+                Return API.FormatFileSize(size.Value)
             End Get
         End Property
 
@@ -162,9 +115,7 @@ Namespace PSDisk
 
         Public ReadOnly Property IsReadOnly As Boolean?
             Get
-                If DiskState IsNot Nothing Then
-                    Return DiskState.IsReadOnly
-                ElseIf NativePropertyDiskOReadOnly IsNot Nothing Then
+                If NativePropertyDiskOReadOnly.HasValue Then
                     Return NativePropertyDiskOReadOnly.Value
                 ElseIf DeviceProperties IsNot Nothing Then
                     Return (DeviceProperties.Flags And DeviceFlags.ReadOnly) = DeviceFlags.ReadOnly
@@ -191,9 +142,9 @@ Namespace PSDisk
             Get
                 Return _DetailsVisible
             End Get
-            Set(value As Boolean)
-                If Not _DetailsVisible = value Then
-                    _DetailsVisible = value
+            Set
+                If Not _DetailsVisible = Value Then
+                    _DetailsVisible = Value
                     NotifyPropertyChanged("DetailsVisible")
                 End If
             End Set
@@ -203,9 +154,9 @@ Namespace PSDisk
             Get
                 Return _Selected
             End Get
-            Set(value As Boolean)
-                If Not _Selected = value Then
-                    _Selected = value
+            Set
+                If Not _Selected = Value Then
+                    _Selected = Value
                     NotifyPropertyChanged("Selected")
                 End If
             End Set

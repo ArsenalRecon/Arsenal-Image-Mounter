@@ -37,6 +37,7 @@ Namespace IO
             Public Const FILE_ATTRIBUTE_NORMAL As UInt32 = &H80UI
             Public Const FILE_FLAG_OVERLAPPED As UInt32 = &H40000000UI
             Public Const FILE_FLAG_BACKUP_SEMANTICS As UInt32 = &H2000000UI
+            Public Const FILE_FLAG_OPEN_REPARSE_POINT As UInt32 = &H200000UI
             Public Const OPEN_ALWAYS As UInt32 = 4UI
             Public Const OPEN_EXISTING As UInt32 = 3UI
             Public Const CREATE_ALWAYS As UInt32 = 2UI
@@ -60,6 +61,11 @@ Namespace IO
 
             Public Const FSCTL_LOCK_VOLUME As UInt32 = &H90018
             Public Const FSCTL_DISMOUNT_VOLUME As UInt32 = &H90020
+
+            Public Const FSCTL_SET_REPARSE_POINT As UInt32 = &H900A4
+            Public Const FSCTL_GET_REPARSE_POINT As UInt32 = &H900A8
+            Public Const FSCTL_DELETE_REPARSE_POINT As UInt32 = &H900AC
+            Public Const IO_REPARSE_TAG_MOUNT_POINT As UInt32 = &HA0000003UI
 
             Public Const IOCTL_SCSI_MINIPORT As UInt32 = &H4D008
             Public Const IOCTL_SCSI_GET_ADDRESS As UInt32 = &H41018
@@ -132,10 +138,10 @@ Namespace IO
                     Get
                         Return CUInt(PathId) Or (CUInt(TargetId) << 8) Or (CUInt(Lun) << 16)
                     End Get
-                    Set(value As UInt32)
-                        PathId = CByte(value And &HFF)
-                        TargetId = CByte((value >> 8) And &HFF)
-                        Lun = CByte((value >> 16) And &HFF)
+                    Set
+                        PathId = CByte(Value And &HFF)
+                        TargetId = CByte((Value >> 8) And &HFF)
+                        Lun = CByte((Value >> 16) And &HFF)
                     End Set
                 End Property
 
@@ -230,14 +236,36 @@ Namespace IO
 
             <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
             Public Structure OSVERSIONINFO
-                Public dwOSVersionInfoSize As Int32
-                Public dwMajorVersion As Int32
-                Public dwMinorVersion As Int32
-                Public dwBuildNumber As Int32
-                Public dwPlatformId As UInt32
+                Public OSVersionInfoSize As Int32
+                Public MajorVersion As Int32
+                Public MinorVersion As Int32
+                Public BuildNumber As Int32
+                Public PlatformId As PlatformID
 
                 <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=128)>
-                Public szCSDVersion As String
+                Public CSDVersion As String
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
+            Public Structure OSVERSIONINFOEX
+                Public OSVersionInfoSize As Int32
+                Public MajorVersion As Int32
+                Public MinorVersion As Int32
+                Public BuildNumber As Int32
+                Public PlatformId As PlatformID
+
+                <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=128)>
+                Public CSDVersion As String
+
+                Public ServicePackMajor As UShort
+
+                Public ServicePackMinor As UShort
+
+                Public SuiteMask As Short
+
+                Public ProductType As Byte
+
+                Public Reserved As Byte
             End Structure
 
             <StructLayout(LayoutKind.Sequential, Pack:=8)>
@@ -588,6 +616,11 @@ Namespace IO
               cchBufferLength As UInt32,
               <Out> ByRef lpcchReturnLength As UInt32) As UInt32
 
+            Public Declare Auto Function GetVolumeNameForVolumeMountPoint Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
+              <MarshalAs(UnmanagedType.LPTStr), [In](), Out> DestinationInfFileName As StringBuilder,
+              DestinationInfFileNameSize As Int32) As UInt32
+
             Public Declare Auto Function GetCommTimeouts Lib "kernel32" (
               hFile As SafeFileHandle,
               <Out> ByRef lpCommTimeouts As COMMTIMEOUTS) As Boolean
@@ -604,6 +637,18 @@ Namespace IO
               dwCreationDisposition As UInt32,
               dwFlagsAndAttributes As UInt32,
               hTemplateFile As IntPtr) As SafeFileHandle
+
+            Public Declare Auto Function CreateFile Lib "kernel32" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
+              dwDesiredAccess As UInt32,
+              dwShareMode As UInt32,
+              lpSecurityAttributes As IntPtr,
+              dwCreationDisposition As UInt32,
+              dwFlagsAndAttributes As Int32,
+              hTemplateFile As IntPtr) As SafeFileHandle
+
+            Public Declare Function FlushFileBuffers Lib "kernel32" (
+              handle As SafeFileHandle) As Boolean
 
             Public Declare Function GetFileSize Lib "kernel32" Alias "GetFileSizeEx" (
               hFile As SafeFileHandle,
@@ -1122,6 +1167,9 @@ Namespace IO
             Public Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
               <[In], Out> ByRef os_version As OSVERSIONINFO) As Integer
 
+            Public Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
+              <[In], Out> ByRef os_version As OSVERSIONINFOEX) As Integer
+
         End Class
 #End Region
 
@@ -1140,6 +1188,7 @@ Namespace IO
             Public Const SMP_IMSCSI_CHECK = SMP_IMSCSI Or &H804UI
             Public Const SMP_IMSCSI_SET_DEVICE_FLAGS = SMP_IMSCSI Or &H805UI
             Public Const SMP_IMSCSI_REMOVE_DEVICE = SMP_IMSCSI Or &H806UI
+            Public Const SMP_IMSCSI_EXTEND_DEVICE = SMP_IMSCSI Or &H807UI
 
             ''' <summary>
             ''' Signature to set in SRB_IO_CONTROL header. This identifies that sender and receiver of
@@ -1273,7 +1322,6 @@ Namespace IO
         ''' that error code.
         ''' </summary>
         ''' <param name="result">Return code from a Win32 API function call.</param>
-        <DebuggerHidden()>
         Public Shared Function Win32Try(Of T)(result As T) As T
 
             If result Is Nothing Then
@@ -1332,6 +1380,20 @@ Namespace IO
 
         End Function
 
+        Public Shared Function ConvertManagedFileAccess(DesiredAccess As FileAccess) As UInt32
+
+            Dim NativeDesiredAccess As UInt32 = Win32API.FILE_READ_ATTRIBUTES
+            If (DesiredAccess And FileAccess.Read) = FileAccess.Read Then
+                NativeDesiredAccess = NativeDesiredAccess Or Win32API.GENERIC_READ
+            End If
+            If (DesiredAccess And FileAccess.Write) = FileAccess.Write Then
+                NativeDesiredAccess = NativeDesiredAccess Or Win32API.GENERIC_WRITE
+            End If
+
+            Return NativeDesiredAccess
+
+        End Function
+
         ''' <summary>
         ''' Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
         ''' </summary>
@@ -1351,13 +1413,7 @@ Namespace IO
                 Throw New ArgumentNullException("FileName")
             End If
 
-            Dim NativeDesiredAccess As UInt32 = Win32API.FILE_READ_ATTRIBUTES Or Win32API.SYNCHRONIZE
-            If (DesiredAccess And FileAccess.Read) = FileAccess.Read Then
-                NativeDesiredAccess = NativeDesiredAccess Or Win32API.GENERIC_READ
-            End If
-            If (DesiredAccess And FileAccess.Write) = FileAccess.Write Then
-                NativeDesiredAccess = NativeDesiredAccess Or Win32API.GENERIC_WRITE
-            End If
+            Dim NativeDesiredAccess = ConvertManagedFileAccess(DesiredAccess)
 
             Dim NativeShareMode As UInt32 = 0
             If (ShareMode And FileShare.Read) = FileShare.Read Then
@@ -1390,6 +1446,91 @@ Namespace IO
             If Overlapped Then
                 NativeFlagsAndAttributes += Win32API.FILE_FLAG_OVERLAPPED
             End If
+
+            Dim Handle = Win32API.CreateFile(FileName,
+                                             NativeDesiredAccess,
+                                             NativeShareMode,
+                                             IntPtr.Zero,
+                                             NativeCreationDisposition,
+                                             NativeFlagsAndAttributes,
+                                             IntPtr.Zero)
+            If Handle.IsInvalid Then
+                Throw New Win32Exception
+            End If
+
+            Return Handle
+        End Function
+
+        ''' <summary>
+        ''' Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
+        ''' </summary>
+        ''' <param name="FileName">Name of file to open.</param>
+        ''' <param name="DesiredAccess">File access to request.</param>
+        ''' <param name="ShareMode">Share mode to request.</param>
+        ''' <param name="CreationDisposition">Open/creation mode.</param>
+        ''' <param name="Options">Specifies whether to request overlapped I/O.</param>
+        Public Shared Function OpenFileHandle(
+          FileName As String,
+          DesiredAccess As FileAccess,
+          ShareMode As FileShare,
+          CreationDisposition As FileMode,
+          Options As FileOptions) As SafeFileHandle
+
+            Return OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, CUInt(Options))
+
+        End Function
+
+        ''' <summary>
+        ''' Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
+        ''' </summary>
+        ''' <param name="FileName">Name of file to open.</param>
+        ''' <param name="DesiredAccess">File access to request.</param>
+        ''' <param name="ShareMode">Share mode to request.</param>
+        ''' <param name="CreationDisposition">Open/creation mode.</param>
+        ''' <param name="Options">Specifies whether to request overlapped I/O.</param>
+        Public Shared Function OpenFileHandle(
+          FileName As String,
+          DesiredAccess As FileAccess,
+          ShareMode As FileShare,
+          CreationDisposition As FileMode,
+          Options As UInt32) As SafeFileHandle
+
+            If String.IsNullOrEmpty(FileName) Then
+                Throw New ArgumentNullException("FileName")
+            End If
+
+            Dim NativeDesiredAccess = ConvertManagedFileAccess(DesiredAccess)
+
+            Dim NativeShareMode As UInt32 = 0
+            If (ShareMode And FileShare.Read) = FileShare.Read Then
+                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_READ
+            End If
+            If (ShareMode And FileShare.Write) = FileShare.Write Then
+                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_WRITE
+            End If
+            If (ShareMode And FileShare.Delete) = FileShare.Delete Then
+                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_DELETE
+            End If
+
+            Dim NativeCreationDisposition As UInt32 = 0
+            Select Case CreationDisposition
+                Case FileMode.Create
+                    NativeCreationDisposition = Win32API.CREATE_ALWAYS
+                Case FileMode.CreateNew
+                    NativeCreationDisposition = Win32API.CREATE_NEW
+                Case FileMode.Open
+                    NativeCreationDisposition = Win32API.OPEN_EXISTING
+                Case FileMode.OpenOrCreate
+                    NativeCreationDisposition = Win32API.OPEN_ALWAYS
+                Case FileMode.Truncate
+                    NativeCreationDisposition = Win32API.TRUNCATE_EXISTING
+                Case Else
+                    Throw New NotImplementedException
+            End Select
+
+            Dim NativeFlagsAndAttributes As UInt32 = Win32API.FILE_ATTRIBUTE_NORMAL
+
+            NativeFlagsAndAttributes += Options
 
             Dim Handle = Win32API.CreateFile(FileName,
                                              NativeDesiredAccess,
@@ -1567,13 +1708,13 @@ Namespace IO
 
             Dim pinptr = GCHandle.Alloc(State, GCHandleType.Pinned)
             Try
-                Win32Try(Win32API.DeviceIoControl(SafeFileHandle, _
-                                                  Win32API.FSCTL_SET_COMPRESSION, _
-                                                  pinptr.AddrOfPinnedObject(), _
-                                                  2UI, _
-                                                  IntPtr.Zero, _
-                                                  0UI, _
-                                                  Nothing, _
+                Win32Try(Win32API.DeviceIoControl(SafeFileHandle,
+                                                  Win32API.FSCTL_SET_COMPRESSION,
+                                                  pinptr.AddrOfPinnedObject(),
+                                                  2UI,
+                                                  IntPtr.Zero,
+                                                  0UI,
+                                                  Nothing,
                                                   IntPtr.Zero))
 
             Finally
@@ -1775,6 +1916,51 @@ Namespace IO
 
         End Function
 
+        ''' <summary>
+        ''' Creates a directory junction
+        ''' </summary>
+        ''' <param name="source">Location of directory to convert to a junction.</param>
+        ''' <param name="target">Target path for the junction.</param>
+        Public Shared Sub CreateDirectoryJunction(source As String, target As String)
+
+            Directory.CreateDirectory(source)
+
+            Using hdir = OpenFileHandle(source, FileAccess.Write, FileShare.Read, FileMode.Open, Win32API.FILE_FLAG_BACKUP_SEMANTICS Or Win32API.FILE_FLAG_OPEN_REPARSE_POINT)
+                CreateDirectoryJunction(hdir, target)
+            End Using
+
+        End Sub
+
+        ''' <summary>
+        ''' Creates a directory junction
+        ''' </summary>
+        ''' <param name="source">Handle to directory.</param>
+        ''' <param name="target">Target path for the junction.</param>
+        Public Shared Sub CreateDirectoryJunction(source As SafeFileHandle, target As String)
+
+            Dim name = Encoding.Unicode.GetBytes(target)
+
+            Dim wr As New BufferedBinaryWriter
+            wr.Write(Win32API.IO_REPARSE_TAG_MOUNT_POINT) ' DWORD ReparseTag
+            wr.Write(8S + CShort(name.Length) + 2S + CShort(name.Length) + 2S) ' WORD ReparseDataLength
+            wr.Write(0S) ' WORD Reserved
+            wr.Write(0S) ' WORD NameOffset
+            wr.Write(CShort(name.Length)) ' WORD NameLength
+            wr.Write(CShort(name.Length) + 2S) ' WORD DisplayNameOffset
+            wr.Write(CShort(name.Length)) ' WORD DisplayNameLength
+            wr.Write(name)
+            wr.Write(New Char)
+            wr.Write(name)
+            wr.Write(New Char)
+
+            Dim buffer = wr.ToArray()
+
+            If Not Win32API.DeviceIoControl(source, Win32API.FSCTL_SET_REPARSE_POINT, buffer, CUInt(buffer.Length), IntPtr.Zero, 0UI, 0UI, IntPtr.Zero) Then
+                Throw New Win32Exception
+            End If
+
+        End Sub
+
         Public Shared Function GetProcAddress(hModule As IntPtr, procedureName As String, delegateType As Type) As [Delegate]
 
             Return Marshal.GetDelegateForFunctionPointer(Win32Try(Win32API.GetProcAddress(hModule, procedureName)), delegateType)
@@ -1907,6 +2093,10 @@ Namespace IO
 
         End Function
 
+        Public Shared Sub FlushBuffers(handle As SafeFileHandle)
+            Win32Try(Win32API.FlushFileBuffers(handle))
+        End Sub
+
         Public Shared Function GetDiskOffline(disk As SafeFileHandle) As Boolean?
 
             Dim attribs_size As Byte = 16
@@ -2005,6 +2195,63 @@ Namespace IO
 
         End Function
 
+        Public Shared Function GetVolumeNameForVolumeMountPoint(MountPoint As String) As String
+
+            Dim str As New StringBuilder(65536)
+
+            Win32Try(Win32API.GetVolumeNameForVolumeMountPoint(MountPoint, str, str.Capacity))
+
+            Return str.ToString()
+
+        End Function
+
+        Public Shared Function GetDevicesScsiAddresses(portnumber As Byte) As Dictionary(Of UInteger, String)
+
+            Static SizeOfScsiAddress As UInt32 = CUInt(Marshal.SizeOf(GetType(NativeFileIO.Win32API.SCSI_ADDRESS)))
+
+            Dim GetScsiAddress =
+                Function(drv As String) As NativeFileIO.Win32API.SCSI_ADDRESS?
+                    Try
+                        Using disk As New DiskDevice(drv)
+                            Dim ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS
+                            Dim rc = NativeFileIO.Win32API.
+                            DeviceIoControl(disk.SafeFileHandle,
+                                            NativeFileIO.Win32API.IOCTL_SCSI_GET_ADDRESS,
+                                            IntPtr.Zero,
+                                            0,
+                                            ScsiAddress,
+                                            SizeOfScsiAddress,
+                                            Nothing,
+                                            Nothing)
+
+                            If rc Then
+                                Return ScsiAddress
+                            Else
+                                Trace.WriteLine("IOCTL_SCSI_GET_ADDRESS failed for device " & drv & ": Error 0x" & Marshal.GetLastWin32Error().ToString("X"))
+                                Return Nothing
+                            End If
+                        End Using
+
+                    Catch ex As Exception
+                        Trace.WriteLine("Exception attempting to find SCSI address for device " & drv & ": " & ex.ToString())
+                        Return Nothing
+
+                    End Try
+                End Function
+
+            Dim q =
+                From drv In NativeFileIO.QueryDosDevice()
+                Where drv.StartsWith("PhysicalDrive", StringComparison.Ordinal) OrElse
+                    drv.StartsWith("CdRom", StringComparison.Ordinal)
+                Let address = GetScsiAddress(String.Concat("\\?\", drv))
+                Where address.HasValue
+                Where address.Value.PortNumber = portnumber
+
+            Return q.ToDictionary(Function(o) o.address.Value.DWordDeviceNumber,
+                                  Function(o) o.drv)
+
+        End Function
+
         Public Shared Function GetVolumeMountPoints(VolumeName As String) As String()
 
             Dim TargetPath(0 To 65536) As Char
@@ -2023,12 +2270,46 @@ Namespace IO
 
         End Function
 
+        Public Shared Function GetDiskVolumes(DevicePath As String) As IEnumerable(Of String)
+
+            If DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.Ordinal) Then
+                Return GetDiskVolumes(UInteger.Parse(DevicePath.Substring("\\?\PhysicalDrive".Length)))
+            Else
+                Return GetVolumeNamesForDeviceObject(NativeFileIO.QueryDosDevice(DevicePath.Substring("\\?\".Length)).First())
+            End If
+
+        End Function
+
         Public Shared Function GetDiskVolumes(DiskNumber As UInteger) As IEnumerable(Of String)
 
             Return (New VolumeEnumerator).Where(
                 Function(volumeGuid)
                     Try
                         Return VolumeUsesDisk(volumeGuid, DiskNumber)
+
+                    Catch ex As Exception
+                        Trace.WriteLine(volumeGuid & ": " & ex.JoinMessages())
+                        Return False
+
+                    End Try
+                End Function)
+
+        End Function
+
+        Public Shared Function GetVolumeNamesForDeviceObject(DeviceObject As String) As IEnumerable(Of String)
+
+            Return (New VolumeEnumerator).Where(
+                Function(volumeGuid)
+                    Try
+                        If volumeGuid.StartsWith("\\?\", StringComparison.Ordinal) Then
+                            volumeGuid = volumeGuid.Substring(4)
+                        End If
+
+                        volumeGuid = volumeGuid.TrimEnd("\"c)
+
+                        Return _
+                            Aggregate target In QueryDosDevice(volumeGuid)
+                                Into Any(target.Equals(DeviceObject, StringComparison.OrdinalIgnoreCase))
 
                     Catch ex As Exception
                         Trace.WriteLine(volumeGuid & ": " & ex.JoinMessages())
@@ -2527,7 +2808,8 @@ Namespace IO
 
             For Each diskdevice In
                 From device In QueryDosDevice()
-                Where device.StartsWith("PhysicalDrive", StringComparison.OrdinalIgnoreCase)
+                Where device.StartsWith("PhysicalDrive", StringComparison.OrdinalIgnoreCase) OrElse
+                    device.StartsWith("CdRom", StringComparison.OrdinalIgnoreCase)
 
                 Try
                     Using device = OpenFileHandle("\\?\" & diskdevice, 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
@@ -2576,54 +2858,73 @@ Namespace IO
         ''' </summary>
         Public Shared Function OpenDiskByScsiAddress(ScsiAddress As Win32API.SCSI_ADDRESS, AccessMode As FileAccess) As KeyValuePair(Of String, SafeFileHandle)
 
-            For Each diskdevice In
-                From device In QueryDosDevice()
+            Dim dosdevs = QueryDosDevice()
+
+            Dim rawdevices =
+                From device In dosdevs
                 Where
                     device.StartsWith("PhysicalDrive", StringComparison.OrdinalIgnoreCase) OrElse
                     device.StartsWith("CdRom", StringComparison.OrdinalIgnoreCase)
-                Select
-                    String.Concat("\\?\", device)
 
-                Try
-                    Dim devicehandle = OpenFileHandle(diskdevice, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
+            Dim volumedevices =
+                From device In dosdevs
+                Where
+                    device.Length = 2 AndAlso device(1).Equals(":"c)
+
+            Dim filter =
+                Function(diskdevice As String) As KeyValuePair(Of String, SafeFileHandle)
 
                     Try
-                        Dim Address = GetScsiAddress(devicehandle)
+                        Dim devicehandle = OpenFileHandle(diskdevice, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
 
-                        If Address <> ScsiAddress Then
+                        Try
+                            Dim Address = GetScsiAddress(devicehandle)
+
+                            If Not Address.HasValue OrElse Address <> ScsiAddress Then
+
+                                devicehandle.Dispose()
+
+                                Return Nothing
+
+                            End If
+
+                            Trace.WriteLine("Found " & diskdevice & " with SCSI address " & Address.ToString())
+
+                            Return New KeyValuePair(Of String, SafeFileHandle)(diskdevice, devicehandle)
+
+                        Catch ex As Exception
+                            Trace.WriteLine("Exception while querying SCSI address for " & diskdevice & ": " & ex.ToString())
 
                             devicehandle.Dispose()
 
-                            Continue For
-
-                        End If
-
-                        Trace.WriteLine("Found " & diskdevice & " with SCSI address " & Address.ToString())
-
-                        Return New KeyValuePair(Of String, SafeFileHandle)(diskdevice, devicehandle)
+                        End Try
 
                     Catch ex As Exception
-                        Trace.WriteLine("Exception while querying SCSI address for " & diskdevice & ": " & ex.ToString())
-
-                        devicehandle.Dispose()
+                        Trace.WriteLine("Exception while opening " & diskdevice & ": " & ex.ToString())
 
                     End Try
 
-                Catch ex As Exception
-                    Trace.WriteLine("Exception while opening " & diskdevice & ": " & ex.ToString())
+                    Return Nothing
 
-                End Try
+                End Function
 
-            Next
+            Dim dev =
+                Aggregate anydevice In rawdevices.Concat(volumedevices)
+                    Select seldevice = filter(String.Concat("\\?\", anydevice))
+                        Into FirstOrDefault(seldevice.Key IsNot Nothing)
 
-            Throw New DriveNotFoundException("No physical drive found with SCSI address: " & ScsiAddress.ToString())
+            If dev.Key Is Nothing Then
+                Throw New DriveNotFoundException("No physical drive found with SCSI address: " & ScsiAddress.ToString())
+            End If
+
+            Return dev
 
         End Function
 
-        Public Shared Function GetOSVersion() As Version
+        Public Shared Function GetOSVersion() As OperatingSystem
 
-            Dim os_version As New Win32API.OSVERSIONINFO With {
-                .dwOSVersionInfoSize = Marshal.SizeOf(os_version)
+            Dim os_version As New Win32API.OSVERSIONINFOEX With {
+                .OSVersionInfoSize = Marshal.SizeOf(os_version)
             }
 
             Dim status = Win32API.RtlGetVersion(os_version)
@@ -2632,9 +2933,11 @@ Namespace IO
                 Throw New Win32Exception(Win32API.RtlNtStatusToDosError(status))
             End If
 
-            Return New Version(os_version.dwMajorVersion,
-                               os_version.dwMinorVersion,
-                               os_version.dwBuildNumber)
+            Return New OperatingSystem(os_version.PlatformId,
+                                       New Version(os_version.MajorVersion,
+                                                   os_version.MinorVersion,
+                                                   os_version.BuildNumber,
+                                                   CInt(os_version.ServicePackMajor) << 16 Or CInt(os_version.ServicePackMinor)))
 
         End Function
 

@@ -81,6 +81,34 @@ Namespace Server.Interaction
         ''' <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
         ''' this could specify a flag for read-only mounting.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProxyType, Flags As DeviceFlags, DiskAccess As VirtualDiskAccess) As DevioServiceBase
+
+            If Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) OrElse
+                Imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) OrElse
+                Imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) Then
+
+                Flags = Flags Or DeviceFlags.DeviceTypeCD
+            End If
+
+            Dim Service = GetService(Imagefile, DiskAccess, Proxy)
+
+            Service.StartServiceThreadAndMount(Adapter, Flags)
+
+            Return Service
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file. Once that is done, this method
+        ''' automatically calls Arsenal Image Mounter to create a virtual disk device for this
+        ''' image file.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="Adapter">Open ScsiAdapter object for communication with Arsenal Image Mounter.</param>
+        ''' <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
+        ''' this could specify a flag for read-only mounting.</param>
+        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
         Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProxyType, Flags As DeviceFlags) As DevioServiceBase
 
             Dim DiskAccess As FileAccess
@@ -91,7 +119,10 @@ Namespace Server.Interaction
                 DiskAccess = FileAccess.Read
             End If
 
-            If Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) Then
+            If Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) OrElse
+                Imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) OrElse
+                Imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) Then
+
                 Flags = Flags Or DeviceFlags.DeviceTypeCD
             End If
 
@@ -135,7 +166,7 @@ Namespace Server.Interaction
                     Service = New DevioShmService(GetProviderLibEwf(Imagefile, DiskAccess), OwnsProvider:=True)
 
                 Case ProxyType.None
-                    Service = New DevioNoneService(Imagefile, GetDirectFileAccessFlags(DiskAccess))
+                    Service = New DevioNoneService(Imagefile, DiskAccess)
 
                 Case Else
                     Throw New NotSupportedException("Proxy " & Proxy.ToString() & " not supported.")
@@ -184,7 +215,7 @@ Namespace Server.Interaction
 
         End Function
 
-        Private Shared Function GetDirectFileAccessFlags(DiskAccess As VirtualDiskAccess) As FileAccess
+        Friend Shared Function GetDirectFileAccessFlags(DiskAccess As VirtualDiskAccess) As FileAccess
             If (DiskAccess And Not FileAccess.ReadWrite) <> 0 Then
                 Throw New ArgumentException("Unsupported VirtualDiskAccess flags for direct file access: " & DiskAccess.ToString(), "DiskAccess")
             End If
@@ -192,7 +223,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using DiscUtils library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -203,10 +234,10 @@ Namespace Server.Interaction
 
             Select Case DiskAccess
                 Case FileAccess.Read
-                    VirtualDiskAccess = DevioServiceFactory.VirtualDiskAccess.ReadOnly
+                    VirtualDiskAccess = VirtualDiskAccess.ReadOnly
 
                 Case FileAccess.ReadWrite
-                    VirtualDiskAccess = DevioServiceFactory.VirtualDiskAccess.ReadWriteOriginal
+                    VirtualDiskAccess = VirtualDiskAccess.ReadWriteOriginal
 
                 Case Else
                     Throw New ArgumentException("Unsupported DiskAccess for DiscUtils: " & DiskAccess.ToString(), "DiskAccess")
@@ -218,7 +249,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using DiscUtils library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -276,9 +307,13 @@ Namespace Server.Interaction
 
                 Trace.WriteLine("Image virtual size is " & Disk.Capacity & " bytes")
 
+                Dim SectorSize As UInteger
+
                 If Disk.Geometry Is Nothing Then
+                    SectorSize = 512
                     Trace.WriteLine("Image sector size is unknown")
                 Else
+                    SectorSize = CUInt(Disk.Geometry.BytesPerSector)
                     Trace.WriteLine("Image sector size is " & Disk.Geometry.BytesPerSector & " bytes")
                 End If
 
@@ -306,9 +341,12 @@ Namespace Server.Interaction
                     Trace.WriteLine("Read-only mode.")
                 End If
 
-                Dim provider As New DevioProviderFromStream(DiskStream, ownsStream:=True)
+                Dim provider As New DevioProviderFromStream(DiskStream, ownsStream:=True) With {
+                    .CustomSectorSize = SectorSize
+                }
 
-                AddHandler provider.Disposed, Sub() DisposableObjects.ForEach(Sub(obj) obj.Dispose())
+                AddHandler provider.Disposed,
+                    Sub() DisposableObjects.ForEach(Sub(obj) obj.Dispose())
 
                 Return provider
 
@@ -323,7 +361,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified set of multi-part raw image files.
         ''' </summary>
         ''' <param name="Imagefile">First part image file.</param>
@@ -335,7 +373,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified set of multi-part raw image files.
         ''' </summary>
         ''' <param name="Imagefile">First part image file.</param>
@@ -344,12 +382,30 @@ Namespace Server.Interaction
 
             Dim DiskStream As New MultiPartFileStream(Imagefile, DiskAccess)
 
-            Return New DevioProviderFromStream(DiskStream, ownsStream:=True)
+            Return New DevioProviderFromStream(DiskStream, ownsStream:=True) With {
+                .CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)
+            }
 
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified set of multi-part raw image files.
+        ''' </summary>
+        ''' <param name="Imagefile">First part image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        Public Shared Function GetProviderMultiPartRaw(Imagefile As String, DiskAccess As FileAccess, ShareMode As FileShare?) As IDevioProvider
+
+            Dim DiskStream As New MultiPartFileStream(Imagefile, DiskAccess, ShareMode)
+
+            Return New DevioProviderFromStream(DiskStream, ownsStream:=True) With {
+                .CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)
+            }
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using libewf library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -375,7 +431,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using libewf library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>

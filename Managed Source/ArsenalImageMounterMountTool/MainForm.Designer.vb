@@ -65,7 +65,7 @@ Partial Class MainForm
         Me.btnRefresh.Location = New System.Drawing.Point(12, 270)
         Me.btnRefresh.Name = "btnRefresh"
         Me.btnRefresh.Size = New System.Drawing.Size(629, 24)
-        Me.btnRefresh.TabIndex = 2
+        Me.btnRefresh.TabIndex = 1
         Me.btnRefresh.Text = "Refresh list"
         Me.btnRefresh.UseVisualStyleBackColor = True
         '
@@ -89,7 +89,7 @@ Partial Class MainForm
         Me.btnRemoveAll.Location = New System.Drawing.Point(12, 360)
         Me.btnRemoveAll.Name = "btnRemoveAll"
         Me.btnRemoveAll.Size = New System.Drawing.Size(629, 24)
-        Me.btnRemoveAll.TabIndex = 3
+        Me.btnRemoveAll.TabIndex = 4
         Me.btnRemoveAll.Text = "Remove all"
         Me.btnRemoveAll.UseVisualStyleBackColor = True
         '
@@ -100,7 +100,7 @@ Partial Class MainForm
         Me.btnMountRaw.Location = New System.Drawing.Point(12, 420)
         Me.btnMountRaw.Name = "btnMountRaw"
         Me.btnMountRaw.Size = New System.Drawing.Size(629, 24)
-        Me.btnMountRaw.TabIndex = 3
+        Me.btnMountRaw.TabIndex = 6
         Me.btnMountRaw.Text = "Mount raw image"
         Me.btnMountRaw.UseVisualStyleBackColor = True
         '
@@ -111,7 +111,7 @@ Partial Class MainForm
         Me.btnMountDiscUtils.Location = New System.Drawing.Point(12, 479)
         Me.btnMountDiscUtils.Name = "btnMountDiscUtils"
         Me.btnMountDiscUtils.Size = New System.Drawing.Size(629, 24)
-        Me.btnMountDiscUtils.TabIndex = 3
+        Me.btnMountDiscUtils.TabIndex = 8
         Me.btnMountDiscUtils.Text = "Mount through DiscUtils"
         Me.btnMountDiscUtils.UseVisualStyleBackColor = True
         '
@@ -122,7 +122,7 @@ Partial Class MainForm
         Me.btnMountLibEwf.Location = New System.Drawing.Point(12, 509)
         Me.btnMountLibEwf.Name = "btnMountLibEwf"
         Me.btnMountLibEwf.Size = New System.Drawing.Size(629, 24)
-        Me.btnMountLibEwf.TabIndex = 3
+        Me.btnMountLibEwf.TabIndex = 9
         Me.btnMountLibEwf.Text = "Mount through libewf"
         Me.btnMountLibEwf.UseVisualStyleBackColor = True
         '
@@ -144,7 +144,7 @@ Partial Class MainForm
         Me.cbNotifyLibEwf.Location = New System.Drawing.Point(15, 539)
         Me.cbNotifyLibEwf.Name = "cbNotifyLibEwf"
         Me.cbNotifyLibEwf.Size = New System.Drawing.Size(98, 17)
-        Me.cbNotifyLibEwf.TabIndex = 5
+        Me.cbNotifyLibEwf.TabIndex = 10
         Me.cbNotifyLibEwf.Text = "Debug console"
         Me.cbNotifyLibEwf.UseVisualStyleBackColor = True
         '
@@ -155,7 +155,7 @@ Partial Class MainForm
         Me.btnMountMultiPartRaw.Location = New System.Drawing.Point(12, 449)
         Me.btnMountMultiPartRaw.Name = "btnMountMultiPartRaw"
         Me.btnMountMultiPartRaw.Size = New System.Drawing.Size(629, 24)
-        Me.btnMountMultiPartRaw.TabIndex = 3
+        Me.btnMountMultiPartRaw.TabIndex = 7
         Me.btnMountMultiPartRaw.Text = "Mount multi-part raw"
         Me.btnMountMultiPartRaw.UseVisualStyleBackColor = True
         '
@@ -177,7 +177,7 @@ Partial Class MainForm
         Me.lbDevices.RowHeadersVisible = False
         Me.lbDevices.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
         Me.lbDevices.Size = New System.Drawing.Size(629, 239)
-        Me.lbDevices.TabIndex = 6
+        Me.lbDevices.TabIndex = 0
         '
         'ScsiIdDataGridViewTextBoxColumn
         '
@@ -254,7 +254,7 @@ Partial Class MainForm
         Me.btnRAMDisk.Location = New System.Drawing.Point(12, 390)
         Me.btnRAMDisk.Name = "btnRAMDisk"
         Me.btnRAMDisk.Size = New System.Drawing.Size(629, 24)
-        Me.btnRAMDisk.TabIndex = 3
+        Me.btnRAMDisk.TabIndex = 5
         Me.btnRAMDisk.Text = "Create RAM disk"
         Me.btnRAMDisk.UseVisualStyleBackColor = True
         '

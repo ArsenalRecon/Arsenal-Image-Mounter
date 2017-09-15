@@ -5,7 +5,7 @@
 /// queueing work items for requests that need to be carried out at
 /// PASSIVE_LEVEL.
 /// 
-/// Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -31,7 +31,7 @@ VOID
 ScsiExecuteRaidControllerUnit(
 __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
 __in PSCSI_REQUEST_BLOCK  pSrb,
-__in PUCHAR               pResult
+__in pResultType          pResult
 )
 {
     KdPrint2(("PhDskMnt::ScsiExecuteRaidControllerUnit: pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
@@ -129,7 +129,7 @@ VOID
 ScsiExecute(
 __in pHW_HBA_EXT          pHBAExt,    // Adapter device-object extension from port driver.
 __in PSCSI_REQUEST_BLOCK  pSrb,
-__in PUCHAR               pResult,
+__in pResultType          pResult,
 __in PKIRQL               LowestAssumedIrql
 )
 {
@@ -258,7 +258,7 @@ __in PKIRQL               LowestAssumedIrql
 
     default:
         //StorPortLogError(pHBAExt, pSrb, pSrb->PathId, pSrb->TargetId, pSrb->Lun, SP_PROTOCOL_ERROR, 0x0100 | pSrb->Cdb[0]);
-        KdPrint(("PhDskMnt::ScsiExecute: Unknown opcode=0x%X\n", (int)pSrb->Cdb[0]));
+        KdPrint(("PhDskMnt::ScsiExecute: Unknown opcode %s (0x%X)\n", DbgGetScsiOpStr(pSrb), (int)pSrb->Cdb[0]));
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
         break;
 
@@ -930,7 +930,7 @@ ScsiOpVPDCdRomUnit(
         PVPD_SUPPORTED_PAGES_PAGE pSupportedPages;
         ULONG len;
 
-        len = FIELD_OFFSET(VPD_SUPPORTED_PAGES_PAGE, SupportedPageList) + 2;
+        len = FIELD_OFFSET(VPD_SUPPORTED_PAGES_PAGE, SupportedPageList) + 3;
 
         if (pSrb->DataTransferLength < len)
         {
@@ -941,9 +941,10 @@ ScsiOpVPDCdRomUnit(
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
-        pSupportedPages->PageLength = 2;
+        pSupportedPages->PageLength = 3;
         pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
         pSupportedPages->SupportedPageList[1] = VPD_SERIAL_NUMBER;
+        pSupportedPages->SupportedPageList[2] = VPD_DEVICE_IDENTIFIERS;
 
         ScsiSetSuccess(pSrb, len);
     }
@@ -978,6 +979,39 @@ ScsiOpVPDCdRomUnit(
         ScsiSetSuccess(pSrb, len);
     }
     break;
+
+    case VPD_DEVICE_IDENTIFIERS:
+    {
+        PVPD_IDENTIFICATION_PAGE IdentificationPage =
+            (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;
+
+        if (pSrb->DataTransferLength < sizeof(VPD_IDENTIFICATION_PAGE) +
+            sizeof(VPD_IDENTIFICATION_DESCRIPTOR) + sizeof(pLUExt->UniqueId))
+        {
+            ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+        }
+        else
+        {
+            IdentificationPage->PageCode = VPD_DEVICE_IDENTIFIERS;
+            IdentificationPage->PageLength =
+                sizeof(VPD_IDENTIFICATION_DESCRIPTOR) +
+                sizeof(pLUExt->UniqueId);
+
+            PVPD_IDENTIFICATION_DESCRIPTOR pIdDescriptor =
+                (PVPD_IDENTIFICATION_DESCRIPTOR)IdentificationPage->Descriptors;
+
+            pIdDescriptor->CodeSet = VpdCodeSetBinary;
+            pIdDescriptor->IdentifierType = VpdIdentifierTypeFCPHName;
+            pIdDescriptor->Association = VpdAssocDevice;
+            pIdDescriptor->IdentifierLength = sizeof(pLUExt->UniqueId);
+            RtlCopyMemory(pIdDescriptor->Identifier, pLUExt->UniqueId,
+                sizeof(pLUExt->UniqueId));
+
+            ScsiSetSuccess(pSrb, sizeof(VPD_IDENTIFICATION_PAGE) +
+                IdentificationPage->PageLength);
+        }
+        break;
+    }
 
     default:
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
@@ -1015,7 +1049,7 @@ ScsiOpVPDDiskUnit(
         PVPD_SUPPORTED_PAGES_PAGE pSupportedPages;
         ULONG len;
 
-        len = FIELD_OFFSET(VPD_SUPPORTED_PAGES_PAGE, SupportedPageList) + 3;
+        len = FIELD_OFFSET(VPD_SUPPORTED_PAGES_PAGE, SupportedPageList) + 4;
 
         if (pSrb->DataTransferLength < len)
         {
@@ -1026,10 +1060,11 @@ ScsiOpVPDDiskUnit(
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
-        pSupportedPages->PageLength = 3;
+        pSupportedPages->PageLength = 4;
         pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
         pSupportedPages->SupportedPageList[1] = VPD_BLOCK_LIMITS;
         pSupportedPages->SupportedPageList[2] = VPD_LOGICAL_BLOCK_PROVISIONING;
+        pSupportedPages->SupportedPageList[3] = VPD_DEVICE_IDENTIFIERS;
 
         ScsiSetSuccess(pSrb, len);
     }
@@ -1124,7 +1159,43 @@ ScsiOpVPDDiskUnit(
         }
         break;
     }
+    
+    case VPD_DEVICE_IDENTIFIERS:
+    {
+        PVPD_IDENTIFICATION_PAGE IdentificationPage =
+            (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;
 
+        ULONG required_size =
+            (ULONG)(LONG_PTR)&((PVPD_IDENTIFICATION_DESCRIPTOR)
+            (((VPD_IDENTIFICATION_PAGE*)0)->Descriptors))->Identifier +
+            sizeof(pLUExt->UniqueId);
+
+        if (pSrb->DataTransferLength < required_size)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+        }
+        else
+        {
+            IdentificationPage->PageCode = VPD_DEVICE_IDENTIFIERS;
+            IdentificationPage->PageLength =
+                sizeof(VPD_IDENTIFICATION_DESCRIPTOR) +
+                sizeof(pLUExt->UniqueId);
+            
+            PVPD_IDENTIFICATION_DESCRIPTOR pIdDescriptor =
+                (PVPD_IDENTIFICATION_DESCRIPTOR)IdentificationPage->Descriptors;
+
+            pIdDescriptor->CodeSet = VpdCodeSetBinary;
+            pIdDescriptor->IdentifierType = VpdIdentifierTypeFCPHName;
+            pIdDescriptor->Association = VpdAssocDevice;
+            pIdDescriptor->IdentifierLength = sizeof(pLUExt->UniqueId);
+            RtlCopyMemory(pIdDescriptor->Identifier, pLUExt->UniqueId,
+                sizeof(pLUExt->UniqueId));
+
+            ScsiSetSuccess(pSrb, required_size);
+        }
+        break;
+    }
+    
     default:
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
     }
@@ -1344,7 +1415,7 @@ ScsiOpReadWrite(
 __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
 __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.        
 __in PSCSI_REQUEST_BLOCK  pSrb,
-__in PUCHAR               pResult,
+__in pResultType          pResult,
 __in PKIRQL               LowestAssumedIrql
 )
 {
@@ -1433,7 +1504,9 @@ __in PKIRQL               LowestAssumedIrql
     }
 
     // Intermediate non-paged cache
-    if (pLUExt->FileObject == NULL)
+    if ((pLUExt->FileObject == NULL) &&
+        (pLUExt->LastIoLength > 0) &&
+        !pLUExt->SharedImage)
     {
         ImScsiAcquireLock(&pLUExt->LastIoLock, &lock_handle, *LowestAssumedIrql);
 
@@ -1479,8 +1552,7 @@ __in PKIRQL               LowestAssumedIrql
         ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
     }
 
-    pWkRtnParms =                                     // Allocate parm area for work routine.
-        (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
+    pWkRtnParms = ImScsiCreateWorkItem(pHBAExt, pLUExt, pSrb);
 
     if (pWkRtnParms == NULL)
     {
@@ -1489,12 +1561,6 @@ __in PKIRQL               LowestAssumedIrql
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
         return;
     }
-
-    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms));
-
-    pWkRtnParms->pHBAExt = pHBAExt;
-    pWkRtnParms->pLUExt = pLUExt;
-    pWkRtnParms->pSrb = pSrb;
 
     if (pLUExt->FileObject != NULL)
     {
@@ -1506,15 +1572,7 @@ __in PKIRQL               LowestAssumedIrql
     {
         // Queue work item, which will run in the System process.
 
-        KdPrint2(("PhDskMnt::ScsiOpReadWrite: Queuing work=0x%p\n", pWkRtnParms));
-
-        ImScsiAcquireLock(&pLUExt->RequestListLock, &lock_handle, *LowestAssumedIrql);
-
-        InsertTailList(&pLUExt->RequestList, &pWkRtnParms->RequestListEntry);
-
-        ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
-
-        KeSetEvent(&pLUExt->RequestEvent, (KPRIORITY)0, FALSE);
+        ImScsiScheduleWorkItem(pWkRtnParms, LowestAssumedIrql);
 
         *pResult = ResultQueued;                          // Indicate queuing.
     }
@@ -1548,10 +1606,10 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
     }
 
     mph->ModeDataLength = sizeof(MODE_PARAMETER_HEADER);
-    if (pLUExt != NULL ? pLUExt->ReadOnly : FALSE)
+    if (pLUExt != NULL && pLUExt->ReadOnly)
         mph->DeviceSpecificParameter = MODE_DSP_WRITE_PROTECT;
 
-    if (pLUExt != NULL ? pLUExt->RemovableMedia : FALSE)
+    if (pLUExt != NULL && pLUExt->RemovableMedia)
         mph->MediumType = RemovableMedia;
 
     ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
@@ -1584,10 +1642,10 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
     }
 
     mph->ModeDataLength[1] = sizeof(MODE_PARAMETER_HEADER10);
-    if (pLUExt != NULL ? pLUExt->ReadOnly : FALSE)
+    if (pLUExt != NULL && pLUExt->ReadOnly)
         mph->DeviceSpecificParameter = MODE_DSP_WRITE_PROTECT;
 
-    if (pLUExt != NULL ? pLUExt->RemovableMedia : FALSE)
+    if (pLUExt != NULL && pLUExt->RemovableMedia)
         mph->MediumType = RemovableMedia;
 
     ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
@@ -1653,9 +1711,9 @@ ScsiOpUnmap(
     __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
     __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.        
     __in PSCSI_REQUEST_BLOCK  pSrb,
-    __in PUCHAR               pResult,
+    __in pResultType          pResult,
     __in PKIRQL               LowestAssumedIrql
-    )
+)
 {
     PCDB pCdb = (PCDB)pSrb->Cdb;
 
@@ -1757,8 +1815,7 @@ ScsiOpUnmap(
         }
     }
 
-    pMP_WorkRtnParms pWkRtnParms =                                     // Allocate parm area for work routine.
-        (pMP_WorkRtnParms)ExAllocatePoolWithTag(NonPagedPool, sizeof(MP_WorkRtnParms), MP_TAG_GENERAL);
+    pMP_WorkRtnParms pWkRtnParms = ImScsiCreateWorkItem(pHBAExt, pLUExt, pSrb);
 
     if (pWkRtnParms == NULL)
     {
@@ -1768,29 +1825,41 @@ ScsiOpUnmap(
         return;
     }
 
-    RtlZeroMemory(pWkRtnParms, sizeof(MP_WorkRtnParms));
-
-    pWkRtnParms->pHBAExt = pHBAExt;
-    pWkRtnParms->pLUExt = pLUExt;
-    pWkRtnParms->pSrb = pSrb;
-
     // Queue work item, which will run in the System process.
 
-    KdPrint2(("PhDskMnt::ScsiOpUnmap: Queuing work=0x%p\n", pWkRtnParms));
-
-    KLOCK_QUEUE_HANDLE           lock_handle;
-
-    ImScsiAcquireLock(&pLUExt->RequestListLock, &lock_handle, *LowestAssumedIrql);
-
-    InsertTailList(&pLUExt->RequestList, &pWkRtnParms->RequestListEntry);
-
-    ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
-
-    KeSetEvent(&pLUExt->RequestEvent, (KPRIORITY)0, FALSE);
+    ImScsiScheduleWorkItem(pWkRtnParms, LowestAssumedIrql);
 
     *pResult = ResultQueued;                          // Indicate queuing.
 
     KdPrint2(("PhDskMnt::ScsiOpUnmap:  End. *Result=%i\n", (INT)*pResult));
+}
+
+VOID
+ScsiOpPersistentReserveInOut(
+    __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
+    __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driver.        
+    __in PSCSI_REQUEST_BLOCK  pSrb,
+    __in pResultType          pResult,
+    __in PKIRQL               LowestAssumedIrql
+)
+{
+    pMP_WorkRtnParms pWkRtnParms = ImScsiCreateWorkItem(pHBAExt, pLUExt, pSrb);
+
+    if (pWkRtnParms == NULL)
+    {
+        DbgPrint("PhDskMnt::ScsiOpPersistentReserveInOut: Failed to allocate work parm structure\n");
+
+        ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
+        return;
+    }
+
+    // Queue work item, which will run in the System process.
+
+    ImScsiScheduleWorkItem(pWkRtnParms, LowestAssumedIrql);
+
+    *pResult = ResultQueued;                          // Indicate queuing.
+
+    KdPrint2(("PhDskMnt::ScsiOpPersistentReserveInOut:  End. *Result=%i\n", (INT)*pResult));
 }
 
 VOID
@@ -1941,7 +2010,7 @@ __inout __deref PKIRQL             LowestAssumedIrql
         pSrb->SrbStatus = SRB_STATUS_SUCCESS;         // Do nothing.
     }
 
-    KdPrint2(("PhDskMnt::ScsiPnP:  status = 0x%X\n", status));
+    KdPrint2(("PhDskMnt::ScsiPnP:  SrbStatus = 0x%X\n", pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiPnP().

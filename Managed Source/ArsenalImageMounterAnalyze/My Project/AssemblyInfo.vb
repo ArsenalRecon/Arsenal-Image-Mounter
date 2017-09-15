@@ -13,7 +13,9 @@ Imports System.Runtime.InteropServices
 <Assembly: AssemblyCompany("Arsenal Recon")> 
 <Assembly: AssemblyProduct("PDMAnalyze")> 
 <Assembly: AssemblyCopyright("Copyright © Arsenal Recon")> 
-<Assembly: AssemblyTrademark("")> 
+<Assembly: AssemblyTrademark("")>
+
+<Assembly: ObfuscateAssembly(False)>
 
 <Assembly: ComVisible(False)>
 

@@ -21,29 +21,23 @@ Namespace Server.GenericProviders
     Public Class DevioProviderFromStream
         Inherits DevioProviderManagedBase
 
-        Private _BaseStream As Stream
-
         ''' <summary>
         ''' Stream object used by this instance.
         ''' </summary>
         Public ReadOnly Property BaseStream As Stream
-            Get
-                Return _BaseStream
-            End Get
-        End Property
 
         ''' <summary>
-        ''' Indicates whether base stream will be automacially closed when this
+        ''' Indicates whether base stream will be automatically closed when this
         ''' instance is disposed.
         ''' </summary>
-        Public ReadOnly OwnsBaseStream As Boolean
+        Public ReadOnly Property OwnsBaseStream As Boolean
 
         ''' <summary>
         ''' Creates an object implementing IDevioProvider interface with I/O redirected
         ''' to an object of a class derived from System.IO.Stream.
         ''' </summary>
         ''' <param name="Stream">Object of a class derived from System.IO.Stream.</param>
-        ''' <param name="ownsStream">Indicates whether Stream object will be automacially closed when this
+        ''' <param name="ownsStream">Indicates whether Stream object will be automatically closed when this
         ''' instance is disposed.</param>
         Public Sub New(Stream As Stream, ownsStream As Boolean)
             _BaseStream = Stream
@@ -77,9 +71,16 @@ Namespace Server.GenericProviders
         ''' </summary>
         ''' <value>512</value>
         ''' <returns>512</returns>
+        Public Property CustomSectorSize As UInteger = 512
+
+        ''' <summary>
+        ''' Returns a fixed value of 512.
+        ''' </summary>
+        ''' <value>512</value>
+        ''' <returns>512</returns>
         Public Overrides ReadOnly Property SectorSize As UInteger
             Get
-                Return 512
+                Return _CustomSectorSize
             End Get
         End Property
 
@@ -99,12 +100,8 @@ Namespace Server.GenericProviders
         End Function
 
         Protected Overrides Sub Dispose(disposing As Boolean)
-            If _BaseStream IsNot Nothing Then
-                If OwnsBaseStream Then
-                    _BaseStream.Dispose()
-                End If
-                _BaseStream = Nothing
-            End If
+            _BaseStream?.Dispose()
+            _BaseStream = Nothing
 
             MyBase.Dispose(disposing)
         End Sub

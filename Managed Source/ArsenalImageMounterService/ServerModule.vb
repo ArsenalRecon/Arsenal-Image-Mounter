@@ -108,6 +108,7 @@ Module ServerModule
         Dim ProviderName As String = "DiscUtils"
         Dim ShowHelp As Boolean = False
         Dim Verbose As Boolean
+        Dim DeviceFlags As DeviceFlags
 
         For Each arg In args
             If arg.Equals("/trace", StringComparison.OrdinalIgnoreCase) Then
@@ -129,6 +130,9 @@ Module ServerModule
                 DiskAccess = FileAccess.Read
             ElseIf arg.Equals("/mount", StringComparison.OrdinalIgnoreCase) Then
                 Mount = True
+            ElseIf arg.Equals("/mount:removable", StringComparison.OrdinalIgnoreCase) Then
+                Mount = True
+                DeviceFlags = DeviceFlags Or DeviceFlags.Removable
             ElseIf arg = "/?" OrElse arg.Equals("/help", StringComparison.OrdinalIgnoreCase) Then
                 ShowHelp = True
                 Exit For
@@ -156,15 +160,15 @@ Module ServerModule
                               "For version information, license, copyrights and credits, type aim_cli /version" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, automatically select object name and mount:" & Environment.NewLine &
-                              asmname & " /mount [/readonly] [/buffersize=bytes]" & Environment.NewLine &
+                              asmname & " /mount[:removable] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
                               "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, start shared memory service mode, for mounting from other applications:" & Environment.NewLine &
-                              asmname & " /name=objectname [/mount] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
+                              asmname & " /name=objectname [/mount[:removable]] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
                               "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, start TCP/IP service mode, for mounting from other computers:" & Environment.NewLine &
-                              asmname & " [/ipaddress=address] /port=tcpport [/mount] [/readonly]" & Environment.NewLine &
+                              asmname & " [/ipaddress=address] /port=tcpport [/mount[:removable]] [/readonly]" & Environment.NewLine &
                               "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
                               Environment.NewLine &
                               "DiscUtils and MultiPartRaw support libraries are included embedded in this" & Environment.NewLine &
@@ -218,14 +222,14 @@ Module ServerModule
         Else
 
             Provider.Dispose()
-            Console.WriteLine("Shared memory object name, TCP/IP port Or /mount switch must be specified.")
+            Console.WriteLine("Shared memory object name, TCP/IP port or /mount switch must be specified.")
             Return
 
         End If
 
         If Mount Then
             Console.WriteLine("Opening image file And mounting as virtual disk...")
-            Service.StartServiceThreadAndMount(New ScsiAdapter, 0)
+            Service.StartServiceThreadAndMount(New ScsiAdapter, DeviceFlags)
             Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk And exit.")
         Else
             Console.WriteLine("Opening image file...")
@@ -235,12 +239,16 @@ Module ServerModule
 
         AddHandler Console.CancelKeyPress,
             Sub(sender, e)
-                Console.WriteLine("Stopping service...")
-                Service.Dispose()
-
                 Try
+                    Console.WriteLine("Stopping service...")
+                    Service.Dispose()
+
                     e.Cancel = True
-                Catch
+
+                Catch ex As Exception
+                    Trace.WriteLine(ex.ToString())
+                    Console.WriteLine(ex.JoinMessages())
+
                 End Try
             End Sub
 

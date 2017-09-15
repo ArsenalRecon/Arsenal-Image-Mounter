@@ -39,6 +39,12 @@ Namespace Server.GenericProviders
         Public MustOverride ReadOnly Property CanWrite As Boolean Implements IDevioProvider.CanWrite
 
         ''' <summary>
+        ''' Indicates whether provider supports shared image operations with registrations
+        ''' and reservations.
+        ''' </summary>
+        Public Overridable ReadOnly Property SupportsShared As Boolean Implements IDevioProvider.SupportsShared
+
+        ''' <summary>
         ''' Size of virtual disk.
         ''' </summary>
         ''' <value>Size of virtual disk.</value>
@@ -91,6 +97,18 @@ Namespace Server.GenericProviders
             Return Write(array, 0, count, fileoffset)
 
         End Function
+
+        ''' <summary>
+        ''' Manage registrations and reservation keys for shared images.
+        ''' </summary>
+        ''' <param name="Request">Request data</param>
+        ''' <param name="Response">Response data</param>
+        ''' <param name="Keys">List of currently registered keys</param>
+        Public Overridable Sub SharedKeys(Request As IMDPROXY_SHARED_REQ, <Out> ByRef Response As IMDPROXY_SHARED_RESP, <Out> ByRef Keys() As ULong) Implements IDevioProvider.SharedKeys
+
+            Throw New NotImplementedException()
+
+        End Sub
 
         Private disposedValue As Boolean ' To detect redundant calls
 

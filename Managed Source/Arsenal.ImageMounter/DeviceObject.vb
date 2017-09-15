@@ -19,8 +19,9 @@ Imports Arsenal.ImageMounter.IO
 Public MustInherit Class DeviceObject
     Implements IDisposable
 
-    Public ReadOnly SafeFileHandle As SafeFileHandle
-    Public ReadOnly AccessMode As FileAccess
+    Public ReadOnly Property SafeFileHandle As SafeFileHandle
+
+    Public ReadOnly Property AccessMode As FileAccess
 
     ''' <summary>
     ''' Opens specified Path with CreateFile Win32 API and encapsulates the returned handle
@@ -59,14 +60,13 @@ Public MustInherit Class DeviceObject
         If Not Me.disposedValue Then
             If disposing Then
                 ' TODO: dispose managed state (managed objects).
+                _SafeFileHandle?.Dispose()
             End If
 
             ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-            If SafeFileHandle IsNot Nothing Then
-                SafeFileHandle.Dispose()
-            End If
 
             ' TODO: set large fields to null.
+            _SafeFileHandle = Nothing
         End If
         Me.disposedValue = True
     End Sub
