@@ -12,7 +12,7 @@ Please see Arsenal Image Mounter’s product page: https://ArsenalRecon.com/weap
 Supporting Arsenal Image Mounter
 --------------------------------
 
-We appreciate help making commercial projects aware of Arsenal Image Mounter’s capabilities, as commercial licensing of our source code and APIs supports ongoing development. We are also aware that some commercial projects are using Arsenal Image Mounter’s source code and APIs without being properly licensed… we appreciate being made aware of these situations so those projects can be nudged appropriately.
+We appreciate your help making commercial projects aware of Arsenal Image Mounter’s capabilities, because commercial licensing of our source code and APIs supports ongoing development. On a related note, we know that some commercial projects are using Arsenal Image Mounter’s source code and APIs without being properly licensed… we also appreciate being alerted to these situations so we can nudge those projects appropriately.
 
 More Details on Licensing and Contributions
 -------------------------------------------
