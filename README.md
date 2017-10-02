@@ -10,12 +10,12 @@ For end users, Arsenal Image Mounter’s full functionality (along with all our 
 Please see Arsenal Image Mounter’s product page: https://ArsenalRecon.com/weapons/image-mounter for more details.
 
 Supporting Arsenal Image Mounter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------
 
 We appreciate help making commercial projects aware of Arsenal Image Mounter’s capabilities, as commercial licensing of our source code and APIs supports ongoing development. We are also aware that some commercial projects are using Arsenal Image Mounter’s source code and APIs without being properly licensed… we appreciate being made aware of these situations so those projects can be nudged appropriately.
 
 More Details on Licensing and Contributions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------------------------
 
 We chose a dual-license for Arsenal Image Mounter (more specifically, Arsenal Image Mounter’s source code and APIs) to allow its royalty-free use by open source projects, but require financial support from commercial projects.
 
