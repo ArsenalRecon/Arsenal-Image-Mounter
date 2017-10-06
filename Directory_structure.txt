@@ -10,7 +10,8 @@ zlib license.txt.
 Graphical applications
 ----------------------
 
-This directory contains ArsenalImageMounter.exe.
+ArsenalImageMounter.exe has been moved to ArsenalRecon.com web site.
+https://arsenalrecon.com/weapons/image-mounter/
 
 One-piece (with the exception of libewf.dll) powerful tool for mounting
 disk image files as virtual drives. Supports raw disk images and various
@@ -134,3 +135,10 @@ The driver project directory also contains files for building with WDK 7
 build.exe environment, to support targeting older Windows versions than
 Windows 7.
 
+
+---------
+MountTool
+---------
+
+Compiled exe files for the sample graphical and command line tools under
+Managed Source directory.
