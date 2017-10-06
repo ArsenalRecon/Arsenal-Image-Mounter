@@ -146,8 +146,10 @@
     <Compile Include="Server\Services\DevioNoneService.vb" />
     <Compile Include="Server\Services\DevioShmService.vb" />
     <Compile Include="Server\Services\DevioTcpService.vb" />
+    <Compile Include="Server\SpecializedProviders\DebugProvider.vb" />
     <Compile Include="Server\SpecializedProviders\DevioProviderLibEwf.vb" />
     <Compile Include="Server\SpecializedProviders\MultiPartFileStream.vb" />
+    <Compile Include="Server\GenericProviders\ProviderSupport.vb" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="My Project\Resources.resx">

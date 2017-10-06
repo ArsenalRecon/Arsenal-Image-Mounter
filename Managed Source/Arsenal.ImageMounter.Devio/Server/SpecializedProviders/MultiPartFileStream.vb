@@ -1,6 +1,6 @@
-﻿''''' DevioProviderLibEwf.vb
+﻿''''' MultiPartFileStream.vb
 ''''' 
-''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -8,6 +8,8 @@
 ''''' proprietary exceptions.
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
+
+Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 
 Namespace Server.SpecializedProviders
 
@@ -55,44 +57,12 @@ Namespace Server.SpecializedProviders
         End Sub
 
         Public Sub New(FirstImagefile As String, DiskAccess As FileAccess)
-            Me.New(GetMultiSegmentFiles(FirstImagefile), DiskAccess)
+            Me.New(ProviderSupport.GetMultiSegmentFiles(FirstImagefile), DiskAccess)
         End Sub
 
         Public Sub New(FirstImagefile As String, DiskAccess As FileAccess, ShareMode As FileShare?)
-            Me.New(GetMultiSegmentFiles(FirstImagefile), DiskAccess, ShareMode)
+            Me.New(ProviderSupport.GetMultiSegmentFiles(FirstImagefile), DiskAccess, ShareMode)
         End Sub
-
-        Private Shared Function GetMultiSegmentFiles(FirstFile As String) As String()
-            Trace.WriteLine("Finding files starting with " & FirstFile)
-
-            Dim pathpart = Path.GetDirectoryName(FirstFile)
-            Dim filepart = Path.GetFileNameWithoutExtension(FirstFile)
-            Dim extension = Path.GetExtension(FirstFile)
-            If extension.StartsWith(".0", StringComparison.OrdinalIgnoreCase) AndAlso
-              Integer.TryParse(extension.Substring(1), Nothing) Then
-
-                Dim mask As New String("0"c, extension.Length - 1)
-
-                Dim foundfiles As New List(Of String)
-                Dim filenumber = Integer.Parse(extension.Substring(1))
-                Do
-                    Dim thisfile = Path.Combine(pathpart, filepart & "." & filenumber.ToString(mask))
-                    If Not File.Exists(thisfile) Then
-                        Exit Do
-                    End If
-
-                    foundfiles.Add(thisfile)
-                    filenumber += 1
-                Loop
-                Return foundfiles.ToArray()
-
-            Else
-
-                Return {FirstFile}
-
-            End If
-
-        End Function
 
         Public Overrides ReadOnly Property CanRead As Boolean
             Get
