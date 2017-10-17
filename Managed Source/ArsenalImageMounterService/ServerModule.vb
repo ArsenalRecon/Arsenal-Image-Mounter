@@ -109,10 +109,16 @@ Module ServerModule
         Dim ShowHelp As Boolean = False
         Dim Verbose As Boolean
         Dim DeviceFlags As DeviceFlags
+        Dim DebugCompare As String = Nothing
+        Dim libewfDebugOutput As String = "CONOUT$"
 
         For Each arg In args
             If arg.Equals("/trace", StringComparison.OrdinalIgnoreCase) Then
                 Trace.Listeners.Add(New ConsoleTraceListener(True))
+                Verbose = True
+            ElseIf arg.StartsWith("/trace=", StringComparison.OrdinalIgnoreCase) Then
+                Dim tracefile = New StreamWriter(arg.Substring("/trace=".Length), append:=True) With {.AutoFlush = True}
+                Trace.Listeners.Add(New TextWriterTraceListener(tracefile))
                 Verbose = True
             ElseIf arg.StartsWith("/name=", StringComparison.OrdinalIgnoreCase) Then
                 ObjectName = arg.Substring("/name=".Length)
@@ -133,6 +139,10 @@ Module ServerModule
             ElseIf arg.Equals("/mount:removable", StringComparison.OrdinalIgnoreCase) Then
                 Mount = True
                 DeviceFlags = DeviceFlags Or DeviceFlags.Removable
+            ElseIf arg.StartsWith("/libewfoutput=", StringComparison.OrdinalIgnoreCase) Then
+                libewfDebugOutput = arg.Substring("/libewfoutput=".Length)
+            ElseIf arg.StartsWith("/debugcompare=", StringComparison.OrdinalIgnoreCase) Then
+                DebugCompare = arg.Substring("/debugcompare=".Length)
             ElseIf arg = "/?" OrElse arg.Equals("/help", StringComparison.OrdinalIgnoreCase) Then
                 ShowHelp = True
                 Exit For
@@ -187,7 +197,7 @@ Module ServerModule
                 Provider = DevioServiceFactory.GetProviderDiscUtils(DeviceName, DiskAccess)
 
             Case "libewf"
-                DevioProviderLibEwf.NotificationFile = "CONOUT$"
+                DevioProviderLibEwf.NotificationFile = libewfDebugOutput
                 AddHandler RunToEnd,
                     Sub() DevioProviderLibEwf.NotificationFile = Nothing
 
@@ -204,6 +214,14 @@ Module ServerModule
                 Return
 
         End Select
+
+        If Not String.IsNullOrWhiteSpace(DebugCompare) Then
+
+            Dim DebugCompareStream = File.OpenRead(DebugCompare)
+
+            Provider = New DebugProvider(Provider, DebugCompareStream)
+
+        End If
 
         Dim Service As DevioServiceBase
 
@@ -230,7 +248,7 @@ Module ServerModule
         If Mount Then
             Console.WriteLine("Opening image file And mounting as virtual disk...")
             Service.StartServiceThreadAndMount(New ScsiAdapter, DeviceFlags)
-            Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk And exit.")
+            Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
         Else
             Console.WriteLine("Opening image file...")
             Service.StartServiceThread()

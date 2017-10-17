@@ -1,7 +1,7 @@
 ﻿
 ''''' DevioProviderLibEwf.vb
 ''''' 
-''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -198,47 +198,6 @@ Namespace Server.SpecializedProviders
             End Set
         End Property
 
-        Private Shared Function GetMultiSegmentFiles(FirstFile As String) As String()
-
-            Dim pathpart = Path.GetDirectoryName(FirstFile)
-            Dim filepart = Path.GetFileNameWithoutExtension(FirstFile)
-            Dim extension = Path.GetExtension(FirstFile)
-            Dim foundfiles As New List(Of String)
-
-            If extension.EndsWith("01") Then
-
-                Dim mask = "00"
-
-                Dim filenumber = Integer.Parse(extension.Substring(extension.Length - 2))
-                Do
-                    Dim thisfile =
-                        Path.Combine(pathpart,
-                                     filepart & extension.Remove(extension.Length - 2) & filenumber.ToString(mask))
-
-                    If Not File.Exists(thisfile) Then
-                        Exit Do
-                    End If
-
-                    foundfiles.Add(thisfile)
-                    filenumber += 1
-                Loop
-
-            Else
-
-                If File.Exists(FirstFile) Then
-                    foundfiles.Add(FirstFile)
-                End If
-
-            End If
-
-            If foundfiles.Count = 0 Then
-                Throw New FileNotFoundException("Image file not found", FirstFile)
-            End If
-
-            Return foundfiles.ToArray()
-
-        End Function
-
         Public Sub New(filenames As String(), Flags As Byte)
             Me.Flags = Flags
 
@@ -293,7 +252,7 @@ Namespace Server.SpecializedProviders
         End Sub
 
         Public Sub New(firstfilename As String, Flags As Byte)
-            Me.New(GetMultiSegmentFiles(firstfilename), Flags)
+            Me.New(ProviderSupport.GetMultiSegmentFiles(firstfilename), Flags)
         End Sub
 
         Public Overrides ReadOnly Property CanWrite As Boolean
