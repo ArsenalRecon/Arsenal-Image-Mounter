@@ -23,6 +23,11 @@ Arsenal Consulting, Inc. (d/b/a Arsenal Recon) retains the copyright to Arsenal 
 
 Contributors to Arsenal Image Mounter must sign the Arsenal Contributor Agreement ("ACA"). The ACA gives Arsenal and the contributor joint copyright interests in the source code.
 
+Disclaimer
+----------
+
+Arsenal Image Mounter including its kernel driver, APIs, command line and graphical user applications ("the Software") are provided "AS IS" and "WITH ALL FAULTS," without warranty of any kind, including without limitation the warranties of merchantability, fitness for a particular purpose, and non-infringement. Arsenal makes no warranty that the Software is free of defects or is suitable for any particular purpose. In no event shall Arsenal be responsible for loss or damages arising from the installation or use of the Software, including but not limited to any indirect, punitive, special, incidental, or consequential damages of any character including, without limitation, damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses. The entire risk as to the quality and performance of the Software is borne by you. Should the Software prove defective, you and not Arsenal assume the entire cost of any service and repair.
+
 Folder Specific Information
 ----------------------------
 
