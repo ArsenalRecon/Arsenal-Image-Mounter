@@ -1,6 +1,6 @@
 ﻿''''' DevioServiceBase.vb
 ''''' 
-''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -443,11 +443,11 @@ Namespace Server.Services
         Public Overridable Property ForceRemoveDiskDeviceOnCrash As Boolean = True
 
 #Region "IDisposable Support"
-        Private disposedValue As Boolean ' To detect redundant calls
+        Public ReadOnly Property IsDisposed As Boolean ' To detect redundant calls
 
         ' IDisposable
         Protected Overridable Sub Dispose(disposing As Boolean)
-            If Not Me.disposedValue Then
+            If Not Me._IsDisposed Then
                 If disposing Then
                     ' TODO: dispose managed state (managed objects).
                     If HasDiskDevice Then
@@ -476,7 +476,7 @@ Namespace Server.Services
                 ' TODO: set large fields to null.
                 _DevioProvider = Nothing
             End If
-            Me.disposedValue = True
+            Me._IsDisposed = True
         End Sub
 
         ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.

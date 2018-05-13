@@ -1,6 +1,6 @@
 ﻿''''' MultiPartFileStream.vb
 ''''' 
-''''' Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -120,7 +120,7 @@ Namespace Server.SpecializedProviders
 
         Public Overrides Sub SetLength(value As Long)
             If value <> _Length Then
-                Throw New NotSupportedException("Cannot set length of multi-part file stream.")
+                Throw New InvalidOperationException("Cannot set length of multi-part file stream.")
             End If
         End Sub
 

@@ -4,7 +4,7 @@
 /// routines are queued here for completion at an IRQL where waiting and
 /// communicating is possible.
 /// 
-/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -16,6 +16,8 @@
 //#define _MP_H_skip_includes
 
 #include "phdskmnt.h"
+
+#include "legacycompat.h"
 
 /**************************************************************************************************/
 /*                                                                                                */
@@ -330,29 +332,36 @@ ImScsiDispatchReadWrite(
         return;
     }
 
-    /// Fake random disk signature in case mounted read-only, 0xAA55 at end of mbr and 0x00000000 in disk id field.
-    /// Compatibility fix for mounting Windows Backup vhd files in read-only.
+    /// If "fake random disk signature" option is used.
+    /// Compatibility fix for mounting Windows Backup vhd files in read-only etc.
     if ((pLUExt->FakeDiskSignature != 0) &&
-        ((pSrb->Cdb[0] == SCSIOP_READ) |
+        ((pSrb->Cdb[0] == SCSIOP_READ) ||
         (pSrb->Cdb[0] == SCSIOP_READ16)) &&
             (startingSector.QuadPart == 0) &&
-        (pSrb->DataTransferLength >= 512) &&
-        (pLUExt->ReadOnly))
+        (pSrb->DataTransferLength >= 512))
     {
         PUCHAR mbr = (PUCHAR)buffer;
 
-        if ((*(PUSHORT)(mbr + 0x01FE) == 0xAA55) &
-            (*(PUSHORT)(mbr + 0x01BC) == 0x0000) &
-            ((*(mbr + 0x01BE) & 0x7F) == 0x00) &
-            ((*(mbr + 0x01CE) & 0x7F) == 0x00) &
-            ((*(mbr + 0x01DE) & 0x7F) == 0x00) &
-            ((*(mbr + 0x01EE) & 0x7F) == 0x00) &
-            ((*(PULONG)(mbr + 0x01B8) == 0x00000000UL)))
+        if ((*(PUSHORT)(mbr + 0x01FE) == 0xAA55) &&
+            (*(PUSHORT)(mbr + 0x01BC) == 0x0000) &&
+            ((*(mbr + 0x01BE) & 0x7F) == 0x00) &&
+            ((*(mbr + 0x01CE) & 0x7F) == 0x00) &&
+            ((*(mbr + 0x01DE) & 0x7F) == 0x00) &&
+            ((*(mbr + 0x01EE) & 0x7F) == 0x00))
         {
             DbgPrint("PhDskMnt::ImScsiDispatchWork: Faking disk signature as %#X.\n", pLUExt->FakeDiskSignature);
 
             *(PULONG)(mbr + 0x01B8) = pLUExt->FakeDiskSignature;
         }
+    }
+    /// Allow the fake disk signature to be overwritten.
+    else if ((pLUExt->FakeDiskSignature != 0) &&
+        ((pSrb->Cdb[0] == SCSIOP_WRITE) ||
+        (pSrb->Cdb[0] == SCSIOP_WRITE16)) &&
+            (startingSector.QuadPart == 0) &&
+        (pSrb->DataTransferLength >= 512))
+    {
+        pLUExt->FakeDiskSignature = 0;
     }
 
     /// For write operations, temporary buffer holds read data.
@@ -463,3 +472,415 @@ __in pMP_WorkRtnParms        pWkRtnParms
     KdPrint2(("PhDskMnt::ImScsiDispatchWork: End pSrb: 0x%p.\n", pSrb));
 
 }                                                     // End ImScsiDispatchWork().
+
+VOID
+ImScsiDispatchUnmapDevice(
+    __in pHW_HBA_EXT pHBAExt,
+    __in pHW_LU_EXTENSION pLUExt,
+    __in PSCSI_REQUEST_BLOCK pSrb)
+{
+    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
+    USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
+
+    UNREFERENCED_PARAMETER(pHBAExt);
+    UNREFERENCED_PARAMETER(pLUExt);
+
+    if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) >
+        pSrb->DataTransferLength)
+    {
+        KdBreakPoint();
+        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+        return;
+    }
+
+    USHORT items = descrlength / sizeof(*list->Descriptors);
+
+    NTSTATUS status = STATUS_SUCCESS;
+
+    IO_STATUS_BLOCK io_status;
+
+    if (pLUExt->UseProxy)
+    {
+        WPoolMem<DEVICE_DATA_SET_RANGE, PagedPool> range(sizeof(DEVICE_DATA_SET_RANGE) * items);
+
+        if (!range)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_ERROR);
+            return;
+        }
+
+        for (USHORT i = 0; i < items; i++)
+        {
+            LONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
+            ULONG numBlocks = RtlUlongByteSwap(*(PULONG)list->Descriptors[i].LbaCount);
+
+            range[i].StartingOffset = (startingSector << pLUExt->BlockPower) + pLUExt->ImageOffset.QuadPart;
+            range[i].LengthInBytes = (ULONGLONG)numBlocks << pLUExt->BlockPower;
+
+            if (pLUExt->FakeDiskSignature != 0 &&
+                range[i].StartingOffset == 0 && range[i].LengthInBytes >= 512)
+            {
+                pLUExt->FakeDiskSignature = 0;
+            }
+
+            KdPrint(("PhDskMnt::ImScsiDispatchUnmapDevice: Offset: %I64i, bytes: %I64u\n",
+                range[i].StartingOffset, range[i].LengthInBytes));
+        }
+
+        status = ImScsiUnmapOrZeroProxy(
+            &pLUExt->Proxy,
+            IMDPROXY_REQ_UNMAP,
+            &io_status,
+            &pLUExt->StopThread,
+            items,
+            range);
+    }
+    else if (pLUExt->ImageFile != NULL)
+    {
+        FILE_ZERO_DATA_INFORMATION zerodata;
+
+#if _NT_TARGET_VERSION >= 0x602
+        ULONG fltrim_size = FIELD_OFFSET(FILE_LEVEL_TRIM, Ranges) +
+            (items * sizeof(FILE_LEVEL_TRIM_RANGE));
+
+        WPoolMem<FILE_LEVEL_TRIM, PagedPool> fltrim;
+
+        if (!pLUExt->NoFileLevelTrim)
+        {
+            fltrim.Alloc(fltrim_size);
+
+            if (!fltrim)
+            {
+                ScsiSetError(pSrb, SRB_STATUS_ERROR);
+                return;
+            }
+
+            fltrim->NumRanges = items;
+        }
+#endif
+
+        for (int i = 0; i < items; i++)
+        {
+            LONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
+            ULONG numBlocks = RtlUlongByteSwap(*(PULONG)list->Descriptors[i].LbaCount);
+
+            zerodata.FileOffset.QuadPart = (startingSector << pLUExt->BlockPower) + pLUExt->ImageOffset.QuadPart;
+            zerodata.BeyondFinalZero.QuadPart = ((LONGLONG)numBlocks << pLUExt->BlockPower) +
+                zerodata.FileOffset.QuadPart;
+
+            if (pLUExt->FakeDiskSignature != 0 &&
+                zerodata.FileOffset.QuadPart == 0 && zerodata.BeyondFinalZero.QuadPart >= 512)
+            {
+                pLUExt->FakeDiskSignature = 0;
+            }
+
+            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: Zero data request from 0x%I64X to 0x%I64X\n",
+                zerodata.FileOffset.QuadPart, zerodata.BeyondFinalZero.QuadPart));
+
+#if _NT_TARGET_VERSION >= 0x602
+            if (!pLUExt->NoFileLevelTrim)
+            {
+                fltrim->Ranges[i].Offset = zerodata.FileOffset.QuadPart;
+                fltrim->Ranges[i].Length = (LONGLONG)numBlocks << pLUExt->BlockPower;
+
+                KdPrint(("PhDskMnt::ImScsiDispatchUnmap: File level trim request 0x%I64X bytes at 0x%I64X\n",
+                    fltrim->Ranges[i].Length, fltrim->Ranges[i].Offset));
+            }
+#endif
+
+            status = ZwFsControlFile(
+                pLUExt->ImageFile,
+                NULL,
+                NULL,
+                NULL,
+                &io_status,
+                FSCTL_SET_ZERO_DATA,
+                &zerodata,
+                sizeof(zerodata),
+                NULL,
+                0);
+
+            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: FSCTL_SET_ZERO_DATA result: 0x%#X\n", status));
+
+            if (!NT_SUCCESS(status))
+            {
+                goto done;
+            }
+        }
+
+#if _NT_TARGET_VERSION >= 0x602
+        if (!pLUExt->NoFileLevelTrim)
+        {
+            status = ZwFsControlFile(
+                pLUExt->ImageFile,
+                NULL,
+                NULL,
+                NULL,
+                &io_status,
+                FSCTL_FILE_LEVEL_TRIM,
+                fltrim,
+                fltrim_size,
+                NULL,
+                0);
+
+            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: FSCTL_FILE_LEVEL_TRIM result: %#x\n", status));
+
+            if (!NT_SUCCESS(status))
+            {
+                pLUExt->NoFileLevelTrim = TRUE;
+            }
+        }
+#endif
+    }
+    else
+    {
+        status = STATUS_NOT_SUPPORTED;
+    }
+
+done:
+
+    KdPrint(("PhDskMnt::ImScsiDispatchUnmap: Result: %#x\n", status));
+
+    ScsiSetSuccess(pSrb, 0);
+}
+
+VOID
+ImScsiCreateLU(
+    __in pHW_HBA_EXT             pHBAExt,
+    __in PSCSI_REQUEST_BLOCK     pSrb,
+    __in PETHREAD                pReqThread,
+    __inout __deref PKIRQL    LowestAssumedIrql
+)
+{
+    PSRB_IMSCSI_CREATE_DATA new_device = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
+    PLIST_ENTRY             list_ptr;
+    pHW_LU_EXTENSION        pLUExt = NULL;
+    NTSTATUS                ntstatus;
+
+    KLOCK_QUEUE_HANDLE      LockHandle;
+
+    KdPrint(("PhDskMnt::ImScsiCreateLU: Initializing new device: %d:%d:%d\n",
+        new_device->Fields.DeviceNumber.PathId,
+        new_device->Fields.DeviceNumber.TargetId,
+        new_device->Fields.DeviceNumber.Lun));
+
+    ImScsiAcquireLock(                   // Serialize the linked list of LUN extensions.              
+        &pHBAExt->LUListLock, &LockHandle, *LowestAssumedIrql);
+
+    for (list_ptr = pHBAExt->LUList.Flink;
+        list_ptr != &pHBAExt->LUList;
+        list_ptr = list_ptr->Flink
+        )
+    {
+        pHW_LU_EXTENSION object;
+        object = CONTAINING_RECORD(list_ptr, HW_LU_EXTENSION, List);
+
+        if (object->DeviceNumber.LongNumber ==
+            new_device->Fields.DeviceNumber.LongNumber)
+        {
+            pLUExt = object;
+            break;
+        }
+    }
+
+    if (pLUExt != NULL)
+    {
+        ImScsiReleaseLock(&LockHandle, LowestAssumedIrql);
+
+        ntstatus = STATUS_OBJECT_NAME_COLLISION;
+
+        goto Done;
+    }
+
+    pLUExt = (pHW_LU_EXTENSION)ExAllocatePoolWithTag(NonPagedPool, sizeof(HW_LU_EXTENSION), MP_TAG_GENERAL);
+
+    if (pLUExt == NULL)
+    {
+        ImScsiReleaseLock(&LockHandle, LowestAssumedIrql);
+
+        ntstatus = STATUS_INSUFFICIENT_RESOURCES;
+
+        goto Done;
+    }
+
+    RtlZeroMemory(pLUExt, sizeof(HW_LU_EXTENSION));
+
+    pLUExt->DeviceNumber = new_device->Fields.DeviceNumber;
+
+    KeInitializeEvent(&pLUExt->StopThread, NotificationEvent, FALSE);
+
+    InsertHeadList(&pHBAExt->LUList, &pLUExt->List);
+
+    ImScsiReleaseLock(&LockHandle, LowestAssumedIrql);
+
+    pLUExt->pHBAExt = pHBAExt;
+
+    ntstatus = ImScsiInitializeLU(pLUExt, new_device, pReqThread);
+    if (!NT_SUCCESS(ntstatus))
+    {
+        ImScsiCleanupLU(pLUExt, LowestAssumedIrql);
+        goto Done;
+    }
+
+Done:
+    new_device->SrbIoControl.ReturnCode = ntstatus;
+
+    ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
+
+    return;
+}
+
+NTSTATUS
+ImScsiExtendLU(
+    pHW_HBA_EXT pHBAExt,
+    pHW_LU_EXTENSION device_extension,
+    PSRB_IMSCSI_EXTEND_DEVICE extend_device_data)
+{
+    NTSTATUS status;
+    FILE_END_OF_FILE_INFORMATION new_size;
+    FILE_STANDARD_INFORMATION file_standard_information;
+
+    UNREFERENCED_PARAMETER(pHBAExt);
+
+    new_size.EndOfFile.QuadPart =
+        device_extension->DiskSize.QuadPart +
+        extend_device_data->ExtendSize.QuadPart;
+
+    KdPrint(("ImScsi: New size of device %i:%i:%i will be %I64i bytes.\n",
+        (int)extend_device_data->DeviceNumber.PathId,
+        (int)extend_device_data->DeviceNumber.TargetId,
+        (int)extend_device_data->DeviceNumber.Lun,
+        new_size.EndOfFile.QuadPart));
+
+    if (new_size.EndOfFile.QuadPart <= 0)
+    {
+        status = STATUS_END_OF_MEDIA;
+        goto done;
+    }
+
+    if (device_extension->VMDisk)
+    {
+        PVOID new_image_buffer = NULL;
+        SIZE_T free_size = 0;
+#ifdef _WIN64
+        ULONG_PTR old_size =
+            device_extension->DiskSize.QuadPart;
+        SIZE_T max_size = new_size.EndOfFile.QuadPart;
+#else
+        ULONG_PTR old_size =
+            device_extension->DiskSize.LowPart;
+        SIZE_T max_size = new_size.EndOfFile.LowPart;
+
+        // A vm type disk cannot be extended to a larger size than
+        // 2 GB.
+        if (new_size.EndOfFile.QuadPart & 0xFFFFFFFF80000000)
+        {
+            status = STATUS_INVALID_DEVICE_REQUEST;
+            goto done;
+        }
+#endif // _WIN64
+
+        KdPrint(("ImScsi: Allocating %I64u bytes.\n",
+            (ULONGLONG)max_size));
+
+        status = ZwAllocateVirtualMemory(NtCurrentProcess(),
+            &new_image_buffer,
+            0,
+            &max_size,
+            MEM_COMMIT,
+            PAGE_READWRITE);
+
+        if (!NT_SUCCESS(status))
+        {
+            status = STATUS_NO_MEMORY;
+            goto done;
+        }
+
+        RtlCopyMemory(new_image_buffer,
+            device_extension->ImageBuffer,
+            min(old_size, max_size));
+
+        ZwFreeVirtualMemory(NtCurrentProcess(),
+            (PVOID*)&device_extension->ImageBuffer,
+            &free_size,
+            MEM_RELEASE);
+
+        device_extension->ImageBuffer = (PUCHAR)new_image_buffer;
+        device_extension->DiskSize = new_size.EndOfFile;
+
+        status = STATUS_SUCCESS;
+        goto done;
+    }
+
+    // For proxy-type disks the new size is just accepted and
+    // that's it.
+    if (device_extension->UseProxy)
+    {
+        device_extension->DiskSize =
+            new_size.EndOfFile;
+
+        status = STATUS_SUCCESS;
+        goto done;
+    }
+
+    // Image file backed disks left to do.
+
+    // For disks with offset, refuse to extend size. Otherwise we
+    // could break compatibility with the header data we have
+    // skipped and we don't know about.
+    if (device_extension->ImageOffset.QuadPart != 0)
+    {
+        status = STATUS_INVALID_DEVICE_REQUEST;
+        goto done;
+    }
+
+    IO_STATUS_BLOCK io_status;
+
+    status =
+        ZwQueryInformationFile(device_extension->ImageFile,
+            &io_status,
+            &file_standard_information,
+            sizeof file_standard_information,
+            FileStandardInformation);
+
+    if (!NT_SUCCESS(status))
+    {
+        goto done;
+    }
+
+    KdPrint(("ImScsi: Current image size is %I64u bytes.\n",
+        file_standard_information.EndOfFile.QuadPart));
+
+    if (file_standard_information.EndOfFile.QuadPart >=
+        new_size.EndOfFile.QuadPart)
+    {
+        device_extension->DiskSize = new_size.EndOfFile;
+
+        status = STATUS_SUCCESS;
+        goto done;
+    }
+
+    // For other, fixed file-backed disks we need to adjust the
+    // physical file size.
+
+    KdPrint(("ImScsi: Setting new image size to %I64u bytes.\n",
+        new_size.EndOfFile.QuadPart));
+
+    status = ZwSetInformationFile(device_extension->ImageFile,
+        &io_status,
+        &new_size,
+        sizeof new_size,
+        FileEndOfFileInformation);
+
+    if (NT_SUCCESS(status))
+    {
+        device_extension->DiskSize = new_size.EndOfFile;
+        goto done;
+    }
+
+done:
+    KdPrint(("ImScsi: SMP_IMSCSI_EXTEND_DEVICE result: %#x\n", status));
+
+    return status;
+}
+

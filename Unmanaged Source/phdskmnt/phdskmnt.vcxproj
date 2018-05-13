@@ -266,60 +266,50 @@
   <PropertyGroup Label="UserMacros" />
   <!-- The WrappedTaskItems label is used by the conversion tool to identify the location where items 
         associated with wrapped tasks will reside.-->
-  <ItemGroup Label="WrappedTaskItems" />
+  <ItemGroup Label="WrappedTaskItems">
+    <Text Include="readme.txt" />
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
     <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
     <Inf />
-    <Inf>
-      <TimeStamp>1.9.0026.00026</TimeStamp>
-    </Inf>
+    <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <Inf />
-    <Inf>
-      <TimeStamp>1.9.0026.00026</TimeStamp>
-    </Inf>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <Inf />
-    <Inf>
-      <TimeStamp>1.9.0026.00026</TimeStamp>
-    </Inf>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
+    <Inf />
+    <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'">
     <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'">
     <Inf />
-    <Inf>
-      <TimeStamp>1.9.0026.00026</TimeStamp>
-    </Inf>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
     <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
     <Inf />
-    <Inf>
-      <TimeStamp>1.9.0026.00026</TimeStamp>
-    </Inf>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
+    <Inf />
+    <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
     <Inf />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
     <Inf />
-    <Inf>
-      <TimeStamp>1.9.0026.00026</TimeStamp>
-    </Inf>
+    <Inf />
   </ItemDefinitionGroup>
   <ItemGroup>
     <!-- We only add items (e.g. form ClSourceFiles) that do not already exist (e.g in the ClCompile list), this avoids duplication -->
@@ -353,7 +343,6 @@
   <!-- Necessary to pick up propper files from local directory when in the IDE-->
   <ItemGroup>
     <None Include="todo.txt" />
-    <None Include="ReadMe.htm" />
     <None Exclude="@(None)" Include="*.ico;*.cur;*.bmp;*.dlg;*.rct;*.gif;*.jpg;*.jpeg;*.wav;*.jpe;*.tiff;*.tif;*.png;*.rc2" />
     <None Exclude="@(None)" Include="*.def;*.bat;*.hpj;*.asmx" />
   </ItemGroup>

@@ -2,7 +2,7 @@
 ''''' Support routines for creating provider and service instances given a known
 ''''' proxy provider.
 ''''' 
-''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -14,6 +14,8 @@
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
+Imports Arsenal.ImageMounter.Extensions
+Imports System.Collections.Specialized
 
 Namespace Server.Interaction
 
@@ -64,6 +66,12 @@ Namespace Server.Interaction
                 {ProxyType.LibEwf,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOverlay})}
+            }
+
+        Private Shared NotSupportedFormatsForWriteOverlay As String() =
+            {
+                ".vdi",
+                ".xva"
             }
 
         Private Sub New()
@@ -134,11 +142,21 @@ Namespace Server.Interaction
 
         End Function
 
-        Public Shared Function GetSupportedVirtualDiskAccess(Proxy As ProxyType) As ReadOnlyCollection(Of VirtualDiskAccess)
+        Public Shared Function GetSupportedVirtualDiskAccess(Proxy As ProxyType, imagePath As String) As ReadOnlyCollection(Of VirtualDiskAccess)
 
             GetSupportedVirtualDiskAccess = Nothing
             If Not SupportedVirtualDiskAccess.TryGetValue(Proxy, GetSupportedVirtualDiskAccess) Then
                 Throw New ArgumentException("Proxy type not supported: " & Proxy.ToString(), "Proxy")
+            End If
+
+            If Proxy = ProxyType.DiscUtils AndAlso
+                NotSupportedFormatsForWriteOverlay.Contains(
+                    Path.GetExtension(imagePath), StringComparer.OrdinalIgnoreCase) Then
+
+                GetSupportedVirtualDiskAccess = GetSupportedVirtualDiskAccess.
+                    Where(Function(acc) acc <> VirtualDiskAccess.ReadWriteOverlay).
+                    ToList().
+                    AsReadOnly()
             End If
 
         End Function
@@ -169,7 +187,7 @@ Namespace Server.Interaction
                     Service = New DevioNoneService(Imagefile, DiskAccess)
 
                 Case Else
-                    Throw New NotSupportedException("Proxy " & Proxy.ToString() & " not supported.")
+                    Throw New InvalidOperationException("Proxy " & Proxy.ToString() & " not supported.")
 
             End Select
 
@@ -205,7 +223,7 @@ Namespace Server.Interaction
                     Service = New DevioNoneService(Imagefile, DiskAccess)
 
                 Case Else
-                    Throw New NotSupportedException("Proxy " & Proxy.ToString() & " not supported.")
+                    Throw New InvalidOperationException("Proxy " & Proxy.ToString() & " not supported.")
 
             End Select
 
@@ -311,10 +329,10 @@ Namespace Server.Interaction
 
                 If Disk.Geometry Is Nothing Then
                     SectorSize = 512
-                    Trace.WriteLine("Image sector size is unknown")
+                    Trace.WriteLine("Image sector size is unknown, assuming 512 bytes")
                 Else
                     SectorSize = CUInt(Disk.Geometry.BytesPerSector)
-                    Trace.WriteLine("Image sector size is " & Disk.Geometry.BytesPerSector & " bytes")
+                    Trace.WriteLine("Image sector size is " & SectorSize.ToString() & " bytes")
                 End If
 
                 If DiskAccess = VirtualDiskAccess.ReadWriteOverlay Then
@@ -324,11 +342,27 @@ Namespace Server.Interaction
 
                     Trace.WriteLine("Using temporary overlay file '" & DifferencingPath & "'")
 
-                    If File.Exists(DifferencingPath) Then
-                        File.Delete(DifferencingPath)
-                    End If
+                    Do
+                        Try
+                            If File.Exists(DifferencingPath) Then
+                                If UseExistingDifferencingDisk(DifferencingPath) Then
+                                    Disk = VirtualDisk.OpenDisk(DifferencingPath, FileAccess.ReadWrite)
+                                    Exit Do
+                                End If
 
-                    Disk = Disk.CreateDifferencingDisk(DifferencingPath)
+                                File.Delete(DifferencingPath)
+                            End If
+
+                            Disk = Disk.CreateDifferencingDisk(DifferencingPath)
+                            Exit Do
+
+                        Catch ex As Exception When _
+                                ex.Enumerate().All(Function(iex) Not TypeOf iex Is OperationCanceledException) AndAlso
+                                HandleDifferencingDiskCreationError(ex, DifferencingPath)
+
+                        End Try
+                    Loop
+
                     DisposableObjects.Add(Disk)
                 End If
 
@@ -358,6 +392,55 @@ Namespace Server.Interaction
 
             End Try
 
+        End Function
+
+        Public Class PathExceptionEventArgs
+            Inherits EventArgs
+
+            Public Property Exception As Exception
+
+            Public Property Path As String
+
+            Public Property Handled As Boolean
+
+        End Class
+
+        Public Shared Event DifferencingDiskCreationError As EventHandler(Of PathExceptionEventArgs)
+
+        Private Shared Function HandleDifferencingDiskCreationError(ex As Exception, ByRef differencingPath As String) As Boolean
+            Dim e As New PathExceptionEventArgs With {
+                .Exception = ex,
+                .Path = differencingPath
+            }
+
+            RaiseEvent DifferencingDiskCreationError(Nothing, e)
+
+            differencingPath = e.Path
+
+            Return e.Handled
+        End Function
+
+        Public Class PathRequestEventArgs
+            Inherits EventArgs
+
+            Public Property Path As String
+
+            Public Property Response As Boolean
+
+        End Class
+
+        Public Shared Event UseExistingDifferencingDiskUserRequest As EventHandler(Of PathRequestEventArgs)
+
+        Private Shared Function UseExistingDifferencingDisk(ByRef differencingPath As String) As Boolean
+            Dim e As New PathRequestEventArgs With {
+                .Path = differencingPath
+            }
+
+            RaiseEvent UseExistingDifferencingDiskUserRequest(Nothing, e)
+
+            differencingPath = e.Path
+
+            Return e.Response
         End Function
 
         ''' <summary>

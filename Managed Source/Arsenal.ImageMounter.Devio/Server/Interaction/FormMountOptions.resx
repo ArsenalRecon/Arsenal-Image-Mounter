@@ -118,6 +118,9 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="lblWriteOverlay.Text" xml:space="preserve">
-    <value>Mount the disk image as a writeable disk device. Modifications will be written to a temporary differential file and original disk image will not be changed.  (Sometimes referred to as write-overlay or write-copy mode.)</value>
+    <value>Mount the disk image as a writable disk device. Modifications will be written to a write-overlay differencing file and the original disk image will not be changed. (Sometimes referred to as write-overlay or write-copy mode.) Currently not supported for raw/dd-type disk images.</value>
+  </data>
+  <data name="lblFakeDiskSig.Text" xml:space="preserve">
+    <value>“Report a random disk signature to Windows. Useful if the disk image contains a zeroed-out disk signature or you are attempting to mount a duplicate disk signature. (Requires an existing valid master boot record.)</value>
   </data>
 </root>

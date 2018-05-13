@@ -1,7 +1,7 @@
 ﻿''''' ScsiAdapter.vb
 ''''' Class for controlling Arsenal Image Mounter Devices.
 ''''' 
-''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -616,11 +616,11 @@ Public Class ScsiAdapter
 
         Try
             Dim build = Response.ReadByte()
-            Dim revision = build
-            Dim minor = Response.ReadUInt16()
+            Dim low = Response.ReadByte()
+            Dim minor = Response.ReadByte()
             Dim major = Response.ReadByte()
 
-            Return New Version(major, minor, build, revision)
+            Return New Version(major, minor, low, build)
 
         Catch ex As IOException
             Return Nothing

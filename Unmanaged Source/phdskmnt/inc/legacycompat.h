@@ -28,6 +28,23 @@
 #define VPD_BLOCK_DEVICE_CHARACTERISTICS   0xB1
 #define VPD_LOGICAL_BLOCK_PROVISIONING     0xB2
 
+#pragma pack(push, read_capacity16, 1)
+typedef struct _READ_CAPACITY16_DATA {
+    LARGE_INTEGER LogicalBlockAddress;
+    ULONG BytesPerBlock;
+    UCHAR ProtectionEnable : 1;
+    UCHAR ProtectionType : 3;
+    UCHAR Reserved : 4;
+    UCHAR LogicalPerPhysicalExponent : 4;
+    UCHAR Reserved1 : 4;
+    UCHAR LowestAlignedBlock_MSB : 6;
+    UCHAR LBPRZ : 1;
+    UCHAR LBPME : 1;
+    UCHAR LowestAlignedBlock_LSB;
+    UCHAR Reserved3[16];
+} READ_CAPACITY16_DATA, *PREAD_CAPACITY16_DATA;
+#pragma pack(pop, read_capacity16)
+
 //
 // Structure related to 0x42 - SCSIOP_UNMAP
 //
@@ -87,6 +104,24 @@ typedef struct _VPD_BLOCK_LIMITS_PAGE {
 #endif
     };
 } VPD_BLOCK_LIMITS_PAGE, *PVPD_BLOCK_LIMITS_PAGE;
+
+//
+// VPD Page 0xB1, Block Device Characteristics
+//
+typedef struct _VPD_BLOCK_DEVICE_CHARACTERISTICS_PAGE {
+    UCHAR DeviceType : 5;
+    UCHAR DeviceTypeQualifier : 3;
+    UCHAR PageCode;                 // 0xB1
+    UCHAR Reserved0;
+    UCHAR PageLength;               // 0x3C
+
+    UCHAR MediumRotationRateMsb;
+    UCHAR MediumRotationRateLsb;
+    UCHAR MediumProductType;
+    UCHAR NominalFormFactor : 4;
+    UCHAR Reserved2 : 4;
+    UCHAR Reserved3[56];
+} VPD_BLOCK_DEVICE_CHARACTERISTICS_PAGE, *PVPD_BLOCK_DEVICE_CHARACTERISTICS_PAGE;
 
 //
 // VPD Page 0xB2, Logical Block Provisioning

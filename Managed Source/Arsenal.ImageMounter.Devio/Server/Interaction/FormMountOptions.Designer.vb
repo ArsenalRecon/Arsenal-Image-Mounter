@@ -53,10 +53,10 @@ Partial Class FormMountOptions
         '
         Me.rbWriteOverlay.AutoSize = True
         Me.rbWriteOverlay.Enabled = False
-        Me.rbWriteOverlay.Location = New System.Drawing.Point(13, 117)
+        Me.rbWriteOverlay.Location = New System.Drawing.Point(12, 56)
         Me.rbWriteOverlay.Name = "rbWriteOverlay"
         Me.rbWriteOverlay.Size = New System.Drawing.Size(99, 17)
-        Me.rbWriteOverlay.TabIndex = 4
+        Me.rbWriteOverlay.TabIndex = 2
         Me.rbWriteOverlay.Text = "Write temporary"
         Me.rbWriteOverlay.UseVisualStyleBackColor = True
         '
@@ -64,10 +64,10 @@ Partial Class FormMountOptions
         '
         Me.rbReadWrite.AutoSize = True
         Me.rbReadWrite.Enabled = False
-        Me.rbReadWrite.Location = New System.Drawing.Point(13, 187)
+        Me.rbReadWrite.Location = New System.Drawing.Point(12, 126)
         Me.rbReadWrite.Name = "rbReadWrite"
         Me.rbReadWrite.Size = New System.Drawing.Size(86, 17)
-        Me.rbReadWrite.TabIndex = 6
+        Me.rbReadWrite.TabIndex = 4
         Me.rbReadWrite.Text = "Write original"
         Me.rbReadWrite.UseVisualStyleBackColor = True
         '
@@ -84,49 +84,45 @@ Partial Class FormMountOptions
         'lblWriteOverlay
         '
         Me.lblWriteOverlay.Enabled = False
-        Me.lblWriteOverlay.Location = New System.Drawing.Point(16, 137)
+        Me.lblWriteOverlay.Location = New System.Drawing.Point(15, 76)
         Me.lblWriteOverlay.Name = "lblWriteOverlay"
         Me.lblWriteOverlay.Size = New System.Drawing.Size(473, 47)
-        Me.lblWriteOverlay.TabIndex = 5
+        Me.lblWriteOverlay.TabIndex = 3
         Me.lblWriteOverlay.Text = resources.GetString("lblWriteOverlay.Text")
         '
         'lblReadWrite
         '
         Me.lblReadWrite.Enabled = False
-        Me.lblReadWrite.Location = New System.Drawing.Point(16, 207)
+        Me.lblReadWrite.Location = New System.Drawing.Point(15, 146)
         Me.lblReadWrite.Name = "lblReadWrite"
         Me.lblReadWrite.Size = New System.Drawing.Size(473, 35)
-        Me.lblReadWrite.TabIndex = 7
+        Me.lblReadWrite.TabIndex = 5
         Me.lblReadWrite.Text = "Mount the disk image as a writeable disk device. Modifications will be written to" &
     " the disk image. (Caution - this option modifies the original disk image.)"
         '
         'cbFakeDiskSig
         '
         Me.cbFakeDiskSig.AutoSize = True
-        Me.cbFakeDiskSig.Enabled = False
-        Me.cbFakeDiskSig.Location = New System.Drawing.Point(19, 56)
+        Me.cbFakeDiskSig.Location = New System.Drawing.Point(12, 211)
         Me.cbFakeDiskSig.Name = "cbFakeDiskSig"
         Me.cbFakeDiskSig.Size = New System.Drawing.Size(118, 17)
-        Me.cbFakeDiskSig.TabIndex = 2
+        Me.cbFakeDiskSig.TabIndex = 8
         Me.cbFakeDiskSig.Text = "Fake disk signature"
         Me.cbFakeDiskSig.UseVisualStyleBackColor = True
         '
         'lblFakeDiskSig
         '
-        Me.lblFakeDiskSig.Enabled = False
-        Me.lblFakeDiskSig.Location = New System.Drawing.Point(16, 74)
+        Me.lblFakeDiskSig.Location = New System.Drawing.Point(9, 229)
         Me.lblFakeDiskSig.Name = "lblFakeDiskSig"
-        Me.lblFakeDiskSig.Size = New System.Drawing.Size(473, 40)
-        Me.lblFakeDiskSig.TabIndex = 3
-        Me.lblFakeDiskSig.Text = "Report a random disk signature to Windows if the disk image contains a zeroed-out" &
-    " disk signature.  (Requires read-only mounting and an existing valid master boot" &
-    " record.)"
+        Me.lblFakeDiskSig.Size = New System.Drawing.Size(473, 32)
+        Me.lblFakeDiskSig.TabIndex = 9
+        Me.lblFakeDiskSig.Text = resources.GetString("lblFakeDiskSig.Text")
         '
         'btnOK
         '
         Me.btnOK.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.btnOK.AutoSize = True
-        Me.btnOK.Location = New System.Drawing.Point(267, 288)
+        Me.btnOK.Location = New System.Drawing.Point(267, 286)
         Me.btnOK.Name = "btnOK"
         Me.btnOK.Size = New System.Drawing.Size(108, 33)
         Me.btnOK.TabIndex = 11
@@ -138,7 +134,7 @@ Partial Class FormMountOptions
         Me.btnCancel.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.btnCancel.AutoSize = True
         Me.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel
-        Me.btnCancel.Location = New System.Drawing.Point(381, 288)
+        Me.btnCancel.Location = New System.Drawing.Point(381, 286)
         Me.btnCancel.Name = "btnCancel"
         Me.btnCancel.Size = New System.Drawing.Size(108, 33)
         Me.btnCancel.TabIndex = 12
@@ -148,25 +144,25 @@ Partial Class FormMountOptions
         'Label1
         '
         Me.Label1.AutoSize = True
-        Me.Label1.Location = New System.Drawing.Point(19, 248)
+        Me.Label1.Location = New System.Drawing.Point(18, 187)
         Me.Label1.Name = "Label1"
         Me.Label1.Size = New System.Drawing.Size(62, 13)
-        Me.Label1.TabIndex = 8
+        Me.Label1.TabIndex = 6
         Me.Label1.Text = "Sector size:"
         '
         'cbSectorSize
         '
         Me.cbSectorSize.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.cbSectorSize.Items.AddRange(New Object() {"512", "1024", "2048", "4096", "8192", "16384", "32768", "65536"})
-        Me.cbSectorSize.Location = New System.Drawing.Point(94, 245)
+        Me.cbSectorSize.Location = New System.Drawing.Point(93, 184)
         Me.cbSectorSize.Name = "cbSectorSize"
         Me.cbSectorSize.Size = New System.Drawing.Size(121, 21)
-        Me.cbSectorSize.TabIndex = 9
+        Me.cbSectorSize.TabIndex = 7
         '
         'cbRemovable
         '
         Me.cbRemovable.AutoSize = True
-        Me.cbRemovable.Location = New System.Drawing.Point(13, 272)
+        Me.cbRemovable.Location = New System.Drawing.Point(13, 264)
         Me.cbRemovable.Name = "cbRemovable"
         Me.cbRemovable.Size = New System.Drawing.Size(176, 17)
         Me.cbRemovable.TabIndex = 10
@@ -182,7 +178,7 @@ Partial Class FormMountOptions
         Me.AutoSize = True
         Me.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
         Me.CancelButton = Me.btnCancel
-        Me.ClientSize = New System.Drawing.Size(512, 368)
+        Me.ClientSize = New System.Drawing.Size(512, 331)
         Me.ControlBox = False
         Me.Controls.Add(Me.cbRemovable)
         Me.Controls.Add(Me.cbSectorSize)

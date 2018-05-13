@@ -1,12 +1,14 @@
 ﻿Imports System.Security
 Imports Microsoft.VisualBasic
 Imports Arsenal.ImageMounter.Extensions
+Imports System.Security.Permissions
+Imports System.Diagnostics.CodeAnalysis
 
 ''''' NativeFileIO.vb
 ''''' Routines for accessing some useful Win32 API functions to access features not
 ''''' directly accessible through .NET Framework.
 ''''' 
-''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -51,6 +53,8 @@ Namespace IO
             Public Const ERROR_PATH_NOT_FOUND As UInt32 = 3UI
             Public Const ERROR_ACCESS_DENIED As UInt32 = 5UI
             Public Const ERROR_NO_MORE_FILES As UInt32 = 18UI
+            Public Const ERROR_HANDLE_EOF As UInt32 = 38UI
+            Public Const ERROR_MORE_DATA As UInt32 = &H234UI
 
             Public Const FSCTL_GET_COMPRESSION As UInt32 = &H9003C
             Public Const FSCTL_SET_COMPRESSION As UInt32 = &H9C040
@@ -117,11 +121,11 @@ Namespace IO
             Public Structure SCSI_ADDRESS
                 Implements IEquatable(Of SCSI_ADDRESS)
 
-                Public Length As UInt32
-                Public PortNumber As Byte
-                Public PathId As Byte
-                Public TargetId As Byte
-                Public Lun As Byte
+                Public ReadOnly Property Length As UInt32
+                Public ReadOnly Property PortNumber As Byte
+                Public ReadOnly Property PathId As Byte
+                Public ReadOnly Property TargetId As Byte
+                Public ReadOnly Property Lun As Byte
 
                 Public Sub New(PortNumber As Byte, DWordDeviceNumber As UInt32)
                     Me.Length = CUInt(Marshal.SizeOf(Me))
@@ -136,25 +140,25 @@ Namespace IO
 
                 Public Property DWordDeviceNumber As UInt32
                     Get
-                        Return CUInt(PathId) Or (CUInt(TargetId) << 8) Or (CUInt(Lun) << 16)
+                        Return CUInt(_PathId) Or (CUInt(_TargetId) << 8) Or (CUInt(_Lun) << 16)
                     End Get
                     Set
-                        PathId = CByte(Value And &HFF)
-                        TargetId = CByte((Value >> 8) And &HFF)
-                        Lun = CByte((Value >> 16) And &HFF)
+                        _PathId = CByte(Value And &HFF)
+                        _TargetId = CByte((Value >> 8) And &HFF)
+                        _Lun = CByte((Value >> 16) And &HFF)
                     End Set
                 End Property
 
                 Public Overrides Function ToString() As String
-                    Return "Port = " & PortNumber & ", Path = " & PathId & ", Target = " & TargetId & ", Lun = " & Lun
+                    Return "Port = " & _PortNumber.ToString() & ", Path = " & _PathId.ToString() & ", Target = " & _TargetId.ToString() & ", Lun = " & _Lun.ToString()
                 End Function
 
                 Public Overloads Function Equals(other As SCSI_ADDRESS) As Boolean Implements IEquatable(Of SCSI_ADDRESS).Equals
                     Return _
-                        PortNumber.Equals(other.PortNumber) AndAlso
-                        PathId.Equals(other.PathId) AndAlso
-                        TargetId.Equals(other.TargetId) AndAlso
-                        Lun.Equals(other.Lun)
+                        _PortNumber.Equals(other._PortNumber) AndAlso
+                        _PathId.Equals(other._PathId) AndAlso
+                        _TargetId.Equals(other._TargetId) AndAlso
+                        _Lun.Equals(other._Lun)
                 End Function
 
                 Public Overrides Function Equals(obj As Object) As Boolean
@@ -166,7 +170,7 @@ Namespace IO
                 End Function
 
                 Public Overrides Function GetHashCode() As Integer
-                    Return CInt(PathId) Or (CInt(TargetId) << 8) Or (CInt(Lun) << 16)
+                    Return CInt(_PathId) Or (CInt(_TargetId) << 8) Or (CInt(_Lun) << 16)
                 End Function
 
                 Public Shared Operator =(first As SCSI_ADDRESS, second As SCSI_ADDRESS) As Boolean
@@ -462,6 +466,44 @@ Namespace IO
                     Return FindVolumeMountPointClose(handle)
                 End Function
             End Class
+
+            Public Declare Auto Function GetFileInformationByHandle Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                <Out> ByRef lpFileInformation As ByHandleFileInformation) As Boolean
+
+            Public Declare Auto Function GetFileTime Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                <Out, [Optional]> ByRef lpCreationTime As Int64,
+                <Out, [Optional]> ByRef lpLastAccessTime As Int64,
+                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
+
+            Public Declare Auto Function GetFileTime Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                <Out, [Optional]> ByRef lpCreationTime As Int64,
+                lpLastAccessTime As IntPtr,
+                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
+
+            Public Declare Auto Function GetFileTime Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                lpCreationTime As IntPtr,
+                lpLastAccessTime As IntPtr,
+                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
+
+            Public Declare Auto Function GetFileTime Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                <Out, [Optional]> ByRef lpCreationTime As Int64,
+                lpLastAccessTime As IntPtr,
+                lpLastWriteTime As IntPtr) As Boolean
+
+            Public Declare Auto Function FindFirstStream Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
+              InfoLevel As UInt32,
+              <[Out]> ByRef lpszVolumeMountPoint As FindStreamData,
+              dwFlags As UInt32) As SafeFindHandle
+
+            Public Declare Auto Function FindNextStream Lib "kernel32.dll" (
+              hFindStream As SafeFindHandle,
+              <[Out]> ByRef lpszVolumeMountPoint As FindStreamData) As Boolean
 
             Public Declare Auto Function FindFirstVolumeMountPoint Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszRootPathName As String,
@@ -1163,6 +1205,50 @@ Namespace IO
             Public Declare Auto Function ExitWindowsEx Lib "kernel32.dll" (
               flags As ShutdownFlags,
               reason As ShutdownReason) As Boolean
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <MarshalAs(UnmanagedType.LPArray), Out> buffer As Byte(),
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              buffer As IntPtr,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As SByte,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As Int16,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As Int32,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As Int64,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As Byte,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As UInt16,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As UInt32,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As UInt64,
+              length As Int32) As Byte
+
+            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+              <Out> ByRef buffer As Guid,
+              length As Int32) As Byte
 
             Public Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
               <[In], Out> ByRef os_version As OSVERSIONINFO) As Integer
@@ -2205,31 +2291,77 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetDevicesScsiAddresses(portnumber As Byte) As Dictionary(Of UInteger, String)
+        Public Structure ScsiAddressAndLength
+            Implements IEquatable(Of ScsiAddressAndLength)
 
-            Static SizeOfScsiAddress As UInt32 = CUInt(Marshal.SizeOf(GetType(NativeFileIO.Win32API.SCSI_ADDRESS)))
+            Public ReadOnly Property ScsiAddress As Win32API.SCSI_ADDRESS
 
-            Dim GetScsiAddress =
-                Function(drv As String) As NativeFileIO.Win32API.SCSI_ADDRESS?
+            Public ReadOnly Property Length As Long
+
+            Public Sub New(ScsiAddress As Win32API.SCSI_ADDRESS, Length As Long)
+                _ScsiAddress = ScsiAddress
+                _Length = Length
+            End Sub
+
+            Public Overrides Function Equals(obj As Object) As Boolean
+                If Not TypeOf obj Is ScsiAddressAndLength Then
+                    Return False
+                End If
+
+                Return Equals(DirectCast(obj, ScsiAddressAndLength))
+            End Function
+
+            Public Overrides Function ToString() As String
+                Return ScsiAddress.ToString() & ", Length = " & _Length.ToString()
+            End Function
+
+            Public Overloads Function Equals(other As ScsiAddressAndLength) As Boolean Implements IEquatable(Of ScsiAddressAndLength).Equals
+                Return _Length.Equals(other._Length) AndAlso _ScsiAddress.Equals(other._ScsiAddress)
+            End Function
+        End Structure
+
+        Public Shared Function GetDevicesScsiAddresses(portnumber As Byte) As Dictionary(Of ScsiAddressAndLength, String)
+
+            Static SizeOfLong As UInt32 = CUInt(Marshal.SizeOf(GetType(Long)))
+            Static SizeOfScsiAddress As UInt32 = CUInt(Marshal.SizeOf(GetType(Win32API.SCSI_ADDRESS)))
+
+            Dim GetScsiAddressAndLength =
+                Function(drv As String) As ScsiAddressAndLength?
                     Try
-                        Using disk As New DiskDevice(drv)
-                            Dim ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS
-                            Dim rc = NativeFileIO.Win32API.
-                            DeviceIoControl(disk.SafeFileHandle,
-                                            NativeFileIO.Win32API.IOCTL_SCSI_GET_ADDRESS,
-                                            IntPtr.Zero,
-                                            0,
-                                            ScsiAddress,
-                                            SizeOfScsiAddress,
-                                            Nothing,
-                                            Nothing)
+                        Using disk As New DiskDevice(drv, FileAccess.Read)
+                            Dim ScsiAddress As Win32API.SCSI_ADDRESS
+                            Dim rc = Win32API.
+                                DeviceIoControl(disk.SafeFileHandle,
+                                                Win32API.IOCTL_SCSI_GET_ADDRESS,
+                                                IntPtr.Zero,
+                                                0,
+                                                ScsiAddress,
+                                                SizeOfScsiAddress,
+                                                Nothing,
+                                                Nothing)
 
-                            If rc Then
-                                Return ScsiAddress
-                            Else
+                            If Not rc Then
                                 Trace.WriteLine("IOCTL_SCSI_GET_ADDRESS failed for device " & drv & ": Error 0x" & Marshal.GetLastWin32Error().ToString("X"))
                                 Return Nothing
                             End If
+
+                            Dim Length As Long
+                            rc = Win32API.
+                                DeviceIoControl(disk.SafeFileHandle,
+                                                Win32API.IOCTL_DISK_GET_LENGTH_INFO,
+                                                IntPtr.Zero,
+                                                0,
+                                                Length,
+                                                SizeOfLong,
+                                                Nothing,
+                                                Nothing)
+
+                            If Not rc Then
+                                Trace.WriteLine("IOCTL_DISK_GET_LENGTH_INFO failed for device " & drv & ": Error 0x" & Marshal.GetLastWin32Error().ToString("X"))
+                                Return Nothing
+                            End If
+
+                            Return New ScsiAddressAndLength(ScsiAddress, Length)
                         End Using
 
                     Catch ex As Exception
@@ -2240,14 +2372,15 @@ Namespace IO
                 End Function
 
             Dim q =
-                From drv In NativeFileIO.QueryDosDevice()
-                Where drv.StartsWith("PhysicalDrive", StringComparison.Ordinal) OrElse
+                From drv In QueryDosDevice()
+                Where
+                    drv.StartsWith("PhysicalDrive", StringComparison.Ordinal) OrElse
                     drv.StartsWith("CdRom", StringComparison.Ordinal)
-                Let address = GetScsiAddress(String.Concat("\\?\", drv))
+                Let address = GetScsiAddressAndLength(String.Concat("\\?\", drv))
                 Where address.HasValue
-                Where address.Value.PortNumber = portnumber
+                Where address.Value.ScsiAddress.PortNumber = portnumber
 
-            Return q.ToDictionary(Function(o) o.address.Value.DWordDeviceNumber,
+            Return q.ToDictionary(Function(o) o.address.Value,
                                   Function(o) o.drv)
 
         End Function
@@ -2940,6 +3073,139 @@ Namespace IO
                                                    CInt(os_version.ServicePackMajor) << 16 Or CInt(os_version.ServicePackMinor)))
 
         End Function
+
+        <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
+        Public Structure FindStreamData
+
+            Public StreamSize As Int64
+
+            <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=296)>
+            Public StreamName As String
+
+            Public ReadOnly Property NamePart As String
+                Get
+                    Return StreamName?.Split(":"c).ElementAtOrDefault(1)
+                End Get
+            End Property
+
+            Public ReadOnly Property TypePart As String
+                Get
+                    Return StreamName?.Split(":"c).ElementAtOrDefault(2)
+                End Get
+            End Property
+
+        End Structure
+
+        ''' <summary>
+        ''' Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
+        ''' </summary>
+        <SecurityCritical>
+        <SecurityPermission(SecurityAction.Demand, Flags:=SecurityPermissionFlag.AllFlags)>
+        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
+        Public NotInheritable Class SafeFindHandle
+            Inherits SafeHandleMinusOneIsInvalid
+
+            Private Declare Auto Function FindClose Lib "kernel32.dll" (
+                  h As IntPtr) As Boolean
+
+            ''' <summary>
+            ''' Initiates a new instance with an existing open handle.
+            ''' </summary>
+            ''' <param name="open_handle">Existing open handle.</param>
+            ''' <param name="owns_handle">Indicates whether handle should be closed when this
+            ''' instance is released.</param>
+            <SecurityCritical>
+            Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
+                MyBase.New(owns_handle)
+
+                SetHandle(open_handle)
+            End Sub
+
+            ''' <summary>
+            ''' Creates a new empty instance. This constructor is used by native to managed
+            ''' handle marshaller.
+            ''' </summary>
+            <SecurityCritical>
+            Protected Sub New()
+                MyBase.New(ownsHandle:=True)
+
+            End Sub
+
+            ''' <summary>
+            ''' Closes contained handle by calling FindClose() Win32 API.
+            ''' </summary>
+            ''' <returns>Return value from FindClose() Win32 API.</returns>
+            <SecurityCritical>
+            Protected Overrides Function ReleaseHandle() As Boolean
+                Return FindClose(handle)
+            End Function
+        End Class
+
+        <StructLayout(LayoutKind.Sequential, Pack:=1)>
+        Public Structure ByHandleFileInformation
+            Public ReadOnly Property FileAttributes As FileAttributes
+            Private ReadOnly ftCreationTime As Long
+            Private ReadOnly ftLastAccessTime As Long
+            Private ReadOnly ftLastWriteTime As Long
+            Public ReadOnly Property VolumeSerialNumber As UInteger
+            Private ReadOnly nFileSizeHigh As Integer
+            Private ReadOnly nFileSizeLow As UInteger
+            Public ReadOnly Property NumberOfLinks As Integer
+            Private ReadOnly nFileIndexHigh As UInteger
+            Private ReadOnly nFileIndexLow As UInteger
+
+            Public ReadOnly Property CreationTime As Date
+                Get
+                    Return Date.FromFileTime(ftCreationTime)
+                End Get
+            End Property
+
+            Public ReadOnly Property LastAccessTime As Date
+                Get
+                    Return Date.FromFileTime(ftLastAccessTime)
+                End Get
+            End Property
+
+            Public ReadOnly Property LastWriteTime As Date
+                Get
+                    Return Date.FromFileTime(ftLastWriteTime)
+                End Get
+            End Property
+
+            Public ReadOnly Property FileSize As Long
+                Get
+                    Return (CLng(nFileSizeHigh) << 32) Or nFileSizeLow
+                End Get
+            End Property
+
+            Public ReadOnly Property FileIndexAndSequence As ULong
+                Get
+                    Return (CULng(nFileIndexHigh) << 32) Or nFileIndexLow
+                End Get
+            End Property
+
+            Public ReadOnly Property FileIndex As Long
+                Get
+                    Return ((nFileIndexHigh And &HFFFFL) << 32) Or nFileIndexLow
+                End Get
+            End Property
+
+            Public ReadOnly Property Sequence As UShort
+                Get
+                    Return CUShort(nFileIndexHigh >> 16)
+                End Get
+            End Property
+
+            Public Shared Function FromHandle(handle As SafeFileHandle) As ByHandleFileInformation
+
+                Dim obj As New ByHandleFileInformation
+
+                Win32Try(Win32API.GetFileInformationByHandle(handle, obj))
+
+                Return obj
+
+            End Function
+        End Structure
 
     End Class
 

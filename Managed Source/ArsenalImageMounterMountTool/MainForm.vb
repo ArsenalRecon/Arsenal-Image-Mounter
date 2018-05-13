@@ -2,7 +2,7 @@
 ''''' MainForm.vb
 ''''' GUI mount tool.
 ''''' 
-''''' Copyright (c) 2012-2015, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -287,6 +287,13 @@ Public Class MainForm
             item.view.DeviceProperties.Filename = item.serviceItem.ImageFile
         Next
 
+        For Each prop In From item In list
+                         Where item.DeviceProperties.Filename Is Nothing
+                         Select item.DeviceProperties
+
+            prop.Filename = "RAM disk"
+        Next
+
         DiskStateViewBindingSource.DataSource = list
 
         If list Is Nothing OrElse list.Count = 0 Then
@@ -568,7 +575,7 @@ Public Class MainForm
 
                 With FormMountOptions
 
-                    .SupportedAccessModes = DevioServiceFactory.GetSupportedVirtualDiskAccess(ProxyType)
+                    .SupportedAccessModes = DevioServiceFactory.GetSupportedVirtualDiskAccess(ProxyType, Imagefile)
 
                     If (Flags And DeviceFlags.ReadOnly) <> 0 Then
                         .SelectedReadOnly = True
@@ -798,19 +805,10 @@ Public Class MainForm
 
     Private Sub btnRAMDisk_Click(sender As Object, e As EventArgs) Handles btnRAMDisk.Click
 
-        Dim DeviceNumber As UInteger = ScsiAdapter.AutoDeviceNumber
-
-        Dim ssize = Microsoft.VisualBasic.InputBox("Enter size in MB", "RAM disk", "0")
-
-        Dim size As Long
-        If Not Long.TryParse(ssize, size) Then
-            Return
-        End If
-
         Try
-            DiscUtilsInteraction.CreateRamDisk(Me, Adapter, size << 20, DeviceNumber)
-
-            RefreshDeviceList()
+            If DiscUtilsInteraction.InteractiveCreateRAMDisk(Me, Adapter) Then
+                RefreshDeviceList()
+            End If
 
         Catch ex As Exception
             MessageBox.Show(Me, ex.JoinMessages(), "Error",
@@ -819,4 +817,5 @@ Public Class MainForm
         End Try
 
     End Sub
+
 End Class

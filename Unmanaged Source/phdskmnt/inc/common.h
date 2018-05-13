@@ -106,8 +106,10 @@
 /// Extracts the IMSCSI_PROXY_TYPE_xxx from flags
 #define IMSCSI_IMAGE_MODIFIED           0x00010000
 
-/// Report a fake disk signature if zero
-#define IMSCSI_FAKE_DISK_SIG_IF_ZERO    0x00020000
+/// Report a fake disk signature instead of existing one
+#define IMSCSI_FAKE_DISK_SIG            0x00020000
+/// Obsolete name
+#define IMSCSI_FAKE_DISK_SIG_IF_ZERO    IMSCSI_FAKE_DISK_SIG
 
 /// This flag causes the driver to open image files in shared write mode even
 /// if the image is opened for writing. This could be useful in some cases,

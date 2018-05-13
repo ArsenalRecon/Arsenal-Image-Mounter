@@ -10,8 +10,7 @@ Namespace PSDisk
         Public DeviceProperties As ScsiAdapter.DeviceProperties
         Public RawDiskSignature As UInt32?
 
-        Friend Sub New()
-
+        Public Sub New()
         End Sub
 
         Public Property DevicePath As String
@@ -134,6 +133,19 @@ Namespace PSDisk
                     Return "RO"
                 Else
                     Return "RW"
+                End If
+            End Get
+        End Property
+
+        Public ReadOnly Property ReadWriteString As String
+            Get
+                Dim state = IsReadOnly
+                If Not state.HasValue Then
+                    Return Nothing
+                ElseIf state.Value Then
+                    Return "Read only"
+                Else
+                    Return "Read write"
                 End If
             End Get
         End Property

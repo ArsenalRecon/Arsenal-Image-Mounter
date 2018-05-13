@@ -14,15 +14,23 @@ Namespace PSDisk
 
         Public Function GetSimpleView(portnumber As Byte, deviceProperties As List(Of DeviceProperties)) As List(Of DiskStateView)
 
+            Return GetSimpleViewSpecial(Of DiskStateView)(portnumber, deviceProperties)
+
+        End Function
+
+        Public Function GetSimpleViewSpecial(Of T As {New, DiskStateView})(portnumber As Byte, deviceProperties As List(Of DeviceProperties)) As List(Of T)
+
             Try
                 Dim ids = NativeFileIO.GetDevicesScsiAddresses(portnumber)
 
                 Dim getid =
                     Function(dev As DeviceProperties) As String
+                        Dim scsiaddress As New NativeFileIO.ScsiAddressAndLength(New NativeFileIO.Win32API.SCSI_ADDRESS(portnumber, dev.DeviceNumber), dev.DiskSize)
                         Dim result As String = Nothing
-                        If ids.TryGetValue(dev.DeviceNumber, result) Then
+                        If ids.TryGetValue(scsiaddress, result) Then
                             Return result
                         Else
+                            Trace.WriteLine("No PhysicalDrive object found for " & scsiaddress.ToString())
                             Return Nothing
                         End If
                     End Function
@@ -32,10 +40,10 @@ Namespace PSDisk
                     ConvertAll(
                         Function(dev)
 
-                            Dim view As New DiskStateView
-
-                            view.DeviceProperties = dev
-                            view.DeviceName = getid(dev)
+                            Dim view As New T With {
+                                .DeviceProperties = dev,
+                                .DeviceName = getid(dev)
+                            }
 
                             If view.DeviceName IsNot Nothing Then
                                 Try
@@ -44,9 +52,7 @@ Namespace PSDisk
                                         view.RawDiskSignature = device.DiskSignature
                                         view.NativePropertyDiskOffline = device.DiskOffline
                                         view.NativePropertyDiskOReadOnly = device.DiskReadOnly
-                                        If device.PartitionInformationEx.HasValue Then
-                                            view.NativePartitionLayout = device.PartitionInformationEx.Value.PartitionStyle
-                                        End If
+                                        view.NativePartitionLayout = device.PartitionInformationEx?.PartitionStyle
                                     End Using
 
                                 Catch ex As Exception

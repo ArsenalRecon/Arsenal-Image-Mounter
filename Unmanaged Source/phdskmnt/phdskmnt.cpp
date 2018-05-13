@@ -3,7 +3,7 @@
 /// Driver entry routines, miniport callback definitions and other support
 /// routines.
 /// 
-/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -196,8 +196,10 @@ __in PUNICODE_STRING pRegistryPath
     pMPDriverInfo                  pMPDrvInfo;
     LARGE_INTEGER                  liTickCount;
 
-    KdPrint2(("PhDskMnt::DriverEntry: Begin.\n"));
+    KdPrint(("PhDskMnt::DriverEntry: Begin '%wZ'.\n", pRegistryPath));
     
+    KdBreakPoint();
+
 #if 0 //DBG
 
 #if (NTDDI_VERSION >= NTDDI_WS03)

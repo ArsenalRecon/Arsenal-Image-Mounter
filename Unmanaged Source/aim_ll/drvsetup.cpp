@@ -2,7 +2,7 @@
 /// drvsetup.cpp
 /// Driver setup routines for command line use.
 /// 
-/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -93,10 +93,10 @@ wmainSetup(int, wchar_t **argv)
     else
     {
         fprintf(stderr,
-            "Syntax:\r\n"
-            "aim_ll --install source_directory\r\n"
-            "aim_ll --uninstall\r\n"
-            "aim_ll --rescan\r\n");
+            "Syntax:\n"
+            "aim_ll --install source_directory\n"
+            "aim_ll --uninstall\n"
+            "aim_ll --rescan\n");
 
         return -1;
     }

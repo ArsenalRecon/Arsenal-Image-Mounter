@@ -4,7 +4,7 @@
 ; Intended for use on 32 or 64 bit editions of Windows Server 2003 or newer,
 ; or Windows Vista or newer.
 ; 
-; Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+; Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ; This source code and API are available under the terms of the Affero General Public
 ; License v3.
 ;
@@ -17,7 +17,7 @@ Signature = "$WINDOWS NT$"
 Class = SCSIAdapter
 ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
 Provider = %ARSENALRECON%
-DriverVer = 08/31/2017,1.9.0025.00025
+DriverVer = 04/25/2018,1.10.0027.00027
 CatalogFile = phdskmnt.cat
 
 [SourceDisksFiles.x86]

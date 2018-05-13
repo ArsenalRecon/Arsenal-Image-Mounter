@@ -114,7 +114,7 @@
     <Compile Include="Client\DevioDirectStream.vb" />
     <Compile Include="Client\DevioShmStream.vb" />
     <Compile Include="Client\DevioStream.vb" />
-    <Compile Include="DiscUtilsInteraction.vb" />
+    <Compile Include="Server\Interaction\DiscUtilsInteraction.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderFromStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderManagedBase.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderUnmanagedBase.vb" />

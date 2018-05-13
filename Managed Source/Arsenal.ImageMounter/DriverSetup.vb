@@ -2,6 +2,7 @@
 Imports Ionic.Zip
 Imports Arsenal.ImageMounter.IO
 Imports System.Windows.Forms
+Imports Ionic.Crc
 
 ''' <summary>
 ''' Routines for installing or uninstalling Arsenal Image Mounter kernel level
@@ -54,8 +55,8 @@ Public Class DriverSetup
     ''' <param name="zipFile">ZipFile object with setup files</param>
     Public Shared Function GetArchiveDriverVersion(zipFile As ZipFile) As Version
 
-        Dim infpath1 = kernel & "\phdskmnt.inf"
-        Dim infpath2 = kernel & "/phdskmnt.inf"
+        Dim infpath1 = kernel & "\x86\phdskmnt.sys"
+        Dim infpath2 = kernel & "/x86/phdskmnt.sys"
 
         Dim entry =
             Aggregate e In zipFile
@@ -67,17 +68,190 @@ Public Class DriverSetup
 
         If entry Is Nothing Then
 
-            Throw New KeyNotFoundException("File '" & infpath1 & "' missing in zip archive.")
+            Throw New KeyNotFoundException("Driver file phdskmnt.sys for " & kernel & " missing in zip archive.")
 
         End If
 
         Using versionFile = entry.OpenReader()
 
-            Return GetSetupFileDriverVersion(New CachedIniFile(versionFile,
-                                                               Encoding.ASCII))
+            Return GetFileVersionInfo(versionFile)
 
         End Using
 
+    End Function
+
+    Public Shared Function GetFileVersionInfo(exe As Stream) As Version
+
+        Dim buffer = New Byte(0 To CInt(exe.Length - 1)) {}
+        exe.Read(buffer, 0, buffer.Length)
+
+        Return GetFileVersionInfo(buffer)
+
+    End Function
+
+    Public Shared Function GetFileVersionInfo(exe As Byte()) As Version
+
+        Dim exe_signature = Encoding.UTF7.GetString(exe, 0, 2)
+        If Not exe_signature.Equals("MZ", StringComparison.Ordinal) Then
+            Throw New BadImageFormatException("Invalid executable header signature")
+        End If
+
+        Dim pe = BitConverter.ToInt32(exe, &H3C)
+
+        Dim pe_signature = Encoding.UTF7.GetChars(exe, pe, 4)
+
+        Static expected_pe_signature As String = "PE" & New Char & New Char
+
+        If Not pe_signature.SequenceEqual(expected_pe_signature) Then
+            Throw New BadImageFormatException("Invalid PE header signature")
+        End If
+
+        Dim coff = pe + 4
+
+        Dim num_sections = BitConverter.ToUInt16(exe, coff + 2)
+        Dim opt_header_size = BitConverter.ToUInt16(exe, coff + 16)
+
+        If num_sections = 0 OrElse opt_header_size = 0 Then
+            Throw New BadImageFormatException("Invalid PE file")
+        End If
+
+        Dim opt_header = coff + 20
+
+        Dim opt_header_signature = BitConverter.ToUInt16(exe, opt_header)
+
+        Dim data_dir = opt_header + 96
+
+        Dim va_res = BitConverter.ToInt32(exe, data_dir + 8 * 2)
+
+        Dim sec_table = opt_header + opt_header_size
+
+        Static expected_section_name As String = ".rsrc" & New Char
+
+        For i = 0 To num_sections - 1
+            Dim sec = sec_table + 40 * i
+            Dim sec_name = Encoding.UTF7.GetChars(exe, sec, expected_section_name.Length)
+
+            If Not sec_name.SequenceEqual(expected_section_name) Then
+                Continue For
+            End If
+
+            Dim va_sec = BitConverter.ToInt32(exe, sec + 12)
+            Dim raw = BitConverter.ToInt32(exe, sec + 20)
+            Dim res_sec = raw + (va_res - va_sec)
+
+            Dim num_named = BitConverter.ToUInt16(exe, res_sec + 12)
+            Dim num_id = BitConverter.ToUInt16(exe, res_sec + 14)
+
+            If num_named + num_id = 0 Then
+                Exit For
+            End If
+
+            For j = 0 To num_named + num_id - 1
+
+                Dim res = res_sec + 16 + 8 * j
+                Dim name = BitConverter.ToUInt32(exe, res)
+
+                If name <> 16 Then
+                    Continue For
+                End If
+
+                Dim offs = BitConverter.ToUInt32(exe, res + 4)
+
+                If (offs And &H80000000UI) = 0 Then
+                    Exit For
+                End If
+
+                Dim ver_dir = res_sec + CInt(offs And &H7FFFFFFFUI)
+
+                num_named = BitConverter.ToUInt16(exe, ver_dir + 12)
+                num_id = BitConverter.ToUInt16(exe, ver_dir + 14)
+
+                If num_named + num_id = 0 Then
+                    Exit For
+                End If
+
+                res = ver_dir + 16
+
+                offs = BitConverter.ToUInt32(exe, res + 4)
+
+                If (offs And &H80000000UI) = 0 Then
+                    Exit For
+                End If
+
+                ver_dir = res_sec + CInt(offs And &H7FFFFFFFUI)
+
+                num_named = BitConverter.ToUInt16(exe, ver_dir + 12)
+                num_id = BitConverter.ToUInt16(exe, ver_dir + 14)
+
+                If num_named + num_id = 0 Then
+                    Exit For
+                End If
+
+                res = ver_dir + 16
+
+                offs = BitConverter.ToUInt32(exe, res + 4)
+
+                If (offs And &H80000000UI) <> 0 Then
+                    Exit For
+                End If
+
+                ver_dir = res_sec + CInt(offs)
+
+                Dim ver_va = BitConverter.ToInt32(exe, ver_dir)
+
+                Dim version = raw + (ver_va - va_sec)
+
+                Dim off = 0
+
+                Dim len = BitConverter.ToUInt16(exe, version)
+                Dim val_len = BitConverter.ToUInt16(exe, version + 2)
+                Dim type = BitConverter.ToUInt16(exe, version + 4)
+
+                off = 6
+                Do
+                    Dim c = BitConverter.ToChar(exe, version + off)
+                    If c = New Char Then
+                        Exit Do
+                    End If
+                    off += 2
+                Loop
+
+                Dim info = Encoding.Unicode.GetString(exe, version + 6, off - 6)
+
+                off += 2
+
+                off = PadValue(off, 4)
+
+                If info.Equals("VS_VERSION_INFO", StringComparison.Ordinal) Then
+
+                    Dim fixed = version + off
+
+                    Dim fileA = BitConverter.ToUInt16(exe, fixed + 10)
+                    Dim fileB = BitConverter.ToUInt16(exe, fixed + 8)
+                    Dim fileC = BitConverter.ToUInt16(exe, fixed + 14)
+                    Dim fileD = BitConverter.ToUInt16(exe, fixed + 12)
+                    'Dim prodA = BitConverter.ToUInt16(exe, fixed + 18)
+                    'Dim prodB = BitConverter.ToUInt16(exe, fixed + 16)
+                    'Dim prodC = BitConverter.ToUInt16(exe, fixed + 22)
+                    'Dim prodD = BitConverter.ToUInt16(exe, fixed + 20)
+
+                    Dim file_version As New Version(fileA, fileB, fileC, fileD)
+                    'Dim prod_version As New Version(prodA, prodB, prodC, prodD)
+
+                    Return file_version
+
+                End If
+
+            Next
+
+        Next
+
+        Throw New KeyNotFoundException("No version resource exists in file")
+
+    End Function
+
+    Private Shared Function PadValue(value As Integer, align As Integer) As Integer
+        Return (value + align - 1) And -align
     End Function
 
     ''' <summary>
@@ -236,7 +410,7 @@ Public Class DriverSetup
         CheckCompatibility(ownerWindow)
 
         RemoveDevices(ownerWindow)
-        
+
         RemoveDriver()
 
     End Sub

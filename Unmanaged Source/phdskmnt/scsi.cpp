@@ -5,7 +5,7 @@
 /// queueing work items for requests that need to be carried out at
 /// PASSIVE_LEVEL.
 /// 
-/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -632,9 +632,9 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     PINQUIRYDATA          pInqData = (PINQUIRYDATA)pSrb->DataBuffer;// Point to Inquiry buffer.
-    PCDB                  pCdb;
+    PCDB                  pCdb = (PCDB)pSrb->Cdb;
 
-    KdPrint2(("PhDskMnt::ScsiOpInquiry:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
+    KdPrint(("PhDskMnt::ScsiOpInquiry:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
     if (!KeReadStateEvent(&pLUExt->Initialized))
     {
@@ -647,7 +647,12 @@ __in PSCSI_REQUEST_BLOCK  pSrb
             SCSI_ADSENSE_LUN_NOT_READY,
             SCSI_SENSEQ_BECOMING_READY);
 
-        goto done;
+        return;
+    }
+
+    if (pSrb->DataTransferLength == 0)
+    {
+        pSrb->DataTransferLength = pCdb->CDB6INQUIRY3.AllocationLength;
     }
 
     if (pSrb->DataTransferLength > 0)
@@ -655,8 +660,6 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
         pInqData->DeviceType = pLUExt->DeviceType;
     }
-
-    pCdb = (PCDB)pSrb->Cdb;
 
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
@@ -669,7 +672,6 @@ __in PSCSI_REQUEST_BLOCK  pSrb
             break;
 
         case DIRECT_ACCESS_DEVICE:
-        case ARRAY_CONTROLLER_DEVICE:
             ScsiOpVPDDiskUnit(pHBAExt, pLUExt, pSrb);
             break;
 
@@ -681,40 +683,51 @@ __in PSCSI_REQUEST_BLOCK  pSrb
                 SCSI_ADSENSE_INVALID_CDB,
                 0);
         }
-
-        goto done;
     }
-    
-    if (pSrb->DataTransferLength == 0)
+    else
     {
-        pSrb->DataTransferLength = pCdb->CDB6INQUIRY3.AllocationLength;
+        if (pSrb->DataTransferLength > FIELD_OFFSET(INQUIRYDATA, AdditionalLength))
+        {
+#if _NT_TARGET_VERSION >= 0x601 && !defined(_IA64_)
+            pInqData->AdditionalLength = FIELD_OFFSET(INQUIRYDATA, VersionDescriptors) +
+                3 * sizeof(*pInqData->VersionDescriptors) - FIELD_OFFSET(INQUIRYDATA, AdditionalLength);
+#endif
+
+            pInqData->RemovableMedia = pLUExt->RemovableMedia;
+            pInqData->ResponseDataFormat = 0x2;
+        }
+
+        if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, VendorId))
+        {
+            pInqData->CommandQueue = TRUE;
+
+            if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, VendorId) + sizeof(pInqData->VendorId))
+                RtlMoveMemory(pInqData->VendorId, pHBAExt->VendorId, 8);
+
+            if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, ProductId) + sizeof(pInqData->ProductId))
+                RtlMoveMemory(pInqData->ProductId, pHBAExt->ProductId, 16);
+
+            if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, ProductRevisionLevel) + sizeof(pInqData->ProductRevisionLevel))
+                RtlMoveMemory(pInqData->ProductRevisionLevel, pHBAExt->ProductRevision, 4);
+
+#if _NT_TARGET_VERSION >= 0x601 && !defined(_IA64_)
+            if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, VersionDescriptors) + 3 * sizeof(*pInqData->VersionDescriptors))
+            {
+                USHORT descriptor = VER_DESCRIPTOR_SBC3;
+                REVERSE_BYTES_SHORT(&pInqData->VersionDescriptors[0], &descriptor);
+                descriptor = VER_DESCRIPTOR_SPC4_T10_1731D_R23;
+                REVERSE_BYTES_SHORT(&pInqData->VersionDescriptors[1], &descriptor);
+                descriptor = VER_DESCRIPTOR_1667_NOVERSION;
+                REVERSE_BYTES_SHORT(&pInqData->VersionDescriptors[2], &descriptor);
+            }
+#endif
+        }
+
+        ScsiSetSuccess(pSrb, min(pSrb->DataTransferLength, sizeof(INQUIRYDATA)));
     }
 
-    if (pSrb->DataTransferLength > 0)
-    {
-        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
-        pInqData->DeviceType = pLUExt->DeviceType;
-    }
-
-    if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, VendorId))
-    {
-        pInqData->RemovableMedia = pLUExt->RemovableMedia;
-        pInqData->CommandQueue = TRUE;
-
-        if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, VendorId) + sizeof(pInqData->VendorId))
-            RtlMoveMemory(pInqData->VendorId, pHBAExt->VendorId, 8);
-
-        if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, ProductId) + sizeof(pInqData->ProductId))
-            RtlMoveMemory(pInqData->ProductId, pHBAExt->ProductId, 16);
-        
-        if (pSrb->DataTransferLength >= FIELD_OFFSET(INQUIRYDATA, ProductRevisionLevel) + sizeof(pInqData->ProductRevisionLevel))
-            RtlMoveMemory(pInqData->ProductRevisionLevel, pHBAExt->ProductRevision, 4);
-    }
-
-    ScsiSetSuccess(pSrb, min(pSrb->DataTransferLength, sizeof(INQUIRYDATA)));
-
-done:
-    KdPrint2(("PhDskMnt::ScsiOpInquiry: End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint(("PhDskMnt::ScsiOpInquiry: End: status=0x%X length=0x%X\n",
+        (int)pSrb->SrbStatus, (int)pSrb->DataTransferLength));
 
     return;
 }                                                     // End ScsiOpInquiry.
@@ -1018,7 +1031,7 @@ ScsiOpVPDCdRomUnit(
         break;
     }
 
-    KdPrint2(("PhDskMnt::ScsiOpVPDCdRomUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint(("PhDskMnt::ScsiOpVPDCdRomUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
 }
 
 #endif
@@ -1049,7 +1062,7 @@ ScsiOpVPDDiskUnit(
         PVPD_SUPPORTED_PAGES_PAGE pSupportedPages;
         ULONG len;
 
-        len = FIELD_OFFSET(VPD_SUPPORTED_PAGES_PAGE, SupportedPageList) + 4;
+        len = FIELD_OFFSET(VPD_SUPPORTED_PAGES_PAGE, SupportedPageList) + 5;
 
         if (pSrb->DataTransferLength < len)
         {
@@ -1060,11 +1073,12 @@ ScsiOpVPDDiskUnit(
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
-        pSupportedPages->PageLength = 4;
+        pSupportedPages->PageLength = 5;
         pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
-        pSupportedPages->SupportedPageList[1] = VPD_BLOCK_LIMITS;
-        pSupportedPages->SupportedPageList[2] = VPD_LOGICAL_BLOCK_PROVISIONING;
-        pSupportedPages->SupportedPageList[3] = VPD_DEVICE_IDENTIFIERS;
+        pSupportedPages->SupportedPageList[1] = VPD_DEVICE_IDENTIFIERS;
+        pSupportedPages->SupportedPageList[2] = VPD_BLOCK_LIMITS;
+        pSupportedPages->SupportedPageList[3] = VPD_BLOCK_DEVICE_CHARACTERISTICS;
+        pSupportedPages->SupportedPageList[4] = VPD_LOGICAL_BLOCK_PROVISIONING;
 
         ScsiSetSuccess(pSrb, len);
     }
@@ -1090,7 +1104,11 @@ ScsiOpVPDDiskUnit(
             {
                 // not worry about multiply overflow as max of DsmCapBlockCount is min(AHCI_MAX_TRANSFER_LENGTH / ATA_BLOCK_SIZE, 0xFFFF) 
                 // calculate how many LBA ranges can be associated with one DSM - Trim command 
-                ULONG maxLbaRangeEntryCountPerCmd;
+                ULONG maxLbaRangeEntryCountPerCmd = MAXLONG;
+
+                // calculate how many LBA can be associated with one DSM - Trim command 
+                ULONG maxLbaCountPerCmd = MAXLONG;
+
                 if (pLUExt->UseProxy &&
                     pLUExt->Proxy.connection_type == PROXY_CONNECTION::PROXY_CONNECTION_SHM)
                 {
@@ -1098,30 +1116,28 @@ ScsiOpVPDDiskUnit(
                         (pLUExt->Proxy.shared_memory_size - sizeof(IMDPROXY_HEADER_SIZE)) /
                         sizeof(DEVICE_DATA_SET_RANGE);
 
-                    maxLbaRangeEntryCountPerCmd = (ULONG)min(MAXLONG, max_dsrs);
+                    maxLbaCountPerCmd =
+                        maxLbaRangeEntryCountPerCmd = (ULONG)min(MAXLONG, max_dsrs);
                 }
-                else
-                {
-                    maxLbaRangeEntryCountPerCmd = MAXLONG;
-                }
-
-                // calculate how many LBA can be associated with one DSM - Trim command 
-                ULONG maxLbaCountPerCmd = MAXLONG;
 
                 NT_ASSERT(maxLbaCountPerCmd > 0);
+
+                ULONG optimalUnmapGranularity = (2UL << 20) >> pLUExt->BlockPower;
 
                 // buffer is big enough for UNMAP information. 
                 outputBuffer->PageLength[1] = 0x3C;        // must be 0x3C per spec 
 
                                                            // (16:19) MAXIMUM UNMAP LBA COUNT 
-                REVERSE_BYTES(&outputBuffer->Descriptors[16], &maxLbaCountPerCmd);
+                REVERSE_BYTES(&outputBuffer->MaximumUnmapLBACount, &maxLbaCountPerCmd);
 
                 // (20:23) MAXIMUM UNMAP BLOCK DESCRIPTOR COUNT 
-                REVERSE_BYTES(&outputBuffer->Descriptors[20], &maxLbaRangeEntryCountPerCmd);
+                REVERSE_BYTES(&outputBuffer->MaximumUnmapBlockDescriptorCount, &maxLbaRangeEntryCountPerCmd);
 
                 // (24:27) OPTIMAL UNMAP GRANULARITY 
+                REVERSE_BYTES(&outputBuffer->OptimalUnmapGranularity, &optimalUnmapGranularity);
+
                 // (28:31) UNMAP GRANULARITY ALIGNMENT; (28) bit7: UGAVALID 
-                //leave '0' indicates un-supported. 
+                outputBuffer->UGAValid = FALSE;
 
                 // keep original 'pSrb->DataTransferLength' value. 
             }
@@ -1148,9 +1164,10 @@ ScsiOpVPDDiskUnit(
 
             outputBuffer->PageCode = VPD_LOGICAL_BLOCK_PROVISIONING;
             outputBuffer->PageLength[1] = 0x04;      // 8 bytes data in total 
+            outputBuffer->ProvisioningType = PROVISIONING_TYPE_THIN;
             outputBuffer->DP = 0;
             outputBuffer->ANC_SUP = pLUExt->SupportsUnmap;
-            outputBuffer->LBPRZ = 0;
+            outputBuffer->LBPRZ = pLUExt->SupportsUnmap;
             outputBuffer->LBPWS10 = 0;                   // does not support WRITE SAME(10) 
             outputBuffer->LBPWS = 0;                     // does not support WRITE SAME 
             outputBuffer->LBPU = pLUExt->SupportsUnmap;  // supports UNMAP
@@ -1160,6 +1177,27 @@ ScsiOpVPDDiskUnit(
         break;
     }
     
+    case VPD_BLOCK_DEVICE_CHARACTERISTICS:
+    {
+        if (pSrb->DataTransferLength < 0x08)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+        }
+        else
+        {
+            PVPD_BLOCK_DEVICE_CHARACTERISTICS_PAGE outputBuffer = (PVPD_BLOCK_DEVICE_CHARACTERISTICS_PAGE)pSrb->DataBuffer;
+
+            outputBuffer->PageCode = VPD_BLOCK_DEVICE_CHARACTERISTICS;
+            outputBuffer->PageLength = 0x3C;        // must be 0x3C per spec
+            outputBuffer->MediumRotationRateMsb = 0;
+            outputBuffer->MediumRotationRateLsb = 0;
+            outputBuffer->NominalFormFactor = 0;
+
+            pSrb->SrbStatus = SRB_STATUS_SUCCESS;
+        }
+        break;
+    }
+
     case VPD_DEVICE_IDENTIFIERS:
     {
         PVPD_IDENTIFICATION_PAGE IdentificationPage =
@@ -1200,7 +1238,7 @@ ScsiOpVPDDiskUnit(
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
     }
 
-    KdPrint2(("PhDskMnt::ScsiOpVPDDiskUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint(("PhDskMnt::ScsiOpVPDDiskUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiOpVPDDiskUnit().
@@ -1347,7 +1385,6 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
 )
 {
     PREAD_CAPACITY_DATA     readCapacity = (PREAD_CAPACITY_DATA)pSrb->DataBuffer;
-    PREAD_CAPACITY_DATA_EX  readCapacity16 = (PREAD_CAPACITY_DATA_EX)pSrb->DataBuffer;
     ULARGE_INTEGER          maxBlocks;
     ULONG                   blockSize;
 
@@ -1393,8 +1430,15 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
     }
     else if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY16)
     {
+        PREAD_CAPACITY16_DATA readCapacity16 = (PREAD_CAPACITY16_DATA)readCapacity;
         REVERSE_BYTES(&readCapacity16->BytesPerBlock, &blockSize);
         REVERSE_BYTES_QUAD(&readCapacity16->LogicalBlockAddress, &maxBlocks);
+        
+        if ((LONG)pSrb->DataTransferLength >= FIELD_OFFSET(READ_CAPACITY16_DATA, Reserved3))
+        {
+            readCapacity16->LBPME = pLUExt->SupportsUnmap;
+            readCapacity16->LBPRZ = pLUExt->SupportsUnmap;
+        }
     }
 
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  End.\n"));
@@ -1973,7 +2017,7 @@ __inout __deref PKIRQL               LowestAssumedIrql
     pStorageCapabilities->EjectSupported = TRUE;
     pStorageCapabilities->SilentInstall = TRUE;
     pStorageCapabilities->Removable = pLUExt->RemovableMedia;
-    pStorageCapabilities->SurpriseRemovalOK = FALSE;
+    pStorageCapabilities->SurpriseRemovalOK = pLUExt->ReadOnly;
 
     pSrb->SrbStatus = SRB_STATUS_SUCCESS;
 

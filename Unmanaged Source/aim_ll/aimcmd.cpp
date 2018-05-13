@@ -2,7 +2,7 @@
 /// aimcmd.cpp
 /// Command line access to Arsenal Image Mounter features.
 /// 
-/// Copyright (c) 2012-2017, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -87,255 +87,254 @@ void __declspec(noreturn)
 ImScsiSyntaxHelp()
 {
     int rc = fputs(
-        "Low-level command line interface to Arsenal Image Mounter virtual\r\n"
-        "SCSI miniport driver.\r\n"
+        "Low-level command line interface to Arsenal Image Mounter virtual\n"
+        "SCSI miniport driver.\n"
         "\n"
-        "For version information, license, copyrights and credits, type aim_ll --version\r\n"
+        "For version information, license, copyrights and credits, type aim_ll --version\n"
         "\n"
-        "Setup syntax:\r\n"
-        "aim_ll --install setup_directory\r\n"
-        "        Installs Arsenal Image Mounter driver from a directory with setup\r\n"
-        "        files.\r\n"
+        "Setup syntax:\n"
+        "aim_ll --install setup_directory\n"
+        "        Installs Arsenal Image Mounter driver from a directory with setup\n"
+        "        files.\n"
         "\n"
-        "aim_ll --uninstall\r\n"
-        "        Uninstalls Arsenal Image Mounter driver.\r\n"
+        "aim_ll --uninstall\n"
+        "        Uninstalls Arsenal Image Mounter driver.\n"
         "\n"
-        "aim_ll --rescan\r\n"
-        "        Rescans SCSI bus on installed adapter.\r\n"
+        "aim_ll --rescan\n"
+        "        Rescans SCSI bus on installed adapter.\n"
         "\n"
-        "Manage virtual disks:\r\n"
-        "aim_ll -a -t type [-n] [-o opt1[,opt2 ...]] [-f|-F file] [-s size] [-b offset]\r\n"
-        "       [-S sectorsize] [-u devicenumber] [-m mountpoint]\r\n"
-        "       [-p \"format-parameters\"] [-P]\r\n"
-        "aim_ll -d|-D [-u devicenumber | -m mountpoint] [-P]\r\n"
-        "aim_ll -R -u unit\r\n"
-        "aim_ll -l [-u devicenumber | -m mountpoint]\r\n"
-        "aim_ll -e [-s size] [-o opt1[,opt2 ...]] [-u devicenumber | -m mountpoint]\r\n"
+        "Manage virtual disks:\n"
+        "aim_ll -a -t type [-n] [-o opt1[,opt2 ...]] [-f|-F file] [-s size] [-b offset]\n"
+        "       [-S sectorsize] [-u devicenumber] [-m mountpoint]\n"
+        "       [-p \"format-parameters\"] [-P]\n"
+        "aim_ll -d|-D [-u devicenumber | -m mountpoint] [-P]\n"
+        "aim_ll -R -u unit\n"
+        "aim_ll -l [-u devicenumber | -m mountpoint]\n"
+        "aim_ll -e [-s size] [-o opt1[,opt2 ...]] [-u devicenumber | -m mountpoint]\n"
         "\n"
-        "-a      Attach a virtual disk. This will configure and attach a virtual disk\r\n"
-        "        with the parameters specified and attach it to the system.\r\n"
+        "-a      Attach a virtual disk. This will configure and attach a virtual disk\n"
+        "        with the parameters specified and attach it to the system.\n"
         "\n"
-        "-d      Detach a virtual disk from the system and release all resources.\r\n"
-        "        Use -D to force removal even if the device is in use.\r\n"
+        "-d      Detach a virtual disk from the system and release all resources.\n"
+        "        Use -D to force removal even if the device is in use.\n"
         "\n"
-        "-R      Emergency removal of hung virtual disks. Should only be used as a last\r\n"
-        "        resort when a virtual disk has some kind of problem that makes it\r\n"
-        "        impossible to detach it in a safe way. This could happen for example\r\n"
-        "        for proxy-type virtual disks sometimes when proxy communication fails.\r\n"
-        "        Note that this does not attempt to dismount filesystem or lock the\r\n"
-        "        volume in any way so there is a potential risk of data loss. Use with\r\n"
-        "        caution!\r\n"
+        "-R      Emergency removal of hung virtual disks. Should only be used as a last\n"
+        "        resort when a virtual disk has some kind of problem that makes it\n"
+        "        impossible to detach it in a safe way. This could happen for example\n"
+        "        for proxy-type virtual disks sometimes when proxy communication fails.\n"
+        "        Note that this does not attempt to dismount filesystem or lock the\n"
+        "        volume in any way so there is a potential risk of data loss. Use with\n"
+        "        caution!\n"
         "\n"
-        "-e      Edit an existing virtual disk.\r\n"
+        "-e      Edit an existing virtual disk.\n"
         "\n"
-        "        Along with the -s parameter extends the size of an existing virtual\r\n"
-        "        disk.\r\n"
+        "        Along with the -s parameter extends the size of an existing virtual\n"
+        "        disk.\n"
         "\n"
-        "        Along with the -o parameter changes media characteristics for an\r\n"
-        "        existing virtual disk. Options that can be changed on existing virtual\r\n"
-        "        disks are those specifying wether or not the media of the virtual disk\r\n"
-        "        should be writable and/or removable.\r\n"
+        "        Along with the -o parameter changes media characteristics for an\n"
+        "        existing virtual disk. Options that can be changed on existing virtual\n"
+        "        disks are those specifying wether or not the media of the virtual disk\n"
+        "        should be writable and/or removable.\n"
         "\n"
-        "-t type\r\n"
-        "        Select the backingstore for the virtual disk.\r\n"
+        "-t type\n"
+        "        Select the backingstore for the virtual disk.\n"
         "\n"
-        "vm      Storage for this type of virtual disk is allocated from virtual memory\r\n"
-        "        in the system process. If a file is specified with -f that file is\r\n"
-        "        is loaded into the memory allocated for the disk image.\r\n"
+        "vm      Storage for this type of virtual disk is allocated from virtual memory\n"
+        "        in the system process. If a file is specified with -f that file is\n"
+        "        is loaded into the memory allocated for the disk image.\n"
         "\n"
-        "file    A file specified with -f file becomes the backingstore for this\r\n"
-        "        virtual disk.\r\n"
+        "file    A file specified with -f file becomes the backingstore for this\n"
+        "        virtual disk.\n"
         "\n"
-        "proxy   The actual backingstore for this type of virtual disk is controlled by\r\n"
-        "        a storage server accessed by the driver on this machine by\r\n"
-        "        sending storage I/O requests through a named pipe specified with -f.\r\n"
+        "proxy   The actual backingstore for this type of virtual disk is controlled by\n"
+        "        a storage server accessed by the driver on this machine by\n"
+        "        sending storage I/O requests through a named pipe specified with -f.\n"
         "\n"
-        "-f file or -F file\r\n"
-        "        Filename to use as backingstore for the file type virtual disk, to\r\n"
-        "        initialize a vm type virtual disk or name of a named pipe for I/O\r\n"
-        "        client/server communication for proxy type virtual disks. For proxy\r\n"
-        "        type virtual disks \"file\" may be a COM port or a remote server\r\n"
-        "        address if the -o options includes \"ip\" or \"comm\".\r\n"
+        "-f file or -F file\n"
+        "        Filename to use as backingstore for the file type virtual disk, to\n"
+        "        initialize a vm type virtual disk or name of a named pipe for I/O\n"
+        "        client/server communication for proxy type virtual disks. For proxy\n"
+        "        type virtual disks \"file\" may be a COM port or a remote server\n"
+        "        address if the -o options includes \"ip\" or \"comm\".\n"
         "\n"
-        "        Instead of using -f to specify 'DOS-style' paths, such as\r\n"
-        "        C:\\dir\\image.bin or \\\\server\\share\\image.bin, you can use -F to\r\n"
-        "        specify 'NT-style' native paths, such as\r\n"
-        "        \\Device\\Harddisk0\\Partition1\\image.bin. This makes it possible to\r\n"
-        "        specify files on disks or communication devices that currently have no\r\n"
-        "        drive letters assigned.\r\n"
+        "        Instead of using -f to specify 'DOS-style' paths, such as\n"
+        "        C:\\dir\\image.bin or \\\\server\\share\\image.bin, you can use -F to\n"
+        "        specify 'NT-style' native paths, such as\n"
+        "        \\Device\\Harddisk0\\Partition1\\image.bin. This makes it possible to\n"
+        "        specify files on disks or communication devices that currently have no\n"
+        "        drive letters assigned.\n"
         "\n"
-        "-l      List configured devices. If given with -u or -m, display details about\r\n"
-        "        that particular device.\r\n"
+        "-l      List configured devices. If given with -u or -m, display details about\n"
+        "        that particular device.\n"
         "\n"
-        "-n      When printing listing devices, print only the unit number without other\r\n"
-        "        information.\r\n"
+        "-n      When printing listing devices, print only the unit number without other\n"
+        "        information.\n"
         "\n"
-        "-s size\r\n"
-        "        Size of the virtual disk. Size is number of bytes unless suffixed with\r\n"
-        "        a b, k, m, g, t, K, M, G or T which denotes number of 512-byte blocks,\r\n"
-        "        thousand bytes, million bytes, billion bytes, trillion bytes,\r\n"
-        "        kilobytes, megabytes, gigabytes and terabytes respectively. The suffix\r\n"
-        "        can also be % to indicate percentage of free physical memory which\r\n"
-        "        could be useful when creating vm type virtual disks. It is optional to\r\n"
-        "        specify a size unless the file to use for a file type virtual disk does\r\n"
-        "        not already exist or when a vm type virtual disk is created without\r\n"
-        "        specifying an initialization image file using the -f or -F. If size is\r\n"
-        "        specified when creating a file type virtual disk, the size of the file\r\n"
-        "        used as backingstore for the virtual disk is adjusted to the new size\r\n"
-        "        specified with this size option.\r\n"
+        "-s size\n"
+        "        Size of the virtual disk. Size is number of bytes unless suffixed with\n"
+        "        a b, k, m, g, t, K, M, G or T which denotes number of 512-byte blocks,\n"
+        "        thousand bytes, million bytes, billion bytes, trillion bytes,\n"
+        "        kilobytes, megabytes, gigabytes and terabytes respectively. The suffix\n"
+        "        can also be % to indicate percentage of free physical memory which\n"
+        "        could be useful when creating vm type virtual disks. It is optional to\n"
+        "        specify a size unless the file to use for a file type virtual disk does\n"
+        "        not already exist or when a vm type virtual disk is created without\n"
+        "        specifying an initialization image file using the -f or -F. If size is\n"
+        "        specified when creating a file type virtual disk, the size of the file\n"
+        "        used as backingstore for the virtual disk is adjusted to the new size\n"
+        "        specified with this size option.\n"
         "\n"
-        "        The size can be a negative value to indicate the size of free physical\r\n"
-        "        memory minus this size. If you e.g. type -400M the size of the virtual\r\n"
-        "        disk will be the amount of free physical memory minus 400 MB.\r\n"
+        "        The size can be a negative value to indicate the size of free physical\n"
+        "        memory minus this size. If you e.g. type -400M the size of the virtual\n"
+        "        disk will be the amount of free physical memory minus 400 MB.\n"
         "\n"
-        "-b offset\r\n"
-        "        Specifies an offset in an image file where the virtual disk begins. All\r\n"
-        "        offsets of I/O operations on the virtual disk will be relative to this\r\n"
-        "        offset. This parameter is particularily useful when mounting a specific\r\n"
-        "        partition in an image file that contains an image of a complete hard\r\n"
-        "        disk, not just one partition. This parameter has no effect when\r\n"
-        "        creating a blank vm type virtual disk. When creating a vm type virtual\r\n"
-        "        disk with a pre-load image file specified with -f or -F parameters, the\r\n"
-        "        -b parameter specifies an offset in the image file where the image to\r\n"
-        "        be loaded into the vm type virtual disk begins.\r\n"
+        "-b offset\n"
+        "        Specifies an offset in an image file where the virtual disk begins. All\n"
+        "        offsets of I/O operations on the virtual disk will be relative to this\n"
+        "        offset. This parameter is particularily useful when mounting a specific\n"
+        "        partition in an image file that contains an image of a complete hard\n"
+        "        disk, not just one partition. This parameter has no effect when\n"
+        "        creating a blank vm type virtual disk. When creating a vm type virtual\n"
+        "        disk with a pre-load image file specified with -f or -F parameters, the\n"
+        "        -b parameter specifies an offset in the image file where the image to\n"
+        "        be loaded into the vm type virtual disk begins.\n"
         "\n"
-        "        Specify auto as offset to automatically select offset for a few known\r\n"
-        "        non-raw disk image file formats. Currently auto-selection is supported\r\n"
-        "        for Nero .nrg and Microsoft .sdi image files.\r\n"
+        "        Specify auto as offset to automatically select offset for a few known\n"
+        "        non-raw disk image file formats. Currently auto-selection is supported\n"
+        "        for Nero .nrg and Microsoft .sdi image files.\n"
         "\n"
-        "-S sectorsize\r\n"
-        "        Sectorsize to use for the virtual disk device. Default value is 512\r\n"
-        "        bytes except for CD-ROM/DVD-ROM style devices where 2048 bytes is used\r\n"
-        "        by default.\r\n"
+        "-S sectorsize\n"
+        "        Sectorsize to use for the virtual disk device. Default value is 512\n"
+        "        bytes except for CD-ROM/DVD-ROM style devices where 2048 bytes is used\n"
+        "        by default.\n"
         "\n"
-        "-p \"format-parameters\"\r\n"
-        "        If -p is specified the 'format' command is invoked to create a\r\n"
-        "        filesystem when the new virtual disk has been created.\r\n"
-        "        \"format-parameters\" must be a parameter string enclosed within\r\n"
-        "        double-quotes. The string is added to the command line that starts\r\n"
-        "        'format'. You usually specify something like \"/fs:ntfs /q /y\", that\r\n"
-        "        is, create an NTFS filesystem with quick formatting and without user\r\n"
-        "        interaction.\r\n"
+        "-p \"format-parameters\"\n"
+        "        If -p is specified the 'format' command is invoked to create a\n"
+        "        filesystem when the new virtual disk has been created.\n"
+        "        \"format-parameters\" must be a parameter string enclosed within\n"
+        "        double-quotes. The string is added to the command line that starts\n"
+        "        'format'. You usually specify something like \"/fs:ntfs /q /y\", that\n"
+        "        is, create an NTFS filesystem with quick formatting and without user\n"
+        "        interaction.\n"
         "\n"
-        "-o option\r\n"
-        "        Set or reset options.\r\n"
+        "-o option\n"
+        "        Set or reset options.\n"
         "\n"
-        "ro      Creates a read-only virtual disk. For vm type virtual disks, this\r\n"
-        "        option can only be used if the -f option is also specified.\r\n"
+        "ro      Creates a read-only virtual disk. For vm type virtual disks, this\n"
+        "        option can only be used if the -f option is also specified.\n"
         "\n"
-        "rw      Specifies that the virtual disk should be read/writable. This is the\r\n"
-        "        default setting. It can be used with the -e parameter to set an\r\n"
-        "        existing read-only virtual disk writable.\r\n"
+        "rw      Specifies that the virtual disk should be read/writable. This is the\n"
+        "        default setting. It can be used with the -e parameter to set an\n"
+        "        existing read-only virtual disk writable.\n"
         "\n"
-        "fksig   If this flag is set, the driver will report a random fake disk\r\n"
-        "        signature to Windows in case device is read-only, existing disk\r\n"
-        "        signature is zero and master boot record has otherwise apparently valid\r\n"
-        "        data.\r\n"
+        "fksig   If this flag is set, the driver will report a random fake disk\n"
+        "        signature to Windows instead of any existing one, in case the master\n"
+        "        boot record has otherwise apparently valid data.\n"
         "\n"
-        "sparse  Sets NTFS sparse attribute on image file. This has no effect on proxy\r\n"
-        "        or vm type virtual disks.\r\n"
+        "sparse  Sets NTFS sparse attribute on image file. This has no effect on proxy\n"
+        "        or vm type virtual disks.\n"
         "\n"
-        "rem     Specifies that the device should be created with removable media\r\n"
-        "        characteristics. This changes the device properties returned by the\r\n"
-        "        driver to the system. For example, this changes how some filesystems\r\n"
-        "        cache write operations.\r\n"
+        "rem     Specifies that the device should be created with removable media\n"
+        "        characteristics. This changes the device properties returned by the\n"
+        "        driver to the system. For example, this changes how some filesystems\n"
+        "        cache write operations.\n"
         "\n"
-        "fix     Specifies that the media characteristics of the virtual disk should be\r\n"
-        "        fixed media, as opposed to removable media specified with the rem\r\n"
-        "        option. Fixed media is the default setting. The fix option can be used\r\n"
-        "        with the -e parameter to set an existing removable virtual disk as\r\n"
-        "        fixed.\r\n"
+        "fix     Specifies that the media characteristics of the virtual disk should be\n"
+        "        fixed media, as opposed to removable media specified with the rem\n"
+        "        option. Fixed media is the default setting. The fix option can be used\n"
+        "        with the -e parameter to set an existing removable virtual disk as\n"
+        "        fixed.\n"
         "\n"
-        "saved   Clears the 'image modified' flag from an existing virtual disk. This\r\n"
-        "        flag is set by the driver when an image is modified and is displayed\r\n"
-        "        in the -l output for a virtual disk. The 'saved' option is only valid\r\n"
-        "        with the -e parameter.\r\n"
+        "saved   Clears the 'image modified' flag from an existing virtual disk. This\n"
+        "        flag is set by the driver when an image is modified and is displayed\n"
+        "        in the -l output for a virtual disk. The 'saved' option is only valid\n"
+        "        with the -e parameter.\n"
         "\n"
-        "        Note that virtual floppy or CD/DVD-ROM drives are always read-only and\r\n"
-        "        removable devices and that cannot be changed.\r\n"
+        "        Note that virtual floppy or CD/DVD-ROM drives are always read-only and\n"
+        "        removable devices and that cannot be changed.\n"
         "\n"
-        "cd      Creates a virtual CD-ROM/DVD-ROM.\r\n"
+        "cd      Creates a virtual CD-ROM/DVD-ROM.\n"
         "\n"
-        "fd      Creates a virtual floppy disk.\r\n"
+        "fd      Creates a virtual floppy disk.\n"
         "\n"
-        "        NOTE: cd and fd options are currently not supported by the driver.\r\n"
+        "        NOTE: cd and fd options are currently not supported by the driver.\n"
         "\n"
-        "hd      Creates a virtual hard disk. This is the default.\r\n"
+        "hd      Creates a virtual hard disk. This is the default.\n"
         "\n"
-        "raw     Creates a device object with \"controller\" device type. The system will\r\n"
-        "        not attempt to use such devices as a storage device, but it could be\r\n"
-        "        useful in combination with third-party drivers that can provide further\r\n"
-        "        device objects using this virtual disk device as a backing store.\r\n"
+        "raw     Creates a device object with \"controller\" device type. The system will\n"
+        "        not attempt to use such devices as a storage device, but it could be\n"
+        "        useful in combination with third-party drivers that can provide further\n"
+        "        device objects using this virtual disk device as a backing store.\n"
         "\n"
-        "ip      Can only be used with proxy-type virtual disks. With this option, the\r\n"
-        "        user-mode service component is initialized to connect to a\r\n"
-        "        storage server using TCP/IP. With this option, the -f switch specifies\r\n"
-        "        the remote host optionally followed by a colon and a port number to\r\n"
-        "        connect to.\r\n"
+        "ip      Can only be used with proxy-type virtual disks. With this option, the\n"
+        "        user-mode service component is initialized to connect to a\n"
+        "        storage server using TCP/IP. With this option, the -f switch specifies\n"
+        "        the remote host optionally followed by a colon and a port number to\n"
+        "        connect to.\n"
         "\n"
-        "comm    Can only be used with proxy-type virtual disks. With this option, the\r\n"
-        "        user-mode service component is initialized to connect to a\r\n"
-        "        storage server through a COM port. With this option, the -f switch\r\n"
-        "        specifies the COM port to connect to, optionally followed by a colon,\r\n"
-        "        a space, and then a device settings string with the same syntax as the\r\n"
-        "        MODE command.\r\n"
+        "comm    Can only be used with proxy-type virtual disks. With this option, the\n"
+        "        user-mode service component is initialized to connect to a\n"
+        "        storage server through a COM port. With this option, the -f switch\n"
+        "        specifies the COM port to connect to, optionally followed by a colon,\n"
+        "        a space, and then a device settings string with the same syntax as the\n"
+        "        MODE command.\n"
         "\n"
-        "shm     Can only be used with proxy-type virtual disks. With this option, the\r\n"
-        "        driver communicates with a storage server on the same computer using\r\n"
-        "        shared memory block to transfer I/O data.\r\n"
+        "shm     Can only be used with proxy-type virtual disks. With this option, the\n"
+        "        driver communicates with a storage server on the same computer using\n"
+        "        shared memory block to transfer I/O data.\n"
         "\n"
-        "awe     Can only be used with file-type virtual disks. With this option, the\r\n"
-        "        driver copies contents of image file to physical memory. No changes are\r\n"
-        "        written to image file. If this option is used in combination with  no\r\n"
-        "        image file name, a physical memory block will be used without loading\r\n"
-        "        an image file onto it. In that case, -s parameter is needed to specify\r\n"
-        "        size of memory block. This option requires awealloc driver, which\r\n"
-        "        is installed with ImDisk Virtual Disk Driver.\r\n"
+        "awe     Can only be used with file-type virtual disks. With this option, the\n"
+        "        driver copies contents of image file to physical memory. No changes are\n"
+        "        written to image file. If this option is used in combination with  no\n"
+        "        image file name, a physical memory block will be used without loading\n"
+        "        an image file onto it. In that case, -s parameter is needed to specify\n"
+        "        size of memory block. This option requires awealloc driver, which\n"
+        "        is installed with ImDisk Virtual Disk Driver.\n"
         "\n"
-        "bswap   Instructs driver to swap each pair of bytes read from or written to\r\n"
-        "        image file. Useful when examining images from some embedded systems\r\n"
-        "        and similar where data is stored in reverse byte order.\r\n"
+        "bswap   Instructs driver to swap each pair of bytes read from or written to\n"
+        "        image file. Useful when examining images from some embedded systems\n"
+        "        and similar where data is stored in reverse byte order.\n"
         "\n"
-        "        NOTE: This option is currently not supported by the driver.\r\n"
+        "        NOTE: This option is currently not supported by the driver.\n"
         "\n"
-        "par     Parallel I/O. Valid for file-type virtual disks. With this flag set,\r\n"
-        "        driver sends read and write requests for the virtual disk directly down\r\n"
-        "        to the driver that handles the image file, within the SCSIOP dispatch\r\n"
-        "        routine. This flag is intended for developers who provide their own\r\n"
-        "        driver that handles image file requests. Such driver need to handle\r\n"
-        "        requests at DISPATCH_LEVEL at any time, otherwise system crashes are\r\n"
-        "        very likely to happen. *Never* use this flag when mounting image files!\r\n"
-        "        Use it *only* with special purpose drivers that can meet all neeed\r\n"
-        "        requirements!\r\n"
+        "par     Parallel I/O. Valid for file-type virtual disks. With this flag set,\n"
+        "        driver sends read and write requests for the virtual disk directly down\n"
+        "        to the driver that handles the image file, within the SCSIOP dispatch\n"
+        "        routine. This flag is intended for developers who provide their own\n"
+        "        driver that handles image file requests. Such driver need to handle\n"
+        "        requests at DISPATCH_LEVEL at any time, otherwise system crashes are\n"
+        "        very likely to happen. *Never* use this flag when mounting image files!\n"
+        "        Use it *only* with special purpose drivers that can meet all neeed\n"
+        "        requirements!\n"
         "\n"
-        "-u devicenumber\r\n"
-        "        Six hexadecimal digits indicating SCSI path, target and lun numbers\r\n"
-        "        for a device. Format: LLTTPP. Along with -a, request a specific device\r\n"
-        "        number for the new device instead of automatic allocation. Along with\r\n"
-        "        -d or -l specifies the unit number of the virtual disk to remove or\r\n"
-        "        query.\r\n"
+        "-u devicenumber\n"
+        "        Six hexadecimal digits indicating SCSI path, target and lun numbers\n"
+        "        for a device. Format: LLTTPP. Along with -a, request a specific device\n"
+        "        number for the new device instead of automatic allocation. Along with\n"
+        "        -d or -l specifies the unit number of the virtual disk to remove or\n"
+        "        query.\n"
         "\n"
-        "-m mountpoint\r\n"
-        "        Specifies a drive letter or mount point for the new virtual disk, the\r\n"
-        "        virtual disk to query or the virtual disk to remove. When creating a\r\n"
-        "        new virtual disk you can specify #: as mountpoint in which case the\r\n"
-        "        first unused drive letter is automatically used.\r\n"
+        "-m mountpoint\n"
+        "        Specifies a drive letter or mount point for the new virtual disk, the\n"
+        "        virtual disk to query or the virtual disk to remove. When creating a\n"
+        "        new virtual disk you can specify #: as mountpoint in which case the\n"
+        "        first unused drive letter is automatically used.\n"
         "\n"
-        "        Note that even if you don't specify -m, Windows normally assigns drive\r\n"
-        "        letters to new volumes anyway. This behaviour can be changed using the\r\n"
-        "        MOUNTVOL command line tool.\r\n"
+        "        Note that even if you don't specify -m, Windows normally assigns drive\n"
+        "        letters to new volumes anyway. This behaviour can be changed using the\n"
+        "        MOUNTVOL command line tool.\n"
         "\n"
-        "-P      Persistent. Along with -a, saves registry settings for re-creating the\r\n"
-        "        same virtual disk automatically when driver is loaded, which usually\r\n"
-        "        occurs during system startup. Along with -d or -D, existing such\r\n"
-        "        settings for the removed virtual disk are also removed from registry.\r\n"
-        "        There are some limitations to what settings could be saved in this way.\r\n"
-        "        Only features directly implemented in the kernel level driver are\r\n"
-        "        saved, so for example the -p switch to format a virtual disk will not\r\n"
-        "        be saved.\r\n"
+        "-P      Persistent. Along with -a, saves registry settings for re-creating the\n"
+        "        same virtual disk automatically when driver is loaded, which usually\n"
+        "        occurs during system startup. Along with -d or -D, existing such\n"
+        "        settings for the removed virtual disk are also removed from registry.\n"
+        "        There are some limitations to what settings could be saved in this way.\n"
+        "        Only features directly implemented in the kernel level driver are\n"
+        "        saved, so for example the -p switch to format a virtual disk will not\n"
+        "        be saved.\n"
         "\n"
-        "        NOTE: Registry settings for auto-loading devices are currently not\r\n"
-        "        supported by the driver, so this switch has currently no effect.\r\n",
+        "        NOTE: Registry settings for auto-loading devices are currently not\n"
+        "        supported by the driver, so this switch has currently no effect.\n",
         stderr);
 
     if (rc > 0)
@@ -443,7 +442,7 @@ ImScsiCliCheckDriverVersion(HANDLE Device)
     {
         if (GetLastError() == ERROR_REVISION_MISMATCH)
         {
-            fputs("Wrong version of Arsenal Image Mounter.\r\n", stderr);
+            fputs("Wrong version of Arsenal Image Mounter.\n", stderr);
             return FALSE;
         }
         else
@@ -482,7 +481,7 @@ LPWSTR FormatOptions)
     {
         if (GetLastError() == ERROR_FILE_NOT_FOUND)
         {
-            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             return IMSCSI_CLI_ERROR_DRIVER_NOT_INSTALLED;
         }
         else
@@ -531,18 +530,18 @@ LPWSTR FormatOptions)
             switch (GetLastError())
             {
             case ERROR_SERVICE_DOES_NOT_EXIST:
-                fputs("The AWEAlloc driver is not installed.\r\n"
-                    "Please install ImDisk Virtual Disk Driver.\r\n", stderr);
+                fputs("The AWEAlloc driver is not installed.\n"
+                    "Please install ImDisk Virtual Disk Driver.\n", stderr);
                 break;
 
             case ERROR_PATH_NOT_FOUND:
             case ERROR_FILE_NOT_FOUND:
-                fputs("Cannot load AWEAlloc driver.\r\n"
-                    "Please install ImDisk Virtual Disk Driver.\r\n", stderr);
+                fputs("Cannot load AWEAlloc driver.\n"
+                    "Please install ImDisk Virtual Disk Driver.\n", stderr);
                 break;
 
             case ERROR_SERVICE_DISABLED:
-                fputs("The AWEAlloc driver is disabled.\r\n", stderr);
+                fputs("The AWEAlloc driver is disabled.\n", stderr);
                 break;
 
             default:
@@ -576,26 +575,26 @@ LPWSTR FormatOptions)
                     switch (GetLastError())
                     {
                     case ERROR_SERVICE_DOES_NOT_EXIST:
-                        fputs("The ImDisk Virtual Disk Driver Helper Service is not \r\n"
-                            "installed.\r\n"
-                            "Please install ImDisk Virtual Disk Driver.\r\n", stderr);
+                        fputs("The ImDisk Virtual Disk Driver Helper Service is not \n"
+                            "installed.\n"
+                            "Please install ImDisk Virtual Disk Driver.\n", stderr);
                         break;
 
                     case ERROR_PATH_NOT_FOUND:
                     case ERROR_FILE_NOT_FOUND:
-                        fputs("Cannot ImDisk Virtual Disk Driver Helper \r\n"
-                            "Service.\r\n"
-                            "Please install ImDisk Virtual Disk Driver.\r\n", stderr);
+                        fputs("Cannot ImDisk Virtual Disk Driver Helper \n"
+                            "Service.\n"
+                            "Please install ImDisk Virtual Disk Driver.\n", stderr);
                         break;
 
                     case ERROR_SERVICE_DISABLED:
-                        fputs("The ImDisk Virtual Disk Driver Helper Service is \r\n"
-                            "disabled.\r\n", stderr);
+                        fputs("The ImDisk Virtual Disk Driver Helper Service is \n"
+                            "disabled.\n", stderr);
                         break;
 
                     default:
                         PrintLastError
-                            (L"Error starting ImDisk Virtual Disk Driver Helper \r\n"
+                            (L"Error starting ImDisk Virtual Disk Driver Helper \n"
                             L"Service:");
                     }
 
@@ -612,7 +611,7 @@ LPWSTR FormatOptions)
         if (!RtlCreateUnicodeString(&file_name, FileName))
         {
             CloseHandle(driver);
-            fputs("Memory allocation error.\r\n", stderr);
+            fputs("Memory allocation error.\n", stderr);
             return IMSCSI_CLI_ERROR_FATAL;
         }
     }
@@ -642,7 +641,7 @@ LPWSTR FormatOptions)
         if (!RtlCreateUnicodeString(&file_name, prefixed_name))
         {
             CloseHandle(driver);
-            fputs("Memory allocation error.\r\n", stderr);
+            fputs("Memory allocation error.\n", stderr);
             return IMSCSI_CLI_ERROR_FATAL;
         }
     }
@@ -651,7 +650,7 @@ LPWSTR FormatOptions)
         if (!RtlDosPathNameToNtPathName_U(FileName, &file_name, NULL, NULL))
         {
             CloseHandle(driver);
-            fputs("Memory allocation error.\r\n", stderr);
+            fputs("Memory allocation error.\n", stderr);
             return IMSCSI_CLI_ERROR_FATAL;
         }
     }
@@ -1083,7 +1082,7 @@ LPWSTR FormatOptions)
                     MountPoint[0] = ImDiskFindFreeDriveLetter();
                     if (MountPoint[0] == 0)
                     {
-                        fputs("All drive letters are in use.\r\n", stderr);
+                        fputs("All drive letters are in use.\n", stderr);
                         return IMSCSI_CLI_NO_FREE_DRIVE_LETTERS;
                     }
                 }
@@ -1158,7 +1157,7 @@ BOOL RemoveSettings)
         {
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
             {
-                fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+                fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             }
             else
             {
@@ -1185,11 +1184,11 @@ BOOL RemoveSettings)
                 {
                     if (DeviceNumber.LongNumber == IMSCSI_ALL_DEVICES)
                     {
-                        fputs("No devices found.\r\n", stderr);
+                        fputs("No devices found.\n", stderr);
                     }
                     else
                     {
-                        fprintf(stderr, "No device with number %.6X.\r\n",
+                        fprintf(stderr, "No device with number %.6X.\n",
                             DeviceNumber.LongNumber);
                     }
 
@@ -1233,15 +1232,15 @@ BOOL RemoveSettings)
         switch (GetLastError())
         {
         case ERROR_INVALID_PARAMETER:
-            fputs("This version of Windows only supports drive letters as \r\n"
-                "mount points.\r\n"
-                "Windows 2000 or higher is required to support \r\n"
-                "subdirectory mount points.\r\n",
+            fputs("This version of Windows only supports drive letters as \n"
+                "mount points.\n"
+                "Windows 2000 or higher is required to support \n"
+                "subdirectory mount points.\n",
                 stderr);
             return IMSCSI_CLI_ERROR_BAD_MOUNT_POINT;
 
         case ERROR_INVALID_FUNCTION:
-            fputs("Mount points are only supported on NTFS volumes.\r\n",
+            fputs("Mount points are only supported on NTFS volumes.\n",
                 stderr);
             return IMSCSI_CLI_ERROR_BAD_MOUNT_POINT;
 
@@ -1356,7 +1355,7 @@ LPWSTR MountPoint)
         {
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
             {
-                fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+                fprintf(stderr, "Arsenal Image Mounter not installed.\n");
                 return IMSCSI_CLI_ERROR_DRIVER_NOT_INSTALLED;
             }
             else
@@ -1389,7 +1388,7 @@ LPWSTR MountPoint)
         {
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
             {
-                fprintf(stderr, "Not an Arsenal Image Mounter device.\r\n");
+                fprintf(stderr, "Not an Arsenal Image Mounter device.\n");
             }
             else
             {
@@ -1404,7 +1403,7 @@ LPWSTR MountPoint)
         {
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
             {
-                fputs("No such device.\r\n", stderr);
+                fputs("No such device.\n", stderr);
                 return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
             }
             else
@@ -1593,12 +1592,12 @@ ImScsiCliQueryStatusDriver(BOOL NumericPrint)
     {
         if (GetLastError() == ERROR_FILE_NOT_FOUND)
         {
-            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             return IMSCSI_CLI_ERROR_DRIVER_NOT_INSTALLED;
         }
         else
         {
-            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             return IMSCSI_CLI_ERROR_DRIVER_INACCESSIBLE;
         }
     }
@@ -1610,7 +1609,7 @@ ImScsiCliQueryStatusDriver(BOOL NumericPrint)
         NtClose(adapter);
         if (GetLastError() == ERROR_FILE_NOT_FOUND)
         {
-            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             return IMSCSI_CLI_ERROR_DRIVER_NOT_INSTALLED;
         }
         else
@@ -1681,12 +1680,12 @@ DWORD FlagsToChange, DWORD Flags)
     {
         if (GetLastError() == ERROR_FILE_NOT_FOUND)
         {
-            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             return IMSCSI_CLI_ERROR_DRIVER_NOT_INSTALLED;
         }
         else
         {
-            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             return IMSCSI_CLI_ERROR_DRIVER_INACCESSIBLE;
         }
     }
@@ -1716,12 +1715,12 @@ PLARGE_INTEGER ExtendSize)
     {
         if (GetLastError() == ERROR_FILE_NOT_FOUND)
         {
-            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             return IMSCSI_CLI_ERROR_DRIVER_NOT_INSTALLED;
         }
         else
         {
-            fprintf(stderr, "Arsenal Image Mounter not installed.\r\n");
+            fprintf(stderr, "Arsenal Image Mounter not installed.\n");
             return IMSCSI_CLI_ERROR_DRIVER_INACCESSIBLE;
         }
     }
@@ -1750,45 +1749,45 @@ wmain(int argc, LPWSTR argv[])
     if ((argc == 2) && (_wcsicmp(argv[1], L"--version") == 0))
     {
         puts(
-            "Low-level command line interface to Arsenal Image Mounter virtual\r\n"
-            "SCSI miniport driver.\r\n"
+            "Low-level command line interface to Arsenal Image Mounter virtual\n"
+            "SCSI miniport driver.\n"
             "\n"
-            "Version " PHDSKMNT_RC_VERSION_STR " - (Compiled " __DATE__ ")\r\n"
+            "Version " PHDSKMNT_RC_VERSION_STR " - (Compiled " __DATE__ ")\n"
             "\n"
-            "Copyright (C) 2012-2015 Arsenal Recon.\r\n"
+            "Copyright (C) 2012-2015 Arsenal Recon.\n"
             "\n"
             "\n"
-            "http://www.ArsenalRecon.com\r\n"
+            "http://www.ArsenalRecon.com\n"
             "\n"
-            "Arsenal Image Mounter including its kernel driver, API library,\r\n"
-            "command line and graphical user applications (\"the Software\")\r\n"
-            "are provided \"AS IS\" and \"WITH ALL FAULTS,\" without warranty\r\n"
-            "of any kind, including without limitation the warranties of\r\n"
-            "merchantability, fitness for a particular purpose and\r\n"
-            "non - infringement.Arsenal makes no warranty that the Software\r\n"
-            "is free of defects or is suitable for any particular purpose.\r\n"
-            "In no event shall Arsenal be responsible for loss or damages\r\n"
-            "arising from the installation or use of the Software, including\r\n"
-            "but not limited to any indirect, punitive, special, incidental\r\n"
-            "or consequential damages of any character including, without\r\n"
-            "limitation, damages for loss of goodwill, work stoppage,\r\n"
-            "computer failure or malfunction, or any and all other\r\n"
-            "commercial damages or losses.The entire risk as to the\r\n"
-            "quality and performance of the Software is borne by you.Should\r\n"
-            "the Software prove defective, you and not Arsenal assume the\r\n"
-            "entire cost of any service and repair.\r\n"
+            "Arsenal Image Mounter including its kernel driver, API library,\n"
+            "command line and graphical user applications (\"the Software\")\n"
+            "are provided \"AS IS\" and \"WITH ALL FAULTS,\" without warranty\n"
+            "of any kind, including without limitation the warranties of\n"
+            "merchantability, fitness for a particular purpose and\n"
+            "non - infringement.Arsenal makes no warranty that the Software\n"
+            "is free of defects or is suitable for any particular purpose.\n"
+            "In no event shall Arsenal be responsible for loss or damages\n"
+            "arising from the installation or use of the Software, including\n"
+            "but not limited to any indirect, punitive, special, incidental\n"
+            "or consequential damages of any character including, without\n"
+            "limitation, damages for loss of goodwill, work stoppage,\n"
+            "computer failure or malfunction, or any and all other\n"
+            "commercial damages or losses.The entire risk as to the\n"
+            "quality and performance of the Software is borne by you.Should\n"
+            "the Software prove defective, you and not Arsenal assume the\n"
+            "entire cost of any service and repair.\n"
             "\n"
-            "Arsenal Consulting, Inc. (d/b/a Arsenal Recon) retains the copyright to the\r\n"
-            "Arsenal Image Mounter source code being made available under terms of the\r\n"
-            "Affero General Public License v3.\r\n"
-            "(http://www.fsf.org/licensing/licenses/agpl-3.0.html). This source code may\r\n"
-            "be used in projects that are licensed so as to be compatible with AGPL v3.\r\n"
+            "Arsenal Consulting, Inc. (d/b/a Arsenal Recon) retains the copyright to the\n"
+            "Arsenal Image Mounter source code being made available under terms of the\n"
+            "Affero General Public License v3.\n"
+            "(http://www.fsf.org/licensing/licenses/agpl-3.0.html). This source code may\n"
+            "be used in projects that are licensed so as to be compatible with AGPL v3.\n"
             "\n"
-            "Contributors to Arsenal Image Mounter must sign the Arsenal Contributor\r\n"
-            "Agreement(\"ACA\").The ACA gives Arsenal and the contributor joint\r\n"
-            "copyright interests in the code.\r\n"
+            "Contributors to Arsenal Image Mounter must sign the Arsenal Contributor\n"
+            "Agreement(\"ACA\").The ACA gives Arsenal and the contributor joint\n"
+            "copyright interests in the code.\n"
             "\n"
-            "If your project is not licensed under an AGPL v3 compatible license,\r\n"
+            "If your project is not licensed under an AGPL v3 compatible license,\n"
             "contact us directly regarding alternative licensing.");
 
         DWORD library_version;
@@ -1961,8 +1960,8 @@ wmain(int argc, LPWSTR argv[])
                         }
                         else if (wcscmp(opt, L"fksig") == 0)
                         {
-                            flags_to_change |= IMSCSI_FAKE_DISK_SIG_IF_ZERO;
-                            flags |= IMSCSI_FAKE_DISK_SIG_IF_ZERO;
+                            flags_to_change |= IMSCSI_FAKE_DISK_SIG;
+                            flags |= IMSCSI_FAKE_DISK_SIG;
                         }
                         else if (wcscmp(opt, L"sparse") == 0)
                         {
@@ -2152,7 +2151,7 @@ wmain(int argc, LPWSTR argv[])
                         if (disk_geometry.QuadPart < 0)
                         {
                             fprintf(stderr,
-                                "Not enough memory, there is currently \r\n"
+                                "Not enough memory, there is currently \n"
                                 "%.4g %s free physical memory.\n",
                                 _h(memstat.dwAvailPhys),
                                 _p(memstat.dwAvailPhys));

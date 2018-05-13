@@ -119,6 +119,7 @@
     <Compile Include="Extensions\Extensions.vb" />
     <Compile Include="IO\DisposableDictionary.vb" />
     <Compile Include="IO\DisposableList.vb" />
+    <Compile Include="IO\FileStreamsEnumerator.vb" />
     <Compile Include="IO\VolumeMountPointEnumerator.vb" />
     <Compile Include="IO\VolumeEnumerator.vb" />
     <Compile Include="PSDisk\DiskStateParser.vb" />
