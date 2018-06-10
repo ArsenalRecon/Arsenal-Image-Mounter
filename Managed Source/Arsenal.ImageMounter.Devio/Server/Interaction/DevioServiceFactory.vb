@@ -477,7 +477,7 @@ Namespace Server.Interaction
         ''' </summary>
         ''' <param name="Imagefile">First part image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-        Public Shared Function GetProviderMultiPartRaw(Imagefile As String, DiskAccess As FileAccess, ShareMode As FileShare?) As IDevioProvider
+        Public Shared Function GetProviderMultiPartRaw(Imagefile As String, DiskAccess As FileAccess, ShareMode As FileShare) As IDevioProvider
 
             Dim DiskStream As New MultiPartFileStream(Imagefile, DiskAccess, ShareMode)
 

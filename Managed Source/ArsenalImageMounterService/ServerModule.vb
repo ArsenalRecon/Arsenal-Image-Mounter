@@ -139,6 +139,9 @@ Module ServerModule
             ElseIf arg.Equals("/mount:removable", StringComparison.OrdinalIgnoreCase) Then
                 Mount = True
                 DeviceFlags = DeviceFlags Or DeviceFlags.Removable
+            ElseIf arg.Equals("/mount:cdrom", StringComparison.OrdinalIgnoreCase) Then
+                Mount = True
+                DeviceFlags = DeviceFlags Or DeviceFlags.DeviceTypeCD
             ElseIf arg.StartsWith("/libewfoutput=", StringComparison.OrdinalIgnoreCase) Then
                 libewfDebugOutput = arg.Substring("/libewfoutput=".Length)
             ElseIf arg.StartsWith("/debugcompare=", StringComparison.OrdinalIgnoreCase) Then
@@ -170,15 +173,15 @@ Module ServerModule
                               "For version information, license, copyrights and credits, type aim_cli /version" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, automatically select object name and mount:" & Environment.NewLine &
-                              asmname & " /mount[:removable] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
+                              asmname & " /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly]" & Environment.NewLine &
                               "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, start shared memory service mode, for mounting from other applications:" & Environment.NewLine &
-                              asmname & " /name=objectname [/mount[:removable]] [/readonly] [/buffersize=bytes]" & Environment.NewLine &
+                              asmname & " /name=objectname [/buffersize=bytes] [/readonly]" & Environment.NewLine &
                               "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
                               Environment.NewLine &
                               "Syntax, start TCP/IP service mode, for mounting from other computers:" & Environment.NewLine &
-                              asmname & " [/ipaddress=address] /port=tcpport [/mount[:removable]] [/readonly]" & Environment.NewLine &
+                              asmname & " [/ipaddress=address] /port=tcpport [/readonly]" & Environment.NewLine &
                               "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
                               Environment.NewLine &
                               "DiscUtils and MultiPartRaw support libraries are included embedded in this" & Environment.NewLine &
@@ -248,6 +251,9 @@ Module ServerModule
         If Mount Then
             Console.WriteLine("Opening image file And mounting as virtual disk...")
             Service.StartServiceThreadAndMount(New ScsiAdapter, DeviceFlags)
+            Using device = Service.OpenDiskDevice(0)
+                Console.WriteLine("Virtual disk is " & device.DevicePath & " with SCSI address " & device.ScsiAddress.ToString())
+            End Using
             Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
         Else
             Console.WriteLine("Opening image file...")
