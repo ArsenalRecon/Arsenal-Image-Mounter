@@ -245,6 +245,7 @@ extern "C" {
         BOOLEAN               RemovableMedia;
         BOOLEAN               ReadOnly;
         ULONG                 FakeDiskSignature;
+        UCHAR                 LastReportedEvent;
         PVOID                 LastIoBuffer;
         LONGLONG              LastIoStartSector;
         ULONG                 LastIoLength;

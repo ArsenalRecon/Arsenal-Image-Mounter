@@ -3,7 +3,7 @@
 /// Driver entry routines, miniport callback definitions and other support
 /// routines.
 /// 
-/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -198,9 +198,7 @@ __in PUNICODE_STRING pRegistryPath
 
     KdPrint(("PhDskMnt::DriverEntry: Begin '%wZ'.\n", pRegistryPath));
     
-    KdBreakPoint();
-
-#if 0 //DBG
+#if DBG
 
 #if (NTDDI_VERSION >= NTDDI_WS03)
     KdRefreshDebuggerNotPresent();
@@ -1209,9 +1207,9 @@ __in __deref PLARGE_INTEGER Offset)
                 &current_file_offset,
                 NULL);
 
-            if (((status == STATUS_INSUFFICIENT_RESOURCES) |
-                (status == STATUS_INVALID_BUFFER_SIZE) |
-                (status == STATUS_INVALID_PARAMETER)) &
+            if (((status == STATUS_INSUFFICIENT_RESOURCES) ||
+                (status == STATUS_INVALID_BUFFER_SIZE) ||
+                (status == STATUS_INVALID_PARAMETER)) &&
                 (request_length >= 2048))
             {
                 ExFreePoolWithTag(intermediate_buffer, MP_TAG_GENERAL);
@@ -1391,7 +1389,7 @@ __in ULONG Length)
                 irp, IoStatusBlock->Status));
 
             RequestLength >>= 1;
-        } while ((status == STATUS_INVALID_BUFFER_SIZE) |
+        } while ((status == STATUS_INVALID_BUFFER_SIZE) ||
             (status == STATUS_INVALID_PARAMETER));
 
         if (!NT_SUCCESS(status))

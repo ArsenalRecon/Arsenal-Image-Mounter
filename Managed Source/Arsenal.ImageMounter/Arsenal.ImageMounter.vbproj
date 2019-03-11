@@ -21,7 +21,7 @@
     <DebugType>full</DebugType>
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\Arsenal.ImageMounter.Devio\bin\Debug\</OutputPath>
     <DocumentationFile>Arsenal.ImageMounter.xml</DocumentationFile>
     <NoWarn>
     </NoWarn>
@@ -35,7 +35,7 @@
     <DefineDebug>false</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\Arsenal.ImageMounter.Devio\bin\Release\</OutputPath>
     <DocumentationFile>Arsenal.ImageMounter.xml</DocumentationFile>
     <NoWarn>
     </NoWarn>

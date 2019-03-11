@@ -2,7 +2,7 @@
 /// aimcmd.cpp
 /// Command line access to Arsenal Image Mounter features.
 /// 
-/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -36,6 +36,7 @@
 #include <imdisk.h>
 #include <imdproxy.h>
 
+#pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "imdisk.lib")
 #pragma comment(lib, "ntdll.lib")
 
@@ -307,6 +308,12 @@ ImScsiSyntaxHelp()
         "        Use it *only* with special purpose drivers that can meet all neeed\n"
         "        requirements!\n"
         "\n"
+        "buf     Buffered I/O. Valid for file-type virtual disks. With this flag set,\n"
+        "        driver opens image file in buffered I/O mode. This is usually less\n"
+        "        efficient, but it could be required to for example mount an image file\n"
+        "        with smaller sector size than the volume where the image file is\n"
+        "        stored.\n"
+        "\n"
         "-u devicenumber\n"
         "        Six hexadecimal digits indicating SCSI path, target and lun numbers\n"
         "        for a device. Format: LLTTPP. Along with -a, request a specific device\n"
@@ -358,7 +365,9 @@ ImScsiOemPrintF(FILE *Stream, LPCSTR Message, ...)
         (LPSTR)&lpBuf, 0, &param_list))
         return FALSE;
 
+#ifndef _M_ARM
     CharToOemA(lpBuf, lpBuf);
+#endif
     fprintf(Stream, "%s\n", lpBuf);
     LocalFree(lpBuf);
     return TRUE;
@@ -417,10 +426,12 @@ LPVOID
 ImScsiCliAssertNotNull(LPVOID Ptr)
 {
     if (Ptr == NULL)
+    {
         RaiseException(STATUS_NO_MEMORY,
-        EXCEPTION_NONCONTINUABLE,
-        0,
-        NULL);
+            EXCEPTION_NONCONTINUABLE,
+            0,
+            NULL);
+    }
 
     return Ptr;
 }
@@ -767,7 +778,7 @@ LPWSTR FormatOptions)
     WMem<WCHAR> dev_path(ImDiskAllocPrintF(L"\\\\?\\PhysicalDrive%1!u!",
         disk_number));
 
-    if (dev_path == NULL)
+    if (!dev_path)
     {
         return IMSCSI_CLI_ERROR_NOT_ENOUGH_MEMORY;
     }
@@ -804,27 +815,29 @@ LPWSTR FormatOptions)
     DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
         &dw, NULL);
 
-    GET_LENGTH_INFORMATION disk_size;
-    if (!DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
+    GET_LENGTH_INFORMATION disk_size = { 0 };
+    if (DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
         &disk_size, sizeof(disk_size), &dw, NULL))
+    {
+        LONGLONG diff = disk_size.Length.QuadPart -
+            create_data->Fields.DiskSize.QuadPart;
+        if ((diff > create_data->Fields.BytesPerSector) ||
+            (diff < -(LONG)create_data->Fields.BytesPerSector))
+        {
+            ImScsiDebugMessage(
+                L"Disk %1!ws! has unexpected size: %2!I64u!",
+                (LPCWSTR)dev_path, disk_size.Length.QuadPart);
+
+            FormatOptions = NULL;
+        }
+    }
+    else if (GetLastError() != ERROR_INVALID_FUNCTION)
     {
         WErrMsg errmsg;
 
         ImScsiDebugMessage(
             L"Cannot query size of disk %1!ws!: %2!ws!",
             (LPCWSTR)dev_path, (LPCWSTR)errmsg);
-
-        FormatOptions = NULL;
-    }
-
-    LONGLONG diff = disk_size.Length.QuadPart -
-        create_data->Fields.DiskSize.QuadPart;
-    if ((diff > create_data->Fields.BytesPerSector) ||
-        (diff < -(LONG)create_data->Fields.BytesPerSector))
-    {
-        ImScsiDebugMessage(
-            L"Disk %1!ws! has unexpected size: %2!I64u!",
-            (LPCWSTR)dev_path, disk_size.Length.QuadPart);
 
         FormatOptions = NULL;
     }
@@ -1448,7 +1461,9 @@ LPWSTR MountPoint)
             ", Physical Memory" :
             IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_PARALLEL_IO ?
             ", Parallel I/O Image File" :
-            ", Queued I/O Image File",
+            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_BUFFERED_IO ?
+            ", Queued buffered I/O Image File" :
+            ", Queued unbuffered I/O Image File",
             IMSCSI_DEVICE_TYPE(config->Flags) ==
             IMSCSI_DEVICE_TYPE_CD ? ", CD-ROM" :
             IMSCSI_DEVICE_TYPE(config->Flags) ==
@@ -2039,6 +2054,15 @@ wmain(int argc, LPWSTR argv[])
 
                             flags |= IMSCSI_TYPE_FILE | IMSCSI_FILE_TYPE_PARALLEL_IO;
                         }
+                        else if (wcscmp(opt, L"buf") == 0)
+                        {
+                            if (((IMSCSI_TYPE(flags) != IMSCSI_TYPE_FILE) &
+                                (IMSCSI_TYPE(flags) != 0)) |
+                                (IMSCSI_FILE_TYPE(flags) != 0))
+                                ImScsiSyntaxHelp();
+
+                            flags |= IMSCSI_TYPE_FILE | IMSCSI_FILE_TYPE_BUFFERED_IO;
+                        }
                         else if (wcscmp(opt, L"bswap") == 0)
                         {
                             flags |= IMSCSI_OPTION_BYTE_SWAP;
@@ -2323,14 +2347,14 @@ wmain(int argc, LPWSTR argv[])
             save_settings, emergency_remove);
 
     case OP_MODE_QUERY:
-        if ((device_number.LongNumber == IMSCSI_AUTO_DEVICE_NUMBER) &
+        if ((device_number.LongNumber == IMSCSI_AUTO_DEVICE_NUMBER) &&
             (mount_point == NULL))
             return !ImScsiCliQueryStatusDriver(numeric_print);
 
         return ImScsiCliQueryStatusDevice(device_number, mount_point);
 
     case OP_MODE_EDIT:
-        if ((device_number.LongNumber == IMSCSI_AUTO_DEVICE_NUMBER) &
+        if ((device_number.LongNumber == IMSCSI_AUTO_DEVICE_NUMBER) &&
             (mount_point == NULL))
             ImScsiSyntaxHelp();
 
@@ -2369,7 +2393,9 @@ ExceptionFilter(LPEXCEPTION_POINTERS ExceptionInfo)
         ExceptionInfo->ExceptionRecord->ExceptionCode, 0,
         (LPSTR)&MsgBuf, 0, NULL))
     {
+#ifndef _M_ARM
         CharToOemA(MsgBuf, MsgBuf);
+#endif
     }
     else
     {
@@ -2409,7 +2435,7 @@ ExceptionFilter(LPEXCEPTION_POINTERS ExceptionInfo)
 // We have our own EXE entry to be less dependent of
 // specific MSVCRT code that may not be available in older Windows versions.
 // It also saves some EXE file size.
-#ifndef _M_ARM
+#if !defined(_DEBUG) && !defined(DEBUG) && _MSC_PLATFORM_TOOLSET < 140
 extern "C"
 __declspec(noreturn)
 void
@@ -2423,10 +2449,12 @@ wmainCRTStartup()
 
     if (argv == NULL)
     {
+#ifndef _M_ARM
         MessageBoxA(NULL,
             "This program requires Windows NT/2000/XP.",
             "Arsenal Image Mounter",
             MB_ICONSTOP);
+#endif
 
         ExitProcess((UINT)-1);
     }

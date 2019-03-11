@@ -25,13 +25,13 @@ Namespace Server.Interaction
             Dim Flags As DeviceFlags = 0
 
             Using handle = NativeFileIO.Win32API.
-            CreateFile("\\?\awealloc",
-                       NativeFileIO.Win32API.FILE_READ_ATTRIBUTES,
-                       0,
-                       IntPtr.Zero,
-                       NativeFileIO.Win32API.OPEN_EXISTING,
-                       NativeFileIO.Win32API.FILE_ATTRIBUTE_NORMAL,
-                       IntPtr.Zero)
+                CreateFile("\\?\awealloc",
+                           NativeFileIO.Win32API.FILE_READ_ATTRIBUTES,
+                           0,
+                           IntPtr.Zero,
+                           NativeFileIO.Win32API.OPEN_EXISTING,
+                           0,
+                           IntPtr.Zero)
 
                 If Not handle.IsInvalid Then
                     Flags = Flags Or DeviceFlags.FileTypeAwe

@@ -99,6 +99,9 @@
 /// Requires lower level driver to be callable at DISPATCH_LEVEL, otherwise
 /// IRQL_NOT_LESS_THAN_OR_EQUAL
 #define IMSCSI_FILE_TYPE_PARALLEL_IO    0x00002000
+/// Buffered I/O to an image file. Disables FILE_NO_INTERMEDIATE_BUFFERING when
+/// opening image file.
+#define IMSCSI_FILE_TYPE_BUFFERED_IO    0x00003000
 
 /// Extracts the IMSCSI_PROXY_TYPE_xxx from flags
 #define IMSCSI_FILE_TYPE(x)             ((ULONG)(x) & 0x0000F000)

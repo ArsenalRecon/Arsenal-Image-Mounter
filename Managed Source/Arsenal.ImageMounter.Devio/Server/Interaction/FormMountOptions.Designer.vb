@@ -112,9 +112,9 @@ Partial Class FormMountOptions
         '
         'lblFakeDiskSig
         '
-        Me.lblFakeDiskSig.Location = New System.Drawing.Point(9, 229)
+        Me.lblFakeDiskSig.Location = New System.Drawing.Point(15, 229)
         Me.lblFakeDiskSig.Name = "lblFakeDiskSig"
-        Me.lblFakeDiskSig.Size = New System.Drawing.Size(473, 32)
+        Me.lblFakeDiskSig.Size = New System.Drawing.Size(473, 43)
         Me.lblFakeDiskSig.TabIndex = 9
         Me.lblFakeDiskSig.Text = resources.GetString("lblFakeDiskSig.Text")
         '
@@ -122,7 +122,7 @@ Partial Class FormMountOptions
         '
         Me.btnOK.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.btnOK.AutoSize = True
-        Me.btnOK.Location = New System.Drawing.Point(267, 286)
+        Me.btnOK.Location = New System.Drawing.Point(267, 302)
         Me.btnOK.Name = "btnOK"
         Me.btnOK.Size = New System.Drawing.Size(108, 33)
         Me.btnOK.TabIndex = 11
@@ -134,7 +134,7 @@ Partial Class FormMountOptions
         Me.btnCancel.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.btnCancel.AutoSize = True
         Me.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel
-        Me.btnCancel.Location = New System.Drawing.Point(381, 286)
+        Me.btnCancel.Location = New System.Drawing.Point(381, 302)
         Me.btnCancel.Name = "btnCancel"
         Me.btnCancel.Size = New System.Drawing.Size(108, 33)
         Me.btnCancel.TabIndex = 12
@@ -162,7 +162,7 @@ Partial Class FormMountOptions
         'cbRemovable
         '
         Me.cbRemovable.AutoSize = True
-        Me.cbRemovable.Location = New System.Drawing.Point(13, 264)
+        Me.cbRemovable.Location = New System.Drawing.Point(12, 285)
         Me.cbRemovable.Name = "cbRemovable"
         Me.cbRemovable.Size = New System.Drawing.Size(176, 17)
         Me.cbRemovable.TabIndex = 10
@@ -178,7 +178,7 @@ Partial Class FormMountOptions
         Me.AutoSize = True
         Me.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
         Me.CancelButton = Me.btnCancel
-        Me.ClientSize = New System.Drawing.Size(512, 331)
+        Me.ClientSize = New System.Drawing.Size(512, 347)
         Me.ControlBox = False
         Me.Controls.Add(Me.cbRemovable)
         Me.Controls.Add(Me.cbSectorSize)

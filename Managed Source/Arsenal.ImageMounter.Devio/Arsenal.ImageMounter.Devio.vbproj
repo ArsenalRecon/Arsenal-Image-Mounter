@@ -114,6 +114,7 @@
     <Compile Include="Client\DevioDirectStream.vb" />
     <Compile Include="Client\DevioShmStream.vb" />
     <Compile Include="Client\DevioStream.vb" />
+    <Compile Include="Server\GenericProviders\DevioProviderDLLWrapperBase.vb" />
     <Compile Include="Server\Interaction\DiscUtilsInteraction.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderFromStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderManagedBase.vb" />
@@ -148,6 +149,7 @@
     <Compile Include="Server\Services\DevioTcpService.vb" />
     <Compile Include="Server\SpecializedProviders\CombinedSeekStream.vb" />
     <Compile Include="Server\SpecializedProviders\DebugProvider.vb" />
+    <Compile Include="Server\SpecializedProviders\DevioProviderLibAFF4.vb" />
     <Compile Include="Server\SpecializedProviders\DevioProviderLibEwf.vb" />
     <Compile Include="Server\SpecializedProviders\MultiPartFileStream.vb" />
     <Compile Include="Server\GenericProviders\ProviderSupport.vb" />

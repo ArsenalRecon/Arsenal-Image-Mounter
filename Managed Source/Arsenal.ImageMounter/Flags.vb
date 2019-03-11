@@ -2,7 +2,7 @@
 ''''' Enums.vb
 ''''' .NET definitions of the same flags and structures as in phdskmnt.h
 ''''' 
-''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -101,6 +101,11 @@ Public Enum DeviceFlags As UInt32
     ''' DISPATCH_LEVEL, otherwise IRQL_NOT_LESS_THAN_OR_EQUAL blue screen.
     ''' </summary>
     FileTypeParallel = &H2000UI
+    ''' <summary>
+    ''' Image file accessed using queued I/O requests to image file opened in buffered mode. Useful for example when
+    ''' mounting image file with smaller sector size than image file storage.
+    ''' </summary>
+    FileTypeBuffered = &H3000UI
 
     ''' <summary>
     ''' This flag can only be set by the driver and may be included in the response Flags field from QueryDevice method.

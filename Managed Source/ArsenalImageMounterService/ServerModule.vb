@@ -2,7 +2,7 @@
 ''''' ServerModule.vb
 ''''' Main module for PhysicalDiskMounterService application.
 ''''' 
-''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -57,7 +57,7 @@ Module ServerModule
             Environment.NewLine &
             "Version " & file_ver.FileVersion.ToString() & Environment.NewLine &
             Environment.NewLine &
-            "Copyright (C) 2012-2018 Arsenal Recon." & Environment.NewLine &
+            "Copyright (C) 2012-2019 Arsenal Recon." & Environment.NewLine &
             Environment.NewLine &
             Environment.NewLine &
             "http://www.ArsenalRecon.com" & Environment.NewLine &

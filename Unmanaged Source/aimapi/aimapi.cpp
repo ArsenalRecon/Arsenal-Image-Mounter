@@ -2,7 +2,7 @@
 /// aimapi.cpp
 /// Implementation of public API routines.
 /// 
-/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -661,30 +661,32 @@ OUT LPDWORD DiskNumber OPTIONAL)
         DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
             &dw, NULL);
 
-        GET_LENGTH_INFORMATION disk_size;
-        if (!DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
+        GET_LENGTH_INFORMATION disk_size = { 0 };
+        if (DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
             &disk_size, sizeof(disk_size), &dw, NULL))
+        {
+            LONGLONG diff = disk_size.Length.QuadPart -
+                config->DiskSize.QuadPart;
+            if ((diff > config->BytesPerSector) ||
+                (diff < -(LONG)config->BytesPerSector))
+            {
+                ImScsiDebugMessage(
+                    L"Disk %1!ws! has unexpected size: %2!I64u!",
+                    (LPCWSTR)dev_path, disk_size.Length.QuadPart);
+
+                CloseHandle(disk);
+                disk = INVALID_HANDLE_VALUE;
+
+                continue;
+            }
+        }
+        else if (GetLastError() != ERROR_INVALID_FUNCTION)
         {
             WErrMsg errmsg;
 
             ImScsiDebugMessage(
                 L"Cannot query size of disk %1!ws!: %2!ws!",
                 (LPCWSTR)dev_path, (LPCWSTR)errmsg);
-
-            CloseHandle(disk);
-            disk = INVALID_HANDLE_VALUE;
-
-            continue;
-        }
-
-        LONGLONG diff = disk_size.Length.QuadPart -
-            config->DiskSize.QuadPart;
-        if ((diff > config->BytesPerSector) ||
-            (diff < -(LONG)config->BytesPerSector))
-        {
-            ImScsiDebugMessage(
-                L"Disk %1!ws! has unexpected size: %2!I64u!",
-                (LPCWSTR)dev_path, disk_size.Length.QuadPart);
 
             CloseHandle(disk);
             disk = INVALID_HANDLE_VALUE;
@@ -1259,26 +1261,28 @@ IN BOOL CreatePartition)
             &dw, NULL);
 
         GET_LENGTH_INFORMATION disk_size;
-        if (!DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
+        if (DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
             &disk_size, sizeof(disk_size), &dw, NULL))
+        {
+            LONGLONG diff = disk_size.Length.QuadPart -
+                create_data->Fields.DiskSize.QuadPart;
+            if ((diff > create_data->Fields.BytesPerSector) ||
+                (diff < -(LONG)create_data->Fields.BytesPerSector))
+            {
+                ImScsiDebugMessage(
+                    L"Disk %1!ws! has unexpected size: %2!I64u!",
+                    (LPCWSTR)disk_path, disk_size.Length.QuadPart);
+
+                CreatePartition = FALSE;
+            }
+        }
+        else if (GetLastError() != ERROR_INVALID_FUNCTION)
         {
             WErrMsg errmsg;
 
             ImScsiDebugMessage(
                 L"Cannot query size of disk %1!ws!: %2!ws!",
                 (LPCWSTR)disk_path, (LPCWSTR)errmsg);
-
-            CreatePartition = FALSE;
-        }
-
-        LONGLONG diff = disk_size.Length.QuadPart -
-            create_data->Fields.DiskSize.QuadPart;
-        if ((diff > create_data->Fields.BytesPerSector) ||
-            (diff < -(LONG)create_data->Fields.BytesPerSector))
-        {
-            ImScsiDebugMessage(
-                L"Disk %1!ws! has unexpected size: %2!I64u!",
-                (LPCWSTR)disk_path, disk_size.Length.QuadPart);
 
             CreatePartition = FALSE;
         }

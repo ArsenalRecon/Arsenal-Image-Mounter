@@ -3,7 +3,7 @@
 /// Routines called from worker thread at PASSIVE_LEVEL to complete work items
 /// queued form miniport dispatch routines.
 /// 
-/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -178,6 +178,8 @@ __inout __deref PKIRQL         LowestAssumedIrql
     KdPrint(("PhDskMnt::ImScsiCleanupLU: Done.\n"));
 }
 
+#ifdef USE_SCSIPORT
+
 NTSTATUS
 ImScsiIoCtlCallCompletion(
 PDEVICE_OBJECT DeviceObject,
@@ -200,6 +202,8 @@ PVOID Context)
     return STATUS_MORE_PROCESSING_REQUIRED;
 }
 
+#endif
+
 NTSTATUS
 ImScsiParallelReadWriteImageCompletion(
 PDEVICE_OBJECT DeviceObject,
@@ -221,17 +225,21 @@ PVOID Context)
         case STATUS_INVALID_BUFFER_SIZE:
         {
             DbgPrint("PhDskMnt::ImScsiParallelReadWriteImageCompletion: STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
+            
             ScsiSetCheckCondition(
                 pWkRtnParms->pSrb,
                 SRB_STATUS_ERROR,
                 SCSI_SENSE_ILLEGAL_REQUEST,
                 SCSI_ADSENSE_INVALID_CDB,
                 0);
+            
             break;
         }
+
         case STATUS_DEVICE_BUSY:
         {
             DbgPrint("PhDskMnt::ImScsiParallelReadWriteImageCompletion: STATUS_DEVICE_BUSY from image I/O. Reporting SRB_STATUS_BUSY/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_BECOMING_READY.\n");
+            
             ScsiSetCheckCondition(
                 pWkRtnParms->pSrb,
                 SRB_STATUS_BUSY,
@@ -239,8 +247,33 @@ PVOID Context)
                 SCSI_ADSENSE_LUN_NOT_READY,
                 SCSI_SENSEQ_BECOMING_READY
                 );
+
             break;
         }
+
+        case STATUS_CONNECTION_RESET:
+        case STATUS_DEVICE_REMOVED:
+        case STATUS_DEVICE_DOES_NOT_EXIST:
+        case STATUS_PIPE_BROKEN:
+        case STATUS_PIPE_DISCONNECTED:
+        case STATUS_PORT_DISCONNECTED:
+        case STATUS_REMOTE_DISCONNECT:
+        {
+            DbgPrint("PhDskMnt::ImScsiDispatchWork: Underlying image disconnected. Reporting SRB_STATUS_ERROR/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_NOT_REACHABLE.\n");
+
+            ImScsiRemoveDevice(pWkRtnParms->pHBAExt, &pWkRtnParms->pLUExt->DeviceNumber, &lowest_assumed_irql);
+
+            ScsiSetCheckCondition(
+                pWkRtnParms->pSrb,
+                SRB_STATUS_BUSY,
+                SCSI_SENSE_NOT_READY,
+                SCSI_ADSENSE_LUN_COMMUNICATION,
+                SCSI_SENSEQ_NOT_REACHABLE
+            );
+
+            break;
+        }
+
         default:
         {
             KdPrint(("PhDskMnt::ImScsiParallelReadWriteImageCompletion: Parallel I/O failed with status %#x\n",
@@ -283,7 +316,7 @@ PVOID Context)
         LARGE_INTEGER startingSector;
         KLOCK_QUEUE_HANDLE LockHandle;
 
-        if ((pCdb->AsByte[0] == SCSIOP_READ16) |
+        if ((pCdb->AsByte[0] == SCSIOP_READ16) ||
             (pCdb->AsByte[0] == SCSIOP_WRITE16))
         {
             REVERSE_BYTES_QUAD(&startingSector, pCdb->CDB16.LogicalBlock);
@@ -474,7 +507,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
     UCHAR function = 0;
     BOOLEAN use_mdl = FALSE;
 
-    if ((pCdb->AsByte[0] == SCSIOP_READ16) |
+    if ((pCdb->AsByte[0] == SCSIOP_READ16) ||
         (pCdb->AsByte[0] == SCSIOP_WRITE16))
     {
         REVERSE_BYTES_QUAD(&starting_sector, pCdb->CDB16.LogicalBlock);
@@ -519,8 +552,8 @@ __inout __deref PKIRQL      LowestAssumedIrql
             PortSupportsGetOriginalMdl = FALSE;
         }
     }
-
 #endif
+
     if (use_mdl)
     {
         lower_irp = IoAllocateIrp(lower_device->StackSize, FALSE);
@@ -708,24 +741,28 @@ __in PULONG           Length
         io_status.Information = *Length;
     }
     else if (pLUExt->UseProxy)
+    {
         status = ImScsiReadProxy(
-        &pLUExt->Proxy,
-        &io_status,
-        &pLUExt->StopThread,
-        Buffer,
-        *Length,
-        &byteoffset);
+            &pLUExt->Proxy,
+            &io_status,
+            &pLUExt->StopThread,
+            Buffer,
+            *Length,
+            &byteoffset);
+    }
     else if (pLUExt->ImageFile != NULL)
+    {
         status = NtReadFile(
-        pLUExt->ImageFile,
-        NULL,
-        NULL,
-        NULL,
-        &io_status,
-        Buffer,
-        *Length,
-        &byteoffset,
-        NULL);
+            pLUExt->ImageFile,
+            NULL,
+            NULL,
+            NULL,
+            &io_status,
+            Buffer,
+            *Length,
+            &byteoffset,
+            NULL);
+    }
 
     if (status == STATUS_END_OF_FILE)
     {
@@ -1030,10 +1067,10 @@ __in __deref PETHREAD ClientThread)
 
     // Blank filenames only supported for non-zero VM disks.
     if ((CreateData->Fields.FileNameLength == 0) &&
-        !(((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM) &
-        (CreateData->Fields.DiskSize.QuadPart > 0)) |
-        ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &
-        (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_AWEALLOC) &
+        !(((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM) &&
+        (CreateData->Fields.DiskSize.QuadPart > 0)) ||
+        ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &&
+        (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_AWEALLOC) &&
         (CreateData->Fields.DiskSize.QuadPart > 0))))
     {
         KdPrint(("PhDskMnt: Blank filenames only supported for non-zero length "
@@ -1082,8 +1119,8 @@ __in __deref PETHREAD ClientThread)
 
     // If a file is to be opened or created, allocate name buffer and open that
     // file...
-    if ((CreateData->Fields.FileNameLength > 0) |
-        ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &
+    if ((CreateData->Fields.FileNameLength > 0) ||
+        ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &&
         (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_AWEALLOC)))
     {
         IO_STATUS_BLOCK io_status;
@@ -1241,9 +1278,9 @@ __in __deref PETHREAD ClientThread)
                 NULL);
         }
         else if ((IMSCSI_TYPE(CreateData->Fields.Flags) ==
-            IMSCSI_TYPE_PROXY) &
+            IMSCSI_TYPE_PROXY) &&
             ((IMSCSI_PROXY_TYPE(CreateData->Fields.Flags) ==
-            IMSCSI_PROXY_TYPE_TCP) |
+            IMSCSI_PROXY_TYPE_TCP) ||
             (IMSCSI_PROXY_TYPE(CreateData->Fields.Flags) ==
             IMSCSI_PROXY_TYPE_COMM)))
         {
@@ -1301,8 +1338,10 @@ __in __deref PETHREAD ClientThread)
             }
 
             create_options = FILE_NON_DIRECTORY_FILE |
-                FILE_NO_INTERMEDIATE_BUFFERING |
                 FILE_SYNCHRONOUS_IO_NONALERT;
+
+            if (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) != IMSCSI_FILE_TYPE_BUFFERED_IO)
+                create_options |= FILE_NO_INTERMEDIATE_BUFFERING;
 
             if (IMSCSI_SPARSE_FILE(CreateData->Fields.Flags))
                 create_options |= FILE_OPEN_FOR_BACKUP_INTENT;
@@ -1391,10 +1430,10 @@ __in __deref PETHREAD ClientThread)
         // If not found we will create the file if a new non-zero size is
         // specified, read-only virtual disk is not specified and we are
         // creating a type 'file' virtual disk.
-        if (((status == STATUS_OBJECT_NAME_NOT_FOUND) |
-            (status == STATUS_NO_SUCH_FILE)) &
-            (CreateData->Fields.DiskSize.QuadPart != 0) &
-            (!IMSCSI_READONLY(CreateData->Fields.Flags)) &
+        if (((status == STATUS_OBJECT_NAME_NOT_FOUND) ||
+            (status == STATUS_NO_SUCH_FILE)) &&
+            (CreateData->Fields.DiskSize.QuadPart != 0) &&
+            (!IMSCSI_READONLY(CreateData->Fields.Flags)) &&
             (IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE))
         {
 
@@ -1850,7 +1889,7 @@ __in __deref PETHREAD ClientThread)
             if (CreateData->Fields.DiskSize.QuadPart == 0)
                 CreateData->Fields.DiskSize.QuadPart = proxy_info.file_size;
 
-            if ((proxy_info.req_alignment - 1 > FILE_512_BYTE_ALIGNMENT) |
+            if ((proxy_info.req_alignment - 1 > FILE_512_BYTE_ALIGNMENT) ||
                 (CreateData->Fields.DiskSize.QuadPart == 0))
             {
                 ImScsiCloseProxy(&proxy);

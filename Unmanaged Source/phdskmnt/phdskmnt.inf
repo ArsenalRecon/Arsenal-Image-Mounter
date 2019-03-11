@@ -4,7 +4,7 @@
 ; Intended for use on 32 or 64 bit editions of Windows Server 2003 or newer,
 ; or Windows Vista or newer.
 ; 
-; Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+; Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ; This source code and API are available under the terms of the Affero General Public
 ; License v3.
 ;
@@ -17,7 +17,7 @@ Signature = "$WINDOWS NT$"
 Class = SCSIAdapter
 ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
 Provider = %ARSENALRECON%
-DriverVer = 04/25/2018,1.10.0027.00027
+DriverVer = 02/25/2019,1.10.0028.00028
 CatalogFile = phdskmnt.cat
 
 [SourceDisksFiles.x86]
@@ -32,11 +32,20 @@ phdskmnt.sys = 1, x64
 [SourceDisksFiles.arm]
 phdskmnt.sys = 1, arm
 
+[SourceDisksFiles.arm64]
+phdskmnt.sys = 1, arm64
+
 [DestinationDirs]
 DefaultDestDir = 12
 
 [Manufacturer]
-%ARSENALRECON%=ARSENALRECON, NTx86, NTia64, NTamd64, NTARM
+%ARSENALRECON%=ARSENALRECON, NTx86, NTia64, NTamd64, NTARM, NTARM64
+
+[DeviceInstall32]
+AddDevice = ROOT\PhDskMnt,,PhDskMnt_RootEnumInstall
+
+[PhDskMnt_RootEnumInstall]
+HardwareIds = ROOT\PhDskMnt
 
 [ARSENALRECON.NTx86]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
@@ -48,6 +57,9 @@ DefaultDestDir = 12
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [ARSENALRECON.NTARM]
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+
+[ARSENALRECON.NTARM64]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [PhysicalDiskMounterDevice]

@@ -2,7 +2,7 @@
 ''''' Support routines for creating provider and service instances given a known
 ''''' proxy provider.
 ''''' 
-''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -29,11 +29,13 @@ Namespace Server.Interaction
         ''' </summary>
         Public Enum ProxyType
             None
+
             LibEwf
             DiscUtils
 
             MultiPartRaw
 
+            LibAFF4
         End Enum
 
         ''' <summary>
@@ -49,23 +51,32 @@ Namespace Server.Interaction
 
             ReadWriteOverlay = 7
 
+            ReadOnlyFileSystem = 9
+
         End Enum
 
         Private Shared SupportedVirtualDiskAccess As New Dictionary(Of ProxyType, ReadOnlyCollection(Of VirtualDiskAccess)) From
             {
                 {ProxyType.None,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
-                                   VirtualDiskAccess.ReadWriteOriginal})},
+                                   VirtualDiskAccess.ReadWriteOriginal,
+                                   VirtualDiskAccess.ReadOnlyFileSystem})},
                 {ProxyType.MultiPartRaw,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
-                                   VirtualDiskAccess.ReadWriteOriginal})},
+                                   VirtualDiskAccess.ReadWriteOriginal,
+                                   VirtualDiskAccess.ReadOnlyFileSystem})},
                 {ProxyType.DiscUtils,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOriginal,
-                                   VirtualDiskAccess.ReadWriteOverlay})},
+                                   VirtualDiskAccess.ReadWriteOverlay,
+                                   VirtualDiskAccess.ReadOnlyFileSystem})},
                 {ProxyType.LibEwf,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
-                                   VirtualDiskAccess.ReadWriteOverlay})}
+                                   VirtualDiskAccess.ReadWriteOverlay,
+                                   VirtualDiskAccess.ReadOnlyFileSystem})},
+                {ProxyType.LibAFF4,
+                 Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
+                                   VirtualDiskAccess.ReadOnlyFileSystem})}
             }
 
         Private Shared NotSupportedFormatsForWriteOverlay As String() =
@@ -75,7 +86,6 @@ Namespace Server.Interaction
             }
 
         Private Sub New()
-
         End Sub
 
         ''' <summary>
@@ -162,6 +172,84 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
+        ''' Creates an object, of a DiscUtils.VirtualDisk derived class, for any supported image files format.
+        ''' For image formats not directly supported by DiscUtils.dll, this creates a devio provider first which
+        ''' then is opened as a DiscUtils.VirtualDisk wrapper object so that DiscUtils virtual disk features can
+        ''' be used on the image anyway.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        Public Shared Function GetDiscUtilsVirtualDisk(Imagefile As String, DiskAccess As FileAccess, Proxy As ProxyType) As VirtualDisk
+
+            Dim virtualdisk As VirtualDisk
+
+            Select Case Proxy
+
+                Case ProxyType.MultiPartRaw
+                    virtualdisk = New Raw.Disk(New Client.DevioDirectStream(GetProviderMultiPartRaw(Imagefile, DiskAccess), ownsProvider:=True), ownsStream:=Ownership.Dispose)
+
+                Case ProxyType.DiscUtils
+                    virtualdisk = VirtualDisk.OpenDisk(Imagefile, DiskAccess)
+
+                Case ProxyType.LibEwf
+                    virtualdisk = New Raw.Disk(New Client.DevioDirectStream(GetProviderLibEwf(Imagefile, DiskAccess), ownsProvider:=True), ownsStream:=Ownership.Dispose)
+
+                Case ProxyType.LibAFF4
+                    virtualdisk = New Raw.Disk(New Client.DevioDirectStream(GetProviderLibAFF4(Imagefile, DiskAccess), ownsProvider:=True), ownsStream:=Ownership.Dispose)
+
+                Case ProxyType.None
+                    virtualdisk = New Raw.Disk(Imagefile, DiskAccess)
+
+                Case Else
+                    Throw New InvalidOperationException("Proxy " & Proxy.ToString() & " not supported.")
+
+            End Select
+
+            Return virtualdisk
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file. This does not create a DevioServiceBase
+        ''' object that can actually serve incoming requests, it just creates the provider object that can
+        ''' be used with a later created DevioServiceBase object.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, Proxy As ProxyType) As IDevioProvider
+
+            Dim Provider As IDevioProvider
+
+            Select Case Proxy
+
+                Case ProxyType.MultiPartRaw
+                    Provider = GetProviderMultiPartRaw(Imagefile, DiskAccess)
+
+                Case ProxyType.DiscUtils
+                    Provider = GetProviderDiscUtils(Imagefile, DiskAccess)
+
+                Case ProxyType.LibEwf
+                    Provider = GetProviderLibEwf(Imagefile, DiskAccess)
+
+                Case ProxyType.LibAFF4
+                    Provider = GetProviderLibAFF4(Imagefile, DiskAccess)
+
+                Case ProxyType.None
+                    Provider = New DevioProviderFromStream(File.Open(Imagefile, FileMode.Open, DiskAccess), ownsStream:=True)
+
+                Case Else
+                    Throw New InvalidOperationException("Proxy " & Proxy.ToString() & " not supported.")
+
+            End Select
+
+            Return Provider
+
+        End Function
+
+        ''' <summary>
         ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file.
         ''' </summary>
@@ -182,6 +270,9 @@ Namespace Server.Interaction
 
                 Case ProxyType.LibEwf
                     Service = New DevioShmService(GetProviderLibEwf(Imagefile, DiskAccess), OwnsProvider:=True)
+
+                Case ProxyType.LibAFF4
+                    Service = New DevioShmService(GetProviderLibAFF4(Imagefile, DiskAccess), OwnsProvider:=True)
 
                 Case ProxyType.None
                     Service = New DevioNoneService(Imagefile, DiskAccess)
@@ -218,6 +309,9 @@ Namespace Server.Interaction
 
                 Case ProxyType.LibEwf
                     Service = New DevioShmService(GetProviderLibEwf(Imagefile, DiskAccess), OwnsProvider:=True)
+
+                Case ProxyType.LibAFF4
+                    Service = New DevioShmService(GetProviderLibAFF4(Imagefile, DiskAccess), OwnsProvider:=True)
 
                 Case ProxyType.None
                     Service = New DevioNoneService(Imagefile, DiskAccess)
@@ -293,7 +387,7 @@ Namespace Server.Interaction
 
             Trace.WriteLine("Opening image " & Imagefile)
 
-            Dim Disk As VirtualDisk = VirtualDisk.OpenDisk(Imagefile, FileAccess)
+            Dim Disk = VirtualDisk.OpenDisk(Imagefile, FileAccess)
 
             If Disk Is Nothing Then
                 Dim fs As New FileStream(Imagefile, FileMode.Open, FileAccess, FileShare.Read Or FileShare.Delete)
@@ -313,9 +407,9 @@ Namespace Server.Interaction
             End If
             Trace.WriteLine("Image type class: " & Disk.GetType().ToString())
 
-            Dim DisposableObjects As New List(Of IDisposable)
-
-            DisposableObjects.Add(Disk)
+            Dim DisposableObjects As New List(Of IDisposable) From {
+                Disk
+            }
 
             Try
 
@@ -534,6 +628,85 @@ Namespace Server.Interaction
             Return New DevioProviderLibEwf(Imagefile, Flags)
 
         End Function
+
+        ''' <summary>
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file using libaff4 library.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Only read access to image file supported.</param>
+        Public Shared Function GetProviderLibAFF4(Imagefile As String, DiskAccess As VirtualDiskAccess) As IDevioProvider
+
+            Select Case DiskAccess
+                Case VirtualDiskAccess.ReadOnly
+
+                Case Else
+                    Throw New IOException("Only read-only mode supported with libaff4")
+
+            End Select
+
+            Return GetProviderLibAFF4(Imagefile, 0)
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file using libaff4 library.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Only read access supported.</param>
+        Public Shared Function GetProviderLibAFF4(Imagefile As String, DiskAccess As FileAccess) As IDevioProvider
+
+            If (DiskAccess And FileAccess.Write) = FileAccess.Write Then
+                Throw New IOException("Only read-only mode supported with libaff4")
+            End If
+
+            Return GetProviderLibAFF4(Imagefile, 0)
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file using libaff4 library.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        Public Shared Function GetProviderLibAFF4(Imagefile As String) As IDevioProvider()
+
+            Dim number_of_images = CInt(DevioProviderLibAFF4.getimagecount(Imagefile))
+
+            Dim providers(0 To number_of_images - 1) As IDevioProvider
+
+            Try
+
+                For i = 0 To number_of_images - 1
+                    providers(i) = GetProviderLibAFF4(Imagefile, i)
+                Next
+
+            Catch When (Function()
+                            Array.ForEach(providers, Sub(p) p?.Dispose())
+                            Return False
+                        End Function)()
+
+                Throw
+            End Try
+
+            Return providers
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file using libaff4 library.
+        ''' </summary>
+        ''' <param name="containerfile">Container file containing image to mount.</param>
+        ''' <param name="index">Index of image to mount within container file.</param>
+        Public Shared Function GetProviderLibAFF4(containerfile As String, index As Integer) As IDevioProvider
+
+            Return New DevioProviderLibAFF4(containerfile & ContainerIndexSeparator & index.ToString())
+
+        End Function
+
+        Private Const ContainerIndexSeparator = ":::"
 
     End Class
 

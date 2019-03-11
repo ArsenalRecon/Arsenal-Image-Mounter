@@ -2,7 +2,7 @@
 ''''' MainForm.vb
 ''''' GUI mount tool.
 ''''' 
-''''' Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -521,7 +521,11 @@ Public Class MainForm
 
     End Sub
 
-    Private Sub btnMount_Click(sender As Object, e As EventArgs) Handles btnMountRaw.Click, btnMountLibEwf.Click, btnMountDiscUtils.Click, btnMountMultiPartRaw.Click
+    Private Sub btnMount_Click(sender As Object, e As EventArgs) Handles btnMountRaw.Click,
+        btnMountLibEwf.Click,
+        btnMountDiscUtils.Click,
+        btnMountMultiPartRaw.Click,
+        btnMountLibAFF4.Click
 
         Dim ProxyType As DevioServiceFactory.ProxyType
 
@@ -536,6 +540,8 @@ Public Class MainForm
                 Return
             End If
             ProxyType = DevioServiceFactory.ProxyType.LibEwf
+        ElseIf sender Is btnMountLibAFF4 Then
+            ProxyType = DevioServiceFactory.ProxyType.LibAFF4
         Else
             Return
         End If

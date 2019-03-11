@@ -25,6 +25,10 @@
 #include "..\phdskmnt\inc\common.h"
 #include "..\phdskmnt\inc\phdskmntver.h"
 
+#ifdef CORE_BUILD
+#define MsgWaitForMultipleObjects(n,h,a,t,w) WaitForMultipleObjects(n,h,a,t)
+#endif
+
 VOID
 WINAPI
 ImScsiMsgBoxLastError(HWND hWnd, LPCWSTR Prefix);

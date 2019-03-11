@@ -3,12 +3,24 @@
 #pragma warning(push)
 #pragma warning(disable: 4200)
 
-#ifndef TOC_DATA_TRACK
-#define TOC_DATA_TRACK                      0x04
+#ifndef CD_SECS
+#define CD_SECS                             0x3C
+#endif
+
+#ifndef CD_FRAMES
+#define CD_FRAMES                           0x4B
+#endif
+
+#ifndef CD_MSF_OFFSET
+#define CD_MSF_OFFSET                       150
 #endif
 
 #ifndef SCSI_ADSENSE_RESOURCE_FAILURE
 #define SCSI_ADSENSE_RESOURCE_FAILURE       0x55
+#endif
+
+#ifndef SCSI_SENSEQ_NOT_REACHABLE
+#define SCSI_SENSEQ_NOT_REACHABLE           0x02
 #endif
 
 #ifndef STATUS_DEVICE_FEATURE_NOT_SUPPORTED

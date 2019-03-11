@@ -4,7 +4,7 @@
 /// routines are queued here for completion at an IRQL where waiting and
 /// communicating is possible.
 /// 
-/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -109,7 +109,6 @@ ImScsiWorkerThread(__in PVOID Context)
 
                 if (pLUExt != NULL)
                 {
-                    KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
                     ImScsiCleanupLU(pLUExt, &lowest_assumed_irql);
                 }
 
@@ -302,17 +301,21 @@ ImScsiDispatchReadWrite(
         case STATUS_INVALID_BUFFER_SIZE:
         {
             DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
+            
             ScsiSetCheckCondition(
                 pSrb,
                 SRB_STATUS_ERROR,
                 SCSI_SENSE_ILLEGAL_REQUEST,
                 SCSI_ADSENSE_INVALID_CDB,
                 0);
+
             return;
         }
+
         case STATUS_DEVICE_BUSY:
         {
             DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_DEVICE_BUSY from image I/O. Reporting SRB_STATUS_BUSY/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_BECOMING_READY.\n");
+            
             ScsiSetCheckCondition(
                 pSrb,
                 SRB_STATUS_BUSY,
@@ -320,8 +323,33 @@ ImScsiDispatchReadWrite(
                 SCSI_ADSENSE_LUN_NOT_READY,
                 SCSI_SENSEQ_BECOMING_READY
             );
+            
             return;
         }
+
+        case STATUS_CONNECTION_RESET:
+        case STATUS_DEVICE_REMOVED:
+        case STATUS_DEVICE_DOES_NOT_EXIST:
+        case STATUS_PIPE_BROKEN:
+        case STATUS_PIPE_DISCONNECTED:
+        case STATUS_PORT_DISCONNECTED:
+        case STATUS_REMOTE_DISCONNECT:
+        {
+            DbgPrint("PhDskMnt::ImScsiDispatchWork: Underlying image disconnected. Reporting SRB_STATUS_ERROR/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_NOT_REACHABLE.\n");
+            
+            ImScsiRemoveDevice(pHBAExt, &pLUExt->DeviceNumber, &lowest_assumed_irql);
+            
+            ScsiSetCheckCondition(
+                pSrb,
+                SRB_STATUS_BUSY,
+                SCSI_SENSE_NOT_READY,
+                SCSI_ADSENSE_LUN_COMMUNICATION,
+                SCSI_SENSEQ_NOT_REACHABLE
+            );
+
+            return;
+        }
+
         default:
         {
             ScsiSetError(pSrb, SRB_STATUS_PARITY_ERROR);
@@ -366,7 +394,7 @@ ImScsiDispatchReadWrite(
 
     /// For write operations, temporary buffer holds read data.
     /// Copy that to system buffer.
-    if ((pSrb->Cdb[0] == SCSIOP_READ) | (pSrb->Cdb[0] == SCSIOP_READ16))
+    if ((pSrb->Cdb[0] == SCSIOP_READ) || (pSrb->Cdb[0] == SCSIOP_READ16))
     {
         RtlMoveMemory(sysaddress, buffer, pSrb->DataTransferLength);
     }

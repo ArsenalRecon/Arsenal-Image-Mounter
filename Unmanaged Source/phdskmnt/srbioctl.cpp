@@ -4,7 +4,7 @@
 /// requests are used for example to add or remove virtual disks and similar
 /// tasks.
 /// 
-/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -31,7 +31,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
     *pResult = ResultDone;
 
     if (pSrb->DataTransferLength < sizeof(SRB_IO_CONTROL)
-        || ((srb_io_control->HeaderLength != sizeof(SRB_IO_CONTROL)) |
+        || ((srb_io_control->HeaderLength != sizeof(SRB_IO_CONTROL)) ||
         (srb_io_control->HeaderLength + srb_io_control->Length > pSrb->DataTransferLength)))
     {
         KdPrint2(("PhDskMnt::ScsiIoControl: Malformed MiniportIOCtl detected.\n",
@@ -527,7 +527,7 @@ __inout __deref PKIRQL                          LowestAssumedIrql
         LowestAssumedIrql
         );
 
-    if ((status != SRB_STATUS_SUCCESS) | (device_extension == NULL))
+    if ((status != SRB_STATUS_SUCCESS) || (device_extension == NULL))
         return STATUS_OBJECT_NAME_NOT_FOUND;
 
     // It is not possible to make a file- or proxy virtual disk
@@ -627,7 +627,7 @@ ImScsiExtendDevice(
         LowestAssumedIrql
         );
 
-    if ((scsi_status != SRB_STATUS_SUCCESS) | (device_extension == NULL))
+    if ((scsi_status != SRB_STATUS_SUCCESS) || (device_extension == NULL))
     {
         extend_device_data->SrbIoControl.ReturnCode = (ULONG)STATUS_OBJECT_NAME_NOT_FOUND;
         ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
@@ -704,7 +704,7 @@ __inout __deref PKIRQL          LowestAssumedIrql
         object = CONTAINING_RECORD(list_ptr, HW_LU_EXTENSION, List);
 
         if ((DeviceNumber->LongNumber ==
-            IMSCSI_ALL_DEVICES) |
+            IMSCSI_ALL_DEVICES) ||
             (object->DeviceNumber.LongNumber ==
             DeviceNumber->LongNumber))
         {

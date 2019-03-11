@@ -2224,6 +2224,18 @@
             <param name="bootImageLba">The logical block address of the boot image itself.</param>
             <returns>A stream containing the patched boot image - does not need to be disposed.</returns>
         </member>
+        <member name="P:DiscUtils.Iso9660.CDBuilder.FileCount">
+            <summary>
+            Returns the number of files that have been added to this instance.
+            </summary>
+        </member>
+        <member name="M:DiscUtils.Iso9660.CDBuilder.GetFile(System.String)">
+            <summary>
+            Get information about already added file.
+            </summary>
+            <param name="path">Full path to previously added file.</param>
+            <returns>BuildDirectoryMember object representing already added file.</returns>
+        </member>
         <member name="T:DiscUtils.Iso9660.Iso9660Variant">
             <summary>
             Enumeration of known file system variants.
@@ -9471,6 +9483,11 @@
             <para>Setting this value to <c>false</c>, will always retrieve the latest information from the underlying
             NTFS attribute information, which reflects the true size of the file.</para>
             </remarks>
+        </member>
+        <member name="P:DiscUtils.Ntfs.NtfsOptions.UseSafeSequenceNumberChecks">
+            <summary>
+            Enables sequence number checks when a file reference is resolved through master file table.
+            </summary>
         </member>
         <member name="M:DiscUtils.Ntfs.NtfsOptions.ToString">
             <summary>

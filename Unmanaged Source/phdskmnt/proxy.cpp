@@ -3,7 +3,7 @@
 /// Client components for ImDisk/devio proxy services, for use with kernel level
 /// components.
 /// 
-/// Copyright (c) 2012-2018, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -296,8 +296,8 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
         ULONG number_of_wait_objects = CancelEvent != NULL ? 2 : 1;
 
         // Some parameter sanity checks
-        if ((RequestHeaderSize > IMDPROXY_HEADER_SIZE) |
-            (ResponseHeaderSize > IMDPROXY_HEADER_SIZE) |
+        if ((RequestHeaderSize > IMDPROXY_HEADER_SIZE) ||
+            (ResponseHeaderSize > IMDPROXY_HEADER_SIZE) ||
             ((RequestDataSize + IMDPROXY_HEADER_SIZE) >
                 Proxy->shared_memory_size))
         {
@@ -636,7 +636,7 @@ __in ULONG ProxyInfoResponseLength)
     ASSERT(Proxy != NULL);
     ASSERT(IoStatusBlock != NULL);
 
-    if ((ProxyInfoResponse == NULL) |
+    if ((ProxyInfoResponse == NULL) ||
         (ProxyInfoResponseLength < sizeof(IMDPROXY_INFO_RESP)))
     {
         IoStatusBlock->Status = STATUS_BUFFER_OVERFLOW;
