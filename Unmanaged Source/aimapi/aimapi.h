@@ -601,11 +601,7 @@ extern "C" {
         ImScsiAllocateDeviceInstanceListForService(IN LPCWSTR service,
         OUT LPWSTR *instances);
 
-#ifdef _WIN64
-
-#define ImScsiSetupSetNonInteractiveMode SetupSetNonInteractiveMode
-
-#else
+#ifdef _M_IX86
 
     /**
     Calls SetupSetNonInteractiveMode in setupapi.dll, if that function is
@@ -616,6 +612,10 @@ extern "C" {
         BOOL
         WINAPI
         ImScsiSetupSetNonInteractiveMode(IN BOOL NotInteractiveFlag);
+
+#else
+
+#define ImScsiSetupSetNonInteractiveMode SetupSetNonInteractiveMode
 
 #endif
 
@@ -692,7 +692,7 @@ extern "C" {
         WINAPI
         ImScsiGetOSVersion(__inout __deref POSVERSIONINFOW lpVersionInformation);
 
-#ifndef _WIN64
+#ifdef _M_IX86
 
     /**
     Calls the GetVolumePathNamesForVolumeName Win32 API function if that

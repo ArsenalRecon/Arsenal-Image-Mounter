@@ -3,6 +3,7 @@ Imports Microsoft.VisualBasic
 Imports Arsenal.ImageMounter.Extensions
 Imports System.Security.Permissions
 Imports System.Diagnostics.CodeAnalysis
+Imports Microsoft.Win32
 
 ''''' NativeFileIO.vb
 ''''' Routines for accessing some useful Win32 API functions to access features not
@@ -105,6 +106,12 @@ Namespace IO
             Public Const SERVICE_CONTROL_STOP As UInt32 = &H1
             Public Const ERROR_SERVICE_DOES_NOT_EXIST As UInt32 = 1060
             Public Const ERROR_SERVICE_ALREADY_RUNNING As UInt32 = 1056
+
+            Public Shared ReadOnly SerenumBusEnumeratorGuid As New Guid("{4D36E97B-E325-11CE-BFC1-08002BE10318}")
+            Public Shared ReadOnly DiskClassGuid As New Guid("{53F56307-B6BF-11D0-94F2-00A0C91EFB8B}")
+            Public Shared ReadOnly CdRomClassGuid As New Guid("{53F56308-B6BF-11D0-94F2-00A0C91EFB8B}")
+            Public Shared ReadOnly StoragePortClassGuid As New Guid("{2ACCFE60-C130-11D2-B082-00A0C91EFB8B}")
+            Public Shared ReadOnly ComPortClassGuid As New Guid("{86E0D1E0-8089-11D0-9CE4-08003E301F73}")
 
             <StructLayout(LayoutKind.Sequential)>
             Public Structure STORAGE_DEVICE_NUMBER
@@ -370,7 +377,7 @@ Namespace IO
                 Public RewritePartition As Boolean
 
                 <MarshalAs(UnmanagedType.ByValArray, SizeConst:=108)>
-                Private fields As Byte()
+                Private ReadOnly fields As Byte()
 
             End Structure
 
@@ -878,6 +885,31 @@ Namespace IO
               <MarshalAs(UnmanagedType.LPTStr), [In]()> rootid As String,
               Flags As UInt32) As UInt32
 
+            Public Declare Auto Function CM_Get_DevNode_Registry_Property Lib "setupapi.dll" (
+              DevInst As UInt32,
+              Prop As CmDevNodeRegistryProperty,
+              <Out> ByRef RegDataType As RegistryValueKind,
+              <Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=4)> Buffer As Byte(),
+              <[In], Out> ByRef BufferLength As Int32,
+              Flags As UInt32) As UInt32
+
+            Public Declare Auto Function CM_Set_DevNode_Registry_Property Lib "setupapi.dll" (
+              DevInst As UInt32,
+              Prop As CmDevNodeRegistryProperty,
+              <[In], MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=3)> Buffer As Byte(),
+              length As Int32,
+              Flags As UInt32) As UInt32
+
+            Public Declare Auto Function CM_Get_Child Lib "setupapi.dll" (
+              <Out> ByRef dnDevInst As UInt32,
+              DevInst As UInt32,
+              Flags As UInt32) As UInt32
+
+            Public Declare Auto Function CM_Get_Sibling Lib "setupapi.dll" (
+              <Out> ByRef dnDevInst As UInt32,
+              DevInst As UInt32,
+              Flags As UInt32) As UInt32
+
             Public Declare Function CM_Reenumerate_DevNode Lib "setupapi.dll" (
               devInst As UInt32,
               Flags As UInt32) As UInt32
@@ -1014,7 +1046,10 @@ Namespace IO
               DeviceInfoSet As IntPtr,
               DeviceInfoData As IntPtr) As Boolean
 
+            Public Const DIGCF_DEFAULT As UInt32 = &H1
             Public Const DIGCF_PRESENT As UInt32 = &H2
+            Public Const DIGCF_ALLCLASSES As UInt32 = &H4
+            Public Const DIGCF_PROFILE As UInt32 = &H8
             Public Const DIGCF_DEVICEINTERFACE As UInt32 = &H10
 
             Public Declare Auto Function SetupDiGetINFClass Lib "setupapi.dll" (
@@ -1096,6 +1131,10 @@ Namespace IO
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               MemberIndex As UInt32,
               <[Out]()> ByRef DeviceInterfaceData As SP_DEVINFO_DATA) As Boolean
+
+            Public Declare Auto Function SetupDiRestartDevices Lib "setupapi.dll" (
+              DeviceInfoSet As SafeDeviceInfoSetHandle,
+              <[In], [Out]> ByRef DeviceInterfaceData As SP_DEVINFO_DATA) As Boolean
 
             Public Declare Auto Function SetupDiEnumDeviceInterfaces Lib "setupapi.dll" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
@@ -1184,6 +1223,11 @@ Namespace IO
               RebootRequired As IntPtr) As Boolean
 
             Public Declare Auto Function GetConsoleWindow Lib "kernel32.dll" () As IntPtr
+
+            Public Enum CmDevNodeRegistryProperty As UInt32
+                CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME = &HF
+                CM_DRP_UPPERFILTERS = &H12
+            End Enum
 
             <Flags>
             Public Enum ShutdownFlags As UInt32
@@ -1936,23 +1980,23 @@ Namespace IO
         ''' can only be done through the handle passed to this function until handle is closed or lock is
         ''' released.
         ''' </summary>
-        ''' <param name="hDevice">Handle to device to lock and dismount.</param>
-        ''' <param name="bForce">Indicates if True that volume should be immediately dismounted even if it
+        ''' <param name="Device">Handle to device to lock and dismount.</param>
+        ''' <param name="Force">Indicates if True that volume should be immediately dismounted even if it
         ''' cannot be locked. This causes all open handles to files on the volume to become invalid. If False,
         ''' successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
-        Public Shared Function DismountVolumeFilesystem(hDevice As SafeFileHandle, bForce As Boolean) As Boolean
+        Public Shared Function DismountVolumeFilesystem(Device As SafeFileHandle, Force As Boolean) As Boolean
 
-            If Not Win32API.DeviceIoControl(hDevice, Win32API.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing) Then
-                If Not bForce Then
+            If Not Win32API.DeviceIoControl(Device, Win32API.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing) Then
+                If Not Force Then
                     Return False
                 End If
             End If
 
-            If Not Win32API.DeviceIoControl(hDevice, Win32API.FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing) Then
+            If Not Win32API.DeviceIoControl(Device, Win32API.FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing) Then
                 Return False
             End If
 
-            Return Win32API.DeviceIoControl(hDevice, Win32API.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing)
+            Return Win32API.DeviceIoControl(Device, Win32API.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing)
 
         End Function
 
@@ -1983,6 +2027,20 @@ Namespace IO
             Else
                 Return Nothing
             End If
+
+        End Function
+
+        ''' <summary>
+        ''' Retrieves SCSI address.
+        ''' </summary>
+        ''' <param name="Device">Path to device.</param>
+        Public Shared Function GetScsiAddress(Device As String) As Win32API.SCSI_ADDRESS?
+
+            Using hDevice = OpenFileHandle(Device, 0, FileShare.ReadWrite, FileMode.Open, False)
+
+                Return GetScsiAddress(hDevice)
+
+            End Using
 
         End Function
 
@@ -2508,11 +2566,52 @@ Namespace IO
                 Return status
             End If
 
-            instances = New String(Buffer).Split({New Char})
+            instances = New String(Buffer).Split({New Char}, StringSplitOptions.RemoveEmptyEntries)
 
             Return status
 
         End Function
+
+        Public Shared Sub RestartDevice(devclass As Guid, devinst As UInt32)
+
+            '' get a list of devices which support the given interface
+            Using devinfo = Win32API.SetupDiGetClassDevs(devclass,
+                Nothing,
+                Nothing,
+                Win32API.DIGCF_PROFILE Or
+                Win32API.DIGCF_DEVICEINTERFACE Or
+                Win32API.DIGCF_PRESENT)
+
+                If devinfo.IsInvalid Then
+                    Throw New Exception("Device not found")
+                End If
+
+                Dim devInfoData As Win32API.SP_DEVINFO_DATA
+                '' as per DDK docs on SetupDiEnumDeviceInfo
+                devInfoData.Initialize()
+
+                '' step through the list of devices for this handle
+                '' get device info at index deviceIndex, the function returns FALSE
+                '' when there Is no device at the given index.
+                Dim deviceIndex = 0UI
+
+                While Win32API.SetupDiEnumDeviceInfo(devinfo, deviceIndex, devInfoData)
+                    If devInfoData.DevInst.Equals(devinst) Then
+                        If Win32API.SetupDiRestartDevices(devinfo, devInfoData) Then
+                            Return
+                        End If
+
+                        Throw New Exception("Device restart failed", New Win32Exception)
+                    End If
+
+                    deviceIndex += 1UI
+                End While
+
+            End Using
+
+            Throw New Exception("Device not found")
+
+        End Sub
 
         Public Shared Sub RunDLLInstallHinfSection(OwnerWindow As IntPtr, InfPath As String, InfSection As String)
 
@@ -2665,126 +2764,123 @@ Namespace IO
 
         End Sub
 
-        '    Public Shared Function EnumerateDevices(DeviceInstanceName As String, Flags As UInt32, hwndParent As IntPtr) As Object()
+        Public Shared Iterator Function EnumerateDevices(devInst As UInt32) As IEnumerable(Of UInt32)
 
-        '        '    HDEVINFO devs = INVALID_HANDLE_VALUE
-        '        'IdEntry * templ = NULL
-        '        '    DWORD err
-        '        '    int failcode = EXIT_FAIL
-        '        '    int retcode
-        '        '    int argIndex
-        '        '    DWORD devIndex
-        '        '    SP_DEVINFO_DATA devInfo
-        '        '    SP_DEVINFO_LIST_DETAIL_DATA devInfoListDetail
-        '        '    BOOL doSearch = False
-        '        '    BOOL match
-        '        '    BOOL all = False
-        '        '    Guid cls
-        '        '    DWORD numClass = 0
-        '        '    int skip = 0
+            Dim child As UInt32
 
-        '        If String.IsNullOrEmpty(DeviceInstanceName) Then
-        '            Throw New ArgumentNullException("DeviceInstanceName")
-        '        End If
+            Dim rc = Win32API.CM_Get_Child(child, devInst, 0)
 
-        '        Dim devs = Win32API.SetupDiCreateDeviceInfoList(IntPtr.Zero, hwndParent)
+            While rc = 0
 
-        '        If devs.IsInvalid Then
-        '            Throw New Win32Exception("SetupDiCreateDeviceInfoListEx")
-        '        End If
+                Yield child
 
-        '        Using devs
+                rc = Win32API.CM_Get_Sibling(child, child, 0)
 
-        '            ''
-        '            '' add explicit instances to list (even if enumerated all,
-        '            '' this gets around DIGCF_PRESENT)
-        '            '' do this even if wildcards appear to be detected since they
-        '            '' might actually be part of the instance ID of a non-present device
-        '            ''
-        '            If Not Win32API.SetupDiOpenDeviceInfo(devs, DeviceInstanceName, hwndParent, 0, IntPtr.Zero) Then
-        '                Throw New Win32Exception("SetupDiOpenDeviceInfo")
-        '            End If
+            End While
 
+        End Function
 
-        '            Dim devInfoListDetail As Win32API.SP_DEVINFO_LIST_DETAIL_DATA
-        '            devInfoListDetail.Initialize()
+        Public Shared Function GetPhysicalDeviceObjectName(devInst As UInt32) As String
 
-        '            If Not Win32API.SetupDiGetDeviceInfoListDetail(devs, devInfoListDetail) Then
-        '                Throw New Win32Exception("SetupDiGetDeviceInfoListDetail")
-        '            End If
+            Dim regtype As RegistryValueKind = Nothing
 
-        '            ''
-        '            '' now enumerate them
-        '            ''
-        '            Dim devIndex As UInteger
-        '            Do
-        '                Dim devInfo As Win32API.SP_DEVINFO_DATA
-        '                devInfo.Initialize()
+            Dim buffer(0 To 65535) As Byte
+            Dim buffersize = buffer.Length
 
-        '                Win32API.SetupDiEnumDeviceInfo(devs, devIndex, devInfo)
+            Dim rc = Win32API.CM_Get_DevNode_Registry_Property(devInst, Win32API.CmDevNodeRegistryProperty.CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, regtype, buffer, buffersize, 0)
 
-        '        if(doSearch) {
-        '            for(argIndex=skip,match=FALSE(argIndex<argc) && !matchargIndex++) {
-        '                TCHAR devID[MAX_DEVICE_ID_LEN]
-        '                LPTSTR *hwIds = NULL
-        '                LPTSTR *compatIds = NULL
-        '                        ''
-        '                        '' determine instance ID
-        '                        ''
-        '                        If Win32API.CM_Get_Device_ID_Ex(devInfo.DevInst, devID, MAX_DEVICE_ID_LEN, 0, devInfoListDetail.RemoteMachineHandle) <> CR_SUCCESS Then
-        '                    devID[0] = TEXT('\0')
-        '                        End If
+            If rc <> 0 Then
+                Trace.WriteLine($"Error getting registry property for device. Status=0x{rc:X}")
+                Return Nothing
+            End If
 
-        '                if(templ[argIndex].InstanceId) {
-        '                            ''
-        '                            '' match on the instance ID
-        '                            ''
-        '                    if(WildCardMatch(devID,templ[argIndex])) {
-        '                                match = True
-        '                    }
-        '                } else {
-        '                                ''
-        '                                '' determine hardware ID's
-        '                                '' and search for matches
-        '                                ''
-        '                    hwIds = GetDevMultiSz(devs,&devInfo,SPDRP_HARDWAREID)
-        '                    compatIds = GetDevMultiSz(devs,&devInfo,SPDRP_COMPATIBLEIDS)
+            Return Encoding.Unicode.GetString(buffer, 0, buffersize - 2)
 
-        '                    if(WildCompareHwIds(hwIds,templ[argIndex]) ||
-        '                        WildCompareHwIds(compatIds,templ[argIndex])) {
-        '                                    match = True
-        '                    }
-        '                }
-        '                                    DelMultiSz(hwIds)
-        '                                    DelMultiSz(compatIds)
-        '            }
-        '        } else {
-        '                                    match = True
-        '        }
-        '        if(match) {
-        '            retcode = Callback(devs,&devInfo,devIndex,Context)
-        '            if(retcode) {
-        '                                            failcode = retcode
-        '                                            GoTo final
-        '            }
-        '        }
-        '    }
+        End Function
 
-        '                                            failcode = EXIT_OK
+        Public Shared Function GetRegisteredFilters(devInst As UInt32) As String()
 
-        'final:
-        '    if(templ) {
-        '        delete [] templ
-        '    }
-        '    if(devs != INVALID_HANDLE_VALUE) {
-        '                                                    SetupDiDestroyDeviceInfoList(devs)
-        '    }
-        '                                                    Return failcode
-        '    End Function
+            Dim regtype As RegistryValueKind = Nothing
+
+            Dim buffer(0 To 65535) As Byte
+            Dim buffersize = buffer.Length
+
+            Dim rc = Win32API.CM_Get_DevNode_Registry_Property(devInst, Win32API.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
+
+            If rc <> 0 Then
+                Trace.WriteLine($"Error getting registry property for device. Status=0x{rc:X}")
+                Return Nothing
+            End If
+
+            Return Encoding.Unicode.GetString(buffer, 0, buffersize - 2).Split({New Char}, StringSplitOptions.RemoveEmptyEntries)
+
+        End Function
+
+        Public Shared Sub SetRegisteredFilters(devInst As UInt32, filters As String())
+
+            Dim str = String.Join(New Char, filters) & New Char & New Char
+            Dim buffer = Encoding.Unicode.GetBytes(str)
+            Dim buffersize = buffer.Length
+
+            Dim rc = Win32API.CM_Set_DevNode_Registry_Property(devInst, Win32API.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, buffer, buffersize, 0)
+
+            If rc <> 0 Then
+                Throw New Exception($"Error setting registry property for device. Status=0x{rc:X}")
+            End If
+
+        End Sub
+
+        Public Shared Function AddFilter(devInst As UInt32, driver As String) As Boolean
+
+            Dim filters = If(GetRegisteredFilters(devInst), {})
+
+            If filters.Any(Function(f) f.Equals(driver, StringComparison.OrdinalIgnoreCase)) Then
+
+                Trace.WriteLine($"Filter '{driver}' already registered for devinst {devInst}")
+
+                Return False
+
+            End If
+
+            Trace.WriteLine($"Registering filter '{driver}' for devinst {devInst}")
+
+            Array.Resize(filters, filters.Length + 1)
+
+            filters(filters.Length - 1) = driver
+
+            SetRegisteredFilters(devInst, filters)
+
+            Return True
+
+        End Function
+
+        Public Shared Function RemoveFilter(devInst As UInt32, driver As String) As Boolean
+
+            Dim filters = GetRegisteredFilters(devInst)?.ToList()
+
+            If filters Is Nothing Then
+                Trace.WriteLine($"No filters registered for devinst {devInst}")
+                Return False
+            End If
+
+            Dim c = filters.RemoveAll(Function(f) f.Equals(driver, StringComparison.OrdinalIgnoreCase))
+
+            If c <= 0 Then
+                Trace.WriteLine($"Filter '{driver}' not registered for devinst {devInst}")
+                Return False
+            End If
+
+            Trace.WriteLine($"Removing filter '{driver}' from devinst {devInst}")
+
+            SetRegisteredFilters(devInst, filters.ToArray())
+
+            Return True
+
+        End Function
 
         Public Shared Function RemovePnPDevice(OwnerWindow As IntPtr, hwid As String) As Integer
 
-            Trace.WriteLine("RemovePnPDevice: hwid=""" & hwid & """")
+            Trace.WriteLine($"RemovePnPDevice: hwid='{hwid}'")
 
             ''
             '' Create the container for the to-be-created Device Information Element.
@@ -3208,5 +3304,231 @@ Namespace IO
         End Structure
 
     End Class
+
+    <StructLayout(LayoutKind.Sequential)>
+    Public Structure AIMWRFLTR_DEVICE_STATISTICS
+
+        Public Sub Initialize()
+            _Version = Marshal.SizeOf(Me)
+        End Sub
+
+        ''
+        '' Version of structure. Set to sizeof(AIMWRFLTR_DEVICE_STATISTICS)
+        ''
+        Public ReadOnly Property Version As Integer
+
+        ''
+        '' TRUE if volume Is protected by filter driver, FALSE otherwise.
+        ''
+        Public ReadOnly Property IsProtected As Byte
+
+        ''
+        '' TRUE if all initialization Is complete for protection of this
+        '' device
+        ''
+        Public ReadOnly Property Initialized As Byte
+
+        ''
+        '' Last NTSTATUS error code if failed to attach a diff device.
+        ''
+        Public ReadOnly Property LastErrorCode As Integer
+
+        ''
+        '' Total size of protected volume in bytes.
+        ''
+        Public ReadOnly Property Size As Long
+
+        ''
+        '' Number of allocation blocks reserved at the beginning of
+        '' diff device for future use for saving allocation table
+        '' between reboots.
+        ''
+        Public ReadOnly Property AllocationTableBlocks As Integer
+
+        ''
+        '' Value of AllocationTableBlocks converted to bytes instead
+        '' of number of allocation blocks.
+        ''
+        Public ReadOnly Property AllocationTableSize As Long
+            Get
+                Return CLng(_AllocationTableBlocks) << _DiffBlockBits
+            End Get
+        End Property
+
+        ''
+        '' Last allocated block at diff device.
+        ''
+        Public ReadOnly Property LastAllocatedBlock As Integer
+
+        ''
+        '' Value of LastAllocatedBlock converted to bytes instead of
+        '' number of allocation block. This gives the total number of
+        '' bytes currently in use at diff device.
+        ''
+        Public ReadOnly Property UsedDiffSize As Long
+            Get
+                Return CLng(_LastAllocatedBlock) << _DiffBlockBits
+            End Get
+        End Property
+
+        ''
+        '' Number of bits in block size calculations.
+        ''
+        Public ReadOnly Property DiffBlockBits As Byte
+
+        ''
+        '' Calculates allocation block size.
+        ''
+        Public ReadOnly Property DiffBlockSize As Integer
+            Get
+                Return 1 << _DiffBlockBits
+            End Get
+        End Property
+
+        ''
+        '' Number of next allocation block at diff device that will
+        '' receive a TRIM request while the filter driver Is idle.
+        ''
+        Public ReadOnly Property NextIdleTrimBlock As Integer
+
+        ''
+        '' Number of read requests.
+        ''
+        Public ReadOnly Property ReadRequests As Long
+
+        ''
+        '' Total number of bytes for all read requests.
+        ''
+        Public ReadOnly Property ReadBytes As Long
+
+        ''
+        '' Largest requested read operation.
+        ''
+        Public ReadOnly Property LargestReadSize As UInteger
+
+        ''
+        '' Number of read requests redirected to original device.
+        ''
+        Public ReadOnly Property ReadRequestsReroutedToOriginal As Long
+
+        ''
+        '' Total number of bytes for read requests redirected to
+        '' original device.
+        ''
+        Public ReadOnly Property ReadBytesReroutedToOriginal As Long
+
+        ''
+        '' Number of read requests split into smaller requests due
+        '' to fragmentation at diff device Or to fetch data from
+        '' both original device And diff device to fill a complete
+        '' request.
+        ''
+        Public ReadOnly Property SplitReads As Long
+
+        ''
+        '' Number of bytes read from original device in split requests.
+        ''
+        Public ReadOnly Property ReadBytesFromOriginal As Long
+
+        ''
+        '' Number of bytes read from diff device.
+        ''
+        Public ReadOnly Property ReadBytesFromDiff As Long
+
+        ''
+        '' Number of write requests.
+        ''
+        Public ReadOnly Property WriteRequests As Long
+
+        ''
+        '' Total number of bytes written.
+        ''
+        Public ReadOnly Property WrittenBytes As Long
+
+        ''
+        '' Largest requested write operation.
+        ''
+        Public ReadOnly Property LargestWriteSize As UInteger
+
+        ''
+        '' Number of write requests split into smaller requests due
+        '' to fragmentation at diff device Or where parts of request
+        '' need to allocate New allocation blocks.
+        ''
+        Public ReadOnly Property SplitWrites As Long
+
+        ''
+        '' Number of write requests sent directly to diff device.
+        '' (All blocks already allocated in previous writes.)
+        ''
+        Public ReadOnly Property DirectWriteRequests As Long
+
+        ''
+        '' Total number of bytes in DirectWriteRequests.
+        ''
+        Public ReadOnly Property DirectWrittenBytes As Long
+
+        ''
+        '' Number of write requests deferred to worker thread due
+        '' to needs to allocate New blocks.
+        ''
+        Public ReadOnly Property DeferredWriteRequests As Long
+
+        ''
+        '' Total number of bytes in DeferredWriteRequests.
+        ''
+        Public ReadOnly Property DeferredWrittenBytes As Long
+
+        ''
+        '' Number of read requests issued to original device as
+        '' part of allocating New blocks at diff device. This Is
+        '' done to fill up complete allocation blocks with both
+        '' data to write And padding with data from original device.
+        ''
+        Public ReadOnly Property FillReads As Long
+
+        ''
+        '' Total number of bytes read in FillReads requests.
+        ''
+        Public ReadOnly Property FillReadBytes As Long
+
+        ''
+        '' Number of TRIM requests sent from filesystem drivers above.
+        ''
+        Public ReadOnly Property TrimRequests As Long
+
+        ''
+        '' Total number of bytes for TRIM requests forwarded to diff
+        '' device.
+        ''
+        Public ReadOnly Property TrimBytesForwarded As Long
+
+        ''
+        '' Total number of bytes for TRIM requests ignored. This
+        '' happens when TRIM requests are received for areas Not yet
+        '' allocated at diff device. That Is, Not yet written to.
+        ''
+        Public ReadOnly Property TrimBytesIgnored As Long
+
+        ''
+        '' Number of TRIM requests split due to fragmentation at diff
+        '' device.
+        ''
+        Public ReadOnly Property SplitTrims As Long
+
+        ''
+        '' Number of paging files, hibernation files And similar at
+        '' filtered device.
+        ''
+        Public ReadOnly Property PagingPathCount As Integer
+
+        ''
+        '' Copy of diff device volume boot record. This structure holds
+        '' information about offset to private data/log data/etc.
+        ''
+        <MarshalAs(UnmanagedType.ByValArray, SizeConst:=512)>
+        Private ReadOnly DiffDeviceVbr As Byte()
+
+    End Structure
 
 End Namespace

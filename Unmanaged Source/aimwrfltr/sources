@@ -1,0 +1,60 @@
+
+### sources
+### Definitions for use with WINDDK build.exe.
+### 
+### Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+### This source code is available under the terms of the Affero General Public
+### License v3.
+###
+### Please see LICENSE.txt for full license terms, including the availability of
+### proprietary exceptions.
+### Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+###
+
+
+TARGETNAME=aimwrfltr
+TARGETTYPE=DRIVER
+
+# Set warning level.
+MSC_WARNING_LEVEL=/W4 /WX /wd4995
+# /wd4214 /wd4201
+
+MSC_OPTIMIZATION=$(MSC_OPTIMIZATION) /Oi
+
+# no optimization, to ease debugging.
+##MSC_OPTIMIZATION=$(MSC_OPTIMIZATION) /Odi
+
+##Propagate _NT_TARGET_VERSION macro to compiler
+C_DEFINES=$(C_DEFINES) -D_NT_TARGET_VERSION=$(_NT_TARGET_VERSION)
+
+##!if !defined(_NT_TARGET_VERSION_LONGHORN)
+##_NT_TARGET_VERSION_LONGHORN =0x600
+##!endif
+
+##!if !defined(_NT_TARGET_VERSION_WIN7)
+##_NT_TARGET_VERSION_WIN7 =0x601
+##!endif
+
+TARGETLIBS=$(TARGETLIBS)                                                                    \
+           $(DDK_LIB_PATH)\hal.lib                                                          \
+           $(DDK_LIB_PATH)\ntoskrnl.lib                                                     \
+           $(DDK_LIB_PATH)\wdm.lib
+
+INCLUDES=.\inc;                 \
+	   $(PUBLIC_ROOT)\ddk\inc; \
+	   ..\inc
+
+
+DRIVERTYPE=WDM
+
+SOURCES = mainwdm.cpp		\
+          ioctl.cpp		\
+          partialirp.cpp	\
+          aimwrfltr.rc		\
+          read.cpp		\
+	  write.cpp
+
+!IF "$(NTDEBUG)" == "ntsd"
+#SOURCES = $(SOURCES) debug.cpp
+!ENDIF
+

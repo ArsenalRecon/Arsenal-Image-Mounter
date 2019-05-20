@@ -17,23 +17,28 @@ Signature = "$WINDOWS NT$"
 Class = SCSIAdapter
 ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
 Provider = %ARSENALRECON%
-DriverVer = 02/25/2019,1.10.0028.00028
+DriverVer = 02/25/2019,1.11.0029.00029
 CatalogFile = phdskmnt.cat
 
 [SourceDisksFiles.x86]
 phdskmnt.sys = 1, x86
+aimwrfltr.sys = 1, x86
 
 [SourceDisksFiles.ia64]
 phdskmnt.sys = 1, 64
+aimwrfltr.sys = 1, 64
 
 [SourceDisksFiles.amd64]
 phdskmnt.sys = 1, x64
+aimwrfltr.sys = 1, x64
 
 [SourceDisksFiles.arm]
 phdskmnt.sys = 1, arm
+aimwrfltr.sys = 1, arm
 
 [SourceDisksFiles.arm64]
 phdskmnt.sys = 1, arm64
+aimwrfltr.sys = 1, arm64
 
 [DestinationDirs]
 DefaultDestDir = 12
@@ -63,13 +68,18 @@ HardwareIds = ROOT\PhDskMnt
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [PhysicalDiskMounterDevice]
-CopyFiles = @phdskmnt.sys
+CopyFiles = PhysicalDiskMounterSysFiles
+
+[PhysicalDiskMounterSysFiles]
+phdskmnt.sys
+aimwrfltr.sys
 
 [PhysicalDiskMounterDevice.HW]
 AddReg = PhDskMnt_ScsiPort_AddReg
 
 [PhysicalDiskMounterDevice.Services]
 AddService = phdskmnt, %SPSVCINST_ASSOCSERVICE%, PhDskMnt_PnP_Service_Inst
+AddService = aimwrfltr, , AIMWrFltr_Service_Inst
 
 [PhDskMnt_ScsiPort_AddReg]
 HKR, "ScsiPort", "NeedsSystemShutdownNotification", 0x00010001, 1
@@ -78,16 +88,16 @@ HKR, "ScsiPort", "NeedsSystemShutdownNotification", 0x00010001, 1
 1 = %DiskId1%,,,
 
 [PhDskMnt_PnP_Service_Inst]
-DisplayName    = "Arsenal Image Mounter Miniport"
+DisplayName    = "Arsenal Image Mounter SCSI Miniport"
 Description    = "SCSI emulation miniport"
 ServiceType    = %SERVICE_KERNEL_DRIVER%
 StartType      = %SERVICE_DEMAND_START%
 ErrorControl   = %SERVICE_ERROR_NORMAL%
 ServiceBinary  = %12%\phdskmnt.sys
 LoadOrderGroup = SCSI Miniport
-AddReg         = Service_AddReg
+AddReg         = PhDskMnt_PnP_Service_AddReg
 
-[Service_AddReg]
+[PhDskMnt_PnP_Service_AddReg]
 HKR, "Parameters\PnpInterface", "0",    %REG_DWORD%,  0x00000001
 HKR, "Parameters\PnpInterface", "1",    %REG_DWORD%,  0x00000001
 HKR, "Parameters\PnpInterface", "5",    %REG_DWORD%,  0x00000001
@@ -96,6 +106,15 @@ HKR, "Parameters\PnpInterface", "15",   %REG_DWORD%,  0x00000001
 HKR, "Parameters", "BreakOnEntry",      %REG_DWORD%,  0x00000000
 HKR, "Parameters", "DebugLevel",        %REG_DWORD%,  0x000000ff
 HKR, "Parameters", "NumberOfBuses",     %REG_DWORD%,  0x00000001
+
+[AIMWrFltr_Service_Inst]
+DisplayName    = "Arsenal Image Mounter Write Filter"
+Description    = "Storage Write Filter"
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_DEMAND_START%
+ErrorControl   = %SERVICE_ERROR_NORMAL%
+ServiceBinary  = %12%\aimwrfltr.sys
+LoadOrderGroup = SCSI Miniport
 
 [Strings]
 ARSENALRECON     = "Arsenal Recon"

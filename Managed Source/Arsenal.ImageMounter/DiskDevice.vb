@@ -118,6 +118,23 @@ Public Class DiskDevice
     End Property
 
     ''' <summary>
+    ''' Enumerates disk volumes that use extents of this disk.
+    ''' </summary>
+    Public Function GetDiskVolumes() As IEnumerable(Of String)
+
+        Dim disk_number = StorageDeviceNumber
+
+        If Not disk_number.HasValue Then
+            Return Nothing
+        End If
+
+        Trace.WriteLine($"Found disk number: {disk_number.Value.DeviceNumber}")
+
+        Return NativeFileIO.GetDiskVolumes(disk_number.Value.DeviceNumber)
+
+    End Function
+
+    ''' <summary>
     ''' Opens SCSI adapter that created this virtual disk.
     ''' </summary>
     Public Function OpenAdapter() As ScsiAdapter

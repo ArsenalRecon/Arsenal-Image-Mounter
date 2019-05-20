@@ -91,10 +91,10 @@ extern "C" {
 
 #endif // !defined(_MP_H_skip_includes)
 
-#define VENDOR_ID                   L"Arsenal Recon "
-#define VENDOR_ID_ascii             "Arsenal Recon "
-#define PRODUCT_ID                  L"Virtual "
-#define PRODUCT_ID_ascii            "Virtual "
+#define VENDOR_ID                   L"Arsenal"
+#define VENDOR_ID_ascii             "Arsenal"
+#define PRODUCT_ID                  L"Virtual"
+#define PRODUCT_ID_ascii            "Virtual"
 #define PRODUCT_REV                 L"0001"
 #define PRODUCT_REV_ascii           "0001"
 #define MP_TAG_GENERAL              'cSmI'

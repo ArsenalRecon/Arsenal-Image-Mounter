@@ -12,6 +12,7 @@
 '''''
 
 Imports Arsenal.ImageMounter.IO
+Imports Microsoft.Win32
 
 ''' <summary>
 ''' API for manipulating flag values, issuing SCSI bus rescans and similar tasks.
@@ -29,22 +30,22 @@ Public Class API
     ''' </summary>
     Public Shared Function GetAdapterDevicePaths(hwndParent As IntPtr) As List(Of String)
 
-        Dim SCSIGUID As New Guid("{4D36E97B-E325-11CE-BFC1-08002BE10318}")
-
         Dim devinstances As String() = Nothing
         Dim status = NativeFileIO.GetDeviceInstancesForService("phdskmnt", devinstances)
         If status <> 0 OrElse
           devinstances Is Nothing OrElse
           devinstances.Length = 0 OrElse
-          Not devinstances.Any(Function(s) Not String.IsNullOrEmpty(s)) Then
+          Array.TrueForAll(devinstances, AddressOf String.IsNullOrWhiteSpace) Then
 
             Trace.WriteLine("No devices found serviced by 'phdskmnt'. status=0x" & status.ToString("X"))
             Return Nothing
         End If
 
         Dim devInstList As New List(Of String)
-        For Each devinstname In From devinst In devinstances Where Not String.IsNullOrEmpty(devinst)
-            Using DevInfoSet = NativeFileIO.Win32API.SetupDiGetClassDevs(SCSIGUID,
+
+        For Each devinstname In devinstances
+
+            Using DevInfoSet = NativeFileIO.Win32API.SetupDiGetClassDevs(NativeFileIO.Win32API.SerenumBusEnumeratorGuid,
                                                                          devinstname,
                                                                          hwndParent,
                                                                          NativeFileIO.Win32API.DIGCF_DEVICEINTERFACE Or NativeFileIO.Win32API.DIGCF_PRESENT)
@@ -57,7 +58,7 @@ Public Class API
                 Do
                     Dim DeviceInterfaceData As New NativeFileIO.Win32API.SP_DEVICE_INTERFACE_DATA
                     DeviceInterfaceData.Initialize()
-                    If NativeFileIO.Win32API.SetupDiEnumDeviceInterfaces(DevInfoSet, IntPtr.Zero, SCSIGUID, i, DeviceInterfaceData) = False Then
+                    If NativeFileIO.Win32API.SetupDiEnumDeviceInterfaces(DevInfoSet, IntPtr.Zero, NativeFileIO.Win32API.SerenumBusEnumeratorGuid, i, DeviceInterfaceData) = False Then
                         Exit Do
                     End If
 
@@ -103,14 +104,14 @@ Public Class API
         If status <> 0 OrElse
           devinstances Is Nothing OrElse
           devinstances.Length = 0 OrElse
-          Not devinstances.Any(Function(s) Not String.IsNullOrEmpty(s)) Then
+          Array.TrueForAll(devinstances, AddressOf String.IsNullOrWhiteSpace) Then
 
             Trace.WriteLine("No devices found serviced by 'phdskmnt'. status=0x" & status.ToString("X"))
             Return Nothing
         End If
 
-        Dim devInstList As New List(Of UInt32)
-        For Each devinstname In From devinst In devinstances Where Not String.IsNullOrEmpty(devinst)
+        Dim devInstList As New List(Of UInt32)(devinstances.Length)
+        For Each devinstname In devinstances
             Dim devInst As UInt32
             status = NativeFileIO.Win32API.CM_Locate_DevNode(devInst, devinstname, 0)
             If status <> 0 Then
@@ -281,6 +282,126 @@ Public Class API
         Return CType(Flags And &HF000UI, DeviceFlags)
 
     End Function
+
+    Public Shared Sub UnregisterWriteOverlay(DeviceNumber As UInt32)
+        RegisterWriteOverlay(DeviceNumber, Nothing)
+    End Sub
+
+    Public Shared Sub RegisterWriteOverlay(DeviceNumber As UInt32, OverlayImagePath As String)
+
+        Dim adapters = GetAdapterDeviceInstances()
+
+        If adapters Is Nothing OrElse
+            adapters.Count = 0 Then
+
+            Throw New IOException("SCSI adapter not installed")
+
+        End If
+
+        Dim nativepath As String = Nothing
+
+        If Not String.IsNullOrWhiteSpace(OverlayImagePath) Then
+            nativepath = NativeFileIO.GetNtPath(OverlayImagePath)
+        End If
+
+        For Each dev In
+            From devinstAdapter In adapters
+            From devinstChild In NativeFileIO.EnumerateDevices(devinstAdapter)
+            Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
+            Where Not String.IsNullOrWhiteSpace(path)
+            Let win32path = "\\?\GLOBALROOT" & path
+            Let address = NativeFileIO.GetScsiAddress(win32path)
+            Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)
+
+            Trace.WriteLine($"Device number {DeviceNumber:X6}  found at {dev.path} devinst {dev.devinstChild}. Registering write overlay '{nativepath}'")
+
+            Using regkey = Registry.LocalMachine.CreateSubKey("SYSTEM\CurrentControlSet\Services\aimwrfltr\Parameters")
+                If nativepath Is Nothing Then
+                    regkey.DeleteValue(dev.path, throwOnMissingValue:=False)
+                Else
+                    regkey.SetValue(dev.path, nativepath, RegistryValueKind.String)
+                End If
+            End Using
+
+            If nativepath Is Nothing Then
+                NativeFileIO.RemoveFilter(dev.devinstChild, "aimwrfltr")
+            Else
+                NativeFileIO.AddFilter(dev.devinstChild, "aimwrfltr")
+            End If
+
+            For r = 1 To 4
+
+                NativeFileIO.RestartDevice(NativeFileIO.Win32API.DiskClassGuid, dev.devinstChild)
+
+                If nativepath Is Nothing Then
+                    Return
+                End If
+
+                Dim statistics As New AIMWRFLTR_DEVICE_STATISTICS
+
+                If Not GetWriteOverlayStatus(dev.win32path, statistics) Then
+                    If Marshal.GetLastWin32Error() = NativeFileIO.Win32API.ERROR_INVALID_FUNCTION Then
+                        Trace.WriteLine("Filter driver not yet loaded, retrying...")
+                        Thread.Sleep(200)
+                        Continue For
+                    Else
+                        Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
+                    End If
+                End If
+
+                If statistics.Initialized = 1 Then
+                    Return
+                End If
+
+                Throw New IOException("Error adding write overlay to device", New Win32Exception(NativeFileIO.Win32API.RtlNtStatusToDosError(statistics.LastErrorCode)))
+
+            Next
+
+            Throw New NotSupportedException("Write filter driver not attached to device")
+
+        Next
+
+        Throw New FileNotFoundException("Error adding write overlay: Device not found.")
+
+    End Sub
+
+    ''' <summary>
+    ''' Retrieves status of write overlay for mounted device.
+    ''' </summary>
+    ''' <param name="Device">Path to device.</param>
+    Public Shared Function GetWriteOverlayStatus(Device As String, <Out> ByRef Statistics As AIMWRFLTR_DEVICE_STATISTICS) As Boolean
+
+        Using hDevice = NativeFileIO.OpenFileHandle(Device, 0, FileShare.ReadWrite, FileMode.Open, False)
+
+            Return GetWriteOverlayStatus(hDevice, Statistics)
+
+        End Using
+
+    End Function
+
+    ''' <summary>
+    ''' Retrieves status of write overlay for mounted device.
+    ''' </summary>
+    ''' <param name="hDevice">Handle to device.</param>
+    Public Shared Function GetWriteOverlayStatus(hDevice As SafeFileHandle, <Out> ByRef Statistics As AIMWRFLTR_DEVICE_STATISTICS) As Boolean
+
+        Statistics.Initialize()
+
+        Return DeviceIoControl(hDevice, IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, CUInt(Marshal.SizeOf(GetType(AIMWRFLTR_DEVICE_STATISTICS))), Nothing, Nothing)
+
+    End Function
+
+    Private Const IOCTL_AIMWRFLTR_GET_DEVICE_DATA = &H88443404UI
+
+    Private Declare Function DeviceIoControl Lib "kernel32" (
+              hDevice As SafeFileHandle,
+              dwIoControlCode As UInt32,
+              lpInBuffer As IntPtr,
+              nInBufferSize As UInt32,
+              <Out> ByRef lpOutBuffer As AIMWRFLTR_DEVICE_STATISTICS,
+              nOutBufferSize As UInt32,
+              <Out> ByRef lpBytesReturned As UInt32,
+              lpOverlapped As IntPtr) As Boolean
 
 End Class
 

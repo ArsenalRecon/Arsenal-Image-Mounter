@@ -42,7 +42,7 @@ LPCWSTR KernelPlatformCode = NULL;
 BOOL KernelSupportsStorPort = FALSE;
 BOOL ProcessRunningInWow64 = FALSE;
 
-#ifndef _WIN64
+#ifdef _M_IX86
 
 pfGetVolumePathNamesForVolumeNameW fpGetVolumePathNamesForVolumeNameW = NULL;
 
@@ -314,7 +314,7 @@ ImScsiInitializeSystemVersionInfo()
         return FALSE;
     }
 
-#ifndef _WIN64
+#ifdef _M_IX86
     if ((os_version.dwMajorVersion >= 5) &&
         (os_version.dwMinorVersion >= 1))
     {

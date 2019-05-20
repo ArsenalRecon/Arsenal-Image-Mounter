@@ -383,6 +383,63 @@ Public Class ScsiAdapter
 
     End Sub
 
+
+    ''' <summary>
+    ''' Removes an existing virtual disk from adapter by first taking the disk offline so that any
+    ''' mounted file systems are safely dismounted.
+    ''' </summary>
+    ''' <param name="DeviceNumber">Device number to remove. Note that AutoDeviceNumber constant passed
+    ''' in this parameter causes all present virtual disks to be removed from this adapter.</param>
+    Public Sub RemoveDeviceSafe(DeviceNumber As UInt32)
+
+        If DeviceNumber = AutoDeviceNumber Then
+
+            RemoveAllDevicesSafe()
+
+            Return
+
+        End If
+
+        Dim volumes As IEnumerable(Of String) = Nothing
+
+        Using disk = OpenDevice(DeviceNumber, FileAccess.ReadWrite)
+
+            If disk.IsDiskWritable Then
+
+                volumes = disk.GetDiskVolumes()
+
+            End If
+
+        End Using
+
+        If volumes IsNot Nothing Then
+
+            For Each volname In volumes.Select(Function(v) v.TrimEnd("\"c))
+                Trace.WriteLine($"Dismounting volume: {volname}")
+
+                Using vol = NativeFileIO.OpenFileHandle(volname, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, FileOptions.None)
+                    NativeFileIO.FlushBuffers(vol)
+                    NativeFileIO.SetVolumeOffline(vol, offline:=True)
+                    'NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(vol, Force:=False))
+                End Using
+            Next
+
+        End If
+
+        RemoveDevice(DeviceNumber)
+
+    End Sub
+
+    ''' <summary>
+    ''' Removes all virtual disks on current adapter by first taking the disks offline so that any
+    ''' mounted file systems are safely dismounted.
+    ''' </summary>
+    Public Sub RemoveAllDevicesSafe()
+
+        GetDeviceList().ForEach(AddressOf RemoveDeviceSafe)
+
+    End Sub
+
     ''' <summary>
     ''' Removes an existing virtual disk from adapter.
     ''' </summary>

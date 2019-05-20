@@ -162,16 +162,16 @@
 #define IMSCSI_WINVER() ((IMSCSI_WINVER_MAJOR() << 8) | \
     IMSCSI_WINVER_MINOR())
 
-#if defined(NT4_COMPATIBLE) && !defined(_WIN64)
+#if defined(NT4_COMPATIBLE) && defined(_M_IX86)
 #define IMSCSI_GTE_WIN2K() (IMSCSI_WINVER_MAJOR() >= 0x05)
 #else
 #define IMSCSI_GTE_WIN2K() TRUE
 #endif
 
-#ifdef _WIN64
-#define IMSCSI_GTE_WINXP() TRUE
-#else
+#ifdef _M_IX86
 #define IMSCSI_GTE_WINXP() (IMSCSI_WINVER() >= 0x0501)
+#else
+#define IMSCSI_GTE_WINXP() TRUE
 #endif
 
 #define IMSCSI_GTE_SRV2003() (IMSCSI_WINVER() >= 0x0502)

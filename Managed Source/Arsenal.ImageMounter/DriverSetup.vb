@@ -461,7 +461,7 @@ Public Class DriverSetup
 
         NativeFileIO.GetDeviceInstancesForService("phdskmnt", hwinstances)
 
-        For Each hwinstance In From hwinst In hwinstances Where Not String.IsNullOrEmpty(hwinst)
+        For Each hwinstance In hwinstances
             NativeFileIO.RemovePnPDevice(ownerWindow, hwinstance)
         Next
 
