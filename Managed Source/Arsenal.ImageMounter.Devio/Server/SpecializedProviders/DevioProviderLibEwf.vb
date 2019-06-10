@@ -244,9 +244,9 @@ Namespace Server.SpecializedProviders
             Dim errmsg = GetErrorMessage(errobj)
 
             If errmsg IsNot Nothing Then
-                Throw New Exception(message & ": " & errmsg.ToString())
+                Throw New IOException(message & ": " & errmsg.ToString())
             Else
-                Throw New Exception(message)
+                Throw New IOException(message)
             End If
 
         End Sub

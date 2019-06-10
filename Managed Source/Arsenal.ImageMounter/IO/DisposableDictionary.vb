@@ -22,7 +22,7 @@ Namespace IO
                 If disposing Then
                     ' TODO: free managed resources when explicitly called
                     For Each value In Values
-                        value.Dispose()
+                        value?.Dispose()
                     Next
                 End If
             End If

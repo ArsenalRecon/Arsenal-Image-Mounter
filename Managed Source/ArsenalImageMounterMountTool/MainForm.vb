@@ -457,6 +457,7 @@ Public Class MainForm
     Private Sub lbDevices_SelectedIndexChanged(sender As Object, e As EventArgs) Handles lbDevices.SelectionChanged
 
         btnRemoveSelected.Enabled = lbDevices.SelectedRows.Count > 0
+        btnShowOpened.Enabled = lbDevices.SelectedRows.Count > 0
 
     End Sub
 
@@ -465,6 +466,42 @@ Public Class MainForm
         Try
             Adapter.RemoveAllDevices()
             RefreshDeviceList()
+
+        Catch ex As Exception
+            Trace.WriteLine(ex.ToString())
+            MessageBox.Show(Me,
+                            ex.JoinMessages(),
+                            ex.GetBaseException().GetType().Name,
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Exclamation)
+
+        End Try
+
+    End Sub
+
+    Private Sub btnShowOpened_Click(sender As Object, e As EventArgs) Handles btnShowOpened.Click
+
+        Try
+            For Each DeviceItem In
+              lbDevices.
+              SelectedRows().
+              OfType(Of DataGridViewRow)().
+              Select(Function(row) row.DataBoundItem).
+              OfType(Of DiskStateView)()
+
+                Dim paths = API.GetPhysicalDeviceObjectPath(DeviceItem.DeviceProperties.DeviceNumber).ToArray()
+
+                Dim processes = NativeFileIO.FindProcessesHoldingFileHandle(paths)
+
+                Dim processlist = String.Join(Environment.NewLine, From proc In processes Select $"Id = {proc.HandleTableEntry.ProcessId} Name = {proc.ProcessName}")
+
+                MessageBox.Show(Me,
+                            processlist,
+                            "Process list",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information)
+
+            Next
 
         Catch ex As Exception
             Trace.WriteLine(ex.ToString())

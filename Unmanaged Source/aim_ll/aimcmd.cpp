@@ -1447,30 +1447,21 @@ LPWSTR MountPoint)
             _p(config->DiskSize.QuadPart));
 
         printf("%s%s%s%s%s%s.\n",
-            IMSCSI_SHARED_IMAGE(config->Flags) ?
-            ", Shared image" : "",
-            IMSCSI_READONLY(config->Flags) ?
-            ", ReadOnly" : "",
-            IMSCSI_REMOVABLE(config->Flags) ?
-            ", Removable" : "",
-            IMSCSI_TYPE(config->Flags) == IMSCSI_TYPE_VM ?
-            ", Virtual Memory" :
-            IMSCSI_TYPE(config->Flags) == IMSCSI_TYPE_PROXY ?
-            ", Proxy" :
-            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_AWEALLOC ?
-            ", Physical Memory" :
-            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_PARALLEL_IO ?
-            ", Parallel I/O Image File" :
-            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_BUFFERED_IO ?
-            ", Queued buffered I/O Image File" :
+            IMSCSI_SHARED_IMAGE(config->Flags)  ? ", Shared image" : "",
+            IMSCSI_READONLY(config->Flags)      ? ", ReadOnly" : "",
+            IMSCSI_REMOVABLE(config->Flags)     ? ", Removable" : "",
+            IMSCSI_TYPE(config->Flags) == IMSCSI_TYPE_VM ? ", Virtual Memory" :
+            IMSCSI_TYPE(config->Flags) == IMSCSI_TYPE_PROXY ? ", Proxy" :
+            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_AWEALLOC ? ", Physical Memory" :
+            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_PARALLEL_IO ? ", Parallel I/O Image File" :
+            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_BUFFERED_IO ? ", Queued buffered I/O Image File" :
             ", Queued unbuffered I/O Image File",
-            IMSCSI_DEVICE_TYPE(config->Flags) ==
-            IMSCSI_DEVICE_TYPE_CD ? ", CD-ROM" :
-            IMSCSI_DEVICE_TYPE(config->Flags) ==
-            IMSCSI_DEVICE_TYPE_RAW ? ", RAW" :
-            IMSCSI_DEVICE_TYPE(config->Flags) ==
-            IMSCSI_DEVICE_TYPE_FD ? ", Floppy" : ", HDD",
-            config->Flags & IMSCSI_IMAGE_MODIFIED ? ", Modified" : "");
+            IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_CD ? ", CD-ROM" :
+            IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_RAW ? ", RAW" :
+            IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_FD ? ", Floppy" :
+            ", HDD",
+            config->Flags & IMSCSI_IMAGE_MODIFIED ? ", Modified" :
+            config->Flags & IMSCSI_FAKE_DISK_SIG ? ", Fake disk signature" : "");
 
         flushall();
 

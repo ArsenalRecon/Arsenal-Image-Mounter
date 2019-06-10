@@ -112,12 +112,16 @@ Public Class API
 
         Dim devInstList As New List(Of UInt32)(devinstances.Length)
         For Each devinstname In devinstances
+            Trace.WriteLine($"Found adapter instance '{devinstname}'")
+
             Dim devInst As UInt32
             status = NativeFileIO.Win32API.CM_Locate_DevNode(devInst, devinstname, 0)
             If status <> 0 Then
-                Trace.WriteLine("Device '" & devinstname & "' error 0x" & status.ToString("X"))
+                Trace.WriteLine($"Device '{devinstname}' error 0x{status:X}")
                 Continue For
             End If
+
+            Trace.WriteLine($"Found adapter devinst '{devInst}'")
 
             devInstList.Add(devInst)
         Next
@@ -283,6 +287,29 @@ Public Class API
 
     End Function
 
+    Public Shared Function GetPhysicalDeviceObjectPath(DeviceNumber As UInt32) As IEnumerable(Of String)
+
+        Dim adapters = GetAdapterDeviceInstances()
+
+        If adapters Is Nothing OrElse
+            adapters.Count = 0 Then
+
+            Throw New IOException("SCSI adapter not installed")
+
+        End If
+
+        Return _
+            From devinstAdapter In adapters
+            From devinstChild In NativeFileIO.EnumerateDevices(devinstAdapter)
+            Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
+            Where Not String.IsNullOrWhiteSpace(path)
+            Let win32path = $"\\?\GLOBALROOT{path}"
+            Let address = NativeFileIO.GetScsiAddress(win32path)
+            Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)
+            Select path
+
+    End Function
+
     Public Shared Sub UnregisterWriteOverlay(DeviceNumber As UInt32)
         RegisterWriteOverlay(DeviceNumber, Nothing)
     End Sub
@@ -329,7 +356,9 @@ Public Class API
                 NativeFileIO.AddFilter(dev.devinstChild, "aimwrfltr")
             End If
 
-            For r = 1 To 4
+            Dim last_error = 0
+
+            For r = 1 To 2
 
                 NativeFileIO.RestartDevice(NativeFileIO.Win32API.DiskClassGuid, dev.devinstChild)
 
@@ -340,7 +369,8 @@ Public Class API
                 Dim statistics As New AIMWRFLTR_DEVICE_STATISTICS
 
                 If Not GetWriteOverlayStatus(dev.win32path, statistics) Then
-                    If Marshal.GetLastWin32Error() = NativeFileIO.Win32API.ERROR_INVALID_FUNCTION Then
+                    last_error = Marshal.GetLastWin32Error()
+                    If last_error = NativeFileIO.Win32API.ERROR_INVALID_FUNCTION Then
                         Trace.WriteLine("Filter driver not yet loaded, retrying...")
                         Thread.Sleep(200)
                         Continue For
@@ -357,8 +387,16 @@ Public Class API
 
             Next
 
-            Throw New NotSupportedException("Write filter driver not attached to device")
+            Dim in_use_apps = NativeFileIO.FindProcessesHoldingFileHandle(dev.path).ToArray()
 
+            If in_use_apps.Length = 0 AndAlso last_error > 0 Then
+                Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
+            ElseIf in_use_apps.Length = 0 Then
+                Throw New NotSupportedException("Write filter driver not attached to device")
+            Else
+                Dim apps = String.Join(", ", From app In in_use_apps Select $"{app.ProcessName} (id={app.HandleTableEntry.ProcessId})")
+                Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the virtual disk device open. Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open: {apps}")
+            End If
         Next
 
         Throw New FileNotFoundException("Error adding write overlay: Device not found.")

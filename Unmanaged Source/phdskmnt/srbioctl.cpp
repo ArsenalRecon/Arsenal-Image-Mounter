@@ -453,6 +453,9 @@ __inout __deref PKIRQL              LowestAssumedIrql
     if (device_extension->SharedImage)
         create_data->Fields.Flags |= IMSCSI_OPTION_SHARED_IMAGE;
 
+    if (device_extension->FakeDiskSignature != 0)
+        create_data->Fields.Flags |= IMSCSI_FAKE_DISK_SIG;
+
     create_data->Fields.ImageOffset = device_extension->ImageOffset;
 
     create_data->Fields.FileNameLength = device_extension->ObjectName.Length;

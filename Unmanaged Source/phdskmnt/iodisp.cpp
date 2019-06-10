@@ -947,13 +947,13 @@ __in PULONG           Length
 }
 
 VOID
-ImScsiGenerateUniqueId(pHW_LU_EXTENSION LUExtension)
+ImScsiGenerateUniqueId(pHW_LU_EXTENSION pLUExt)
 {
     IO_STATUS_BLOCK io_status;
     NTSTATUS status = STATUS_SUCCESS;
 
-    if (LUExtension->ImageFile != NULL &&
-        !LUExtension->UseProxy)
+    if (pLUExt->ImageFile != NULL &&
+        !pLUExt->UseProxy)
     {
         KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Image file, attempting to generate UID from volume/file ids\n"));
 
@@ -968,7 +968,7 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION LUExtension)
         if (NT_SUCCESS(status))
         {
             status = ZwQueryVolumeInformationFile(
-                LUExtension->ImageFile,
+                pLUExt->ImageFile,
                 &io_status,
                 volume_info,
                 (ULONG)volume_info.GetSize(),
@@ -980,7 +980,7 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION LUExtension)
         if (NT_SUCCESS(status))
         {
             status = ZwQueryInformationFile(
-                LUExtension->ImageFile,
+                pLUExt->ImageFile,
                 &io_status,
                 &internal_info,
                 sizeof(internal_info),
@@ -989,9 +989,9 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION LUExtension)
 
         if (NT_SUCCESS(status))
         {
-            RtlCopyMemory(LUExtension->UniqueId, "AIMF", 4);
-            *(PULONG)(LUExtension->UniqueId + 4) = volume_info->VolumeSerialNumber;
-            *(PLARGE_INTEGER)(LUExtension->UniqueId + 8) = internal_info.IndexNumber;
+            RtlCopyMemory(pLUExt->UniqueId, "AIMF", 4);
+            *(PULONG)(pLUExt->UniqueId + 4) = volume_info->VolumeSerialNumber;
+            *(PLARGE_INTEGER)(pLUExt->UniqueId + 8) = internal_info.IndexNumber;
 
             KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Successfully generated UID from volume/file ids\n"));
 
@@ -1006,7 +1006,7 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION LUExtension)
 
     for (;;)
     {
-        status = ExUuidCreate((PGUID)LUExtension->UniqueId);
+        status = ExUuidCreate((PGUID)pLUExt->UniqueId);
 
         if (NT_SUCCESS(status))
         {
@@ -1024,7 +1024,7 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION LUExtension)
 }
 
 NTSTATUS
-ImScsiInitializeLU(__inout __deref pHW_LU_EXTENSION LUExtension,
+ImScsiInitializeLU(__inout __deref pHW_LU_EXTENSION pLUExt,
 __inout __deref PSRB_IMSCSI_CREATE_DATA CreateData,
 __in __deref PETHREAD ClientThread)
 {
@@ -2051,23 +2051,23 @@ __in __deref PETHREAD ClientThread)
     switch (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags))
     {
     case IMSCSI_DEVICE_TYPE_CD:
-        LUExtension->DeviceType = READ_ONLY_DIRECT_ACCESS_DEVICE;
+        pLUExt->DeviceType = READ_ONLY_DIRECT_ACCESS_DEVICE;
         CreateData->Fields.Flags |= IMSCSI_OPTION_REMOVABLE;
         break;
 
     case IMSCSI_DEVICE_TYPE_RAW:
-        LUExtension->DeviceType = ARRAY_CONTROLLER_DEVICE;
+        pLUExt->DeviceType = ARRAY_CONTROLLER_DEVICE;
         break;
 
     default:
-        LUExtension->DeviceType = DIRECT_ACCESS_DEVICE;
+        pLUExt->DeviceType = DIRECT_ACCESS_DEVICE;
     }
 
     if (IMSCSI_READONLY(CreateData->Fields.Flags))
-        LUExtension->ReadOnly = TRUE;
+        pLUExt->ReadOnly = TRUE;
 
     if (IMSCSI_REMOVABLE(CreateData->Fields.Flags))
-        LUExtension->RemovableMedia = TRUE;
+        pLUExt->RemovableMedia = TRUE;
 
     if (alignment_requirement > CreateData->Fields.BytesPerSector)
         CreateData->Fields.BytesPerSector = alignment_requirement + 1;
@@ -2090,85 +2090,85 @@ __in __deref PETHREAD ClientThread)
         (int)(CreateData->Fields.FileNameLength / sizeof(*CreateData->Fields.FileName)),
         CreateData->Fields.FileName));
 
-    LUExtension->ObjectName = file_name;
+    pLUExt->ObjectName = file_name;
 
-    LUExtension->DiskSize = CreateData->Fields.DiskSize;
+    pLUExt->DiskSize = CreateData->Fields.DiskSize;
 
     while (CreateData->Fields.BytesPerSector >>= 1)
-        LUExtension->BlockPower++;
-    if (LUExtension->BlockPower == 0)
-        LUExtension->BlockPower = DEFAULT_BLOCK_POWER;
-    CreateData->Fields.BytesPerSector = 1UL << LUExtension->BlockPower;
+        pLUExt->BlockPower++;
+    if (pLUExt->BlockPower == 0)
+        pLUExt->BlockPower = DEFAULT_BLOCK_POWER;
+    CreateData->Fields.BytesPerSector = 1UL << pLUExt->BlockPower;
 
-    LUExtension->ImageOffset = CreateData->Fields.ImageOffset;
+    pLUExt->ImageOffset = CreateData->Fields.ImageOffset;
 
     // VM disk.
     if (IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM)
-        LUExtension->VMDisk = TRUE;
+        pLUExt->VMDisk = TRUE;
     else
-        LUExtension->VMDisk = FALSE;
+        pLUExt->VMDisk = FALSE;
 
     // AWEAlloc disk.
     if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &
         (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_AWEALLOC))
-        LUExtension->AWEAllocDisk = TRUE;
+        pLUExt->AWEAllocDisk = TRUE;
     else
-        LUExtension->AWEAllocDisk = FALSE;
+        pLUExt->AWEAllocDisk = FALSE;
 
-    LUExtension->ImageBuffer = image_buffer;
-    LUExtension->ImageFile = file_handle;
+    pLUExt->ImageBuffer = image_buffer;
+    pLUExt->ImageFile = file_handle;
 
     // Use proxy service.
     if (IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_PROXY)
     {
-        LUExtension->Proxy = proxy;
-        LUExtension->UseProxy = TRUE;
+        pLUExt->Proxy = proxy;
+        pLUExt->UseProxy = TRUE;
     }
     else
-        LUExtension->UseProxy = FALSE;
+        pLUExt->UseProxy = FALSE;
 
     // If we are going to fake a disk signature, prepare that fake
     // disk sig here.
     if ((CreateData->Fields.Flags & IMSCSI_FAKE_DISK_SIG) != 0)
     {
-        LUExtension->FakeDiskSignature =
+        pLUExt->FakeDiskSignature =
             (RtlRandomEx(&pMPDrvInfoGlobal->RandomSeed) |
                 0x80808081UL) & 0xFEFEFEFFUL;
     }
 
-    if ((LUExtension->FileObject == NULL) &&
-        (!LUExtension->AWEAllocDisk) &&
-        (!LUExtension->VMDisk) &&
-        ((!LUExtension->UseProxy) ||
+    if ((pLUExt->FileObject == NULL) &&
+        (!pLUExt->AWEAllocDisk) &&
+        (!pLUExt->VMDisk) &&
+        ((!pLUExt->UseProxy) ||
             proxy_supports_unmap))
     {
-        LUExtension->SupportsUnmap = TRUE;
+        pLUExt->SupportsUnmap = TRUE;
     }
 
-    if ((LUExtension->FileObject == NULL) &&
-        (!LUExtension->AWEAllocDisk) &&
-        (!LUExtension->VMDisk) &&
-        ((!LUExtension->UseProxy) ||
+    if ((pLUExt->FileObject == NULL) &&
+        (!pLUExt->AWEAllocDisk) &&
+        (!pLUExt->VMDisk) &&
+        ((!pLUExt->UseProxy) ||
             proxy_supports_zero))
     {
-        LUExtension->SupportsZero = TRUE;
+        pLUExt->SupportsZero = TRUE;
     }
 
     // Image opened for shared writing
     if (IMSCSI_SHARED_IMAGE(CreateData->Fields.Flags))
     {
-        LUExtension->SharedImage = TRUE;
+        pLUExt->SharedImage = TRUE;
     }
     else
     {
-        LUExtension->SharedImage = FALSE;
+        pLUExt->SharedImage = FALSE;
     }
 
-    ImScsiGenerateUniqueId(LUExtension);
+    ImScsiGenerateUniqueId(pLUExt);
 
 #if DBG
     UNICODE_STRING guid;
-    status = RtlStringFromGUID(*(PGUID)LUExtension->UniqueId, &guid);
+    status = RtlStringFromGUID(*(PGUID)pLUExt->UniqueId, &guid);
     if (NT_SUCCESS(status))
     {
         DbgPrint("PhDskMnt::ImScsiInitializeLU: Unique id: %wZ\n", &guid);
@@ -2176,18 +2176,18 @@ __in __deref PETHREAD ClientThread)
     }
 #endif
 
-    KeInitializeSpinLock(&LUExtension->RequestListLock);
-    InitializeListHead(&LUExtension->RequestList);
-    KeInitializeEvent(&LUExtension->RequestEvent, SynchronizationEvent, FALSE);
+    KeInitializeSpinLock(&pLUExt->RequestListLock);
+    InitializeListHead(&pLUExt->RequestList);
+    KeInitializeEvent(&pLUExt->RequestEvent, SynchronizationEvent, FALSE);
 
-    KeInitializeEvent(&LUExtension->Initialized, NotificationEvent, FALSE);
+    KeInitializeEvent(&pLUExt->Initialized, NotificationEvent, FALSE);
 
-    KeInitializeSpinLock(&LUExtension->LastIoLock);
+    KeInitializeSpinLock(&pLUExt->LastIoLock);
 
-    KeSetEvent(&LUExtension->Initialized, (KPRIORITY)0, FALSE);
+    KeSetEvent(&pLUExt->Initialized, (KPRIORITY)0, FALSE);
 
     KdPrint(("PhDskMnt::ImScsiInitializeLU: Creating worker thread for pLUExt=0x%p.\n",
-        LUExtension));
+        pLUExt));
 
     // Get FILE_OBJECT if we will need that later
     if ((file_handle != NULL) &&
@@ -2197,14 +2197,14 @@ __in __deref PETHREAD ClientThread)
     {
         status = ObReferenceObjectByHandle(file_handle,
             SYNCHRONIZE | FILE_READ_ATTRIBUTES | FILE_READ_DATA |
-            (LUExtension->ReadOnly ?
+            (pLUExt->ReadOnly ?
             0 : FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES),
             *IoFileObjectType,
-            KernelMode, (PVOID*)&LUExtension->FileObject, NULL);
+            KernelMode, (PVOID*)&pLUExt->FileObject, NULL);
 
         if (!NT_SUCCESS(status))
         {
-            LUExtension->FileObject = NULL;
+            pLUExt->FileObject = NULL;
 
             DbgPrint("PhDskMnt::ImScsiCreateLU: Error referencing image file handle: %#x\n",
                 status);
@@ -2218,7 +2218,7 @@ __in __deref PETHREAD ClientThread)
         NULL,
         NULL,
         ImScsiWorkerThread,
-        LUExtension);
+        pLUExt);
 
     if (!NT_SUCCESS(status))
     {
@@ -2228,7 +2228,7 @@ __in __deref PETHREAD ClientThread)
     }
 
     KeWaitForSingleObject(
-        &LUExtension->Initialized,
+        &pLUExt->Initialized,
         Executive,
         KernelMode,
         FALSE,
@@ -2239,16 +2239,16 @@ __in __deref PETHREAD ClientThread)
         FILE_READ_ATTRIBUTES | SYNCHRONIZE,
         *PsThreadType,
         KernelMode,
-        (PVOID*)&LUExtension->WorkerThread,
+        (PVOID*)&pLUExt->WorkerThread,
         NULL
         );
 
     if (!NT_SUCCESS(status))
     {
-        LUExtension->WorkerThread = NULL;
+        pLUExt->WorkerThread = NULL;
 
         DbgPrint("PhDskMnt::ImScsiCreateLU: Cannot reference device worker thread. (%#x)\n", status);
-        KeSetEvent(&LUExtension->StopThread, (KPRIORITY)0, FALSE);
+        KeSetEvent(&pLUExt->StopThread, (KPRIORITY)0, FALSE);
         ZwWaitForSingleObject(thread_handle, FALSE, NULL);
     }
     else
@@ -2263,29 +2263,29 @@ __in __deref PETHREAD ClientThread)
 
 
 BOOLEAN
-ImScsiFillMemoryDisk(pHW_LU_EXTENSION LUExtension)
+ImScsiFillMemoryDisk(pHW_LU_EXTENSION pLUExt)
 {
-    LARGE_INTEGER byte_offset = LUExtension->ImageOffset;
+    LARGE_INTEGER byte_offset = pLUExt->ImageOffset;
     IO_STATUS_BLOCK io_status;
     NTSTATUS status;
 #ifdef _WIN64
-    SIZE_T disk_size = LUExtension->DiskSize.QuadPart;
+    SIZE_T disk_size = pLUExt->DiskSize.QuadPart;
 #else
-    SIZE_T disk_size = LUExtension->DiskSize.LowPart;
+    SIZE_T disk_size = pLUExt->DiskSize.LowPart;
 #endif
 
     KdPrint(("PhDskMnt: Reading image file into vm disk buffer.\n"));
 
     status =
         ImScsiSafeReadFile(
-        LUExtension->ImageFile,
+        pLUExt->ImageFile,
         &io_status,
-        LUExtension->ImageBuffer,
+        pLUExt->ImageBuffer,
         disk_size,
         &byte_offset);
 
-    ZwClose(LUExtension->ImageFile);
-    LUExtension->ImageFile = NULL;
+    ZwClose(pLUExt->ImageFile);
+    pLUExt->ImageFile = NULL;
 
     // Failure to read pre-load image is now considered a fatal error
     if (!NT_SUCCESS(status))

@@ -47,12 +47,17 @@ Namespace PSDisk
 
                             If view.DeviceName IsNot Nothing Then
                                 Try
-                                    view.DevicePath = "\\?\" & view.DeviceName
+                                    view.DevicePath = $"\\?\{view.DeviceName}"
                                     Using device As New DiskDevice(view.DevicePath, FileAccess.Read)
                                         view.RawDiskSignature = device.DiskSignature
+                                        view.FakeDiskSignature = (dev.Flags And DeviceFlags.FakeDiskSignatureIfZero) = DeviceFlags.FakeDiskSignatureIfZero
                                         view.NativePropertyDiskOffline = device.DiskOffline
                                         view.NativePropertyDiskOReadOnly = device.DiskReadOnly
-                                        view.NativePartitionLayout = device.PartitionInformationEx?.PartitionStyle
+                                        If device.HasValidMBR Then
+                                            view.NativePartitionLayout = device.PartitionInformationEx?.PartitionStyle
+                                        Else
+                                            view.NativePartitionLayout = Nothing
+                                        End If
                                     End Using
 
                                 Catch ex As Exception

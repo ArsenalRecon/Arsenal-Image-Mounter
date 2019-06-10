@@ -1,4 +1,5 @@
-﻿Imports System.Threading
+﻿Imports System.Runtime.InteropServices
+Imports System.Threading
 Imports Arsenal.ImageMounter.IO
 
 Public Module MainModule
@@ -22,6 +23,20 @@ Public Module MainModule
         End If
 
         My.Settings.Reload()
+
+        Dim privileges_enabled = NativeFileIO.EnablePrivileges(
+            NativeFileIO.Win32API.SE_BACKUP_NAME,
+            NativeFileIO.Win32API.SE_RESTORE_NAME,
+            NativeFileIO.Win32API.SE_DEBUG_NAME,
+            NativeFileIO.Win32API.SE_MANAGE_VOLUME_NAME,
+            NativeFileIO.Win32API.SE_SECURITY_NAME,
+            NativeFileIO.Win32API.SE_TCB_NAME)
+
+        If privileges_enabled IsNot Nothing Then
+            Trace.WriteLine($"Enabled privileges: {String.Join(", ", privileges_enabled)}")
+        Else
+            Trace.WriteLine($"Error enabling privileges: {Marshal.GetLastWin32Error()}")
+        End If
 
         If Not My.Settings.EULAConfirmed Then
 

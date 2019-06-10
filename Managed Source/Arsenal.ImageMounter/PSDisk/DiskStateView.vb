@@ -50,26 +50,37 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public NativePartitionLayout As IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE?
+        Public Property NativePartitionLayout As IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE?
 
         Public ReadOnly Property PartitionLayout As String
             Get
-                Select Case NativePartitionLayout.GetValueOrDefault()
-                    Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_GPT
-                        Return "GPT"
-                    Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_MBR
-                        Return "MBR"
-                    Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_RAW
-                        Return "RAW"
-                    Case Else
-                        Return "Unknown"
-                End Select
+                If _NativePartitionLayout.HasValue Then
+
+                    Select Case _NativePartitionLayout.Value
+                        Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_GPT
+                            Return "GPT"
+                        Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_MBR
+                            Return "MBR"
+                        Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_RAW
+                            Return "RAW"
+                        Case Else
+                            Return "Unknown"
+                    End Select
+                Else
+                    Return "None"
+                End If
             End Get
         End Property
 
         Public ReadOnly Property Signature As String
             Get
-                Return RawDiskSignature?.ToString("X8")
+                If RawDiskSignature.HasValue AndAlso _FakeDiskSignature Then
+                    Return $"{RawDiskSignature.Value.ToString("X8")} (faked)"
+                ElseIf RawDiskSignature.HasValue Then
+                    Return RawDiskSignature.Value.ToString("X8")
+                Else
+                    Return Nothing
+                End If
             End Get
         End Property
 
@@ -94,12 +105,17 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public NativePropertyDiskOReadOnly As Boolean?
+        Public Property NativePropertyDiskOReadOnly As Boolean?
+
+        Public Property FakeDiskSignature As Boolean
 
         Public Property Volumes As String()
 
         Public ReadOnly Property VolumesString As String
             Get
+                If _Volumes Is Nothing Then
+                    Return Nothing
+                End If
                 Return String.Join(Environment.NewLine, _Volumes)
             End Get
         End Property
@@ -114,8 +130,8 @@ Namespace PSDisk
 
         Public ReadOnly Property IsReadOnly As Boolean?
             Get
-                If NativePropertyDiskOReadOnly.HasValue Then
-                    Return NativePropertyDiskOReadOnly.Value
+                If _NativePropertyDiskOReadOnly.HasValue Then
+                    Return _NativePropertyDiskOReadOnly.Value
                 ElseIf DeviceProperties IsNot Nothing Then
                     Return (DeviceProperties.Flags And DeviceFlags.ReadOnly) = DeviceFlags.ReadOnly
                 Else

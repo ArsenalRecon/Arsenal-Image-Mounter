@@ -372,6 +372,7 @@ ImScsiDispatchReadWrite(
 
         if ((*(PUSHORT)(mbr + 0x01FE) == 0xAA55) &&
             (*(PUSHORT)(mbr + 0x01BC) == 0x0000) &&
+            (*(mbr + 0x01C2) != 0xEE) &&
             ((*(mbr + 0x01BE) & 0x7F) == 0x00) &&
             ((*(mbr + 0x01CE) & 0x7F) == 0x00) &&
             ((*(mbr + 0x01DE) & 0x7F) == 0x00) &&
@@ -380,6 +381,12 @@ ImScsiDispatchReadWrite(
             DbgPrint("PhDskMnt::ImScsiDispatchWork: Faking disk signature as %#X.\n", pLUExt->FakeDiskSignature);
 
             *(PULONG)(mbr + 0x01B8) = pLUExt->FakeDiskSignature;
+        }
+        else
+        {
+            DbgPrint("PhDskMnt::ImScsiDispatchWork: Present MBR data not compatible with fake disk signature option.\n");
+
+            pLUExt->FakeDiskSignature = 0;
         }
     }
     /// Allow the fake disk signature to be overwritten.

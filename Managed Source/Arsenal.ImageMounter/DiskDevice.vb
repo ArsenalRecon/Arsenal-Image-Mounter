@@ -165,17 +165,31 @@ Public Class DiskDevice
     ''' <summary>
     ''' Gets or sets disk signature stored in boot record.
     ''' </summary>
-    Public Property DiskSignature As UInt32
+    Public Property DiskSignature As UInt32?
         Get
             Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
             With GetRawDiskStream()
                 .Position = 0
                 .Read(rawsig, 0, rawsig.Length)
             End With
-            Return BitConverter.ToUInt32(rawsig, &H1B8)
+            If BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US AndAlso
+                    BitConverter.ToUInt16(rawsig, &H1BC) = &H0US AndAlso
+                    rawsig(&H1C2) <> &HEE AndAlso
+                    (rawsig(&H1BE) And &H7F) = 0 AndAlso
+                    (rawsig(&H1CE) And &H7F) = 0 AndAlso
+                    (rawsig(&H1DE) And &H7F) = 0 AndAlso
+                    (rawsig(&H1EE) And &H7F) = 0 Then
+
+                Return BitConverter.ToUInt32(rawsig, &H1B8)
+            End If
+
+            Return Nothing
         End Get
         Set
-            Dim newvalue = BitConverter.GetBytes(Value)
+            If Not Value.HasValue Then
+                Return
+            End If
+            Dim newvalue = BitConverter.GetBytes(Value.Value)
             Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
             With GetRawDiskStream()
                 .Position = 0
@@ -185,6 +199,30 @@ Public Class DiskDevice
                 .Write(rawsig, 0, rawsig.Length)
             End With
         End Set
+    End Property
+
+    ''' <summary>
+    ''' Return a value indicating whether present sector 0 data indicates a valid MBR
+    ''' with a partition table and a disk signature.
+    ''' </summary>
+    Public ReadOnly Property HasValidMBR As Boolean
+        Get
+
+            Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
+
+            With GetRawDiskStream()
+                .Position = 0
+                .Read(rawsig, 0, rawsig.Length)
+            End With
+
+            Return BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US AndAlso
+                BitConverter.ToUInt16(rawsig, &H1BC) = &H0US AndAlso
+                (rawsig(&H1BE) And &H7F) = 0 AndAlso
+                (rawsig(&H1CE) And &H7F) = 0 AndAlso
+                (rawsig(&H1DE) And &H7F) = 0 AndAlso
+                (rawsig(&H1EE) And &H7F) = 0
+
+        End Get
     End Property
 
     ''' <summary>

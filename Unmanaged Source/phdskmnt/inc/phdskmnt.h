@@ -829,7 +829,7 @@ extern "C" {
             );
 
     NTSTATUS
-        ImScsiInitializeLU(__inout __deref pHW_LU_EXTENSION LUExtension,
+        ImScsiInitializeLU(__inout __deref pHW_LU_EXTENSION pLUExt,
             __inout __deref PSRB_IMSCSI_CREATE_DATA CreateData,
             __in __deref PETHREAD ClientThread);
 
@@ -957,7 +957,7 @@ extern "C" {
             PWCHAR Message);
 
     BOOLEAN
-        ImScsiFillMemoryDisk(pHW_LU_EXTENSION LUExtension);
+        ImScsiFillMemoryDisk(pHW_LU_EXTENSION pLUExt);
 
     NTSTATUS
         ImScsiSafeReadFile(__in HANDLE FileHandle,

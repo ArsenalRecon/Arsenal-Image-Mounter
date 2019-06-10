@@ -56,6 +56,7 @@ Namespace IO
             Public Const ERROR_NO_MORE_FILES As UInt32 = 18UI
             Public Const ERROR_HANDLE_EOF As UInt32 = 38UI
             Public Const ERROR_MORE_DATA As UInt32 = &H234UI
+            Public Const ERROR_NOT_ALL_ASSIGNED As UInt32 = 1300UI
 
             Public Const FSCTL_GET_COMPRESSION As UInt32 = &H9003C
             Public Const FSCTL_SET_COMPRESSION As UInt32 = &H9C040
@@ -198,7 +199,11 @@ Namespace IO
 
                 Public Overrides Function ToString() As String
                     Try
-                        Return Marshal.PtrToStringUni(Buffer, Length >> 1)
+                        If Length = 0 Then
+                            Return String.Empty
+                        Else
+                            Return Marshal.PtrToStringUni(Buffer, Length >> 1)
+                        End If
 
                     Catch ex As Exception
                         Return "{" & ex.Message & "}"
@@ -1300,6 +1305,258 @@ Namespace IO
             Public Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
               <[In], Out> ByRef os_version As OSVERSIONINFOEX) As Integer
 
+            Public Declare Auto Function LookupPrivilegeValue Lib "advapi32.dll" (
+              <[In], MarshalAs(UnmanagedType.LPTStr)> lpSystemName As String,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> lpName As String,
+              <Out> ByRef lpLuid As Int64) As Boolean
+
+            Public Declare Auto Function OpenProcessToken Lib "advapi32.dll" (
+              <[In]> hProcess As IntPtr,
+              <[In]> dwAccess As UInteger,
+              <Out> ByRef lpTokenHandle As SafeFileHandle) As Boolean
+
+            Public Declare Auto Function AdjustTokenPrivileges Lib "advapi32.dll" (
+              <[In]> TokenHandle As SafeFileHandle,
+              <[In]> DisableAllPrivileges As Boolean,
+              <[In]> NewStates As SafeBuffer,
+              <[In]> BufferLength As Integer,
+              <[In]> PreviousState As SafeBuffer,
+              <Out> ByRef ReturnLength As Integer) As Boolean
+
+            <StructLayout(LayoutKind.Sequential, Pack:=1)>
+            Public Structure LUID_AND_ATTRIBUTES
+                Public Property LUID As Long
+                Public Property Attributes As Integer
+
+                Public Overrides Function ToString() As String
+                    Return $"LUID = 0x{LUID.ToString("X")}, Attributes = 0x{Attributes.ToString("X")}"
+                End Function
+            End Structure
+
+            Public Const SE_BACKUP_NAME = "SeBackupPrivilege"
+            Public Const SE_RESTORE_NAME = "SeRestorePrivilege"
+            Public Const SE_SECURITY_NAME = "SeSecurityPrivilege"
+            Public Const SE_MANAGE_VOLUME_NAME = "SeManageVolumePrivilege"
+            Public Const SE_DEBUG_NAME = "SeDebugPrivilege"
+            Public Const SE_TCB_NAME = "SeTcbPrivilege"
+            Public Const SE_SHUTDOWN_NAME = "SeShutdownPrivilege"
+
+            Public Enum SystemInfoClass As UInteger
+                SystemBasicInformation  '' 0x002C 
+                SystemProcessorInformation  '' 0x000C 
+                SystemPerformanceInformation    '' 0x0138 
+                SystemTimeInformation   '' 0x0020 
+                SystemPathInformation   '' Not implemented 
+                SystemProcessInformation    '' 0x00C8+ per process 
+                SystemCallInformation   '' 0x0018 + (n * 0x0004) 
+                SystemConfigurationInformation  '' 0x0018 
+                SystemProcessorCounters '' 0x0030 per cpu 
+                SystemGlobalFlag        '' 0x0004 (fails If size != 4) 
+                SystemCallTimeInformation   '' Not implemented 
+                SystemModuleInformation '' 0x0004 + (n * 0x011C) 
+                SystemLockInformation   '' 0x0004 + (n * 0x0024) 
+                SystemStackTraceInformation '' Not implemented 
+                SystemPagedPoolInformation  '' checked build only 
+                SystemNonPagedPoolInformation   '' checked build only 
+                SystemHandleInformation '' 0x0004 + (n * 0x0010) 
+                SystemObjectTypeInformation '' 0x0038+ + (n * 0x0030+) 
+                SystemPageFileInformation   '' 0x0018+ per page file 
+                SystemVdmInstemulInformation    '' 0x0088 
+                SystemVdmBopInformation '' invalid info Class 
+                SystemCacheInformation  '' 0x0024 
+                SystemPoolTagInformation    '' 0x0004 + (n * 0x001C) 
+                SystemInterruptInformation  '' 0x0000 Or 0x0018 per cpu 
+                SystemDpcInformation    '' 0x0014 
+                SystemFullMemoryInformation '' checked build only 
+                SystemLoadDriver        '' 0x0018 Set mode only 
+                SystemUnloadDriver      '' 0x0004 Set mode only 
+                SystemTimeAdjustmentInformation '' 0x000C 0x0008 writeable 
+                SystemSummaryMemoryInformation  '' checked build only 
+                SystemNextEventIdInformation    '' checked build only 
+                SystemEventIdsInformation   '' checked build only 
+                SystemCrashDumpInformation  '' 0x0004 
+                SystemExceptionInformation  '' 0x0010 
+                SystemCrashDumpStateInformation '' 0x0004 
+                SystemDebuggerInformation   '' 0x0002 
+                SystemContextSwitchInformation  '' 0x0030 
+                SystemRegistryQuotaInformation  '' 0x000C 
+                SystemAddDriver     '' 0x0008 Set mode only 
+                SystemPrioritySeparationInformation '' 0x0004 Set mode only 
+                SystemPlugPlayBusInformation    '' Not implemented 
+                SystemDockInformation   '' Not implemented 
+                SystemPowerInfo     '' 0x0060 (XP only!) 
+                SystemProcessorSpeedInformation '' 0x000C (XP only!) 
+                SystemTimeZoneInformation   '' 0x00AC 
+                SystemLookasideInformation  '' n * 0x0020 
+                SystemSetTimeSlipEvent
+                SystemCreateSession '' Set mode only 
+                SystemDeleteSession '' Set mode only 
+                SystemInvalidInfoClass1 '' invalid info Class 
+                SystemRangeStartInformation '' 0x0004 (fails If size != 4) 
+                SystemVerifierInformation
+                SystemAddVerifier
+                SystemSessionProcessesInformation   '' checked build only 
+                MaxSystemInfoClass
+            End Enum
+
+            Public Enum ObjectInfoClass As UInteger
+                ObjectBasicInformation  '' 0 Y N 
+                ObjectNameInformation   '' 1 Y N 
+                ObjectTypeInformation   '' 2 Y N 
+                ObjectAllTypesInformation   '' 3 Y N 
+                ObjectHandleInformation '' 4 Y Y 
+            End Enum
+
+            Public Enum ObType As Byte
+                OB_TYPE_TYPE = 1
+                OB_TYPE_DIRECTORY = 2
+                OB_TYPE_SYMBOLIC_LINK = 3
+                OB_TYPE_TOKEN = 4
+                OB_TYPE_PROCESS = 5
+                OB_TYPE_THREAD = 6
+                OB_TYPE_EVENT = 7
+                OB_TYPE_EVENT_PAIR = 8
+                OB_TYPE_MUTANT = 9
+                OB_TYPE_SEMAPHORE = 10
+                OB_TYPE_TIMER = 11
+                OB_TYPE_PROFILE = 12
+                OB_TYPE_WINDOW_STATION = 13
+                OB_TYPE_DESKTOP = 14
+                OB_TYPE_SECTION = 15
+                OB_TYPE_KEY = 16
+                OB_TYPE_PORT = 17
+                OB_TYPE_ADAPTER = 18
+                OB_TYPE_CONTROLLER = 19
+                OB_TYPE_DEVICE = 20
+                OB_TYPE_DRIVER = 21
+                OB_TYPE_IO_COMPLETION = 22
+                OB_TYPE_FILE = 23
+            End Enum
+
+            <StructLayout(LayoutKind.Sequential)>
+            Public Structure SystemHandleTableEntryInformation
+                Public ReadOnly Property ProcessId As Integer
+                Public ReadOnly Property ObjectType As ObType     '' OB_TYPE_* (OB_TYPE_TYPE, etc.) 
+                Public ReadOnly Property Flags As Byte      '' HANDLE_FLAG_* (HANDLE_FLAG_INHERIT, etc.) 
+                Public ReadOnly Property Handle As UShort
+                Public ReadOnly Property [Object] As IntPtr
+                Public ReadOnly Property GrantedAccess As UInteger
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential)>
+            Public Structure ObjectTypeInformation
+                Public ReadOnly Property Name As UNICODE_STRING
+                Public ReadOnly Property ObjectCount As UInteger
+                Public ReadOnly Property HandleCount As UInteger
+                Private ReadOnly Reserved11 As UInteger
+                Private ReadOnly Reserved12 As UInteger
+                Private ReadOnly Reserved13 As UInteger
+                Private ReadOnly Reserved14 As UInteger
+                Public ReadOnly Property PeakObjectCount As UInteger
+                Public ReadOnly Property PeakHandleCount As UInteger
+                Private ReadOnly Reserved21 As UInteger
+                Private ReadOnly Reserved22 As UInteger
+                Private ReadOnly Reserved23 As UInteger
+                Private ReadOnly Reserved24 As UInteger
+                Public ReadOnly Property InvalidAttributes As UInteger
+                Public ReadOnly Property GenericRead As UInteger
+                Public ReadOnly Property GenericWrite As UInteger
+                Public ReadOnly Property GenericExecute As UInteger
+                Public ReadOnly Property GenericAll As UInteger
+                Public ReadOnly Property ValidAccess As UInteger
+                Private ReadOnly Unknown As Byte
+                <MarshalAs(UnmanagedType.I1)> Private ReadOnly MaintainHandleDatabase As Boolean
+                Private ReadOnly Reserved3 As UShort
+                Public ReadOnly Property PoolType As Integer
+                Public ReadOnly Property PagedPoolUsage As UInteger
+                Public ReadOnly Property NonPagedPoolUsage As UInteger
+            End Structure
+
+            Public Const PROCESS_DUP_HANDLE As UInteger = &H40
+            Public Const PROCESS_QUERY_LIMITED_INFORMATION As UInteger = &H1000
+
+            Public Const TOKEN_QUERY As UInteger = &H8
+            Public Const TOKEN_ADJUST_PRIVILEGES = &H20
+
+            Public Const SE_PRIVILEGE_ENABLED As Integer = &H2
+
+            Public Declare Unicode Function NtQuerySystemInformation Lib "ntdll.dll" (
+              <[In]> SystemInformationClass As SystemInfoClass,
+              <[In]> pSystemInformation As SafeBuffer,
+              <[In]> uSystemInformationLength As Integer,
+              <Out> ByRef puReturnLength As Integer) As Integer
+
+            Public Declare Unicode Function NtQueryObject Lib "ntdll.dll" (
+              <[In]> ObjectHandle As SafeFileHandle,
+              <[In]> ObjectInformationClass As ObjectInfoClass,
+              <[In]> ObjectInformation As SafeBuffer,
+              <[In]> ObjectInformationLength As Integer,
+              <Out> ByRef puReturnLength As Integer) As Integer
+
+            Public Declare Unicode Function NtDuplicateObject Lib "ntdll.dll" (
+              <[In]> SourceProcessHandle As SafeHandle,
+              <[In]> SourceHandle As IntPtr,
+              <[In]> TargetProcessHandle As IntPtr,
+              <Out> ByRef TargetHandle As SafeFileHandle,
+              <[In]> DesiredAccess As UInteger,
+              <[In]> HandleAttributes As UInteger,
+              <[In]> Options As UInteger) As Integer
+
+            Public Declare Unicode Function GetCurrentProcess Lib "kernel32.dll" () As IntPtr
+
+            Public Declare Unicode Function OpenProcess Lib "kernel32.dll" (
+              <[In]> DesiredAccess As UInteger,
+              <[In]> InheritHandle As Boolean,
+              <[In]> ProcessId As Integer) As SafeFileHandle
+
+            Public Const STATUS_INFO_LENGTH_MISMATCH As Integer = &HC0000004
+
+            Public Class HGlobalBuffer
+                Inherits SafeBuffer
+
+                Public Sub New(numBytes As IntPtr)
+                    MyBase.New(ownsHandle:=True)
+                    Dim ptr = Marshal.AllocHGlobal(numBytes)
+                    MyBase.SetHandle(ptr)
+                    MyBase.Initialize(CULng(numBytes))
+                End Sub
+
+                Public Sub New(numBytes As Integer)
+                    MyBase.New(ownsHandle:=True)
+                    Dim ptr = Marshal.AllocHGlobal(numBytes)
+                    MyBase.SetHandle(ptr)
+                    MyBase.Initialize(CULng(numBytes))
+                End Sub
+
+                Public Sub New(ptr As IntPtr, numBytes As ULong, ownsHandle As Boolean)
+                    MyBase.New(ownsHandle)
+                    MyBase.SetHandle(ptr)
+                    MyBase.Initialize(numBytes)
+                End Sub
+
+                Public Sub Resize(newSize As Integer)
+                    handle = Marshal.AllocHGlobal(newSize)
+                    MyBase.Initialize(CULng(newSize))
+                End Sub
+
+                Public Sub Resize(newSize As IntPtr)
+                    handle = Marshal.AllocHGlobal(newSize)
+                    MyBase.Initialize(CULng(newSize))
+                End Sub
+
+                Protected Overrides Function ReleaseHandle() As Boolean
+                    Try
+                        Marshal.FreeHGlobal(handle)
+                        Return True
+
+                    Catch
+                        Return False
+
+                    End Try
+                End Function
+
+            End Class
+
         End Class
 #End Region
 
@@ -1462,6 +1719,242 @@ Namespace IO
         End Function
 
         ''' <summary>
+        ''' Encapsulates call to an ntdll.dll API function that returns an NTSTATUS value indicating
+        ''' success or error status. If result is zero or positive, this function just passes through
+        ''' that value as return value. If result is negative indicating an error, it converts error
+        ''' code to a Win32 error code and throws a managed exception for that error code.
+        ''' </summary>
+        ''' <param name="result">Return code from a ntdll.dll API function call.</param>
+        Public Shared Function NtDllTry(result As Integer) As Integer
+
+            If result < 0 Then
+                Throw New Win32Exception(Win32API.RtlNtStatusToDosError(result))
+            End If
+
+            Return result
+
+        End Function
+
+        Public Shared Function EnablePrivileges(ParamArray privileges As String()) As String()
+
+            Dim token As SafeFileHandle = Nothing
+            Win32Try(Win32API.OpenProcessToken(Win32API.GetCurrentProcess(), Win32API.TOKEN_ADJUST_PRIVILEGES Or Win32API.TOKEN_QUERY, token))
+
+            Using token
+
+                Dim intsize = CLng(Marshal.SizeOf(GetType(Integer)))
+                Dim structsize = Marshal.SizeOf(GetType(Win32API.LUID_AND_ATTRIBUTES))
+
+                Dim luid_and_attribs_list As New Dictionary(Of String, Win32API.LUID_AND_ATTRIBUTES)(privileges.Length)
+
+                For Each privilege In privileges
+
+                    Dim luid_and_attribs As New Win32API.LUID_AND_ATTRIBUTES With {
+                        .Attributes = Win32API.SE_PRIVILEGE_ENABLED
+                    }
+
+                    If Win32API.LookupPrivilegeValue(Nothing, privilege, luid_and_attribs.LUID) Then
+
+                        luid_and_attribs_list.Add(privilege, luid_and_attribs)
+
+                    End If
+
+                Next
+
+                If luid_and_attribs_list.Count = 0 Then
+
+                    Return Nothing
+
+                End If
+
+                Using buffer As New Win32API.HGlobalBuffer(New IntPtr(intsize + privileges.LongLength * structsize))
+
+                    buffer.Write(0, luid_and_attribs_list.Count)
+
+                    buffer.WriteArray(CULng(intsize), luid_and_attribs_list.Values.ToArray(), 0, luid_and_attribs_list.Count)
+
+                    Win32Try(Win32API.AdjustTokenPrivileges(token, False, buffer, CInt(buffer.ByteLength), buffer, Nothing))
+
+                    If Marshal.GetLastWin32Error() = Win32API.ERROR_NOT_ALL_ASSIGNED Then
+                        Dim count = buffer.Read(Of Integer)(0)
+                        Dim enabled_luids(0 To count - 1) As Win32API.LUID_AND_ATTRIBUTES
+                        buffer.ReadArray(CULng(intsize), enabled_luids, 0, count)
+                        Dim enabled_privileges = Aggregate enabled_luid In enabled_luids
+                                                     Join privilege_name In luid_and_attribs_list
+                                                         On enabled_luid.LUID Equals privilege_name.Value.LUID
+                                                         Select privilege_name.Key
+                                                         Into ToArray()
+
+                        Return enabled_privileges
+                    End If
+
+                    Return privileges
+
+                End Using
+
+            End Using
+
+        End Function
+
+        ''' <summary>
+        ''' Returns current system handle table.
+        ''' </summary>
+        Public Shared Function GetSystemHandleTable() As Win32API.SystemHandleTableEntryInformation()
+
+            Using buffer As New Win32API.HGlobalBuffer(65536)
+
+                Do
+                    Dim status = Win32API.NtQuerySystemInformation(
+                        Win32API.SystemInfoClass.SystemHandleInformation,
+                        buffer,
+                        CInt(buffer.ByteLength),
+                        Nothing)
+
+                    If status = Win32API.STATUS_INFO_LENGTH_MISMATCH Then
+                        buffer.Resize(CType(buffer.ByteLength << 1, IntPtr))
+                        Continue Do
+                    End If
+
+                    NtDllTry(status)
+
+                    Exit Do
+                Loop
+
+                Dim handlecount = buffer.Read(Of Integer)(0)
+                Dim arrayoffset = IntPtr.Size
+                Dim array(0 To handlecount - 1) As Win32API.SystemHandleTableEntryInformation
+                buffer.ReadArray(CULng(arrayoffset), array, 0, handlecount)
+
+                Return array
+
+            End Using
+
+        End Function
+
+        Public Class HandleTableEntryInformation
+
+            Public ReadOnly Property HandleTableEntry As Win32API.SystemHandleTableEntryInformation
+
+            Public ReadOnly Property ObjectTypeInfo As Win32API.ObjectTypeInformation
+
+            Public ReadOnly Property ObjectName As String
+            Public ReadOnly Property ProcessName As String
+            Public ReadOnly Property ProcessStartTime As Date
+            Public ReadOnly Property SessionId As Integer
+
+            Protected Friend Sub New(HandleTableEntry As Win32API.SystemHandleTableEntryInformation,
+                                     ObjectTypeInfo As Win32API.ObjectTypeInformation,
+                                     ObjectName As String,
+                                     Process As Process)
+
+                Me.HandleTableEntry = HandleTableEntry
+                Me.ObjectTypeInfo = ObjectTypeInfo
+                Me.ObjectName = ObjectName
+                Me.ProcessName = Process.ProcessName
+                Me.ProcessStartTime = Process.StartTime
+                Me.SessionId = Process.SessionId
+            End Sub
+
+        End Class
+
+        Public Shared Iterator Function QueryHandleTableHandleInformation(handleTable As IEnumerable(Of Win32API.SystemHandleTableEntryInformation)) As IEnumerable(Of HandleTableEntryInformation)
+
+            Using buffer As New Win32API.HGlobalBuffer(65536),
+                processHandleList = New DisposableDictionary(Of Integer, SafeFileHandle),
+                processInfoList = New DisposableDictionary(Of Integer, Process)
+
+                Array.ForEach(Process.GetProcesses(),
+                              Sub(p) processInfoList.Add(p.Id, p))
+
+                For Each handle In handleTable
+                    If handle.ProcessId = 0 Then
+                        Continue For
+                    End If
+
+                    Dim processInfo As Process = Nothing
+                    If Not processInfoList.TryGetValue(handle.ProcessId, processInfo) Then
+                        Continue For
+                    End If
+
+                    Dim processHandle As SafeFileHandle = Nothing
+                    If Not processHandleList.TryGetValue(handle.ProcessId, processHandle) Then
+                        processHandle = Win32API.OpenProcess(Win32API.PROCESS_DUP_HANDLE Or Win32API.PROCESS_QUERY_LIMITED_INFORMATION, False, handle.ProcessId)
+                        If processHandle.IsInvalid Then
+                            processHandle = Nothing
+                        End If
+                        processHandleList.Add(handle.ProcessId, processHandle)
+                    End If
+                    If processHandle Is Nothing Then
+                        Continue For
+                    End If
+                    Dim duphandle As New SafeFileHandle(Nothing, True)
+                    Dim status = Win32API.NtDuplicateObject(processHandle, New IntPtr(handle.Handle), Win32API.GetCurrentProcess(), duphandle, 0, 0, 0)
+                    If status < 0 Then
+                        Continue For
+                    End If
+
+                    Dim object_type_info As Win32API.ObjectTypeInformation = Nothing
+                    Dim object_name As String = Nothing
+
+                    Try
+                        Using duphandle
+                            Dim newbuffersize As Integer
+                            Do
+                                status = Win32API.NtQueryObject(duphandle, Win32API.ObjectInfoClass.ObjectTypeInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+                                If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
+                                    buffer.Resize(newbuffersize)
+                                    Continue Do
+                                ElseIf status < 0 Then
+                                    Continue For
+                                End If
+                                Exit Do
+                            Loop
+
+                            object_type_info = buffer.Read(Of Win32API.ObjectTypeInformation)(0)
+
+                            If handle.GrantedAccess <> &H12019F AndAlso
+                                handle.GrantedAccess <> &H120189 Then
+
+                                Do
+                                    status = Win32API.NtQueryObject(duphandle, Win32API.ObjectInfoClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+                                    If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
+                                        buffer.Resize(newbuffersize)
+                                        Continue Do
+                                    ElseIf status < 0 Then
+                                        Continue For
+                                    End If
+                                    Exit Do
+                                Loop
+
+                                Dim name = buffer.Read(Of Win32API.UNICODE_STRING)(0)
+                                If name.Length > 0 Then
+                                    object_name = name.ToString()
+                                End If
+                            End If
+
+                        End Using
+
+                        Yield New HandleTableEntryInformation(handle, object_type_info, object_name, processInfo)
+
+                    Catch
+
+                    End Try
+                Next
+            End Using
+
+        End Function
+
+        Public Shared Function FindProcessesHoldingFileHandle(ParamArray nativeFullPaths As String()) As IEnumerable(Of HandleTableEntryInformation)
+
+            Return _
+                From handle In QueryHandleTableHandleInformation(GetSystemHandleTable())
+                Where
+                    Not String.IsNullOrWhiteSpace(handle.ObjectName) AndAlso
+                    Array.Exists(nativeFullPaths, AddressOf handle.ObjectName.Equals)
+
+        End Function
+
+        ''' <summary>
         ''' Sends an IOCTL control request to a device driver, or an FSCTL control request to a filesystem driver.
         ''' </summary>
         ''' <param name="device">Open handle to filer or device.</param>
@@ -1491,14 +1984,14 @@ Namespace IO
             End If
 
             Dim rc =
-              NativeFileIO.Win32API.DeviceIoControl(device,
-                                                    ctrlcode,
-                                                    bytes,
-                                                    indatasize,
-                                                    bytes,
-                                                    If(bytes Is Nothing, 0UI, CUInt(bytes.Length)),
-                                                    outdatasize,
-                                                    IntPtr.Zero)
+              Win32API.DeviceIoControl(device,
+                                        ctrlcode,
+                                        bytes,
+                                        indatasize,
+                                        bytes,
+                                        If(bytes Is Nothing, 0UI, CUInt(bytes.Length)),
+                                        outdatasize,
+                                        IntPtr.Zero)
 
             If Not rc Then
                 Throw New Win32Exception
@@ -2772,6 +3265,8 @@ Namespace IO
 
             While rc = 0
 
+                Trace.WriteLine($"Found child devinst: {child}")
+
                 Yield child
 
                 rc = Win32API.CM_Get_Sibling(child, child, 0)
@@ -2784,17 +3279,21 @@ Namespace IO
 
             Dim regtype As RegistryValueKind = Nothing
 
-            Dim buffer(0 To 65535) As Byte
+            Dim buffer(0 To 518) As Byte
             Dim buffersize = buffer.Length
 
             Dim rc = Win32API.CM_Get_DevNode_Registry_Property(devInst, Win32API.CmDevNodeRegistryProperty.CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, regtype, buffer, buffersize, 0)
 
             If rc <> 0 Then
-                Trace.WriteLine($"Error getting registry property for device. Status=0x{rc:X}")
+                Trace.WriteLine($"Error getting registry property for device {devInst}. Status=0x{rc:X}")
                 Return Nothing
             End If
 
-            Return Encoding.Unicode.GetString(buffer, 0, buffersize - 2)
+            Dim name = Encoding.Unicode.GetString(buffer, 0, buffersize - 2)
+
+            Trace.WriteLine($"Found child physical device object name: '{name}'")
+
+            Return name
 
         End Function
 

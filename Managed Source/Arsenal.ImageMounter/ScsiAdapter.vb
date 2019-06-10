@@ -418,9 +418,11 @@ Public Class ScsiAdapter
                 Trace.WriteLine($"Dismounting volume: {volname}")
 
                 Using vol = NativeFileIO.OpenFileHandle(volname, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, FileOptions.None)
-                    NativeFileIO.FlushBuffers(vol)
-                    NativeFileIO.SetVolumeOffline(vol, offline:=True)
-                    'NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(vol, Force:=False))
+                    If NativeFileIO.IsDiskWritable(vol) Then
+                        NativeFileIO.FlushBuffers(vol)
+                        'NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(vol, Force:=False))
+                        NativeFileIO.SetVolumeOffline(vol, offline:=True)
+                    End If
                 End Using
             Next
 

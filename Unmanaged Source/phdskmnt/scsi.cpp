@@ -1180,7 +1180,8 @@ ScsiOpVPDDiskUnit(
 
     ASSERT(pSrb->DataTransferLength>0);
 
-    KdPrint(("PhDskMnt::ScsiOpVPDDiskUnit:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
+    KdPrint(("PhDskMnt::ScsiOpVPDDiskUnit:  pHBAExt = 0x%p, pSrb=0x%p, PageCode=%X\n",
+        pHBAExt, pSrb, (int)pVpdInquiry->PageCode));
 
     switch (pVpdInquiry->PageCode)
     {

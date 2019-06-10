@@ -1185,7 +1185,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
     // Try to initialize diff device. This will most likely fail at
     // this point because it is not ready to receive requests yet,
     // so ignore errors and resume that later at some other request.
-    (void)AIMWrFltrInitializeDiffDeviceUnsafe(device_extension);
+    //(void)AIMWrFltrInitializeDiffDeviceUnsafe(device_extension);
 
     KdPrint((
         "AIMWrFltrAddDevice: Attached to device '%wZ' above driver '%wZ'. Filter device flags: %#x Target device flags: %#x Physical device flags: %#x\n",
