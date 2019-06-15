@@ -386,6 +386,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|ARM64'">
     <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'">
+    <TimeStampServer>http://timestamp.globalsign.com/scripts/timstamp.dll</TimeStampServer>
+  </PropertyGroup>
   <!-- The WrappedTaskItems label is used by the conversion tool to identify the location where items 
         associated with wrapped tasks will reside.-->
   <ItemGroup Label="WrappedTaskItems">

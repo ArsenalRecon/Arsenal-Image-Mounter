@@ -42,7 +42,8 @@ TARGETLIBS=$(TARGETLIBS)                                                        
 
 INCLUDES=.\inc;                 \
 	   $(PUBLIC_ROOT)\ddk\inc; \
-	   ..\inc
+	   ..\inc;              \
+	   ..\phdskmnt\inc
 
 
 DRIVERTYPE=WDM

@@ -782,12 +782,6 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         pSrb->DataTransferLength = pCdb->CDB6INQUIRY3.AllocationLength;
     }
 
-    if (pSrb->DataTransferLength > 0)
-    {
-        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
-        pInqData->DeviceType = pLUExt->DeviceType;
-    }
-
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
         KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%X\n", pCdb->CDB6INQUIRY.PageCode));
@@ -813,6 +807,12 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     }
     else
     {
+        if (pSrb->DataTransferLength > 0)
+        {
+            RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+            pInqData->DeviceType = pLUExt->DeviceType;
+        }
+
         if (pSrb->DataTransferLength > FIELD_OFFSET(INQUIRYDATA, AdditionalLength))
         {
 #if _NT_TARGET_VERSION >= 0x601 && !defined(_IA64_)
@@ -1026,6 +1026,8 @@ ScsiOpVPDCdRomUnit(
 
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
+        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        pSupportedPages->DeviceType = pLUExt->DeviceType;
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
         pSupportedPages->PageLength = 1;
         pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
@@ -1080,6 +1082,8 @@ ScsiOpVPDCdRomUnit(
 
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
+        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        pSupportedPages->DeviceType = pLUExt->DeviceType;
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
         pSupportedPages->PageLength = 3;
         pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
@@ -1104,6 +1108,8 @@ ScsiOpVPDCdRomUnit(
 
         pVpd = (PVPD_SERIAL_NUMBER_PAGE)pSrb->DataBuffer;                        // Point to output buffer.
 
+        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        pVpd->DeviceType = pLUExt->DeviceType;
         pVpd->PageCode = VPD_SERIAL_NUMBER;
 
         pVpd->PageLength = 8;
@@ -1122,9 +1128,6 @@ ScsiOpVPDCdRomUnit(
 
     case VPD_DEVICE_IDENTIFIERS:
     {
-        PVPD_IDENTIFICATION_PAGE IdentificationPage =
-            (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;
-
         if (pSrb->DataTransferLength < sizeof(VPD_IDENTIFICATION_PAGE) +
             sizeof(VPD_IDENTIFICATION_DESCRIPTOR) + sizeof(pLUExt->UniqueId))
         {
@@ -1132,6 +1135,11 @@ ScsiOpVPDCdRomUnit(
         }
         else
         {
+            PVPD_IDENTIFICATION_PAGE IdentificationPage =
+                (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;
+
+            RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+            IdentificationPage->DeviceType = pLUExt->DeviceType;
             IdentificationPage->PageCode = VPD_DEVICE_IDENTIFIERS;
             IdentificationPage->PageLength =
                 sizeof(VPD_IDENTIFICATION_DESCRIPTOR) +
@@ -1200,6 +1208,8 @@ ScsiOpVPDDiskUnit(
 
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
+        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        pSupportedPages->DeviceType = pLUExt->DeviceType;
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
         pSupportedPages->PageLength = 5;
         pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
@@ -1222,6 +1232,8 @@ ScsiOpVPDDiskUnit(
         {
             PVPD_BLOCK_LIMITS_PAGE outputBuffer = (PVPD_BLOCK_LIMITS_PAGE)pSrb->DataBuffer;
 
+            RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+            outputBuffer->DeviceType = pLUExt->DeviceType;
             outputBuffer->PageCode = VPD_BLOCK_LIMITS;
 
             // 
@@ -1290,6 +1302,8 @@ ScsiOpVPDDiskUnit(
         {
             PVPD_LOGICAL_BLOCK_PROVISIONING_PAGE outputBuffer = (PVPD_LOGICAL_BLOCK_PROVISIONING_PAGE)pSrb->DataBuffer;
 
+            RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+            outputBuffer->DeviceType = pLUExt->DeviceType;
             outputBuffer->PageCode = VPD_LOGICAL_BLOCK_PROVISIONING;
             outputBuffer->PageLength[1] = 0x04;      // 8 bytes data in total 
             outputBuffer->ProvisioningType = PROVISIONING_TYPE_THIN;
@@ -1315,6 +1329,8 @@ ScsiOpVPDDiskUnit(
         {
             PVPD_BLOCK_DEVICE_CHARACTERISTICS_PAGE outputBuffer = (PVPD_BLOCK_DEVICE_CHARACTERISTICS_PAGE)pSrb->DataBuffer;
 
+            RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+            outputBuffer->DeviceType = pLUExt->DeviceType;
             outputBuffer->PageCode = VPD_BLOCK_DEVICE_CHARACTERISTICS;
             outputBuffer->PageLength = 0x3C;        // must be 0x3C per spec
             outputBuffer->MediumRotationRateMsb = 0;
@@ -1328,9 +1344,6 @@ ScsiOpVPDDiskUnit(
 
     case VPD_DEVICE_IDENTIFIERS:
     {
-        PVPD_IDENTIFICATION_PAGE IdentificationPage =
-            (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;
-
         ULONG required_size =
             (ULONG)(LONG_PTR)&((PVPD_IDENTIFICATION_DESCRIPTOR)
             (((VPD_IDENTIFICATION_PAGE*)0)->Descriptors))->Identifier +
@@ -1342,6 +1355,11 @@ ScsiOpVPDDiskUnit(
         }
         else
         {
+            PVPD_IDENTIFICATION_PAGE IdentificationPage =
+                (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;
+
+            RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+            IdentificationPage->DeviceType = pLUExt->DeviceType;
             IdentificationPage->PageCode = VPD_DEVICE_IDENTIFIERS;
             IdentificationPage->PageLength =
                 sizeof(VPD_IDENTIFICATION_DESCRIPTOR) +
@@ -1404,6 +1422,8 @@ __in PSCSI_REQUEST_BLOCK  pSrb
             return;
         }
 
+        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        pSupportedPages->DeviceType = pLUExt->DeviceType;
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
@@ -1430,6 +1450,8 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
         pVpd = (PVPD_SERIAL_NUMBER_PAGE)pSrb->DataBuffer;                        // Point to output buffer.
 
+        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        pVpd->DeviceType = pLUExt->DeviceType;
         pVpd->PageCode = VPD_SERIAL_NUMBER;
         pVpd->PageLength = 8 + 32;
 
@@ -1463,6 +1485,8 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
         pVpid = (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;                     // Point to output buffer.
 
+        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        pVpd->DeviceType = pLUExt->DeviceType;
         pVpid->PageCode = VPD_DEVICE_IDENTIFIERS;
 
         pVpidDesc =                                   // Point to first (and only) descriptor.

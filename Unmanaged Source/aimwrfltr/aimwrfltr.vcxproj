@@ -472,6 +472,7 @@
     <EnableInf2cat>false</EnableInf2cat>
     <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
     <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
+    <TimeStampServer>http://timestamp.globalsign.com/scripts/timstamp.dll</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>

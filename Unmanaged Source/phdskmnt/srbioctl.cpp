@@ -401,13 +401,15 @@ __inout __deref PKIRQL              LowestAssumedIrql
     if (*Length <
         sizeof(SRB_IMSCSI_CREATE_DATA) +
         device_extension->ObjectName.Length +
+        device_extension->WriteOverlayFileName.Length +
         sizeof(*create_data->Fields.FileName))
     {
         KdPrint(("PhDskMnt::ImScsiQueryDevice: Buffer too small. Got %u, need %u.\n",
             *Length,
             (ULONG)(sizeof(SRB_IMSCSI_CREATE_DATA) +
-            device_extension->ObjectName.Length +
-            sizeof(*create_data->Fields.FileName))));
+                device_extension->ObjectName.Length +
+                device_extension->WriteOverlayFileName.Length +
+                sizeof(*create_data->Fields.FileName))));
 
         *Length = sizeof(SRB_IO_CONTROL);
         return STATUS_BUFFER_TOO_SMALL;
@@ -456,6 +458,9 @@ __inout __deref PKIRQL              LowestAssumedIrql
     if (device_extension->FakeDiskSignature != 0)
         create_data->Fields.Flags |= IMSCSI_FAKE_DISK_SIG;
 
+    if (device_extension->WriteOverlay != NULL)
+        create_data->Fields.Flags |= IMSCSI_OPTION_WRITE_OVERLAY;
+
     create_data->Fields.ImageOffset = device_extension->ImageOffset;
 
     create_data->Fields.FileNameLength = device_extension->ObjectName.Length;
@@ -465,9 +470,39 @@ __inout __deref PKIRQL              LowestAssumedIrql
         device_extension->ObjectName.Buffer,
         device_extension->ObjectName.Length);
 
-    *Length = sizeof(SRB_IMSCSI_CREATE_DATA) +
-        create_data->Fields.FileNameLength -
-        sizeof(*create_data->Fields.FileName);
+    create_data->Fields.WriteOverlayFileNameLength =
+        device_extension->WriteOverlayFileName.Length;
+
+    if (device_extension->WriteOverlayFileName.Length > 0)
+        RtlCopyMemory(((PUCHAR)create_data->Fields.FileName) +
+            create_data->Fields.FileNameLength,
+            device_extension->WriteOverlayFileName.Buffer,
+            device_extension->WriteOverlayFileName.Length);
+
+    /// Copy handle to write overlay if enough size for that
+    if (device_extension->WriteOverlay != NULL &&
+        *Length >= FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, Fields.FileName) +
+        create_data->Fields.FileNameLength +
+        create_data->Fields.WriteOverlayFileNameLength +
+        sizeof(HANDLE))
+    {
+        PHANDLE handle = (PHANDLE)(((PUCHAR)create_data->Fields.FileName) +
+            create_data->Fields.FileNameLength +
+            create_data->Fields.WriteOverlayFileNameLength);
+
+        *handle = device_extension->WriteOverlay;
+
+        *Length = FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, Fields.FileName) +
+            create_data->Fields.FileNameLength +
+            create_data->Fields.WriteOverlayFileNameLength +
+            sizeof(HANDLE);
+    }
+    else
+    {
+        *Length = FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, Fields.FileName) +
+            create_data->Fields.FileNameLength +
+            create_data->Fields.WriteOverlayFileNameLength;
+    }
 
     KdPrint(("PhDskMnt::ImScsiQueryDevice: End.\n"));
     return STATUS_SUCCESS;

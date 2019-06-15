@@ -125,6 +125,13 @@ Public Enum DeviceFlags As UInt32
     ''' </summary>
     SharedImage = &H40000UI
 
+    ''' <summary>
+    ''' Use differencing image file as write overlay. This is only valid together with read-only flag and file or proxy
+    ''' types and when a write overlay image file is specified when the virtual disk is created. It also needs the write
+    ''' filter driver to be installed and registered.
+    ''' </summary>
+    WriteOverlay = &H80000UI
+
 End Enum
 
 

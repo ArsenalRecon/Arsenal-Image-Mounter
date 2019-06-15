@@ -432,6 +432,20 @@ Public Class DiskDevice
     End Sub
 
     ''' <summary>
+    ''' Get live statistics from write filter driver.
+    ''' </summary>
+    Public Function GetWriteOverlayStatus() As WriteFilterStatistics?
+
+        Dim statistics As WriteFilterStatistics = Nothing
+        If Not API.GetWriteOverlayStatus(SafeFileHandle, statistics) Then
+            Return Nothing
+        End If
+
+        Return statistics
+
+    End Function
+
+    ''' <summary>
     ''' Returns an DiskStream object that can be used to directly access disk data.
     ''' </summary>
     Public Function GetRawDiskStream() As DiskStream

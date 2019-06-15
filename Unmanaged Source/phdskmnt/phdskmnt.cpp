@@ -306,7 +306,10 @@ __in PUNICODE_STRING pRegistryPath
         // Register our own dispatch hooks
 
         pMPDrvInfo->pChainUnload = pDrvObj->DriverUnload;
+        pMPDrvInfo->pChainDeviceControl = pDrvObj->MajorFunction[IRP_MJ_DEVICE_CONTROL];
+
         pDrvObj->DriverUnload = ImScsiUnload;
+        pDrvObj->MajorFunction[IRP_MJ_DEVICE_CONTROL] = ImScsiDeviceControl;
     }
     else
     {
@@ -318,6 +321,80 @@ __in PUNICODE_STRING pRegistryPath
     return status;
 }                                                     // End DriverEntry().
 
+NTSTATUS
+ImScsiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
+{
+    PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(Irp);
+
+    NTSTATUS status;
+
+    if (io_stack->MajorFunction == IRP_MJ_DEVICE_CONTROL)
+    {
+        PSRB_IMSCSI_CREATE_DATA create_data =
+            (PSRB_IMSCSI_CREATE_DATA)Irp->AssociatedIrp.SystemBuffer;
+
+        ULONG size = max(io_stack->Parameters.DeviceIoControl.OutputBufferLength,
+            io_stack->Parameters.DeviceIoControl.InputBufferLength);
+
+        if (Irp->RequestorMode == KernelMode &&
+            io_stack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SCSI_MINIPORT &&
+            size >= sizeof(*create_data) &&
+            memcmp(create_data->SrbIoControl.Signature, IMSCSI_FUNCTION_SIGNATURE, sizeof(create_data->SrbIoControl.Signature)) == 0 &&
+            create_data->SrbIoControl.ControlCode == SMP_IMSCSI_QUERY_DEVICE)
+        {
+            KLOCK_QUEUE_HANDLE LockHandle;
+            KIRQL LowestAssumedIrql = PASSIVE_LEVEL;
+            PLIST_ENTRY list_ptr;
+            pHW_HBA_EXT pHBAExt = NULL;
+
+            ImScsiAcquireLock(                   // Serialize the linked list of HBA.
+                &pMPDrvInfoGlobal->DrvInfoLock, &LockHandle, LowestAssumedIrql);
+
+            for (list_ptr = pMPDrvInfoGlobal->ListMPHBAObj.Flink;
+                list_ptr != &pMPDrvInfoGlobal->ListMPHBAObj;
+                list_ptr = list_ptr->Flink
+                )
+            {
+                pHBAExt = CONTAINING_RECORD(list_ptr, HW_HBA_EXT, List);
+                if (!IsListEmpty(&pHBAExt->LUList))
+                {
+                    break;
+                }
+
+                pHBAExt = NULL;
+            }
+
+            ImScsiReleaseLock(&LockHandle, &LowestAssumedIrql);
+         
+            if (pHBAExt == NULL)
+            {
+                status = STATUS_INVALID_DEVICE_REQUEST;
+                size = 0;
+            }
+            else
+            {
+                status = ImScsiQueryDevice(pHBAExt, create_data, &size, &LowestAssumedIrql);
+            }
+
+            Irp->IoStatus.Information = size;
+            Irp->IoStatus.Status = status;
+            IoCompleteRequest(Irp, IO_NO_INCREMENT);
+        }
+        else
+        {
+            status = pMPDrvInfoGlobal->pChainDeviceControl(DeviceObject, Irp);
+        }
+    }
+    else
+    {
+        status = STATUS_DRIVER_INTERNAL_ERROR;
+        Irp->IoStatus.Status = status;
+        Irp->IoStatus.Information = 0;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    }
+
+    return status;
+}
 
 /**************************************************************************************************/
 /*                                                                                                */

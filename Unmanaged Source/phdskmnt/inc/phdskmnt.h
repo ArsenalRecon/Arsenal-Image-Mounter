@@ -130,6 +130,10 @@ extern "C" {
 #define SCSIOP_UNMAP 0x42
 #endif
 
+#ifndef _Dispatch_type_
+#define _Dispatch_type_(x)
+#endif
+
     typedef struct _MPDriverInfo         MPDriverInfo, *pMPDriverInfo;
     typedef struct _MP_REG_INFO          MP_REG_INFO, *pMP_REG_INFO;
     typedef struct _HW_LU_EXTENSION      HW_LU_EXTENSION, *pHW_LU_EXTENSION;
@@ -155,6 +159,7 @@ extern "C" {
         LIST_ENTRY                     ListMPHBAObj;      // Header of list of HW_HBA_EXT objects.
         PDRIVER_OBJECT                 pDriverObj;
         PDRIVER_UNLOAD                 pChainUnload;
+        PDRIVER_DISPATCH               pChainDeviceControl;
         UCHAR                          GlobalsInitialized;
         KEVENT                         StopWorker;
         PKTHREAD                       WorkerThread;
@@ -271,6 +276,8 @@ extern "C" {
         BOOLEAN               UseProxy;
         PFILE_OBJECT          FileObject;
         UCHAR                 UniqueId[16];
+        UNICODE_STRING        WriteOverlayFileName;
+        HANDLE                WriteOverlay;
     } HW_LU_EXTENSION, *pHW_LU_EXTENSION;
 
     typedef struct _HW_SRB_EXTENSION {
@@ -308,6 +315,9 @@ extern "C" {
 
     IO_COMPLETION_ROUTINE
         ImScsiIoCtlCallCompletion;
+
+    _Dispatch_type_(IRP_MJ_DEVICE_CONTROL) DRIVER_DISPATCH
+        ImScsiDeviceControl;
 
     DRIVER_UNLOAD
         ImScsiUnload;

@@ -121,6 +121,12 @@
 /// Check if flags indicate shared write mode
 #define IMSCSI_SHARED_IMAGE(x)          ((ULONG)(x) & 0x00040000)
 
+/// Redirect write operations to a differencing image. Valid for file or proxy
+/// modes.
+#define IMSCSI_OPTION_WRITE_OVERLAY     0x00080000
+/// Check if flags indicate write overlay mode
+#define IMSCSI_WRITE_OVERLAY(x)         ((ULONG)(x) & 0x00080000)
+
 /// Specify as device number to remove all devices.
 #define IMSCSI_ALL_DEVICES              (0x00FFFFFFUL)
 
@@ -209,8 +215,15 @@ typedef struct _IMSCSI_DEVICE_CONFIGURATION
     /// Bytes per sector
     ULONG           BytesPerSector;
 
-    /// Not used
-    ULONG           Reserved;
+    union
+    {
+        /// Length of write overlay file name after FileName field, if
+        /// Flags field contains write overlay flag.
+        USHORT      WriteOverlayFileNameLength;
+
+        /// Padding if none of flag specific fields are in use.
+        ULONG       Reserved;
+    };
 
     /// The byte offset in image file where the virtual disk data begins.
     LARGE_INTEGER   ImageOffset;

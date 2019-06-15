@@ -109,6 +109,8 @@ Namespace IO
             Public Const ERROR_SERVICE_ALREADY_RUNNING As UInt32 = 1056
 
             Public Shared ReadOnly SerenumBusEnumeratorGuid As New Guid("{4D36E97B-E325-11CE-BFC1-08002BE10318}")
+            Public Shared ReadOnly DiskDriveGuid As New Guid("{4D36E967-E325-11CE-BFC1-08002BE10318}")
+
             Public Shared ReadOnly DiskClassGuid As New Guid("{53F56307-B6BF-11D0-94F2-00A0C91EFB8B}")
             Public Shared ReadOnly CdRomClassGuid As New Guid("{53F56308-B6BF-11D0-94F2-00A0C91EFB8B}")
             Public Shared ReadOnly StoragePortClassGuid As New Guid("{2ACCFE60-C130-11D2-B082-00A0C91EFB8B}")
@@ -905,6 +907,23 @@ Namespace IO
               length As Int32,
               Flags As UInt32) As UInt32
 
+            Public Declare Auto Function CM_Get_Class_Registry_Property Lib "setupapi.dll" (
+              <[In]> ByRef ClassGuid As Guid,
+              Prop As CmClassRegistryProperty,
+              <Out> ByRef RegDataType As RegistryValueKind,
+              <Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=4)> Buffer As Byte(),
+              <[In], Out> ByRef BufferLength As Int32,
+              Flags As UInt32,
+              Optional hMachine As IntPtr = Nothing) As UInt32
+
+            Public Declare Auto Function CM_Set_Class_Registry_Property Lib "setupapi.dll" (
+              <[In]> ByRef ClassGuid As Guid,
+              Prop As CmClassRegistryProperty,
+              <[In], MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=3)> Buffer As Byte(),
+              length As Int32,
+              Flags As UInt32,
+              Optional hMachine As IntPtr = Nothing) As UInt32
+
             Public Declare Auto Function CM_Get_Child Lib "setupapi.dll" (
               <Out> ByRef dnDevInst As UInt32,
               DevInst As UInt32,
@@ -1228,6 +1247,10 @@ Namespace IO
               RebootRequired As IntPtr) As Boolean
 
             Public Declare Auto Function GetConsoleWindow Lib "kernel32.dll" () As IntPtr
+
+            Public Enum CmClassRegistryProperty As UInt32
+                CM_CRP_UPPERFILTERS = &H12
+            End Enum
 
             Public Enum CmDevNodeRegistryProperty As UInt32
                 CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME = &HF
@@ -3315,6 +3338,24 @@ Namespace IO
 
         End Function
 
+        Public Shared Function GetRegisteredFilters(devClass As Guid) As String()
+
+            Dim regtype As RegistryValueKind = Nothing
+
+            Dim buffer(0 To 65535) As Byte
+            Dim buffersize = buffer.Length
+
+            Dim rc = Win32API.CM_Get_Class_Registry_Property(devClass, Win32API.CmClassRegistryProperty.CM_CRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
+
+            If rc <> 0 Then
+                Trace.WriteLine($"Error getting registry property for class. Status=0x{rc:X}")
+                Return Nothing
+            End If
+
+            Return Encoding.Unicode.GetString(buffer, 0, buffersize - 2).Split({New Char}, StringSplitOptions.RemoveEmptyEntries)
+
+        End Function
+
         Public Shared Sub SetRegisteredFilters(devInst As UInt32, filters As String())
 
             Dim str = String.Join(New Char, filters) & New Char & New Char
@@ -3325,6 +3366,20 @@ Namespace IO
 
             If rc <> 0 Then
                 Throw New Exception($"Error setting registry property for device. Status=0x{rc:X}")
+            End If
+
+        End Sub
+
+        Public Shared Sub SetRegisteredFilters(devClass As Guid, filters As String())
+
+            Dim str = String.Join(New Char, filters) & New Char & New Char
+            Dim buffer = Encoding.Unicode.GetBytes(str)
+            Dim buffersize = buffer.Length
+
+            Dim rc = Win32API.CM_Set_Class_Registry_Property(devClass, Win32API.CmClassRegistryProperty.CM_CRP_UPPERFILTERS, buffer, buffersize, 0)
+
+            If rc <> 0 Then
+                Throw New Exception($"Error setting registry property for class. Status=0x{rc:X}")
             End If
 
         End Sub
@@ -3353,6 +3408,48 @@ Namespace IO
 
         End Function
 
+        Public Shared Function AddFilter(devClass As Guid, driver As String, addfirst As Boolean) As Boolean
+
+            Dim filters = If(GetRegisteredFilters(devClass), {})
+
+            If addfirst AndAlso
+                driver.Equals(filters.FirstOrDefault(), StringComparison.OrdinalIgnoreCase) Then
+
+                Trace.WriteLine($"Filter '{driver}' already registered first for class {devClass}")
+                Return False
+
+            ElseIf (Not addfirst) AndAlso
+                driver.Equals(filters.LastOrDefault(), StringComparison.OrdinalIgnoreCase) Then
+
+                Trace.WriteLine($"Filter '{driver}' already registered last for class {devClass}")
+                Return False
+
+            End If
+
+            Dim filter_list As New List(Of String)(filters)
+
+            filter_list.RemoveAll(Function(f) f.Equals(driver, StringComparison.OrdinalIgnoreCase))
+
+            If addfirst Then
+
+                filter_list.Insert(0, driver)
+
+            Else
+
+                filter_list.Add(driver)
+
+            End If
+
+            filters = filter_list.ToArray()
+
+            Trace.WriteLine($"Registering filters '{String.Join(",", filters)}' for class {devClass}")
+
+            SetRegisteredFilters(devClass, filters)
+
+            Return True
+
+        End Function
+
         Public Shared Function RemoveFilter(devInst As UInt32, driver As String) As Boolean
 
             Dim filters = GetRegisteredFilters(devInst)?.ToList()
@@ -3372,6 +3469,30 @@ Namespace IO
             Trace.WriteLine($"Removing filter '{driver}' from devinst {devInst}")
 
             SetRegisteredFilters(devInst, filters.ToArray())
+
+            Return True
+
+        End Function
+
+        Public Shared Function RemoveFilter(devClass As Guid, driver As String) As Boolean
+
+            Dim filters = GetRegisteredFilters(devClass)?.ToList()
+
+            If filters Is Nothing Then
+                Trace.WriteLine($"No filters registered for class {devClass}")
+                Return False
+            End If
+
+            Dim c = filters.RemoveAll(Function(f) f.Equals(driver, StringComparison.OrdinalIgnoreCase))
+
+            If c <= 0 Then
+                Trace.WriteLine($"Filter '{driver}' not registered for class {devClass}")
+                Return False
+            End If
+
+            Trace.WriteLine($"Removing filter '{driver}' from class {devClass}")
+
+            SetRegisteredFilters(devClass, filters.ToArray())
 
             Return True
 
@@ -3805,7 +3926,7 @@ Namespace IO
     End Class
 
     <StructLayout(LayoutKind.Sequential)>
-    Public Structure AIMWRFLTR_DEVICE_STATISTICS
+    Public Structure WriteFilterStatistics
 
         Public Sub Initialize()
             _Version = Marshal.SizeOf(Me)

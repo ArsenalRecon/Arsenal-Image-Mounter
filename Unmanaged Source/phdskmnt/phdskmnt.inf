@@ -111,7 +111,7 @@ HKR, "Parameters", "NumberOfBuses",     %REG_DWORD%,  0x00000001
 DisplayName    = "Arsenal Image Mounter Write Filter"
 Description    = "Storage Write Filter"
 ServiceType    = %SERVICE_KERNEL_DRIVER%
-StartType      = %SERVICE_DEMAND_START%
+StartType      = %SERVICE_BOOT_START%
 ErrorControl   = %SERVICE_ERROR_NORMAL%
 ServiceBinary  = %12%\aimwrfltr.sys
 LoadOrderGroup = SCSI Miniport

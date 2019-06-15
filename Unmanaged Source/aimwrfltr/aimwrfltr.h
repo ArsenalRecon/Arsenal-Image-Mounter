@@ -658,6 +658,9 @@ extern "C"
     NTSTATUS
         AIMWrFltrInitializeDiffDevice(IN PDEVICE_EXTENSION DeviceExtension);
 
+    NTSTATUS
+        AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension);
+
     FORCEINLINE
         PDEVICE_OBJECT
         AIMWrFltrGetLowerDeviceObjectAndDereference(

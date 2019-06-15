@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 
 
@@ -241,7 +242,7 @@ Public Class ScsiAdapter
     ''' <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
     ''' <param name="Filename">Name of disk image file to use or create. If disk image file already exists, the DiskSize
     ''' parameter can be zero in which case current disk image file size will be used as virtual disk size. If Filename
-    ''' paramter is Nothing/null disk will be created in virtual memory and not backed by a physical disk image file.</param>
+    ''' parameter is Nothing/null disk will be created in virtual memory and not backed by a physical disk image file.</param>
     ''' <param name="NativePath">Specifies whether Filename parameter specifies a path in Windows native path format, the
     ''' path format used by drivers in Windows NT kernels, for example \Device\Harddisk0\Partition1\imagefile.img. If this
     ''' parameter is False path in FIlename parameter will be interpreted as an ordinary user application path.</param>
@@ -255,6 +256,56 @@ Public Class ScsiAdapter
                             Flags As DeviceFlags,
                             Filename As String,
                             NativePath As Boolean,
+                            ByRef DeviceNumber As UInt32)
+
+        CreateDevice(
+            DiskSize,
+            BytesPerSector,
+            ImageOffset,
+            Flags,
+            Filename,
+            NativePath,
+            WriteOverlayFilename:=Nothing,
+            WriteOverlayNativePath:=Nothing,
+            DeviceNumber:=DeviceNumber)
+
+    End Sub
+
+    ''' <summary>
+    ''' Creates a new virtual disk.
+    ''' </summary>
+    ''' <param name="DiskSize">Size of virtual disk. If this parameter is zero, current size of disk image file will
+    ''' automatically be used as virtual disk size.</param>
+    ''' <param name="BytesPerSector">Number of bytes per sector for virtual disk geometry. This parameter can be zero
+    '''  in which case most reasonable value will be automatically used by the driver.</param>
+    ''' <param name="ImageOffset">A skip offset if virtual disk data does not begin immediately at start of disk image file.
+    ''' Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter
+    ''' or Windows filesystem drivers.</param>
+    ''' <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
+    ''' <param name="Filename">Name of disk image file to use or create. If disk image file already exists, the DiskSize
+    ''' parameter can be zero in which case current disk image file size will be used as virtual disk size. If Filename
+    ''' parameter is Nothing/null disk will be created in virtual memory and not backed by a physical disk image file.</param>
+    ''' <param name="NativePath">Specifies whether Filename parameter specifies a path in Windows native path format, the
+    ''' path format used by drivers in Windows NT kernels, for example \Device\Harddisk0\Partition1\imagefile.img. If this
+    ''' parameter is False path in Filename parameter will be interpreted as an ordinary user application path.</param>
+    ''' <param name="WriteOverlayFilename">Name of differencing image file to use for write overlay operation. Flags fields
+    ''' must also specify read-only device and write overlay operation for this field to be used.</param>
+    ''' <param name="WriteOverlayNativePath">Specifies whether WriteOverlayFilename parameter specifies a path in Windows
+    ''' native path format, the path format used by drivers in Windows NT kernels, for example
+    ''' \Device\Harddisk0\Partition1\imagefile.img. If this parameter is False path in Filename parameter will be interpreted
+    ''' as an ordinary user application path.</param>
+    ''' <param name="DeviceNumber">In: Device number for device to create. Device number must not be in use by an existing
+    ''' virtual disk. For automatic allocation of device number, pass ScsiAdapter.AutoDeviceNumber.
+    '''
+    ''' Out: Device number for created device.</param>
+    Public Sub CreateDevice(DiskSize As Int64,
+                            BytesPerSector As UInt32,
+                            ImageOffset As Int64,
+                            Flags As DeviceFlags,
+                            Filename As String,
+                            NativePath As Boolean,
+                            WriteOverlayFilename As String,
+                            WriteOverlayNativePath As Boolean,
                             ByRef DeviceNumber As UInt32)
 
         '' Temporary variable for passing through lambda function
@@ -290,14 +341,29 @@ Public Class ScsiAdapter
         End If
 
         '' Show what we got
-        Trace.WriteLine("ScsiAdapter.CreateDevice: Native filename='" & Filename & "'")
+        Trace.WriteLine($"ScsiAdapter.CreateDevice: Native filename='{Filename}'")
+
+        If (Not String.IsNullOrWhiteSpace(WriteOverlayFilename)) AndAlso (Not WriteOverlayNativePath) Then
+            WriteOverlayFilename = NativeFileIO.GetNtPath(WriteOverlayFilename)
+            NativeFileIO.AddFilter(NativeFileIO.Win32API.DiskDriveGuid, "aimwrfltr", addfirst:=True)
+        End If
+
+        '' Show what we got
+        Trace.WriteLine($"ScsiAdapter.CreateDevice: Native write overlay filename='{WriteOverlayFilename}'")
+
+        Dim ReservedField(0 To 3) As Byte
+
+        If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
+            Dim bytes = BitConverter.GetBytes(CUShort(WriteOverlayFilename.Length * 2))
+            Array.Copy(bytes, 0, ReservedField, 0, bytes.Length)
+        End If
 
         Dim FillRequestData =
           Sub(Request As BinaryWriter)
               Request.Write(devnr)
               Request.Write(DiskSize)
               Request.Write(BytesPerSector)
-              Request.Write(0UI)
+              Request.Write(ReservedField)
               Request.Write(ImageOffset)
               Request.Write(CUInt(Flags))
               If String.IsNullOrEmpty(Filename) Then
@@ -305,6 +371,10 @@ Public Class ScsiAdapter
               Else
                   Dim bytes = Encoding.Unicode.GetBytes(Filename)
                   Request.Write(CUShort(bytes.Length))
+                  Request.Write(bytes)
+              End If
+              If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
+                  Dim bytes = Encoding.Unicode.GetBytes(WriteOverlayFilename)
                   Request.Write(bytes)
               End If
           End Sub
@@ -324,12 +394,13 @@ Public Class ScsiAdapter
 
         DeviceNumber = Response.ReadUInt32()
         DiskSize = Response.ReadInt64()
-        BytesPerSector = Response.ReadUInt32
+        BytesPerSector = Response.ReadUInt32()
+        ReservedField = Response.ReadBytes(4)
         ImageOffset = Response.ReadInt64()
         Flags = CType(Response.ReadUInt32(), DeviceFlags)
 
         While Not GetDeviceList().Contains(DeviceNumber)
-            Trace.WriteLine("Waiting for new device " & DeviceNumber.ToString("X6") & " to be registered by driver...")
+            Trace.WriteLine($"Waiting for new device {DeviceNumber:X6} to be registered by driver...")
             Thread.Sleep(2500)
         End While
 
@@ -343,41 +414,72 @@ Public Class ScsiAdapter
 
             Try
                 DiskDevice = New DiskDevice(ScsiAddress, FileAccess.Read)
-                Exit Do
 
             Catch ex As DriveNotFoundException
-                Trace.WriteLine("Error opening device: " & ex.ToString())
+                Trace.WriteLine($"Error opening device: {ex.JoinMessages()}")
                 waittime += TimeSpan.FromMilliseconds(500)
+
+                Trace.WriteLine("Not ready, rescanning SCSI adapter...")
+
+                RescanBus()
+
+                Continue Do
 
             End Try
 
-            Trace.WriteLine("Not ready, rescanning SCSI adapter...")
+            Using DiskDevice
 
-            RescanBus()
+                If DiskDevice.DiskSize = 0 Then
 
-        Loop
+                    '' Wait at most 20 x 500 msec for device to get initialized by driver
+                    For i = 1 To 20
 
-        Using DiskDevice
+                        Thread.Sleep(500 * i)
 
-            If DiskDevice.DiskSize = 0 Then
+                        If DiskDevice.DiskSize <> 0 Then
+                            Exit For
+                        End If
 
-                '' Wait at most 20 x 500 msec for device to get initialized by driver
-                For i = 1 To 20
+                        Trace.WriteLine("Updating disk properties...")
+                        DiskDevice.UpdateProperties()
 
-                    Thread.Sleep(500 * i)
+                    Next
 
-                    If DiskDevice.DiskSize <> 0 Then
-                        Exit For
+                End If
+
+                If (Flags And DeviceFlags.WriteOverlay) = DeviceFlags.WriteOverlay AndAlso
+                    Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
+
+                    Dim status = DiskDevice.GetWriteOverlayStatus()
+
+                    If status.HasValue Then
+
+                        Trace.WriteLine($"Write filter attached, {status.Value.UsedDiffSize} differencing bytes used.")
+
+                        Exit Do
+
                     End If
 
-                    Trace.WriteLine("Updating disk properties...")
-                    DiskDevice.UpdateProperties()
+                    Trace.WriteLine("Write filter not registered. Registering and restarting device...")
 
-                Next
+                Else
 
-            End If
+                    Exit Do
 
-        End Using
+                End If
+
+            End Using
+
+            Try
+                API.RegisterWriteFilter(DeviceNumber, API.RegisterWriteFilterOperation.Register)
+
+            Catch ex As Exception
+                RemoveDevice(DeviceNumber)
+                Throw New Exception("Failed to register write filter driver", ex)
+
+            End Try
+
+        Loop
 
         Trace.WriteLine("CreateDevice done.")
 

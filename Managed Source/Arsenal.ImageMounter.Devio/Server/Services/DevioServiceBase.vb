@@ -268,6 +268,8 @@ Namespace Server.Services
                                            Flags Or AdditionalFlags Or ProxyModeFlags,
                                            ProxyObjectName,
                                            False,
+                                           WriteOverlayImageName,
+                                           False,
                                            _DiskDeviceNumber)
 
                 OnDiskDeviceCreated()
@@ -388,6 +390,13 @@ Namespace Server.Services
         ''' <value>Object name string.</value>
         ''' <returns>Object name that Arsenal Image Mounter can use to connect to this service.</returns>
         Protected MustOverride ReadOnly Property ProxyObjectName As String
+
+        ''' <summary>
+        ''' Path to write overlay image to pass to driver when a virtual disk is created for this service.
+        ''' </summary>
+        ''' <value>Path to write overlay image to pass to driver.</value>
+        ''' <returns>Path to write overlay image to pass to driver.</returns>
+        Public Overridable Property WriteOverlayImageName As String
 
         Private _DiskDeviceNumber As UInteger = UInteger.MaxValue
 

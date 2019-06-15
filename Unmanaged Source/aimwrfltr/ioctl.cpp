@@ -673,8 +673,8 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             PSTORAGE_PROPERTY_QUERY query = (PSTORAGE_PROPERTY_QUERY)
                 Irp->AssociatedIrp.SystemBuffer;
 
-            KdPrint(("AIMWrFltr:DeviceControl: IOCTL_STORAGE_QUERY_PROPERTY QueryType=%i, PropertyId=%i.\n",
-                query->QueryType, query->PropertyId));
+            //KdPrint(("AIMWrFltr:DeviceControl: IOCTL_STORAGE_QUERY_PROPERTY QueryType=%i, PropertyId=%i.\n",
+            //    query->QueryType, query->PropertyId));
 
             if (query->PropertyId > StorageDeviceWriteAggregationProperty)
             {
@@ -688,8 +688,8 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
         }
 
-        KdPrint(("AIMWrFltr:DeviceControl: Forwarding down read-only IOCTL %#x.\n",
-            io_stack->Parameters.DeviceIoControl.IoControlCode));
+        //KdPrint(("AIMWrFltr:DeviceControl: Forwarding down read-only IOCTL %#x.\n",
+        //    io_stack->Parameters.DeviceIoControl.IoControlCode));
 
         return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
     }

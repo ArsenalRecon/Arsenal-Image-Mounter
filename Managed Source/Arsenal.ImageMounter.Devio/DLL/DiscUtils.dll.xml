@@ -12294,6 +12294,14 @@
             <param name="offset">The start offset within the source byte array.</param>
             <param name="count">The number of bytes to write.</param>
         </member>
+        <member name="M:DiscUtils.SparseMemoryBuffer.Write(System.Int64,System.IO.Stream,System.Int64)">
+            <summary>
+            Writes from a stream into the sparse buffer.
+            </summary>
+            <param name="pos">The start offset within the sparse buffer.</param>
+            <param name="source">The stream to get data from.</param>
+            <param name="count">The number of bytes to write.</param>
+        </member>
         <member name="M:DiscUtils.SparseMemoryBuffer.SetCapacity(System.Int64)">
             <summary>
             Sets the capacity of the sparse buffer, truncating if appropriate.

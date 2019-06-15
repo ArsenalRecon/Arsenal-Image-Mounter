@@ -160,6 +160,12 @@ __inout __deref PKIRQL         LowestAssumedIrql
             pLUExt->ImageFile = NULL;
         }
 
+        if (pLUExt->WriteOverlay != NULL)
+        {
+            ZwClose(pLUExt->WriteOverlay);
+            pLUExt->WriteOverlay = NULL;
+        }
+
         if (pLUExt->ReservationKeyFile != NULL)
         {
             ZwClose(pLUExt->ReservationKeyFile);
@@ -173,6 +179,14 @@ __inout __deref PKIRQL         LowestAssumedIrql
         pLUExt->ObjectName.Buffer = NULL;
         pLUExt->ObjectName.Length = 0;
         pLUExt->ObjectName.MaximumLength = 0;
+    }
+
+    if (pLUExt->WriteOverlayFileName.Buffer != NULL)
+    {
+        ExFreePoolWithTag(pLUExt->WriteOverlayFileName.Buffer, MP_TAG_GENERAL);
+        pLUExt->WriteOverlayFileName.Buffer = NULL;
+        pLUExt->WriteOverlayFileName.Length = 0;
+        pLUExt->WriteOverlayFileName.MaximumLength = 0;
     }
 
     KdPrint(("PhDskMnt::ImScsiCleanupLU: Done.\n"));
@@ -1040,14 +1054,16 @@ __in __deref PETHREAD ClientThread)
 
     ASSERT(CreateData != NULL);
 
-    KdPrint
-        (("PhDskMnt: Got request to create a virtual disk. Request data:\n"
+    KdPrint((
+        "PhDskMnt: Got request to create a virtual disk. Request data:\n"
         "DeviceNumber   = %#x\n"
         "DiskSize       = %I64u\n"
         "ImageOffset    = %I64u\n"
         "SectorSize     = %u\n"
         "Flags          = %#x\n"
         "FileNameLength = %u\n"
+        "FileName       = '%.*ws'\n"
+        "WriteOverlayFileNameLength = %u\n"
         "FileName       = '%.*ws'\n",
         CreateData->Fields.DeviceNumber.LongNumber,
         CreateData->Fields.DiskSize.QuadPart,
@@ -1056,7 +1072,10 @@ __in __deref PETHREAD ClientThread)
         CreateData->Fields.Flags,
         CreateData->Fields.FileNameLength,
         (int)(CreateData->Fields.FileNameLength / sizeof(*CreateData->Fields.FileName)),
-        CreateData->Fields.FileName));
+        CreateData->Fields.FileName,
+        CreateData->Fields.WriteOverlayFileNameLength,
+        (int)(CreateData->Fields.WriteOverlayFileNameLength / sizeof(*CreateData->Fields.FileName)),
+        CreateData->Fields.FileName + (CreateData->Fields.FileNameLength / sizeof(*CreateData->Fields.FileName))));
 
     // Auto-select type if not specified.
     if (IMSCSI_TYPE(CreateData->Fields.Flags) == 0)
@@ -1073,8 +1092,8 @@ __in __deref PETHREAD ClientThread)
         (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_AWEALLOC) &&
         (CreateData->Fields.DiskSize.QuadPart > 0))))
     {
-        KdPrint(("PhDskMnt: Blank filenames only supported for non-zero length "
-            "vm type disks.\n"));
+        DbgPrint("PhDskMnt: Blank filenames only supported for non-zero length "
+            "vm type disks.\n");
 
         ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
             0,
@@ -1090,6 +1109,30 @@ __in __deref PETHREAD ClientThread)
             NULL,
             L"Blank filenames only supported for non-zero length "
             L"vm type disks."));
+
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    if (IMSCSI_WRITE_OVERLAY(CreateData->Fields.Flags) &&
+        (!IMSCSI_READONLY(CreateData->Fields.Flags) ||
+            CreateData->Fields.WriteOverlayFileNameLength == 0 ||
+            IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM))
+    {
+        DbgPrint("PhDskMnt: Write overlay mode requires read-only image mounting and a write overlay image path.\n");
+
+        ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
+            0,
+            0,
+            NULL,
+            0,
+            1000,
+            STATUS_INVALID_PARAMETER,
+            102,
+            STATUS_INVALID_PARAMETER,
+            0,
+            0,
+            NULL,
+            L"Write overlay mode requires read-only image mounting and a write overlay image path."));
 
         return STATUS_INVALID_PARAMETER;
     }
@@ -1985,6 +2028,7 @@ __in __deref PETHREAD ClientThread)
 #endif
 
         image_buffer = NULL;
+        
         status =
             ZwAllocateVirtualMemory(NtCurrentProcess(),
             (PVOID*)&image_buffer,
@@ -1992,6 +2036,7 @@ __in __deref PETHREAD ClientThread)
             &max_size,
             MEM_COMMIT,
             PAGE_READWRITE);
+
         if (!NT_SUCCESS(status))
         {
             KdPrint
@@ -2026,7 +2071,9 @@ __in __deref PETHREAD ClientThread)
     // If still no device-type specified, specify FILE_DEVICE_DISK with no
     // particular characteristics. This will emulate a hard disk partition.
     if (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) == 0)
+    {
         CreateData->Fields.Flags |= IMSCSI_DEVICE_TYPE_HD;
+    }
 
     KdPrint(("PhDskMnt: Done with device type selection for floppy sizes.\n"));
 
@@ -2175,6 +2222,56 @@ __in __deref PETHREAD ClientThread)
         RtlFreeUnicodeString(&guid);
     }
 #endif
+
+    if (IMSCSI_WRITE_OVERLAY(CreateData->Fields.Flags) &&
+        CreateData->Fields.WriteOverlayFileNameLength > 0)
+    {
+        UNICODE_STRING overlay_file_name;
+        overlay_file_name.Buffer = (PWCHAR)(((PUCHAR)CreateData->Fields.FileName) +
+            CreateData->Fields.FileNameLength);
+        overlay_file_name.MaximumLength = overlay_file_name.Length =
+            CreateData->Fields.WriteOverlayFileNameLength;
+
+        OBJECT_ATTRIBUTES object_attributes;
+        InitializeObjectAttributes(&object_attributes,
+            &overlay_file_name,
+            OBJ_CASE_INSENSITIVE |
+            OBJ_FORCE_ACCESS_CHECK,
+            NULL,
+            NULL);
+
+        IO_STATUS_BLOCK io_status;
+
+        HANDLE write_overlay;
+
+        status = ZwCreateFile(&write_overlay, GENERIC_READ | GENERIC_WRITE,
+            &object_attributes, &io_status, NULL, FILE_ATTRIBUTE_NORMAL,
+            FILE_SHARE_READ | FILE_SHARE_DELETE, FILE_OPEN_IF,
+            FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS |
+            FILE_NO_INTERMEDIATE_BUFFERING | FILE_SYNCHRONOUS_IO_NONALERT,
+            NULL, 0);
+
+        if (!NT_SUCCESS(status))
+        {
+            DbgPrint("PhDskMnt::ImScsiCreateLU: Error creating write overlay image '%wZ': %#x\n",
+                &overlay_file_name, status);
+            
+            return status;
+        }
+
+        pLUExt->WriteOverlay = write_overlay;
+        
+        pLUExt->WriteOverlayFileName.Buffer = (PWCHAR)ExAllocatePoolWithTag(
+            NonPagedPool, overlay_file_name.Length, POOL_TAG);
+
+        if (pLUExt->WriteOverlayFileName.Buffer == NULL)
+        {
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        pLUExt->WriteOverlayFileName.MaximumLength = overlay_file_name.Length;
+        RtlCopyUnicodeString(&pLUExt->WriteOverlayFileName, &overlay_file_name);
+    }
 
     KeInitializeSpinLock(&pLUExt->RequestListLock);
     InitializeListHead(&pLUExt->RequestList);

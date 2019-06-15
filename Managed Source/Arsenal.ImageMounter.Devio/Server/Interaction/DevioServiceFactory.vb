@@ -278,7 +278,7 @@ Namespace Server.Interaction
                     Service = New DevioNoneService(Imagefile, DiskAccess)
 
                 Case Else
-                    Throw New InvalidOperationException("Proxy " & Proxy.ToString() & " not supported.")
+                    Throw New InvalidOperationException($"Proxy {Proxy} not supported.")
 
             End Select
 
@@ -329,7 +329,7 @@ Namespace Server.Interaction
 
         Friend Shared Function GetDirectFileAccessFlags(DiskAccess As VirtualDiskAccess) As FileAccess
             If (DiskAccess And Not FileAccess.ReadWrite) <> 0 Then
-                Throw New ArgumentException("Unsupported VirtualDiskAccess flags for direct file access: " & DiskAccess.ToString(), "DiskAccess")
+                Throw New ArgumentException($"Unsupported VirtualDiskAccess flags for direct file access: {DiskAccess}", "DiskAccess")
             End If
             Return CType(DiskAccess, FileAccess)
         End Function
