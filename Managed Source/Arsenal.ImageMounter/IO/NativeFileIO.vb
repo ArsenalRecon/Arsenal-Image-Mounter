@@ -57,6 +57,7 @@ Namespace IO
             Public Const ERROR_HANDLE_EOF As UInt32 = 38UI
             Public Const ERROR_MORE_DATA As UInt32 = &H234UI
             Public Const ERROR_NOT_ALL_ASSIGNED As UInt32 = 1300UI
+            Public Const ERROR_INSUFFICIENT_BUFFER As UInt32 = 122UI
 
             Public Const FSCTL_GET_COMPRESSION As UInt32 = &H9003C
             Public Const FSCTL_SET_COMPRESSION As UInt32 = &H9C040
@@ -80,6 +81,8 @@ Namespace IO
             Public Const IOCTL_DISK_GET_LENGTH_INFO As UInt32 = &H7405C
             Public Const IOCTL_DISK_GET_PARTITION_INFO As UInt32 = &H74004
             Public Const IOCTL_DISK_GET_PARTITION_INFO_EX As UInt32 = &H70048
+            Public Const IOCTL_DISK_GET_DRIVE_LAYOUT As UInt32 = &H7400C
+            Public Const IOCTL_DISK_GET_DRIVE_LAYOUT_EX As UInt32 = &H70050
             Public Const IOCTL_DISK_GROW_PARTITION As UInt32 = &H7C0D0
             Public Const IOCTL_DISK_UPDATE_PROPERTIES As UInt32 = &H70140
             Public Const IOCTL_DISK_IS_WRITABLE As UInt32 = &H70024
@@ -367,8 +370,35 @@ Namespace IO
                 End Property
             End Structure
 
+            <StructLayout(LayoutKind.Sequential)>
+            Public Structure DRIVE_LAYOUT_INFORMATION_EX
+                Public Enum PARTITION_STYLE As Integer
+                    PARTITION_STYLE_MBR
+                    PARTITION_STYLE_GPT
+                    PARTITION_STYLE_RAW
+                End Enum
+
+                Public PartitionStyle As PARTITION_STYLE
+                Public PartitionCount As Integer
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential)>
+            Public Structure DRIVE_LAYOUT_INFORMATION_MBR
+                Public DiskSignature As UInteger
+                Public Checksum As UInteger
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential)>
+            Public Structure DRIVE_LAYOUT_INFORMATION_GPT
+                Public DiskId As Guid
+                Public StartingUsableOffset As Long
+                Public UsableLength As Long
+                Public MaxPartitionCount As Integer
+            End Structure
+
             <StructLayout(LayoutKind.Sequential, Pack:=8)>
             Public Structure PARTITION_INFORMATION_EX
+
                 Public Enum PARTITION_STYLE As Byte
                     PARTITION_STYLE_MBR
                     PARTITION_STYLE_GPT
@@ -744,6 +774,36 @@ Namespace IO
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
+              nInBufferSize As UInt32,
+              lpOutBuffer As IntPtr,
+              nOutBufferSize As UInt32,
+              <Out> ByRef lpBytesReturned As UInt32,
+              lpOverlapped As IntPtr) As Boolean
+
+            Public Declare Function DeviceIoControl Lib "kernel32" (
+              hDevice As SafeFileHandle,
+              dwIoControlCode As UInt32,
+              lpInBuffer As IntPtr,
+              nInBufferSize As UInt32,
+              lpOutBuffer As SafeBuffer,
+              nOutBufferSize As UInt32,
+              <Out> ByRef lpBytesReturned As UInt32,
+              lpOverlapped As IntPtr) As Boolean
+
+            Public Declare Function DeviceIoControl Lib "kernel32" (
+              hDevice As SafeFileHandle,
+              dwIoControlCode As UInt32,
+              lpInBuffer As SafeBuffer,
+              nInBufferSize As UInt32,
+              lpOutBuffer As SafeBuffer,
+              nOutBufferSize As UInt32,
+              <Out> ByRef lpBytesReturned As UInt32,
+              lpOverlapped As IntPtr) As Boolean
+
+            Public Declare Function DeviceIoControl Lib "kernel32" (
+              hDevice As SafeFileHandle,
+              dwIoControlCode As UInt32,
+              lpInBuffer As SafeBuffer,
               nInBufferSize As UInt32,
               lpOutBuffer As IntPtr,
               nOutBufferSize As UInt32,
@@ -2750,6 +2810,110 @@ Namespace IO
             Else
                 Return Nothing
             End If
+
+        End Function
+
+        Public Class DriveLayoutInformation
+
+            Public ReadOnly Property DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX
+
+            Public ReadOnly Property Partitions As ReadOnlyCollection(Of Win32API.PARTITION_INFORMATION_EX)
+
+            Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
+                           Partitions As ReadOnlyCollection(Of Win32API.PARTITION_INFORMATION_EX))
+
+                _DriveLayoutInformation = DriveLayoutInformation
+                _Partitions = Partitions
+            End Sub
+
+        End Class
+
+        Public Class DriveLayoutInformationMBR
+            Inherits DriveLayoutInformation
+
+            Public ReadOnly Property DriveLayoutInformationMBR As Win32API.DRIVE_LAYOUT_INFORMATION_MBR
+
+            Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
+                           Partitions As ReadOnlyCollection(Of Win32API.PARTITION_INFORMATION_EX),
+                           DriveLayoutInformationMBR As Win32API.DRIVE_LAYOUT_INFORMATION_MBR)
+                MyBase.New(DriveLayoutInformation, Partitions)
+
+                _DriveLayoutInformationMBR = DriveLayoutInformationMBR
+            End Sub
+
+        End Class
+
+        Public Class DriveLayoutInformationGPT
+            Inherits DriveLayoutInformation
+
+            Public ReadOnly Property DriveLayoutInformationGPT As Win32API.DRIVE_LAYOUT_INFORMATION_GPT
+
+            Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
+                           Partitions As ReadOnlyCollection(Of Win32API.PARTITION_INFORMATION_EX),
+                           DriveLayoutInformationGPT As Win32API.DRIVE_LAYOUT_INFORMATION_GPT)
+                MyBase.New(DriveLayoutInformation, Partitions)
+
+                _DriveLayoutInformationGPT = DriveLayoutInformationGPT
+            End Sub
+
+        End Class
+
+        Public Shared Function GetDriveLayoutEx(disk As SafeFileHandle) As DriveLayoutInformation
+
+            Static partition_struct_size As Integer = Marshal.SizeOf(GetType(Win32API.PARTITION_INFORMATION_EX))
+
+            Dim max_partitions = 1
+
+            Do
+
+                Dim size_needed = Marshal.SizeOf(GetType(Win32API.DRIVE_LAYOUT_INFORMATION_EX)) +
+                    Marshal.SizeOf(GetType(Win32API.DRIVE_LAYOUT_INFORMATION_GPT)) +
+                    max_partitions * partition_struct_size
+
+                Using buffer As New Win32API.HGlobalBuffer(size_needed)
+
+                    If Not Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_GET_DRIVE_LAYOUT_EX,
+                                                  IntPtr.Zero, 0, buffer, CUInt(buffer.ByteLength),
+                                                  0, IntPtr.Zero) Then
+
+                        If Marshal.GetLastWin32Error() = Win32API.ERROR_INSUFFICIENT_BUFFER Then
+                            max_partitions *= 2
+                            Continue Do
+                        End If
+
+                        Return Nothing
+
+                    End If
+
+                    Dim layout = buffer.Read(Of Win32API.DRIVE_LAYOUT_INFORMATION_EX)(0)
+
+                    If layout.PartitionCount > max_partitions Then
+                        max_partitions *= 2
+                        Continue Do
+                    End If
+
+                    Dim partition_offset = 48
+                    Dim partitions_array(0 To layout.PartitionCount - 1) As Win32API.PARTITION_INFORMATION_EX
+                    For i = 0 To layout.PartitionCount - 1
+                        partitions_array(i) = CType(Marshal.PtrToStructure(buffer.DangerousGetHandle() + 48 + i * partition_struct_size,
+                                                                           GetType(Win32API.PARTITION_INFORMATION_EX)),
+                                                                           Win32API.PARTITION_INFORMATION_EX)
+                    Next
+                    Dim partitions = Array.AsReadOnly(partitions_array)
+
+                    If layout.PartitionStyle = Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_MBR Then
+                        Dim mbr = buffer.Read(Of Win32API.DRIVE_LAYOUT_INFORMATION_MBR)(8)
+                        Return New DriveLayoutInformationMBR(layout, partitions, mbr)
+                    ElseIf layout.PartitionStyle = Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_GPT Then
+                        Dim gpt = buffer.Read(Of Win32API.DRIVE_LAYOUT_INFORMATION_GPT)(8)
+                        Return New DriveLayoutInformationGPT(layout, partitions, gpt)
+                    Else
+                        Return New DriveLayoutInformation(layout, partitions)
+                    End If
+
+                End Using
+
+            Loop
 
         End Function
 

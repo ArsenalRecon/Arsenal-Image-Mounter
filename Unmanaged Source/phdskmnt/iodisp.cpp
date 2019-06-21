@@ -1007,8 +1007,6 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION pLUExt)
             *(PULONG)(pLUExt->UniqueId + 4) = volume_info->VolumeSerialNumber;
             *(PLARGE_INTEGER)(pLUExt->UniqueId + 8) = internal_info.IndexNumber;
 
-            KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Successfully generated UID from volume/file ids\n"));
-
             return;
         }
 
@@ -1024,14 +1022,14 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION pLUExt)
 
         if (NT_SUCCESS(status))
         {
-            KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Error generating GUID: 0x%X\n",
-                status));
-
             return;
         }
 
+        KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Error generating GUID: 0x%X\n",
+            status));
+
         LARGE_INTEGER interval;
-        interval.QuadPart = -10000L * 20;
+        interval.QuadPart = -10000L * 20;    // 20 ms
         
         KeDelayExecutionThread(KernelMode, FALSE, &interval);
     }
@@ -2213,15 +2211,16 @@ __in __deref PETHREAD ClientThread)
 
     ImScsiGenerateUniqueId(pLUExt);
 
-#if DBG
     UNICODE_STRING guid;
     status = RtlStringFromGUID(*(PGUID)pLUExt->UniqueId, &guid);
     if (NT_SUCCESS(status))
     {
-        DbgPrint("PhDskMnt::ImScsiInitializeLU: Unique id: %wZ\n", &guid);
+        sprintf(pLUExt->GuidString, "%.38ws", guid.Buffer);
+
         RtlFreeUnicodeString(&guid);
+
+        DbgPrint("PhDskMnt::ImScsiInitializeLU: Unique id: %s\n", pLUExt->GuidString);
     }
-#endif
 
     if (IMSCSI_WRITE_OVERLAY(CreateData->Fields.Flags) &&
         CreateData->Fields.WriteOverlayFileNameLength > 0)

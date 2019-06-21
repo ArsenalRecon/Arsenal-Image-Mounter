@@ -371,7 +371,6 @@ ImScsiDispatchReadWrite(
         PUCHAR mbr = (PUCHAR)buffer;
 
         if ((*(PUSHORT)(mbr + 0x01FE) == 0xAA55) &&
-            (*(PUSHORT)(mbr + 0x01BC) == 0x0000) &&
             (*(mbr + 0x01C2) != 0xEE) &&
             ((*(mbr + 0x01BE) & 0x7F) == 0x00) &&
             ((*(mbr + 0x01CE) & 0x7F) == 0x00) &&

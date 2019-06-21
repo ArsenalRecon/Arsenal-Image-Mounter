@@ -72,12 +72,6 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
     KdPrint2(("PhDskMnt::ScsiOpInquiryRaidControllerUnit:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
-    if (pSrb->DataTransferLength > 0)
-    {
-        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
-        pInqData->DeviceType = ARRAY_CONTROLLER_DEVICE;
-    }
-
     pCdb = (PCDB)pSrb->Cdb;
 
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
@@ -1099,7 +1093,9 @@ ScsiOpVPDCdRomUnit(
         PVPD_SERIAL_NUMBER_PAGE pVpd;
         ULONG len;
 
-        len = sizeof(VPD_SERIAL_NUMBER_PAGE) + 8;
+        UCHAR guid_length = (UCHAR)strlen(pLUExt->GuidString);
+
+        len = sizeof(VPD_SERIAL_NUMBER_PAGE) + guid_length;
         if (pSrb->DataTransferLength < len)
         {
             ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
@@ -1112,15 +1108,11 @@ ScsiOpVPDCdRomUnit(
         pVpd->DeviceType = pLUExt->DeviceType;
         pVpd->PageCode = VPD_SERIAL_NUMBER;
 
-        pVpd->PageLength = 8;
-        pVpd->SerialNumber[0] = 0x31 + pLUExt->DeviceNumber.PathId;
-        pVpd->SerialNumber[1] = 0x31 + pLUExt->DeviceNumber.TargetId;
-        pVpd->SerialNumber[2] = 0x31 + pLUExt->DeviceNumber.Lun;
-        pVpd->SerialNumber[3] = 0x34;
-        pVpd->SerialNumber[4] = 0x35;
-        pVpd->SerialNumber[5] = 0x36;
-        pVpd->SerialNumber[6] = 0x37;
-        pVpd->SerialNumber[7] = 0x38;
+        pVpd->PageLength = guid_length;
+        RtlCopyMemory(pVpd->SerialNumber, pLUExt->GuidString, guid_length);
+
+        KdPrint(("ScsiOpVPDDiskUnit: Reporting device serial number %.*s for device %i:%i:%i\n",
+            pVpd->PageLength, pVpd->SerialNumber, pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
         ScsiSetSuccess(pSrb, len);
     }
@@ -1154,6 +1146,9 @@ ScsiOpVPDCdRomUnit(
             pIdDescriptor->IdentifierLength = sizeof(pLUExt->UniqueId);
             RtlCopyMemory(pIdDescriptor->Identifier, pLUExt->UniqueId,
                 sizeof(pLUExt->UniqueId));
+
+            KdPrint(("ScsiOpVPDDiskUnit: Reporting device id %s for device %d:%d:%d\n",
+                pLUExt->GuidString, pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
             ScsiSetSuccess(pSrb, sizeof(VPD_IDENTIFICATION_PAGE) +
                 IdentificationPage->PageLength);
@@ -1211,12 +1206,56 @@ ScsiOpVPDDiskUnit(
         RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
         pSupportedPages->DeviceType = pLUExt->DeviceType;
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
-        pSupportedPages->PageLength = 5;
+
+#if 1
+
+        pSupportedPages->PageLength = 6;
         pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
-        pSupportedPages->SupportedPageList[1] = VPD_DEVICE_IDENTIFIERS;
-        pSupportedPages->SupportedPageList[2] = VPD_BLOCK_LIMITS;
-        pSupportedPages->SupportedPageList[3] = VPD_BLOCK_DEVICE_CHARACTERISTICS;
-        pSupportedPages->SupportedPageList[4] = VPD_LOGICAL_BLOCK_PROVISIONING;
+        pSupportedPages->SupportedPageList[1] = VPD_SERIAL_NUMBER;
+        pSupportedPages->SupportedPageList[2] = VPD_DEVICE_IDENTIFIERS;
+        pSupportedPages->SupportedPageList[3] = VPD_BLOCK_LIMITS;
+        pSupportedPages->SupportedPageList[4] = VPD_BLOCK_DEVICE_CHARACTERISTICS;
+        pSupportedPages->SupportedPageList[5] = VPD_LOGICAL_BLOCK_PROVISIONING;
+
+#else
+
+        pSupportedPages->PageLength = 4;
+        pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
+        pSupportedPages->SupportedPageList[1] = VPD_BLOCK_LIMITS;
+        pSupportedPages->SupportedPageList[2] = VPD_BLOCK_DEVICE_CHARACTERISTICS;
+        pSupportedPages->SupportedPageList[3] = VPD_LOGICAL_BLOCK_PROVISIONING;
+
+#endif
+
+        ScsiSetSuccess(pSrb, len);
+    }
+    break;
+
+    case VPD_SERIAL_NUMBER:
+    {   // Inquiry for serial number?
+        PVPD_SERIAL_NUMBER_PAGE pVpd;
+        ULONG len;
+
+        UCHAR guid_length = (UCHAR)strlen(pLUExt->GuidString);
+
+        len = sizeof(VPD_SERIAL_NUMBER_PAGE) + guid_length;
+        if (pSrb->DataTransferLength < len)
+        {
+            ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+            return;
+        }
+
+        pVpd = (PVPD_SERIAL_NUMBER_PAGE)pSrb->DataBuffer;                        // Point to output buffer.
+
+        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        pVpd->DeviceType = pLUExt->DeviceType;
+        pVpd->PageCode = VPD_SERIAL_NUMBER;
+
+        pVpd->PageLength = guid_length;
+        RtlCopyMemory(pVpd->SerialNumber, pLUExt->GuidString, guid_length);
+
+        KdPrint(("ScsiOpVPDDiskUnit: Reporting device serial number %.*s for device %i:%i:%i\n",
+            pVpd->PageLength, pVpd->SerialNumber, pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
         ScsiSetSuccess(pSrb, len);
     }
@@ -1375,6 +1414,9 @@ ScsiOpVPDDiskUnit(
             RtlCopyMemory(pIdDescriptor->Identifier, pLUExt->UniqueId,
                 sizeof(pLUExt->UniqueId));
 
+            KdPrint(("ScsiOpVPDDiskUnit: Reporting device id %s for device %d:%d:%d\n",
+                pLUExt->GuidString, pSrb->PathId, pSrb->TargetId, pSrb->Lun));
+
             ScsiSetSuccess(pSrb, required_size);
         }
         break;
@@ -1422,8 +1464,10 @@ __in PSCSI_REQUEST_BLOCK  pSrb
             return;
         }
 
+        pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;                        // Point to output buffer.
+
         RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
-        pSupportedPages->DeviceType = pLUExt->DeviceType;
+        pSupportedPages->DeviceType = ARRAY_CONTROLLER_DEVICE;
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
@@ -1451,7 +1495,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         pVpd = (PVPD_SERIAL_NUMBER_PAGE)pSrb->DataBuffer;                        // Point to output buffer.
 
         RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
-        pVpd->DeviceType = pLUExt->DeviceType;
+        pVpd->DeviceType = ARRAY_CONTROLLER_DEVICE;
         pVpd->PageCode = VPD_SERIAL_NUMBER;
         pVpd->PageLength = 8 + 32;
 
@@ -1486,7 +1530,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         pVpid = (PVPD_IDENTIFICATION_PAGE)pSrb->DataBuffer;                     // Point to output buffer.
 
         RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
-        pVpd->DeviceType = pLUExt->DeviceType;
+        pVpid->DeviceType = ARRAY_CONTROLLER_DEVICE;
         pVpid->PageCode = VPD_DEVICE_IDENTIFIERS;
 
         pVpidDesc =                                   // Point to first (and only) descriptor.

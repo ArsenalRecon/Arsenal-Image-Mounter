@@ -21,6 +21,7 @@
 #include <WinIoCtl.h>
 
 #include "..\phdskmnt\inc\common.h"
+#include "..\aimwrfltr\inc\fltstats.h"
 #include "..\aimapi\aimapi.h"
 
 #include <stdio.h>
@@ -476,6 +477,7 @@ ULONG BytesPerSector,
 PLARGE_INTEGER ImageOffset,
 DWORD Flags,
 LPCWSTR FileName,
+LPCWSTR WriteOverlayFileName,
 BOOL NativePath,
 BOOL NumericPrint,
 BOOL SaveSettings,
@@ -616,7 +618,9 @@ LPWSTR FormatOptions)
 
     UNICODE_STRING file_name;
     if (FileName == NULL)
+    {
         RtlInitUnicodeString(&file_name, NULL);
+    }
     else if (NativePath)
     {
         if (!RtlCreateUnicodeString(&file_name, FileName))
@@ -633,14 +637,20 @@ LPWSTR FormatOptions)
         HANDLE h = CreateFile(L"\\\\?\\Global", 0, FILE_SHARE_READ, NULL,
             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
-        if ((h == INVALID_HANDLE_VALUE) &
+        if ((h == INVALID_HANDLE_VALUE) &&
             (GetLastError() == ERROR_FILE_NOT_FOUND))
+        {
             namespace_prefix = L"\\BaseNamedObjects\\";
+        }
         else
+        {
             namespace_prefix = L"\\BaseNamedObjects\\Global\\";
+        }
 
         if (h != INVALID_HANDLE_VALUE)
+        {
             CloseHandle(h);
+        }
 
         WHeapMem<WCHAR> prefixed_name(
             ((wcslen(namespace_prefix) + wcslen(FileName)) << 1) + 1,
@@ -666,8 +676,32 @@ LPWSTR FormatOptions)
         }
     }
 
+    UNICODE_STRING write_overlay_file_name;
+
+    if (WriteOverlayFileName == NULL)
+    {
+        RtlInitUnicodeString(&write_overlay_file_name, NULL);
+    }
+    else if (NativePath)
+    {
+        if (!RtlCreateUnicodeString(&write_overlay_file_name, WriteOverlayFileName))
+        {
+            fputs("Memory allocation error.\n", stderr);
+            return IMSCSI_CLI_ERROR_FATAL;
+        }
+    }
+    else
+    {
+        if (!RtlDosPathNameToNtPathName_U(WriteOverlayFileName, &write_overlay_file_name, NULL, NULL))
+        {
+            fputs("Memory allocation error.\n", stderr);
+            return IMSCSI_CLI_ERROR_FATAL;
+        }
+    }
+
     WHeapMem<SRB_IMSCSI_CREATE_DATA> create_data(
-        sizeof(SRB_IMSCSI_CREATE_DATA) + file_name.Length,
+        sizeof(SRB_IMSCSI_CREATE_DATA) + file_name.Length +
+        write_overlay_file_name.Length,
         HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY);
 
     puts("Creating device...");
@@ -677,13 +711,28 @@ LPWSTR FormatOptions)
     create_data->Fields.BytesPerSector = BytesPerSector;
     create_data->Fields.ImageOffset = *ImageOffset;
     create_data->Fields.Flags = Flags;
-    create_data->Fields.FileNameLength = file_name.Length;
 
     if (file_name.Length != 0)
     {
+        create_data->Fields.FileNameLength = file_name.Length;
+
         memcpy(&create_data->Fields.FileName, file_name.Buffer,
             file_name.Length);
+
         RtlFreeUnicodeString(&file_name);
+    }
+
+    if (write_overlay_file_name.Length != 0)
+    {
+        create_data->Fields.WriteOverlayFileNameLength =
+            write_overlay_file_name.Length;
+
+        memcpy(((PUCHAR)&create_data->Fields.FileName) +
+            create_data->Fields.FileNameLength,
+            write_overlay_file_name.Buffer,
+            write_overlay_file_name.Length);
+
+        RtlFreeUnicodeString(&write_overlay_file_name);
     }
 
     if (!ImScsiDeviceIoControl(driver,
@@ -703,7 +752,9 @@ LPWSTR FormatOptions)
     *DeviceNumber = create_data->Fields.DeviceNumber;
 
     if (NumericPrint)
+    {
         printf("%u\n", DeviceNumber->LongNumber);
+    }
     else
     {
         ImScsiOemPrintF(stdout,
@@ -717,7 +768,9 @@ LPWSTR FormatOptions)
         puts("Saving registry settings...");
 
         if (!ImScsiSaveRegistrySettings(&create_data->Fields))
+        {
             PrintLastError(L"Registry edit failed");
+        }
     }
 
     if ((IMSCSI_DEVICE_TYPE(create_data->Fields.Flags) != 0) &&
@@ -1317,6 +1370,57 @@ BOOL RemoveSettings)
     return IMSCSI_CLI_SUCCESS;
 }
 
+DWORD
+ImScsiCliQueryStatusWriteFilter(HANDLE Device)
+{
+    AIMWRFLTR_DEVICE_STATISTICS stats = { 0 };
+    DWORD dw;
+
+    if (!DeviceIoControl(Device, IOCTL_AIMWRFLTR_GET_DEVICE_DATA, NULL, 0,
+        &stats, sizeof(stats), &dw, NULL))
+    {
+        auto err_code = GetLastError();
+        
+        fprintf(stderr,
+            "Write overlay mode requested for this device, but write filter driver was not\n"
+            "attached.\n\n");
+
+        return err_code;
+    }
+    else if (stats.Initialized)
+    {
+        auto used_diff_size = stats.UsedDiffSize();
+
+        printf(
+            "Write filter driver is attached and initialized for this device.\n"
+            "Differencing overlay image size used: %I64i bytes (%.4g %s)\n\n",
+            used_diff_size,
+            _h(used_diff_size),
+            _p(used_diff_size));
+
+        return NO_ERROR;
+    }
+    else if (!NT_SUCCESS(stats.LastErrorCode))
+    {
+        auto err_code = RtlNtStatusToDosError(stats.LastErrorCode);
+        WErrMsg errmsg(err_code);
+        
+        ImScsiOemPrintF(stderr,
+            "Write overlay mode requested for this device. Write filter driver was attached, "
+            "but failed to initialize (%1!#x!): %2!ws!%n%n", stats.LastErrorCode, (LPCWSTR)errmsg);
+
+        return err_code;
+    }
+    else
+    {
+        fprintf(stderr,
+            "Write overlay mode requested for this device. Write filter driver was attached,\n"
+            "but has not yet initialized the differencing image file.\n\n");
+
+        return ERROR_DEVICE_REINITIALIZATION_NEEDED;
+    }
+}
+
 // Prints information about an existing virtual disk device, identified by
 // either a device number or mount point.
 int
@@ -1435,11 +1539,15 @@ LPWSTR MountPoint)
                 config->FileName);
         }
         else
+        {
             puts("No image file.");
+        }
 
         if (config->ImageOffset.QuadPart > 0)
+        {
             printf("Image file offset: %I64i bytes\n",
-            config->ImageOffset.QuadPart);
+                config->ImageOffset.QuadPart);
+        }
 
         printf("Size: %I64i bytes (%.4g %s)",
             config->DiskSize.QuadPart,
@@ -1462,6 +1570,16 @@ LPWSTR MountPoint)
             ", HDD",
             config->Flags & IMSCSI_IMAGE_MODIFIED ? ", Modified" :
             config->Flags & IMSCSI_FAKE_DISK_SIG ? ", Fake disk signature" : "");
+
+        if (IMSCSI_WRITE_OVERLAY(config->Flags) &&
+            config->WriteOverlayFileNameLength > 0)
+        {
+            ImScsiOemPrintF(stdout,
+                "Write overlay differencing image file: %1!.*ws!",
+                (int)(config->WriteOverlayFileNameLength /
+                    sizeof(*config->FileName)),
+                (LPCWSTR)(((PUCHAR)config->FileName) + config->FileNameLength));
+        }
 
         flushall();
 
@@ -1488,13 +1606,15 @@ LPWSTR MountPoint)
             return IMSCSI_CLI_ERROR_DEVICE_INACCESSIBLE;
         }
 
+        ImScsiCliQueryStatusWriteFilter(device);
+
         CloseHandle(device);
 
         WCHAR vol_name[50];
 
-        device = FindFirstVolume(vol_name, _countof(vol_name));
+        auto vol_enum = FindFirstVolume(vol_name, _countof(vol_name));
 
-        if (device == INVALID_HANDLE_VALUE)
+        if (vol_enum == INVALID_HANDLE_VALUE)
         {
             PrintLastError(L"Error enumerating disk volumes:");
             return IMSCSI_CLI_ERROR_DEVICE_INACCESSIBLE;
@@ -1578,9 +1698,9 @@ LPWSTR MountPoint)
                 ImScsiOemPrintF(stdout, "  Mounted at %1!ws!", mnt);
             }
 
-        } while (FindNextVolume(device, vol_name, _countof(vol_name)));
+        } while (FindNextVolume(vol_enum, vol_name, _countof(vol_name)));
 
-        FindVolumeClose(device);
+        FindVolumeClose(vol_enum);
     }
 
     return IMSCSI_CLI_SUCCESS;
@@ -1853,6 +1973,7 @@ wmain(int argc, LPWSTR argv[])
     BOOL force_dismount = FALSE;
     BOOL emergency_remove = FALSE;
     LPWSTR file_name = NULL;
+    LPWSTR overlay_image_file_name = NULL;
     LPWSTR format_options = NULL;
     BOOL save_settings = FALSE;
     DEVICE_NUMBER device_number;
@@ -1953,7 +2074,8 @@ wmain(int argc, LPWSTR argv[])
                             if (IMSCSI_READONLY(flags_to_change))
                                 ImScsiSyntaxHelp();
 
-                            flags_to_change |= IMSCSI_OPTION_RO;
+                            flags_to_change |= IMSCSI_OPTION_RO |
+                                IMSCSI_OPTION_WRITE_OVERLAY;
                             flags |= IMSCSI_OPTION_RO;
                         }
                         else if (wcscmp(opt, L"rw") == 0)
@@ -1961,7 +2083,8 @@ wmain(int argc, LPWSTR argv[])
                             if (IMSCSI_READONLY(flags_to_change))
                                 ImScsiSyntaxHelp();
 
-                            flags_to_change |= IMSCSI_OPTION_RO;
+                            flags_to_change |= IMSCSI_OPTION_RO |
+                                IMSCSI_OPTION_WRITE_OVERLAY;
                             flags &= ~IMSCSI_OPTION_RO;
                         }
                         else if (wcscmp(opt, L"fksig") == 0)
@@ -1998,9 +2121,22 @@ wmain(int argc, LPWSTR argv[])
                             flags_to_change |= IMSCSI_IMAGE_MODIFIED;
                             flags &= ~IMSCSI_IMAGE_MODIFIED;
                         }
-                        // None of the other options are valid with the -e parameter.
+                        // None of the other options are valid with -e operation mode.
                         else if (op_mode != OP_MODE_CREATE)
+                        {
                             ImScsiSyntaxHelp();
+                        }
+                        else if (wcscmp(opt, L"wo") == 0)
+                        {
+                            if (IMSCSI_READONLY(flags_to_change))
+                                ImScsiSyntaxHelp();
+
+                            flags_to_change |= IMSCSI_OPTION_RO |
+                                IMSCSI_OPTION_WRITE_OVERLAY;
+
+                            flags |= IMSCSI_OPTION_RO |
+                                IMSCSI_OPTION_WRITE_OVERLAY;
+                        }
                         else if (wcscmp(opt, L"ip") == 0)
                         {
                             if ((IMSCSI_TYPE(flags) != IMSCSI_TYPE_PROXY) |
@@ -2246,6 +2382,18 @@ wmain(int argc, LPWSTR argv[])
                 argv++;
                 break;
 
+            case L'w':
+                if ((op_mode != OP_MODE_CREATE) ||
+                    (argc < 2) ||
+                    !IMSCSI_WRITE_OVERLAY(flags))
+                    ImScsiSyntaxHelp();
+
+                overlay_image_file_name = argv[1];
+
+                argc--;
+                argv++;
+                break;
+
             case L'p':
                 if ((op_mode != OP_MODE_CREATE) |
                     (argc < 2) |
@@ -2319,6 +2467,7 @@ wmain(int argc, LPWSTR argv[])
             &image_offset,
             flags,
             file_name,
+            overlay_image_file_name,
             native_path,
             numeric_print,
             save_settings,

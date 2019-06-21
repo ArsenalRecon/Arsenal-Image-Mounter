@@ -156,7 +156,7 @@ Namespace Server.Interaction
 
             GetSupportedVirtualDiskAccess = Nothing
             If Not SupportedVirtualDiskAccess.TryGetValue(Proxy, GetSupportedVirtualDiskAccess) Then
-                Throw New ArgumentException("Proxy type not supported: " & Proxy.ToString(), "Proxy")
+                Throw New ArgumentException($"Proxy type not supported: {Proxy}", "Proxy")
             End If
 
             If Proxy = ProxyType.DiscUtils AndAlso
@@ -282,7 +282,7 @@ Namespace Server.Interaction
 
             End Select
 
-            Service.Description = "Image file " & Imagefile
+            Service.Description = $"Image file {Imagefile}"
 
             Return Service
 
@@ -352,7 +352,7 @@ Namespace Server.Interaction
                     VirtualDiskAccess = VirtualDiskAccess.ReadWriteOriginal
 
                 Case Else
-                    Throw New ArgumentException("Unsupported DiskAccess for DiscUtils: " & DiskAccess.ToString(), "DiskAccess")
+                    Throw New ArgumentException($"Unsupported DiskAccess for DiscUtils: {DiskAccess}", "DiskAccess")
 
             End Select
 
@@ -381,7 +381,7 @@ Namespace Server.Interaction
                     FileAccess = FileAccess.Read
 
                 Case Else
-                    Throw New ArgumentException("Unsupported DiskAccess for DiscUtils: " & DiskAccess.ToString(), "DiskAccess")
+                    Throw New ArgumentException($"Unsupported DiskAccess for DiscUtils: {DiskAccess}", "DiskAccess")
 
             End Select
 
@@ -414,10 +414,10 @@ Namespace Server.Interaction
             Try
 
                 If Disk.IsPartitioned Then
-                    Trace.WriteLine("Partition table class: " & Disk.Partitions.GetType().ToString())
+                    Trace.WriteLine($"Partition table class: {Disk.Partitions.GetType().ToString()}")
                 End If
 
-                Trace.WriteLine("Image virtual size is " & Disk.Capacity & " bytes")
+                Trace.WriteLine($"Image virtual size is {Disk.Capacity} bytes")
 
                 Dim SectorSize As UInteger
 
@@ -426,15 +426,15 @@ Namespace Server.Interaction
                     Trace.WriteLine("Image sector size is unknown, assuming 512 bytes")
                 Else
                     SectorSize = CUInt(Disk.Geometry.BytesPerSector)
-                    Trace.WriteLine("Image sector size is " & SectorSize.ToString() & " bytes")
+                    Trace.WriteLine($"Image sector size is {SectorSize} bytes")
                 End If
 
                 If DiskAccess = VirtualDiskAccess.ReadWriteOverlay Then
                     Dim DifferencingPath =
                         Path.Combine(Path.GetDirectoryName(Imagefile),
-                                     Path.GetFileNameWithoutExtension(Imagefile) & "_aimdiff" & Path.GetExtension(Imagefile))
+                                     $"{Path.GetFileNameWithoutExtension(Imagefile)}_aimdiff{Path.GetExtension(Imagefile)}")
 
-                    Trace.WriteLine("Using temporary overlay file '" & DifferencingPath & "'")
+                    Trace.WriteLine($"Using temporary overlay file '{DifferencingPath}'")
 
                     Do
                         Try
@@ -461,7 +461,7 @@ Namespace Server.Interaction
                 End If
 
                 Dim DiskStream = Disk.Content
-                Trace.WriteLine("Used size is " & DiskStream.Length & " bytes")
+                Trace.WriteLine($"Used size is {DiskStream.Length} bytes")
 
                 If DiskStream.CanWrite Then
                     Trace.WriteLine("Read/write mode.")
@@ -599,7 +599,7 @@ Namespace Server.Interaction
                     FileAccess = FileAccess.ReadWrite
 
                 Case Else
-                    Throw New ArgumentException("Unsupported VirtualDiskAccess for libewf: " & DiskAccess.ToString(), "DiskAccess")
+                    Throw New ArgumentException($"Unsupported VirtualDiskAccess for libewf: {DiskAccess}", "DiskAccess")
 
             End Select
 

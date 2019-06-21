@@ -20,7 +20,14 @@
 
 #define INITGUID
 
-#include "fltstats.h"
+#include "inc\fltstats.h"
+
+//
+// Tags used for kernel mode allocations and locks.
+// Useful with tools like poolmon etc.
+//
+#define POOL_TAG                    'FrWA'
+#define LOCK_TAG                    'FrWA'
 
 //
 // Number of bits to use in block size mask. For instance,
@@ -538,7 +545,6 @@ typedef DRIVER_DISPATCH *PDRIVER_DISPATCH;
 
 extern "C"
 {
-
     DRIVER_INITIALIZE DriverEntry;
 
     DRIVER_ADD_DEVICE AIMWrFltrAddDevice;

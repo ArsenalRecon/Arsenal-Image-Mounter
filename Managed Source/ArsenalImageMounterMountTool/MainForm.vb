@@ -188,7 +188,7 @@ Public Class MainForm
             End SyncLock
             For Each Item In ServiceItems
                 If Item?.Service?.HasDiskDevice Then
-                    Trace.WriteLine("Requesting service for device " & Item.Service.DiskDeviceNumber.ToString("X6") & " to shut down...")
+                    Trace.WriteLine($"Requesting service for device {Item.Service.DiskDeviceNumber:X6} to shut down...")
                     Item.Service.DismountAndStopServiceThread(TimeSpan.FromSeconds(10))
                 Else
                     ServiceList.Remove(Item)

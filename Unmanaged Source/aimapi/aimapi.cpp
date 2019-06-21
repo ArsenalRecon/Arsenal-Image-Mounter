@@ -11,7 +11,7 @@
 /// Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 ///
 
-// aimapi.cpp : Defines the exported functions for the DLL application.
+// aimapi.cpp : Implements exported functions for managing virtual disks and driver setup.
 //
 
 #include "stdafx.h"
@@ -914,7 +914,7 @@ IN ULONG ConfigSize)
 
 BOOL
 WINAPI
-ImScsiCreateDevice(IN HWND hWnd OPTIONAL,
+ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
 IN HANDLE Adapter,
 IN LPBYTE PortNumber,
 IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
@@ -923,6 +923,7 @@ IN OUT LPDWORD BytesPerSector OPTIONAL,
 IN PLARGE_INTEGER ImageOffset OPTIONAL,
 IN OUT LPDWORD Flags OPTIONAL,
 IN LPCWSTR FileName OPTIONAL,
+IN LPCWSTR WriteOverlayFileName OPTIONAL,
 IN BOOL NativePath,
 IN LPWSTR MountPoint OPTIONAL,
 IN BOOL CreatePartition)
@@ -1071,7 +1072,9 @@ IN BOOL CreatePartition)
     UNICODE_STRING file_name;
 
     if (FileName == NULL)
+    {
         RtlInitUnicodeString(&file_name, NULL);
+    }
     else if (NativePath)
     {
         if (!RtlCreateUnicodeString(&file_name, FileName))
@@ -1090,14 +1093,20 @@ IN BOOL CreatePartition)
         HANDLE h = CreateFile(L"\\\\?\\Global", 0, FILE_SHARE_READ, NULL,
             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
-        if ((h == INVALID_HANDLE_VALUE) &
+        if ((h == INVALID_HANDLE_VALUE) &&
             (GetLastError() == ERROR_FILE_NOT_FOUND))
+        {
             namespace_prefix = L"\\BaseNamedObjects\\";
+        }
         else
+        {
             namespace_prefix = L"\\BaseNamedObjects\\Global\\";
+        }
 
         if (h != INVALID_HANDLE_VALUE)
+        {
             CloseHandle(h);
+        }
 
         WHeapMem<WCHAR> prefixed_name(
             ((wcslen(namespace_prefix) + wcslen(FileName)) << 1) + 1,
@@ -1108,7 +1117,6 @@ IN BOOL CreatePartition)
 
         if (!RtlCreateUnicodeString(&file_name, prefixed_name))
         {
-
             ImScsiDebugMsgBox(hWnd, L"Memory allocation error.",
                 L"Arsenal Image Mounter", MB_ICONSTOP);
             return FALSE;
@@ -1118,7 +1126,31 @@ IN BOOL CreatePartition)
     {
         if (!RtlDosPathNameToNtPathName_U(FileName, &file_name, NULL, NULL))
         {
+            ImScsiDebugMsgBox(hWnd, L"Memory allocation error.",
+                L"Arsenal Image Mounter", MB_ICONSTOP);
+            return FALSE;
+        }
+    }
 
+    UNICODE_STRING write_overlay_file_name;
+
+    if (WriteOverlayFileName == NULL)
+    {
+        RtlInitUnicodeString(&write_overlay_file_name, NULL);
+    }
+    else if (NativePath)
+    {
+        if (!RtlCreateUnicodeString(&write_overlay_file_name, WriteOverlayFileName))
+        {
+            ImScsiDebugMsgBox(hWnd, L"Memory allocation error.",
+                L"Arsenal Image Mounter", MB_ICONSTOP);
+            return FALSE;
+        }
+    }
+    else
+    {
+        if (!RtlDosPathNameToNtPathName_U(WriteOverlayFileName, &write_overlay_file_name, NULL, NULL))
+        {
             ImScsiDebugMsgBox(hWnd, L"Memory allocation error.",
                 L"Arsenal Image Mounter", MB_ICONSTOP);
             return FALSE;
@@ -1129,7 +1161,8 @@ IN BOOL CreatePartition)
     ImScsiSetStatusMsg(hWnd, L"Creating virtual disk...");
 
     WHeapMem<SRB_IMSCSI_CREATE_DATA> create_data(
-        sizeof(SRB_IMSCSI_CREATE_DATA) + file_name.Length,
+        sizeof(SRB_IMSCSI_CREATE_DATA) + file_name.Length +
+        write_overlay_file_name.Length,
         HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY);
 
     if (DeviceNumber != NULL)
@@ -1154,12 +1187,28 @@ IN BOOL CreatePartition)
     if (Flags != NULL)
         create_data->Fields.Flags = *Flags;
 
-    create_data->Fields.FileNameLength = file_name.Length;
-
     if (file_name.Length != 0)
     {
-        memcpy(&create_data->Fields.FileName, file_name.Buffer, file_name.Length);
+        create_data->Fields.FileNameLength = file_name.Length;
+        
+        memcpy(&create_data->Fields.FileName,
+            file_name.Buffer,
+            file_name.Length);
+        
         RtlFreeUnicodeString(&file_name);
+    }
+
+    if (write_overlay_file_name.Length != 0)
+    {
+        create_data->Fields.WriteOverlayFileNameLength =
+            write_overlay_file_name.Length;
+
+        memcpy(((PUCHAR)&create_data->Fields.FileName) +
+            create_data->Fields.FileNameLength,
+            write_overlay_file_name.Buffer,
+            write_overlay_file_name.Length);
+        
+        RtlFreeUnicodeString(&write_overlay_file_name);
     }
 
     if (!ImScsiDeviceIoControl(Adapter,
@@ -1537,6 +1586,35 @@ IN BOOL CreatePartition)
 AIMAPI_API BOOL
 WINAPI
 ImScsiCreateDevice(IN HWND hWnd OPTIONAL,
+    IN HANDLE Adapter OPTIONAL,
+    IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
+    IN OUT PLARGE_INTEGER DiskSize OPTIONAL,
+    IN OUT LPDWORD BytesPerSector OPTIONAL,
+    IN PLARGE_INTEGER ImageOffset OPTIONAL,
+    IN OUT LPDWORD Flags OPTIONAL,
+    IN LPCWSTR FileName OPTIONAL,
+    IN BOOL NativePath,
+    IN LPWSTR MountPoint OPTIONAL,
+    IN BOOL CreatePartition)
+{
+    return ImScsiCreateDeviceEx(
+        hWnd,
+        Adapter,
+        DeviceNumber,
+        DiskSize,
+        BytesPerSector,
+        ImageOffset,
+        Flags,
+        FileName,
+        NULL,
+        NativePath,
+        MountPoint,
+        CreatePartition);
+}
+
+AIMAPI_API BOOL
+WINAPI
+ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
 IN HANDLE Adapter OPTIONAL,
 IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
 IN OUT PLARGE_INTEGER DiskSize OPTIONAL,
@@ -1544,6 +1622,7 @@ IN OUT LPDWORD BytesPerSector OPTIONAL,
 IN PLARGE_INTEGER ImageOffset OPTIONAL,
 IN OUT LPDWORD Flags OPTIONAL,
 IN LPCWSTR FileName OPTIONAL,
+IN LPCWSTR WriteOverlayFileName OPTIONAL,
 IN BOOL NativePath,
 IN LPWSTR MountPoint OPTIONAL,
 IN BOOL CreatePartition)
@@ -1561,7 +1640,8 @@ IN BOOL CreatePartition)
             return FALSE;
         }
 
-        auto rc = ImScsiCreateDevice(hWnd,
+        auto rc = ImScsiCreateDeviceEx(
+            hWnd,
             Adapter,
             &port_number,
             DeviceNumber,
@@ -1570,6 +1650,7 @@ IN BOOL CreatePartition)
             ImageOffset,
             Flags,
             FileName,
+            WriteOverlayFileName,
             NativePath,
             MountPoint,
             CreatePartition);
@@ -1580,7 +1661,8 @@ IN BOOL CreatePartition)
     }
     else if ((MountPoint == NULL) && !CreatePartition)
     {
-        return ImScsiCreateDevice(hWnd,
+        return ImScsiCreateDeviceEx(
+            hWnd,
             Adapter,
             NULL,
             DeviceNumber,
@@ -1589,6 +1671,7 @@ IN BOOL CreatePartition)
             ImageOffset,
             Flags,
             FileName,
+            WriteOverlayFileName,
             NativePath,
             MountPoint,
             FALSE);

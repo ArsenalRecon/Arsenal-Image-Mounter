@@ -645,8 +645,10 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
             ((DeviceExtension->Statistics.DiffDeviceVbr.Fields.Foot.
                 VbrSignature != vbr_signature) ||
                 !RtlEqualMemory(diff_file_magic,
-                    DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.Magic,
-                    sizeof(diff_file_magic))))
+                    DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
+                    Magic, sizeof(diff_file_magic)) ||
+                DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
+                DiffBlockBits != DIFF_BLOCK_BITS))
         {
             DbgPrint("AIMWrFltrInitializeDiffDevice: Diff device VBR for %p is invalid.\n",
                 DeviceExtension->DeviceObject);
@@ -702,6 +704,9 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
 
         DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.MajorVersion =
             major_version;
+
+        DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.DiffBlockBits =
+            DIFF_BLOCK_BITS;
 
         if (DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
             OffsetToAllocationTable == 0)
@@ -836,8 +841,10 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
             ((DeviceExtension->Statistics.DiffDeviceVbr.Fields.Foot.
                 VbrSignature != vbr_signature) ||
                 !RtlEqualMemory(diff_file_magic,
-                    DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.Magic,
-                    sizeof(diff_file_magic))))
+                    DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
+                    Magic, sizeof(diff_file_magic)) ||
+                DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
+                DiffBlockBits != DIFF_BLOCK_BITS))
         {
             DbgPrint("AIMWrFltrInitializeDiffDevice: Diff device VBR for %p is invalid.\n",
                 DeviceExtension->DeviceObject);
@@ -893,6 +900,9 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
 
         DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.MajorVersion =
             major_version;
+
+        DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.DiffBlockBits =
+            DIFF_BLOCK_BITS;
 
         if (DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
             OffsetToAllocationTable == 0)
@@ -1417,8 +1427,6 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
     RtlZeroMemory(device_extension, sizeof(DEVICE_EXTENSION));
 
     device_extension->Statistics.Version = sizeof(AIMWRFLTR_DEVICE_STATISTICS);
-
-    device_extension->Statistics.DiffDeviceVbr.Fields.Head.DiffBlockBits = DIFF_BLOCK_BITS;
 
     //
     // Initialize the remove lock

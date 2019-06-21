@@ -30,7 +30,7 @@ Namespace PSDisk
                         If ids.TryGetValue(scsiaddress, result) Then
                             Return result
                         Else
-                            Trace.WriteLine("No PhysicalDrive object found for " & scsiaddress.ToString())
+                            Trace.WriteLine($"No PhysicalDrive object found for {scsiaddress.ToString()}")
                             Return Nothing
                         End If
                     End Function
@@ -53,15 +53,17 @@ Namespace PSDisk
                                         view.FakeDiskSignature = (dev.Flags And DeviceFlags.FakeDiskSignatureIfZero) = DeviceFlags.FakeDiskSignatureIfZero
                                         view.NativePropertyDiskOffline = device.DiskOffline
                                         view.NativePropertyDiskOReadOnly = device.DiskReadOnly
-                                        If device.HasValidMBR Then
-                                            view.NativePartitionLayout = device.PartitionInformationEx?.PartitionStyle
+                                        Dim drive_layout = device.DriveLayoutEx
+                                        view.DiskId = TryCast(drive_layout, NativeFileIO.DriveLayoutInformationGPT)?.DriveLayoutInformationGPT.DiskId
+                                        If device.HasValidPartitionTable Then
+                                            view.NativePartitionLayout = drive_layout?.DriveLayoutInformation.PartitionStyle
                                         Else
                                             view.NativePartitionLayout = Nothing
                                         End If
                                     End Using
 
                                 Catch ex As Exception
-                                    Trace.WriteLine("Error reading signature from MBR for drive " & view.DevicePath & ": " & ex.ToString())
+                                    Trace.WriteLine($"Error reading signature from MBR for drive {view.DevicePath}: {ex.ToString()}")
 
                                 End Try
 
@@ -70,12 +72,13 @@ Namespace PSDisk
                                     view.MountPoints = view.Volumes.SelectMany(AddressOf NativeFileIO.GetVolumeMountPoints).ToArray()
 
                                 Catch ex As Exception
-                                    Trace.WriteLine("Error enumerating volumes for drive " & view.DevicePath & ": " & ex.ToString())
+                                    Trace.WriteLine($"Error enumerating volumes for drive {view.DevicePath}: {ex.ToString()}")
 
                                 End Try
                             End If
 
                             Return view
+
                         End Function)
 
             Catch ex As Exception When _

@@ -368,7 +368,7 @@ Public Class API
                 Return
             End If
 
-            Throw New IOException("Error adding write overlay to device", New Win32Exception(NativeFileIO.Win32API.RtlNtStatusToDosError(statistics.LastErrorCode)))
+            Throw New IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode))
 
         Next
 

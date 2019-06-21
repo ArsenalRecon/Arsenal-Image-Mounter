@@ -99,6 +99,7 @@ Module ServerModule
     Sub SafeMain(args As String())
 
         Dim DeviceName As String = Nothing
+        Dim WriteOverlayImageFile As String = Nothing
         Dim ObjectName As String = Nothing
         Dim ListenAddress As IPAddress = IPAddress.Any
         Dim ListenPort As Integer
@@ -134,6 +135,10 @@ Module ServerModule
                 ProviderName = arg.Substring("/provider=".Length)
             ElseIf arg.Equals("/readonly", StringComparison.OrdinalIgnoreCase) Then
                 DiskAccess = FileAccess.Read
+            ElseIf arg.StartsWith("/writeoverlay=", StringComparison.OrdinalIgnoreCase) Then
+                WriteOverlayImageFile = arg.Substring("/writeoverlay=".Length)
+                DiskAccess = FileAccess.Read
+                DeviceFlags = DeviceFlags Or DeviceFlags.ReadOnly Or DeviceFlags.WriteOverlay
             ElseIf arg.Equals("/mount", StringComparison.OrdinalIgnoreCase) Then
                 Mount = True
             ElseIf arg.Equals("/mount:removable", StringComparison.OrdinalIgnoreCase) Then
@@ -250,9 +255,10 @@ Module ServerModule
 
         If Mount Then
             Console.WriteLine("Opening image file And mounting as virtual disk...")
+            Service.WriteOverlayImageName = WriteOverlayImageFile
             Service.StartServiceThreadAndMount(New ScsiAdapter, DeviceFlags)
             Using device = Service.OpenDiskDevice(0)
-                Console.WriteLine("Virtual disk is " & device.DevicePath & " with SCSI address " & device.ScsiAddress.ToString())
+                Console.WriteLine($"Virtual disk is {device.DevicePath} with SCSI address {device.ScsiAddress}")
             End Using
             Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
         Else

@@ -201,6 +201,94 @@ extern "C" {
         IN BOOL CreatePartition CPP_DEF_ZERO);
 
     /**
+    This function creates a new virtual disk device.
+
+    hWndStatusText
+                    A handle to a window that can display status message text.
+                    The function will send WM_SETTEXT messages to this window.
+                    If this parameter is NULL no WM_SETTEXT messages are sent
+                    and the function acts non-interactive.
+
+    Adapter         
+                    Handle to open Arsenal Image Mounter virtual SCSI adapter.
+                    If set to INVALID_HANDLE_VALUE, the function automatically
+                    uses first available SCSI adapter.
+
+    DeviceNumber    
+                    In: Device number for device to create. Device number must
+                    not be in use by an existing virtual disk. For automatic
+                    allocation of device number, use IMSCSI_AUTO_DEVICE_NUMBER
+                    constant or specify a NULL pointer.
+
+                    Out: If DeviceNumber parameter is not NULL, device number
+                    for created device is returned in DWORD variable pointed
+                    to.
+
+    DiskSize    
+                    Size of the new virtual disk, in bytes.
+
+                    Size parameter can be zero if the device is backed by an
+                    image file or a proxy device, but not if it is virtual
+                    memory only device.
+
+    BytesPerSector
+                    Sector size of the new virtual disk.
+
+                    BytesPerSector can be zero, in which case default values
+                    will be used automatically.
+
+    Flags           
+                    Bitwise or-ed combination of one of the IMSCSI_TYPE_xxx
+                    flags, one of the IMSCSI_DEVICE_TYPE_xxx flags and any
+                    number of IMSCSI_OPTION_xxx flags. The flags can often be
+                    left zero and left to the driver to automatically select.
+                    For example, if a virtual disk size is specified to 1440
+                    KB and an image file name is not specified, the driver
+                    automatically selects IMSCSI_TYPE_VM|IMSCSI_DEVICE_TYPE_FD
+                    for this parameter.
+
+    FileName        
+                    Name of disk image file. In case IMSCSI_TYPE_VM is
+                    specified in the Flags parameter, this file will be loaded
+                    into the virtual memory-backed disk when created.
+
+    WriteOverlayFileName
+                    Name of write overlay differencing image file to use
+                    with IMSCSI_OPTION_WRITE_OVERLAY mode.
+
+    NativePath      
+                    Set to TRUE if the FileName parameter specifies an NT
+                    native path, such as \??\C:\imagefile.img or FALSE if it
+                    specifies a Win32/DOS-style path such as C:\imagefile.img.
+
+    MountPoint      
+                    Drive letter to assign to the first partition on the new
+                    virtual disk. It can be specified on the form F: or F:\.
+                    It can also specify an empty directory on another NTFS
+                    volume.
+
+    CreatePartition
+                    Set to TRUE to automatically initialize the new virtual
+                    disk with a partition table and create one partition
+                    covering all available space. FALSE does not automatically
+                    initialize anything on the virtual disk.
+    */
+    AIMAPI_API BOOL
+        WINAPI
+        ImScsiCreateDeviceEx(IN HWND hWndStatusText OPTIONAL,
+            IN HANDLE Adapter OPTIONAL,
+            IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
+            IN OUT PLARGE_INTEGER DiskSize OPTIONAL,
+            IN OUT LPDWORD BytesPerSector OPTIONAL CPP_DEF_ZERO,
+            IN PLARGE_INTEGER ImageOffset OPTIONAL CPP_DEF_ZERO,
+            IN OUT LPDWORD Flags OPTIONAL CPP_DEF_ZERO,
+            IN LPCWSTR FileName OPTIONAL CPP_DEF_ZERO,
+            IN LPCWSTR WriteOverlayFileName OPTIONAL CPP_DEF_ZERO,
+            IN BOOL NativePath CPP_DEF_ZERO,
+            IN LPWSTR MountPoint OPTIONAL CPP_DEF_ZERO,
+            IN BOOL CreatePartition CPP_DEF_ZERO);
+
+    /**
     This function removes (unmounts) an existing virtual disk device.
 
     hWndStatusText  A handle to a window that can display status message text.

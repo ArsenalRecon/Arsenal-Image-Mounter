@@ -173,7 +173,6 @@ Public Class DiskDevice
                 .Read(rawsig, 0, rawsig.Length)
             End With
             If BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US AndAlso
-                    BitConverter.ToUInt16(rawsig, &H1BC) = &H0US AndAlso
                     rawsig(&H1C2) <> &HEE AndAlso
                     (rawsig(&H1BE) And &H7F) = 0 AndAlso
                     (rawsig(&H1CE) And &H7F) = 0 AndAlso
@@ -205,7 +204,7 @@ Public Class DiskDevice
     ''' Return a value indicating whether present sector 0 data indicates a valid MBR
     ''' with a partition table and a disk signature.
     ''' </summary>
-    Public ReadOnly Property HasValidMBR As Boolean
+    Public ReadOnly Property HasValidPartitionTable As Boolean
         Get
 
             Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
@@ -216,7 +215,6 @@ Public Class DiskDevice
             End With
 
             Return BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US AndAlso
-                BitConverter.ToUInt16(rawsig, &H1BC) = &H0US AndAlso
                 (rawsig(&H1BE) And &H7F) = 0 AndAlso
                 (rawsig(&H1CE) And &H7F) = 0 AndAlso
                 (rawsig(&H1DE) And &H7F) = 0 AndAlso
@@ -290,6 +288,16 @@ Public Class DiskDevice
     Public ReadOnly Property PartitionInformationEx As NativeFileIO.Win32API.PARTITION_INFORMATION_EX?
         Get
             Return NativeFileIO.GetPartitionInformationEx(SafeFileHandle)
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Gets information about a disk partitions. This property is available
+    ''' for physical disks, not disk partitions.
+    ''' </summary>
+    Public ReadOnly Property DriveLayoutEx As NativeFileIO.DriveLayoutInformation
+        Get
+            Return NativeFileIO.GetDriveLayoutEx(SafeFileHandle)
         End Get
     End Property
 

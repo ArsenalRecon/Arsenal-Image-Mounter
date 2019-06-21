@@ -55,8 +55,6 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         Irp->IoStatus.Status = STATUS_END_OF_MEDIA;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-        KdBreakPoint();
-
         return STATUS_END_OF_MEDIA;
     }
 

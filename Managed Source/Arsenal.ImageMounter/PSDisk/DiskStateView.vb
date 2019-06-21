@@ -5,13 +5,17 @@ Namespace PSDisk
     Public Class DiskStateView
         Implements INotifyPropertyChanged
 
-        Private _DetailsVisible As Boolean
-        Private _Selected As Boolean
-        Public DeviceProperties As ScsiAdapter.DeviceProperties
-        Public RawDiskSignature As UInt32?
-
         Public Sub New()
         End Sub
+
+        Private _DetailsVisible As Boolean
+        Private _Selected As Boolean
+
+        Public Property DeviceProperties As ScsiAdapter.DeviceProperties
+
+        Public Property RawDiskSignature As UInt32?
+
+        Public Property DiskId As Guid?
 
         Public Property DevicePath As String
 
@@ -19,13 +23,13 @@ Namespace PSDisk
 
         Public ReadOnly Property ScsiId As String
             Get
-                Return DeviceProperties.DeviceNumber.ToString("X6")
+                Return _DeviceProperties.DeviceNumber.ToString("X6")
             End Get
         End Property
 
         Public ReadOnly Property ImagePath As String
             Get
-                Return DeviceProperties.Filename
+                Return _DeviceProperties.Filename
             End Get
         End Property
 
@@ -50,18 +54,18 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public Property NativePartitionLayout As IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE?
+        Public Property NativePartitionLayout As IO.NativeFileIO.Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE?
 
         Public ReadOnly Property PartitionLayout As String
             Get
                 If _NativePartitionLayout.HasValue Then
 
                     Select Case _NativePartitionLayout.Value
-                        Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_GPT
+                        Case IO.NativeFileIO.Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_GPT
                             Return "GPT"
-                        Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        Case IO.NativeFileIO.Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_MBR
                             Return "MBR"
-                        Case IO.NativeFileIO.Win32API.PARTITION_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_RAW
+                        Case IO.NativeFileIO.Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_RAW
                             Return "RAW"
                         Case Else
                             Return "Unknown"
@@ -74,10 +78,12 @@ Namespace PSDisk
 
         Public ReadOnly Property Signature As String
             Get
-                If RawDiskSignature.HasValue AndAlso _FakeDiskSignature Then
-                    Return $"{RawDiskSignature.Value.ToString("X8")} (faked)"
-                ElseIf RawDiskSignature.HasValue Then
-                    Return RawDiskSignature.Value.ToString("X8")
+                If _DiskId.HasValue Then
+                    Return _DiskId.Value.ToString("b")
+                ElseIf _RawDiskSignature.HasValue AndAlso _FakeDiskSignature Then
+                    Return $"{_RawDiskSignature.Value.ToString("X8")} (faked)"
+                ElseIf _RawDiskSignature.HasValue Then
+                    Return _RawDiskSignature.Value.ToString("X8")
                 Else
                     Return Nothing
                 End If
@@ -86,8 +92,8 @@ Namespace PSDisk
 
         Public ReadOnly Property DiskSizeNumeric As ULong?
             Get
-                If DeviceProperties IsNot Nothing Then
-                    Return Convert.ToUInt64(DeviceProperties.DiskSize)
+                If _DeviceProperties IsNot Nothing Then
+                    Return Convert.ToUInt64(_DeviceProperties.DiskSize)
                 Else
                     Return Nothing
                 End If
@@ -132,8 +138,8 @@ Namespace PSDisk
             Get
                 If _NativePropertyDiskOReadOnly.HasValue Then
                     Return _NativePropertyDiskOReadOnly.Value
-                ElseIf DeviceProperties IsNot Nothing Then
-                    Return (DeviceProperties.Flags And DeviceFlags.ReadOnly) = DeviceFlags.ReadOnly
+                ElseIf _DeviceProperties IsNot Nothing Then
+                    Return (_DeviceProperties.Flags And DeviceFlags.ReadOnly) = DeviceFlags.ReadOnly
                 Else
                     Return Nothing
                 End If

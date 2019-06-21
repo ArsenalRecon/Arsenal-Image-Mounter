@@ -276,6 +276,7 @@ extern "C" {
         BOOLEAN               UseProxy;
         PFILE_OBJECT          FileObject;
         UCHAR                 UniqueId[16];
+        CHAR                  GuidString[39];
         UNICODE_STRING        WriteOverlayFileName;
         HANDLE                WriteOverlay;
     } HW_LU_EXTENSION, *pHW_LU_EXTENSION;
