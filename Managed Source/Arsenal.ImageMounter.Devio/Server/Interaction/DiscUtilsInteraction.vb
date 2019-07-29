@@ -24,19 +24,9 @@ Namespace Server.Interaction
 
             Dim Flags As DeviceFlags = 0
 
-            Using handle = NativeFileIO.Win32API.
-                CreateFile("\\?\awealloc",
-                           NativeFileIO.Win32API.FILE_READ_ATTRIBUTES,
-                           0,
-                           IntPtr.Zero,
-                           NativeFileIO.Win32API.OPEN_EXISTING,
-                           0,
-                           IntPtr.Zero)
-
-                If Not handle.IsInvalid Then
-                    Flags = Flags Or DeviceFlags.FileTypeAwe
-                End If
-            End Using
+            If NativeFileIO.TestFileOpen("\\?\awealloc") Then
+                Flags = Flags Or DeviceFlags.FileTypeAwe
+            End If
 
             CreateRamDisk(owner, adapter, size << 20, Flags, DeviceNumber)
 
@@ -53,8 +43,8 @@ Namespace Server.Interaction
             Try
                 Using device = Adapter.OpenDevice(DeviceNumber, FileAccess.ReadWrite)
 
-                    device.DiskOffline = True
-                    device.DiskReadOnly = False
+                    device.DiskPolicyOffline = True
+                    device.DiskPolicyReadOnly = False
 
                     Dim kernel_geometry = device.Geometry
                     Dim discutils_geometry As New Geometry(
@@ -83,7 +73,7 @@ Namespace Server.Interaction
                     End Using
 
                     Try
-                        device.DiskOffline = False
+                        device.DiskPolicyOffline = False
 
                         device.UpdateProperties()
 
@@ -97,7 +87,7 @@ Namespace Server.Interaction
 
                                 If driveletter <> Nothing Then
 
-                                    Dim mountPoint = driveletter & ":\"
+                                    Dim mountPoint = $"{driveletter}:\"
 
                                     NativeFileIO.SetVolumeMountPoint(mountPoint, volume)
 

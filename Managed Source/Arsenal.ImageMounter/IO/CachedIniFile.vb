@@ -9,13 +9,12 @@ Namespace IO
     ''' </summary>
     <ComVisible(False)> _
     Public Class CachedIniFile
-        Inherits NullSafeDictionary(Of String, NameValueCollection)
+        Inherits NullSafeDictionary(Of String, NullSafeDictionary(Of String, String))
 
-        Private m_Filename As String
-        Private m_Encoding As Encoding
-
-        Protected Overrides Function GetDefaultValue() As NameValueCollection
-            Return New NameValueCollection(StringComparer.CurrentCultureIgnoreCase)
+        Protected Overrides Function GetDefaultValue(Key As String) As NullSafeDictionary(Of String, String)
+            Dim new_section As New NullSafeStringDictionary(StringComparer.CurrentCultureIgnoreCase)
+            Add(Key, new_section)
+            Return new_section
         End Function
 
         ''' <summary>
@@ -50,10 +49,32 @@ Namespace IO
         ''' <param name="SectionName">Name of INI file section where to save value</param>
         ''' <param name="SettingName">Name of value to save</param>
         Public Sub SaveValue(SectionName As String, SettingName As String)
-            If String.IsNullOrEmpty(m_Filename) Then
+            If String.IsNullOrEmpty(_Filename) Then
                 Throw New ArgumentNullException("Filename", "Filename property not set on this object.")
             End If
-            SaveValue(SectionName, SettingName, Item(SectionName)(SettingName), m_Filename)
+            SaveValue(SectionName, SettingName, Item(SectionName)(SettingName), _Filename)
+        End Sub
+
+        ''' <summary>
+        ''' Saves current contents of this object to INI file that this object last loaded values from, either through constructor
+        ''' call with filename parameter or by calling Load method with filename parameter.
+        ''' </summary>
+        Public Sub Save()
+            File.WriteAllText(_Filename, ToString(), _Encoding)
+        End Sub
+
+        ''' <summary>
+        ''' Saves current contents of this object to an INI file. If the file already exists, it is overwritten.
+        ''' </summary>
+        Public Sub Save(Filename As String, Encoding As Encoding)
+            File.WriteAllText(Filename, ToString(), Encoding)
+        End Sub
+
+        ''' <summary>
+        ''' Saves current contents of this object to an INI file. If the file already exists, it is overwritten.
+        ''' </summary>
+        Public Sub Save(Filename As String)
+            File.WriteAllText(Filename, ToString(), _Encoding)
         End Sub
 
         Public Overrides Function ToString() As String
@@ -63,7 +84,7 @@ Namespace IO
         End Function
 
         Public Sub WriteTo(Stream As Stream)
-            WriteTo(New StreamWriter(Stream, m_Encoding))
+            WriteTo(New StreamWriter(Stream, _Encoding))
         End Sub
 
         Public Sub WriteTo(Writer As TextWriter)
@@ -75,6 +96,7 @@ Namespace IO
 
                 WriteSectionTo(SectionKey, Writer)
             Next
+            Writer.Flush()
         End Sub
 
         Public Sub WriteSectionTo(SectionKey As String, Writer As TextWriter)
@@ -83,38 +105,33 @@ Namespace IO
             End If
 
             Dim Section = Item(SectionKey)
-            If Not Section.HasKeys Then
-                Return
-            End If
+
+            Dim any_written = False
 
             If Not String.IsNullOrEmpty(SectionKey) Then
-                Writer.WriteLine("[" & SectionKey & "]")
+                Writer.WriteLine($"[{SectionKey}]")
+                any_written = True
             End If
 
-            For Each key In Section.AllKeys
-                Writer.WriteLine(key & "=" & Section(key))
+            For Each key In Section.Keys.OfType(Of String)()
+                Writer.WriteLine($"{key}={Section(key)}")
+                any_written = True
             Next
 
-            Writer.WriteLine()
+            If any_written Then
+                Writer.WriteLine()
+            End If
         End Sub
 
         ''' <summary>
-        ''' Name of last ini file loaded into this object.
+        ''' Name of last INI file loaded into this object.
         ''' </summary>
         Public ReadOnly Property Filename() As String
-            Get
-                Return m_Filename
-            End Get
-        End Property
 
         ''' <summary>
-        ''' Text encoding of last ini file loaded into this object.
+        ''' Text encoding of last INI file loaded into this object.
         ''' </summary>
         Public ReadOnly Property Encoding() As Encoding
-            Get
-                Return m_Encoding
-            End Get
-        End Property
 
         ''' <summary>
         ''' Creates a new empty CachedIniFile object
@@ -130,7 +147,7 @@ Namespace IO
         ''' <param name="Filename">Name of INI file to read into the created object</param>
         ''' <param name="Encoding">Text encoding used in INI file</param>
         Public Sub New(Filename As String, Encoding As Encoding)
-            MyBase.New(StringComparer.CurrentCultureIgnoreCase)
+            Me.New()
 
             Load(Filename, Encoding)
         End Sub
@@ -151,7 +168,7 @@ Namespace IO
         ''' <param name="Stream">Stream that contains INI settings to read into the created object</param>
         ''' <param name="Encoding">Text encoding used in INI file</param>
         Public Sub New(Stream As Stream, Encoding As Encoding)
-            MyBase.New(StringComparer.CurrentCultureIgnoreCase)
+            Me.New()
 
             Load(Stream, Encoding)
         End Sub
@@ -171,7 +188,7 @@ Namespace IO
         ''' called earlier.
         ''' </summary>
         Public Sub Reload()
-            Load(m_Filename, m_Encoding)
+            Load(_Filename, _Encoding)
         End Sub
 
         ''' <summary>
@@ -190,8 +207,8 @@ Namespace IO
         ''' <param name="Filename">INI file to load</param>
         ''' <param name="Encoding">Text encoding for INI file</param>
         Public Sub Load(Filename As String, Encoding As Encoding)
-            m_Filename = Filename
-            m_Encoding = Encoding
+            _Filename = Filename
+            _Encoding = Encoding
 
             Try
                 Using fs As New FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 20480, FileOptions.SequentialScan)
@@ -211,9 +228,11 @@ Namespace IO
         ''' <param name="Encoding">Text encoding for INI stream</param>
         Public Sub Load(Stream As Stream, Encoding As Encoding)
             Try
-                Using sr As New StreamReader(Stream, Encoding, False, 1048576)
-                    Load(sr)
-                End Using
+                Dim sr As New StreamReader(Stream, Encoding, False, 1048576)
+
+                Load(sr)
+
+                _Encoding = Encoding
 
             Catch
 
@@ -249,11 +268,11 @@ Namespace IO
 
                             Line = Line.Trim()
 
-                            If Line.Length = 0 OrElse Line.StartsWith(";") Then
+                            If Line.Length = 0 OrElse Line.StartsWith(";", StringComparison.Ordinal) Then
                                 Continue Do
                             End If
 
-                            If Line.StartsWith("[") AndAlso Line.EndsWith("]") Then
+                            If Line.StartsWith("[", StringComparison.Ordinal) AndAlso Line.EndsWith("]", StringComparison.Ordinal) Then
                                 Dim SectionKey = Line.Substring(1, Line.Length - 2).Trim()
                                 CurrentSection = Item(SectionKey)
                                 Continue Do
@@ -267,7 +286,7 @@ Namespace IO
                             Dim Key = Line.Remove(EqualSignPos).Trim()
                             Dim Value = Line.Substring(EqualSignPos + 1).Trim()
 
-                            CurrentSection.Set(Key, Value)
+                            CurrentSection(Key) = Value
 
                         Loop
                     End With

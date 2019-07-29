@@ -233,7 +233,7 @@ Public Class API
     ''' <param name="Flags">Flag field to check.</param>
     Public Shared Function IsReadOnly(Flags As DeviceFlags) As Boolean
 
-        Return (Flags And DeviceFlags.ReadOnly) = DeviceFlags.ReadOnly
+        Return Flags.HasFlag(DeviceFlags.ReadOnly)
 
     End Function
 
@@ -243,7 +243,7 @@ Public Class API
     ''' <param name="Flags">Flag field to check.</param>
     Public Shared Function IsRemovable(Flags As DeviceFlags) As Boolean
 
-        Return (Flags And DeviceFlags.Removable) = DeviceFlags.Removable
+        Return Flags.HasFlag(DeviceFlags.Removable)
 
     End Function
 
@@ -253,7 +253,7 @@ Public Class API
     ''' <param name="Flags">Flag field to check.</param>
     Public Shared Function IsModified(Flags As DeviceFlags) As Boolean
 
-        Return (Flags And DeviceFlags.Modified) = DeviceFlags.Modified
+        Return Flags.HasFlag(DeviceFlags.Modified)
 
     End Function
 

@@ -115,6 +115,7 @@
     <Compile Include="Client\DevioShmStream.vb" />
     <Compile Include="Client\DevioStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderDLLWrapperBase.vb" />
+    <Compile Include="Server\GenericProviders\DevioProviderWIthFakeMBR.vb" />
     <Compile Include="Server\Interaction\DiscUtilsInteraction.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderFromStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderManagedBase.vb" />

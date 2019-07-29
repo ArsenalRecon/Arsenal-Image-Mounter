@@ -30,12 +30,16 @@ Public Class DiskStream
         MyBase.New(SafeFileHandle, AccessMode)
     End Sub
 
+    Private _CachedLength As Long?
+
     ''' <summary>
     ''' Retrieves raw disk size.
     ''' </summary>
     Public Overrides ReadOnly Property Length As Long
         Get
-            Return NativeFileIO.GetDiskSize(SafeFileHandle)
+            _CachedLength = If(_CachedLength, NativeFileIO.GetDiskSize(SafeFileHandle))
+
+            Return _CachedLength.Value
         End Get
     End Property
 

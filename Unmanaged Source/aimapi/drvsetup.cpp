@@ -676,12 +676,12 @@ ImScsiRescanScsiAdapter()
         i < length;
         i += wcslen(hwinstances) + 1)
     {
-        if (hwinstances[0] == 0)
+        if (hwinstances[i] == 0)
         {
             continue;
         }
 
-        ImScsiDebugMessage(L"Rescanning %1...", hwinstances);
+        ImScsiDebugMessage(L"Rescanning %1...", hwinstances + i);
 
         auto status = ImScsiScanForHardwareChanges(hwinstances + i, 0);
 
@@ -692,7 +692,7 @@ ImScsiRescanScsiAdapter()
         else
         {
             ImScsiDebugMessage(L"Rescanning of %1 failed: %2!#x!",
-                hwinstances, status);
+                hwinstances + 1, status);
 
             SetLastError(status);
         }

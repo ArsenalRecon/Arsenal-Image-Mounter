@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 
@@ -55,6 +56,9 @@ Public Class ScsiAdapter
         ''' virtual memory type virtual disk.</summary>
         Public Filename As String
 
+        ''' <summary>Path to differencing file used in write-temporary mode.</summary>
+        Public WriteOverlayImageFile As String
+
     End Class
 
     Public ReadOnly ScsiPortNumber As Byte
@@ -63,14 +67,14 @@ Public Class ScsiAdapter
 
         Dim handle As SafeFileHandle
         Try
-            handle = NativeFileIO.OpenFileHandle("\\?\" & device,
+            handle = NativeFileIO.OpenFileHandle($"\\?\{device}",
                                                  FileAccess.ReadWrite,
                                                  FileShare.ReadWrite,
                                                  FileMode.Open,
-                                                 False)
+                                                 FileOptions.None)
 
         Catch ex As Exception
-            Trace.WriteLine("PhDskMnt::OpenAdapterHandle: Error opening device '" & device & "' ('" & target & "'): " & ex.ToString())
+            Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error opening device '{device}' ('{target}'): {ex.ToString()}")
 
             Return Nothing
 
@@ -105,7 +109,7 @@ Public Class ScsiAdapter
                         Continue For
 
                     Catch ex2 As Exception
-                        Trace.WriteLine("PhDskMnt::RescanScsiAdapter: " & ex2.ToString())
+                        Trace.WriteLine($"PhDskMnt::RescanScsiAdapter: {ex2.ToString()}")
 
                     End Try
                 End If
@@ -114,9 +118,9 @@ Public Class ScsiAdapter
 
             Catch ex As Exception
                 If TypeOf ex Is Win32Exception Then
-                    Trace.WriteLine("Error code 0x" & DirectCast(ex, Win32Exception).NativeErrorCode.ToString("X8"))
+                    Trace.WriteLine($"Error code 0x{DirectCast(ex, Win32Exception).NativeErrorCode:X8}")
                 End If
-                Trace.WriteLine("PhDskMnt::OpenAdapterHandle: Error checking driver version: " & ex.ToString())
+                Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error checking driver version: {ex.ToString()}")
                 handle.Dispose()
                 Return Nothing
 
@@ -172,7 +176,7 @@ Public Class ScsiAdapter
 
         Me.ScsiPortNumber = OpenAdapterHandle.Key
 
-        Trace.WriteLine("Successfully opened adapter with SCSI portnumber = " & ScsiPortNumber & ".")
+        Trace.WriteLine($"Successfully opened adapter with SCSI portnumber = {ScsiPortNumber}.")
     End Sub
 
     ''' <summary>
@@ -180,11 +184,11 @@ Public Class ScsiAdapter
     ''' </summary>
     ''' <param name="ScsiPortNumber">Scsi adapter port number as assigned by SCSI class driver.</param>
     Public Sub New(ScsiPortNumber As Byte)
-        MyBase.New("\\?\Scsi" & ScsiPortNumber & ":", FileAccess.ReadWrite)
+        MyBase.New($"\\?\Scsi{ScsiPortNumber}:", FileAccess.ReadWrite)
 
         Me.ScsiPortNumber = ScsiPortNumber
 
-        Trace.WriteLine("Successfully opened adapter with SCSI portnumber = " & ScsiPortNumber & ".")
+        Trace.WriteLine($"Successfully opened adapter with SCSI portnumber = {ScsiPortNumber}.")
 
         If Not CheckDriverVersion() Then
             Throw New Exception("Incompatible version of Arsenal Image Mounter Miniport driver.")
@@ -196,7 +200,7 @@ Public Class ScsiAdapter
     ''' Retrieves a list of virtual disks on this adapter. Each element in returned list holds device number of an existing
     ''' virtual disk.
     ''' </summary>
-    Public Function GetDeviceList() As List(Of UInt32)
+    Public Iterator Function GetDeviceList() As IEnumerable(Of UInt32)
 
         Dim ReturnCode As Int32
 
@@ -214,18 +218,17 @@ Public Class ScsiAdapter
         Dim NumberOfDevices = Response.ReadInt32()
         Dim DeviceList As New List(Of UInt32)(NumberOfDevices)
         For i = 1 To NumberOfDevices
-            DeviceList.Add(Response.ReadUInt32())
+            Yield Response.ReadUInt32()
         Next
-        Return DeviceList
 
     End Function
 
     ''' <summary>
     ''' Retrieves a list of DeviceProperties objects for each virtual disk on this adapter.
     ''' </summary>
-    Public Function GetDeviceProperties() As List(Of DeviceProperties)
+    Public Function GetDeviceProperties() As IEnumerable(Of DeviceProperties)
 
-        Return GetDeviceList().ConvertAll(AddressOf QueryDevice)
+        Return GetDeviceList().Select(AddressOf QueryDevice)
 
     End Function
 
@@ -325,7 +328,7 @@ Public Class ScsiAdapter
                     Select Case API.GetProxyType(Flags)
 
                         Case DeviceFlags.ProxyTypeSharedMemory
-                            Filename = "\BaseNamedObjects\Global\" & Filename
+                            Filename = $"\BaseNamedObjects\Global\{Filename}"
 
                         Case DeviceFlags.ProxyTypeComm, DeviceFlags.ProxyTypeTCP
 
@@ -355,7 +358,7 @@ Public Class ScsiAdapter
 
         If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
             Dim bytes = BitConverter.GetBytes(CUShort(WriteOverlayFilename.Length * 2))
-            Array.Copy(bytes, 0, ReservedField, 0, bytes.Length)
+            Buffer.BlockCopy(bytes, 0, ReservedField, 0, bytes.Length)
         End If
 
         Dim FillRequestData =
@@ -447,7 +450,7 @@ Public Class ScsiAdapter
 
                 End If
 
-                If (Flags And DeviceFlags.WriteOverlay) = DeviceFlags.WriteOverlay AndAlso
+                If Flags.HasFlag(DeviceFlags.WriteOverlay) AndAlso
                     Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
 
                     Dim status = DiskDevice.GetWriteOverlayStatus()
@@ -540,7 +543,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Sub RemoveAllDevicesSafe()
 
-        GetDeviceList().ForEach(AddressOf RemoveDeviceSafe)
+        Parallel.ForEach(GetDeviceList(), AddressOf RemoveDeviceSafe)
 
     End Sub
 
@@ -565,7 +568,9 @@ Public Class ScsiAdapter
                                                       FillRequestData,
                                                       ReturnCode)
 
-        If ReturnCode <> 0 Then
+        If ReturnCode = NativeFileIO.Win32API.STATUS_OBJECT_NAME_NOT_FOUND Then ' Device already removed
+            Return
+        ElseIf ReturnCode <> 0 Then
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
         End If
 
@@ -599,6 +604,31 @@ Public Class ScsiAdapter
                            ByRef Flags As DeviceFlags,
                            ByRef Filename As String)
 
+        QueryDevice(DeviceNumber, DiskSize, BytesPerSector, ImageOffset, Flags, Filename, WriteOverlayImagefile:=Nothing)
+
+    End Sub
+
+    ''' <summary>
+    ''' Retrieves properties for an existing virtual disk.
+    ''' </summary>
+    ''' <param name="DeviceNumber">Device number of virtual disk to retrieve properties for.</param>
+    ''' <param name="DiskSize">Size of virtual disk.</param>
+    ''' <param name="BytesPerSector">Number of bytes per sector for virtual disk geometry.</param>
+    ''' <param name="ImageOffset">A skip offset if virtual disk data does not begin immediately at start of disk image file.
+    ''' Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter
+    ''' or Windows filesystem drivers.</param>
+    ''' <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
+    ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
+    ''' virtual memory type virtual disk.</param>
+    ''' <param name="WriteOverlayImagefile">Path to differencing file used in write-temporary mode.</param>
+    Public Sub QueryDevice(DeviceNumber As UInt32,
+                           ByRef DiskSize As Int64,
+                           ByRef BytesPerSector As UInt32,
+                           ByRef ImageOffset As Int64,
+                           ByRef Flags As DeviceFlags,
+                           ByRef Filename As String,
+                           ByRef WriteOverlayImagefile As String)
+
         Dim FillRequestData =
           Sub(Request As BinaryWriter)
               Request.Write(DeviceNumber)
@@ -628,7 +658,7 @@ Public Class ScsiAdapter
         DeviceNumber = Response.ReadUInt32()
         DiskSize = Response.ReadInt64()
         BytesPerSector = Response.ReadUInt32
-        Response.ReadUInt32()
+        Dim ReservedField = Response.ReadBytes(4)
         ImageOffset = Response.ReadInt64()
         Flags = CType(Response.ReadUInt32(), DeviceFlags)
         Dim FilenameLength = Response.ReadUInt16()
@@ -636,6 +666,10 @@ Public Class ScsiAdapter
             Filename = Nothing
         Else
             Filename = Encoding.Unicode.GetString(Response.ReadBytes(FilenameLength))
+        End If
+        If Flags.HasFlag(DeviceFlags.WriteOverlay) Then
+            Dim WriteOverlayImagefileLength = BitConverter.ToUInt16(ReservedField, 0)
+            WriteOverlayImagefile = Encoding.Unicode.GetString(Response.ReadBytes(WriteOverlayImagefileLength))
         End If
 
     End Sub
@@ -655,7 +689,9 @@ Public Class ScsiAdapter
                     DeviceProperties.BytesPerSector,
                     DeviceProperties.ImageOffset,
                     DeviceProperties.Flags,
-                    DeviceProperties.Filename)
+                    DeviceProperties.Filename,
+                    DeviceProperties.WriteOverlayImageFile)
+
         Return DeviceProperties
 
     End Function
@@ -768,8 +804,8 @@ Public Class ScsiAdapter
                                                                   Sub(writer) writer.Write(New Byte(0 To 3) {}),
                                                                   ReturnCode)
 
-        Trace.WriteLine("Library version: " & CompatibleDriverVersion.ToString("X4"))
-        Trace.WriteLine("Driver version: " & ReturnCode.ToString("X4"))
+        Trace.WriteLine($"Library version: {CompatibleDriverVersion:X4}")
+        Trace.WriteLine($"Driver version: {ReturnCode:X4}")
 
         If ReturnCode <> CompatibleDriverVersion Then
             Return Nothing
@@ -799,7 +835,7 @@ Public Class ScsiAdapter
             NativeFileIO.DeviceIoControl(SafeFileHandle, NativeFileIO.Win32API.IOCTL_SCSI_RESCAN_BUS, Nothing, 0)
 
         Catch ex As Exception
-            Trace.WriteLine("IOCTL_SCSI_RESCAN_BUS failed: " & ex.ToString())
+            Trace.WriteLine($"IOCTL_SCSI_RESCAN_BUS failed: {ex.ToString()}")
             API.RescanScsiAdapter()
 
         End Try
@@ -813,7 +849,11 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Sub UpdateDiskProperties()
 
-        GetDeviceList().ForEach(AddressOf UpdateDiskProperties)
+        For Each device In GetDeviceList()
+
+            UpdateDiskProperties(device)
+
+        Next
 
     End Sub
 
@@ -822,13 +862,13 @@ Public Class ScsiAdapter
     ''' exceptions are thrown on error, but any exceptions from underlying API calls are logged
     ''' to trace log.
     ''' </summary>
-    Public Sub UpdateDiskProperties(DeviceNumber As UInteger)
+    Public Function UpdateDiskProperties(DeviceNumber As UInteger) As Boolean
 
         Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
 
-        NativeFileIO.UpdateDiskProperties(ScsiAddress)
+        Return NativeFileIO.UpdateDiskProperties(ScsiAddress)
 
-    End Sub
+    End Function
 
     ''' <summary>
     ''' Opens a DiskDevice object for specified device number. Device numbers are created when
@@ -840,6 +880,19 @@ Public Class ScsiAdapter
         Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
 
         Return New DiskDevice(ScsiAddress, AccessMode)
+
+    End Function
+
+    ''' <summary>
+    ''' Returns a PhysicalDrive or CdRom device name for specified device number. Device numbers
+    ''' are created when a new virtual disk is created and returned in a reference parameter to
+    ''' CreateDevice method.
+    ''' </summary>
+    Public Function GetDeviceName(DeviceNumber As UInteger) As String
+
+        Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+
+        Return NativeFileIO.GetDeviceNameByScsiAddress(ScsiAddress)
 
     End Function
 

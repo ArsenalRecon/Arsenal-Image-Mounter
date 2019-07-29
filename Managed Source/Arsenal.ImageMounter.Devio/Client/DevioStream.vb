@@ -82,7 +82,7 @@ Namespace Client
         ''' </summary>
         Public Overrides ReadOnly Property CanWrite As Boolean
             Get
-                Return (Flags And IMDPROXY_FLAGS.IMDPROXY_FLAG_RO) = 0
+                Return Not Flags.HasFlag(IMDPROXY_FLAGS.IMDPROXY_FLAG_RO)
             End Get
         End Property
 

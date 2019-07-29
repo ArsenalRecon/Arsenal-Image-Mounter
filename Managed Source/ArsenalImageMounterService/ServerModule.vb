@@ -16,43 +16,94 @@ Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
-Imports Arsenal.ImageMounter
+Imports Arsenal.ImageMounter.IO
+Imports DiscUtils
 
 Module ServerModule
 
     Private Event RunToEnd As EventHandler
 
-    <MTAThread()>
-    Sub Main(args As String())
+    Private ReadOnly architectureLibPath As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+        {"i386", "x86"},
+        {"AMD64", "x64"}
+    }
 
-        Try
-            SafeMain(args)
+    Private Function GetArchitectureLibPath() As String
 
-        Catch ex As AbandonedMutexException
-            Console.WriteLine("Unexpected client exit.")
-            Trace.WriteLine(ex.ToString())
+        Dim architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
 
-        Catch ex As Exception
-            Console.WriteLine(ex.JoinMessages())
-            Trace.WriteLine(ex.ToString())
-
-        End Try
-
-        RaiseEvent RunToEnd(Nothing, EventArgs.Empty)
-
-        If Debugger.IsAttached Then
-            Console.ReadKey()
+        If String.IsNullOrWhiteSpace(architecture) Then
+            Return String.Empty
         End If
+
+        Dim path As String = Nothing
+
+        If architectureLibPath.TryGetValue(architecture, path) Then
+            Return path
+        End If
+
+        Return architecture
+
+    End Function
+
+    Private ReadOnly assemblyPaths As New List(Of String)(3) From {
+        Path.Combine("lib", GetArchitectureLibPath()),
+        "Lib",
+        "DiskDriver"
+    }
+
+    Sub New()
+
+        Dim appPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)
+
+        For i = 0 To assemblyPaths.Count - 1
+            assemblyPaths(i) = Path.Combine(appPath, assemblyPaths(i))
+        Next
+
+        Dim native_dll_paths = assemblyPaths.Concat(Environment.GetEnvironmentVariable("PATH").Split(";"c))
+
+        Environment.SetEnvironmentVariable("PATH", String.Join(";", native_dll_paths))
 
     End Sub
 
-    Sub ShowVersionInfo()
+    <MTAThread()>
+    Public Function Main(ParamArray args As String()) As Integer
+
+        Try
+            Return SafeMain(args)
+
+        Catch ex As AbandonedMutexException
+            Console.ForegroundColor = ConsoleColor.Red
+            Console.Error.WriteLine("Unexpected client exit.")
+            Console.ResetColor()
+            Trace.WriteLine(ex.ToString())
+            Return -1
+
+        Catch ex As Exception
+            Console.ForegroundColor = ConsoleColor.Red
+            Console.Error.WriteLine(ex.JoinMessages(Environment.NewLine))
+            Console.ResetColor()
+            Trace.WriteLine(ex.ToString())
+            Return -1
+
+        Finally
+            RaiseEvent RunToEnd(Nothing, EventArgs.Empty)
+
+            If Debugger.IsAttached Then
+                Console.ReadKey()
+            End If
+
+        End Try
+
+    End Function
+
+    Public Sub ShowVersionInfo()
 
         Dim asm_file = Assembly.GetExecutingAssembly().Location
         Dim file_ver = FileVersionInfo.GetVersionInfo(asm_file)
 
         Console.WriteLine(
-            "Low-level command line interface to Arsenal Image Mounter virtual" & Environment.NewLine &
+            "Integrated command line interface to Arsenal Image Mounter virtual" & Environment.NewLine &
             "SCSI miniport driver." & Environment.NewLine &
             Environment.NewLine &
             "Version " & file_ver.FileVersion.ToString() & Environment.NewLine &
@@ -96,7 +147,7 @@ Module ServerModule
 
     End Sub
 
-    Sub SafeMain(args As String())
+    Private Function SafeMain(ParamArray args As String()) As Integer
 
         Dim DeviceName As String = Nothing
         Dim WriteOverlayImageFile As String = Nothing
@@ -112,6 +163,8 @@ Module ServerModule
         Dim DeviceFlags As DeviceFlags
         Dim DebugCompare As String = Nothing
         Dim libewfDebugOutput As String = "CONOUT$"
+        Dim OutputImage As String = Nothing
+        Dim OutputImageVariant As String = "dynamic"
 
         For Each arg In args
             If arg.Equals("/trace", StringComparison.OrdinalIgnoreCase) Then
@@ -147,6 +200,11 @@ Module ServerModule
             ElseIf arg.Equals("/mount:cdrom", StringComparison.OrdinalIgnoreCase) Then
                 Mount = True
                 DeviceFlags = DeviceFlags Or DeviceFlags.DeviceTypeCD
+            ElseIf arg.StartsWith("/convert=", StringComparison.OrdinalIgnoreCase) Then
+                OutputImage = arg.Substring("/convert=".Length)
+                DiskAccess = FileAccess.Read
+            ElseIf arg.StartsWith("/variant=", StringComparison.OrdinalIgnoreCase) Then
+                OutputImageVariant = arg.Substring("/variant=".Length)
             ElseIf arg.StartsWith("/libewfoutput=", StringComparison.OrdinalIgnoreCase) Then
                 libewfDebugOutput = arg.Substring("/libewfoutput=".Length)
             ElseIf arg.StartsWith("/debugcompare=", StringComparison.OrdinalIgnoreCase) Then
@@ -156,9 +214,9 @@ Module ServerModule
                 Exit For
             ElseIf arg.Equals("/version", StringComparison.OrdinalIgnoreCase) Then
                 ShowVersionInfo()
-                Return
+                Return 0
             Else
-                Console.WriteLine("Unsupported switch: " & arg)
+                Console.WriteLine($"Unsupported switch: {arg}")
                 ShowHelp = True
                 Exit For
             End If
@@ -170,58 +228,60 @@ Module ServerModule
 
             Dim asmname = Assembly.GetExecutingAssembly().GetName().Name
 
-            Console.WriteLine(asmname & "." & Environment.NewLine &
-                              Environment.NewLine &
-                              "Integrated command line interface to Arsenal Image Mounter virtual SCSI" & Environment.NewLine &
-                              "miniport driver." & Environment.NewLine &
-                              Environment.NewLine &
-                              "For version information, license, copyrights and credits, type aim_cli /version" & Environment.NewLine &
-                              Environment.NewLine &
-                              "Syntax, automatically select object name and mount:" & Environment.NewLine &
-                              asmname & " /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly]" & Environment.NewLine &
-                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
-                              Environment.NewLine &
-                              "Syntax, start shared memory service mode, for mounting from other applications:" & Environment.NewLine &
-                              asmname & " /name=objectname [/buffersize=bytes] [/readonly]" & Environment.NewLine &
-                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
-                              Environment.NewLine &
-                              "Syntax, start TCP/IP service mode, for mounting from other computers:" & Environment.NewLine &
-                              asmname & " [/ipaddress=address] /port=tcpport [/readonly]" & Environment.NewLine &
-                              "    /filename=imagefilename [/provider=DiscUtils|LibEwf|MultiPartRaw]" & Environment.NewLine &
-                              Environment.NewLine &
-                              "DiscUtils and MultiPartRaw support libraries are included embedded in this" & Environment.NewLine &
-                              "application. Libewf support needs libewf.dll, zlib.dll and msvcr100.dll as" & Environment.NewLine &
-                              "external dll files.")
+            Dim providers = String.Join(", ", DevioServiceFactory.InstalledProvidersByNameAndFileAccess.Keys)
 
-            Return
+            Console.WriteLine($"{asmname}.
+
+Integrated command line interface to Arsenal Image Mounter virtual SCSI
+miniport driver.
+
+For version information, license, copyrights and credits, type aim_cli /version
+
+Syntax to mount an image file as a virtual disk:
+{asmname} /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly]
+    /filename=imagefilename /provider={providers}
+    [/writeoverlay=differencingimagefile]
+
+Syntax, start shared memory service mode, for mounting from other applications:
+{asmname} /name=objectname [/buffersize=bytes] [/readonly]
+    /filename=imagefilename /provider={providers}
+
+Syntax, start TCP/IP service mode, for mounting from other computers:
+{asmname} [/ipaddress=listenaddress] /port=tcpport [/readonly]
+    /filename=imagefilename /provider={providers}
+
+Syntax, convert image file without mounting as virtual disk:
+{asmname}  /filename=imagefilename /provider={providers}
+    /convert=outimagefilename [/variant=fixed|dynamic]
+
+DiscUtils and MultiPartRaw provider libraries are included embedded in this
+application. Libewf provider needs libewf.dll and LibAFF4 provider needs
+libaff4.dll.
+
+When converting, output image type can be DD, IMG or RAW for raw format or VHD,
+VHDX, VDI or VMDK virtual machine disk formats. For virtual machine disk
+formats, the optional /variant switch can be used to specify either fixed or
+dynamically expanding formats. Default is dynamic.")
+
+            Return 1
 
         End If
 
-        Dim Provider As IDevioProvider
+        Console.WriteLine($"Opening image file '{DeviceName}'...")
 
-        Select Case ProviderName.ToLowerInvariant()
+        If StringComparer.OrdinalIgnoreCase.Equals(ProviderName, "libewf") Then
 
-            Case "discutils"
-                Provider = DevioServiceFactory.GetProviderDiscUtils(DeviceName, DiskAccess)
+            DevioProviderLibEwf.NotificationFile = libewfDebugOutput
 
-            Case "libewf"
-                DevioProviderLibEwf.NotificationFile = libewfDebugOutput
-                AddHandler RunToEnd,
-                    Sub() DevioProviderLibEwf.NotificationFile = Nothing
+            AddHandler RunToEnd, Sub() DevioProviderLibEwf.NotificationFile = Nothing
 
-                If Verbose Then
-                    DevioProviderLibEwf.NotificationVerbose = True
-                End If
-                Provider = DevioServiceFactory.GetProviderLibEwf(DeviceName, DiskAccess)
+            If Verbose Then
+                DevioProviderLibEwf.NotificationVerbose = True
+            End If
 
-            Case "multipartraw"
-                Provider = DevioServiceFactory.GetProviderMultiPartRaw(DeviceName, DiskAccess)
+        End If
 
-            Case Else
-                Console.WriteLine("Provider names can be DiscUtils, LibEwf Or MultiPartRaw.")
-                Return
-
-        End Select
+        Dim Provider = DevioServiceFactory.GetProvider(DeviceName, DiskAccess, ProviderName)
 
         If Not String.IsNullOrWhiteSpace(DebugCompare) Then
 
@@ -245,24 +305,42 @@ Module ServerModule
 
             Service = New DevioShmService(Provider, OwnsProvider:=True, BufferSize:=BufferSize)
 
+        ElseIf OutputImage IsNot Nothing Then
+
+            ConvertToImage(Provider, OutputImage, OutputImageVariant)
+            Return 0
+
         Else
 
             Provider.Dispose()
-            Console.WriteLine("Shared memory object name, TCP/IP port or /mount switch must be specified.")
-            Return
+
+            Console.WriteLine("None of /name, /port, /mount or /convert switches specified, nothing to do.")
+
+            Return 1
 
         End If
 
         If Mount Then
-            Console.WriteLine("Opening image file And mounting as virtual disk...")
+            Console.WriteLine("Mounting as virtual disk...")
+
             Service.WriteOverlayImageName = WriteOverlayImageFile
-            Service.StartServiceThreadAndMount(New ScsiAdapter, DeviceFlags)
+
+            Dim adapter As ScsiAdapter
+
+            Try
+                adapter = New ScsiAdapter
+
+            Catch ex As Exception
+                Throw New IOException("Cannot access Arsenal Image Mounter driver. Check that the driver is installed and that you are running this application with administrative privileges.")
+
+            End Try
+
+            Service.StartServiceThreadAndMount(adapter, DeviceFlags)
             Using device = Service.OpenDiskDevice(0)
                 Console.WriteLine($"Virtual disk is {device.DevicePath} with SCSI address {device.ScsiAddress}")
             End Using
             Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
         Else
-            Console.WriteLine("Opening image file...")
             Service.StartServiceThread()
             Console.WriteLine("Image file opened, waiting for incoming connections. Press Ctrl+C to exit.")
         End If
@@ -277,7 +355,9 @@ Module ServerModule
 
                 Catch ex As Exception
                     Trace.WriteLine(ex.ToString())
-                    Console.WriteLine(ex.JoinMessages())
+                    Console.ForegroundColor = ConsoleColor.Red
+                    Console.Error.WriteLine(ex.JoinMessages())
+                    Console.ResetColor()
 
                 End Try
             End Sub
@@ -285,6 +365,91 @@ Module ServerModule
         Service.WaitForServiceThreadExit()
 
         Console.WriteLine("Service stopped.")
+
+        If Service.Exception IsNot Nothing Then
+            Throw New Exception("Service failed.", Service.Exception)
+        End If
+
+        Return 0
+
+    End Function
+
+    Public Property ImageIoBufferSize As Integer = 2 << 20
+
+    Public Sub ConvertToImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String)
+
+        Using provider
+
+            Using cancel As New CancellationTokenSource
+
+                AddHandler Console.CancelKeyPress,
+                    Sub(sender, e)
+                        Try
+                            Console.WriteLine("Stopping...")
+                            cancel.Cancel()
+
+                            e.Cancel = True
+
+                        Catch ex As Exception
+                            Trace.WriteLine(ex.ToString())
+                            Console.WriteLine(ex.JoinMessages())
+
+                        End Try
+                    End Sub
+
+                Console.WriteLine($"Converting to new image file '{outputImage}'...")
+
+                Dim image_type = Path.GetExtension(outputImage).TrimStart("."c).ToUpperInvariant()
+
+                Select Case image_type
+
+                    Case "VHD", "VHDX", "VDI", "VMDK"
+                        ConvertToDiscUtilsImage(provider, outputImage, image_type, OutputImageVariant, cancel.Token)
+
+                    Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN"
+                        ConvertToRawImage(provider, outputImage, OutputImageVariant, cancel.Token)
+
+                End Select
+
+                Console.WriteLine($"Image converted successfully.")
+
+            End Using
+
+        End Using
+
+    End Sub
+
+    Public Sub ConvertToDiscUtilsImage(provider As IDevioProvider, outputImage As String, type As String, OutputImageVariant As String, cancel As CancellationToken)
+
+        Using builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize)), Nothing)
+
+            Dim target = builder.Content
+
+            provider.WriteToSkipEmptyBlocks(target, ImageIoBufferSize, cancel)
+
+        End Using
+
+    End Sub
+
+    Public Sub ConvertToRawImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, cancel As CancellationToken)
+
+        Using target As New FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageIoBufferSize)
+
+            If "fixed".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase) Then
+
+            ElseIf "dynamic".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase) Then
+
+                NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, True)
+
+            Else
+
+                Throw New ArgumentException($"Value {OutputImageVariant} not supported as output image variant. Valid values are fixed or dynamic.")
+
+            End If
+
+            provider.WriteToSkipEmptyBlocks(target, ImageIoBufferSize, cancel)
+
+        End Using
 
     End Sub
 

@@ -8139,7 +8139,7 @@
             Gets the type of the attribute.
             </summary>
         </member>
-        <member name="P:DiscUtils.Ntfs.Internals.AttributeListEntry.AttributeName">
+        <member name="P:DiscUtils.Ntfs.Internals.AttributeListEntry.Name">
             <summary>
             Gets the name of the attribute (if any).
             </summary>
@@ -8167,7 +8167,7 @@
             Gets the Master File Table entry that contains the attribute.
             </summary>
         </member>
-        <member name="P:DiscUtils.Ntfs.Internals.AttributeListEntry.AttributeIdentifier">
+        <member name="P:DiscUtils.Ntfs.Internals.AttributeListEntry.Identifier">
             <summary>
             Gets the identifier of the attribute.
             </summary>
@@ -8394,7 +8394,7 @@
             Gets the attributes contained in this entry.
             </summary>
         </member>
-        <member name="M:DiscUtils.Ntfs.Internals.MasterFileTableEntry.Open(DiscUtils.Ntfs.Internals.GenericAttribute,System.IO.FileAccess)">
+        <member name="M:DiscUtils.Ntfs.Internals.MasterFileTableEntry.Open(DiscUtils.Ntfs.Internals.IAttributeLocator,System.IO.FileAccess)">
             <summary>
             Opens an attribute as stream
             </summary>
@@ -8434,7 +8434,7 @@
             Gets the flags indicating how the content of the attribute is stored.
             </summary>
         </member>
-        <member name="P:DiscUtils.Ntfs.Internals.GenericAttribute.ContentLength">
+        <member name="P:DiscUtils.Ntfs.Internals.GenericAttribute.DataLength">
             <summary>
             Gets the amount of valid data in the attribute's content.
             </summary>

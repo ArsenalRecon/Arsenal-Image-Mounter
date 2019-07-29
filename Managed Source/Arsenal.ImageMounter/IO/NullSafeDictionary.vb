@@ -12,9 +12,9 @@
 
         ''' <summary>Gets a value that is returned as item for non-existing
         ''' keys in dictionary</summary>
-        Protected MustOverride Function GetDefaultValue() As TValue
+        Protected MustOverride Function GetDefaultValue(Key As TKey) As TValue
 
-        Public ReadOnly Property SyncRoot() As Object
+        Public ReadOnly Property SyncRoot As Object
             Get
                 Return DirectCast(m_Dictionary, ICollection).SyncRoot
             End Get
@@ -42,17 +42,17 @@
         Default Public Property Item(key As TKey) As TValue Implements IDictionary(Of TKey, TValue).Item
             Get
                 SyncLock SyncRoot
-                    If m_Dictionary.TryGetValue(key, Item) = False Then
-                        Dim NewItem = GetDefaultValue()
-                        m_Dictionary.Add(key, NewItem)
-                        Return NewItem
+                    If m_Dictionary.TryGetValue(key, Item) Then
+                        Return Item
+                    Else
+                        Return GetDefaultValue(key)
                     End If
                 End SyncLock
             End Get
             Set
                 SyncLock SyncRoot
                     If m_Dictionary.ContainsKey(key) Then
-                        m_Dictionary.Item(key) = Value
+                        m_Dictionary(key) = Value
                     Else
                         m_Dictionary.Add(key, Value)
                     End If
@@ -126,6 +126,22 @@
 
         Public Function GetEnumerator() As System.Collections.IEnumerator Implements System.Collections.IEnumerable.GetEnumerator
             Return m_Dictionary.GetEnumerator()
+        End Function
+    End Class
+
+    Public Class NullSafeStringDictionary
+        Inherits NullSafeDictionary(Of String, String)
+
+        Public Sub New()
+            MyBase.New()
+        End Sub
+
+        Public Sub New(Comparer As IEqualityComparer(Of String))
+            MyBase.New(Comparer)
+        End Sub
+
+        Protected Overrides Function GetDefaultValue(Key As String) As String
+            Return String.Empty
         End Function
     End Class
 

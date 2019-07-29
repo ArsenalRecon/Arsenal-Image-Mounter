@@ -92,10 +92,23 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         return IoCallDriver(device_extension->TargetDeviceObject, Irp);
     }
 
-    bool use_deferred_read = false;
+    bool defer_to_worker_thread = false;
 
-    if (use_deferred_read)
+    KIRQL current_irql = KeGetCurrentIrql();
+
+    if (current_irql >= DISPATCH_LEVEL)
     {
+        defer_to_worker_thread = true;
+    }
+
+    if (defer_to_worker_thread)
+    {
+        InterlockedIncrement64(
+            &device_extension->Statistics.DeferredReadRequests);
+
+        InterlockedExchangeAdd64(&device_extension->Statistics.DeferredReadBytes,
+            io_stack->Parameters.Read.Length);
+
         //
         // Acquire the remove lock so that device will not be removed while
         // processing this irp.
@@ -118,9 +131,15 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         IoMarkIrpPending(Irp);
 
-        ExInterlockedInsertTailList(&device_extension->ListHead,
-            &Irp->Tail.Overlay.ListEntry,
-            &device_extension->ListLock);
+        KLOCK_QUEUE_HANDLE lock_handle;
+
+        AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+            current_irql);
+
+        InsertTailList(&device_extension->ListHead,
+            &Irp->Tail.Overlay.ListEntry);
+
+        AIMWrFltrReleaseLock(&lock_handle, &current_irql);
 
         KeSetEvent(&device_extension->ListEvent, 0, FALSE);
 

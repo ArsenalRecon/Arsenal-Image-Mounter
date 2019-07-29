@@ -55,7 +55,7 @@ Namespace Server.GenericProviders
             _SafeHandle = open(filename, [readOnly], _DLLRead, _DLLWrite, DLLClose, _Length)
 
             If _SafeHandle.IsInvalid OrElse _SafeHandle.IsClosed Then
-                Throw New IOException("Error opening '" & filename & "'", GetLastErrorAsException())
+                Throw New IOException($"Error opening '{filename}'", GetLastErrorAsException())
             End If
 
             _SafeHandle.DLLClose = DLLClose

@@ -80,8 +80,8 @@ Namespace PSDisk
             Get
                 If _DiskId.HasValue Then
                     Return _DiskId.Value.ToString("b")
-                ElseIf _RawDiskSignature.HasValue AndAlso _FakeDiskSignature Then
-                    Return $"{_RawDiskSignature.Value.ToString("X8")} (faked)"
+                ElseIf _RawDiskSignature.HasValue AndAlso (_FakeDiskSignature OrElse _FakeMBR) Then
+                    Return $"{_RawDiskSignature:X8} (faked)"
                 ElseIf _RawDiskSignature.HasValue Then
                     Return _RawDiskSignature.Value.ToString("X8")
                 Else
@@ -115,6 +115,8 @@ Namespace PSDisk
 
         Public Property FakeDiskSignature As Boolean
 
+        Public Property FakeMBR As Boolean
+
         Public Property Volumes As String()
 
         Public ReadOnly Property VolumesString As String
@@ -138,10 +140,8 @@ Namespace PSDisk
             Get
                 If _NativePropertyDiskOReadOnly.HasValue Then
                     Return _NativePropertyDiskOReadOnly.Value
-                ElseIf _DeviceProperties IsNot Nothing Then
-                    Return (_DeviceProperties.Flags And DeviceFlags.ReadOnly) = DeviceFlags.ReadOnly
                 Else
-                    Return Nothing
+                    Return _DeviceProperties?.Flags.HasFlag(DeviceFlags.ReadOnly)
                 End If
             End Get
         End Property
@@ -180,6 +180,20 @@ Namespace PSDisk
                 If Not _DetailsVisible = Value Then
                     _DetailsVisible = Value
                     NotifyPropertyChanged("DetailsVisible")
+                    NotifyPropertyChanged("DetailsHidden")
+                End If
+            End Set
+        End Property
+
+        Public Property DetailsHidden As Boolean
+            Get
+                Return Not _DetailsVisible
+            End Get
+            Set
+                If _DetailsVisible = Value Then
+                    _DetailsVisible = Not Value
+                    NotifyPropertyChanged("DetailsVisible")
+                    NotifyPropertyChanged("DetailsHidden")
                 End If
             End Set
         End Property

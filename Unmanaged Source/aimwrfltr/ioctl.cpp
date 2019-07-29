@@ -1,5 +1,7 @@
 #include "aimwrfltr.h"
 
+#include <scsi.h>
+
 NTSTATUS
 AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 {
@@ -600,9 +602,17 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
             IoMarkIrpPending(Irp);
 
-            ExInterlockedInsertTailList(&device_extension->ListHead,
-                &Irp->Tail.Overlay.ListEntry,
-                &device_extension->ListLock);
+            KLOCK_QUEUE_HANDLE lock_handle;
+
+            KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
+
+            AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+                lowest_assumed_irql);
+
+            InsertTailList(&device_extension->ListHead,
+                &Irp->Tail.Overlay.ListEntry);
+
+            AIMWrFltrReleaseLock(&lock_handle, &lowest_assumed_irql);
 
             KeSetEvent(&device_extension->ListEvent, 0, FALSE);
 
@@ -640,8 +650,42 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
     }
 
     case IOCTL_SCSI_MINIPORT:
+    case IOCTL_ATA_MINIPORT:
     {
         return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
+    }
+
+    case IOCTL_SCSI_PASS_THROUGH_DIRECT:
+    {
+        if (io_stack->Parameters.DeviceIoControl.InputBufferLength >= sizeof(SCSI_PASS_THROUGH_DIRECT))
+        {
+            PSCSI_PASS_THROUGH_DIRECT pSrb = (PSCSI_PASS_THROUGH_DIRECT)Irp->AssociatedIrp.SystemBuffer;
+            PCDB pCdb = (PCDB)pSrb->Cdb;
+
+            switch (pCdb->CDB6GENERIC.OperationCode)
+            {
+            case SCSIOP_INQUIRY:
+            case SCSIOP_TEST_UNIT_READY:
+            case SCSIOP_READ_CAPACITY:
+            case SCSIOP_READ_CAPACITY16:
+                return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
+
+            default:
+                ;
+            }
+
+            KdPrint(("AIMWrFltr:DeviceControl: Attempt IOCTL_SCSI_PASS_THROUGH_DIRECT. Operation %#.2x\n",
+                (int)pCdb->CDB6GENERIC.OperationCode));
+
+#if DBG
+            static bool break_here = true;
+
+            if (break_here && !KD_DEBUGGER_NOT_PRESENT)
+            {
+                KdBreakPoint();
+            }
+#endif
+        }
     }
 
     default:
@@ -657,7 +701,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                     io_stack->Parameters.DeviceIoControl.IoControlCode) ==
                 IOCTL_STORAGE_BASE))
         {
-            KdPrint(("AIMWrFltr:DeviceControl: Destructive direct IOCTL %#x access to disk with protected partition.\n",
+            KdPrint(("AIMWrFltr:DeviceControl: Destructive direct IOCTL %#x access to disk with protected disk.\n",
                 io_stack->Parameters.DeviceIoControl.IoControlCode));
 
             status = STATUS_INVALID_DEVICE_REQUEST;
@@ -678,6 +722,10 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
             if (query->PropertyId > StorageDeviceWriteAggregationProperty)
             {
+                KdPrint(("AIMWrFltr:DeviceControl: Too high IOCTL_STORAGE_QUERY_PROPERTY id requested. Requested %i, max supported %i.\n",
+                    (int)query->PropertyId,
+                    (int)StorageDeviceWriteAggregationProperty));
+
                 status = STATUS_INVALID_DEVICE_REQUEST;
 
                 Irp->IoStatus.Status = status;

@@ -574,6 +574,8 @@ extern "C" {
 
 #define StoragePortGetLogicalUnit                               ScsiPortGetLogicalUnit
 
+#define StoragePortLogError                                     ScsiPortLogError
+
 #define StoragePortNotification                                 ScsiPortNotification
 
 #endif
@@ -594,6 +596,8 @@ extern "C" {
 #define StoragePortInitialize                                   StorPortInitialize
 
 #define StoragePortGetLogicalUnit                               StorPortGetLogicalUnit
+
+#define StoragePortLogError                                     StorPortLogError
 
 #define StoragePortNotification                                 StorPortNotification
 

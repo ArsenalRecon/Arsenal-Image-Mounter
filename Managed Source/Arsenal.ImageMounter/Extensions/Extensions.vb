@@ -1,5 +1,6 @@
 ﻿Imports System.Reflection
 Imports System.Runtime.CompilerServices
+Imports System.Threading.Tasks
 Imports Microsoft.Win32
 
 Namespace Extensions
@@ -124,7 +125,37 @@ Namespace Extensions
         End Sub
 
         <Extension>
+        Public Sub SetValueSafe(Of T As Structure)(RegKey As RegistryKey, name As String, value As T?)
+
+            If value Is Nothing Then
+
+                RegKey.DeleteValue(name, throwOnMissingValue:=False)
+
+            Else
+
+                RegKey.SetValue(name, value)
+
+            End If
+
+        End Sub
+
+        <Extension>
         Public Sub SetValueSafe(Of T As Class)(RegKey As RegistryKey, name As String, value As T, valueKind As RegistryValueKind)
+
+            If value Is Nothing Then
+
+                RegKey.DeleteValue(name, throwOnMissingValue:=False)
+
+            Else
+
+                RegKey.SetValue(name, value, valueKind)
+
+            End If
+
+        End Sub
+
+        <Extension>
+        Public Sub SetValueSafe(Of T As Structure)(RegKey As RegistryKey, name As String, value As T?, valueKind As RegistryValueKind)
 
             If value Is Nothing Then
 

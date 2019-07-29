@@ -30,16 +30,16 @@
     </DocumentationSources>
     <ApiFilter>
       <Filter entryType="Namespace" fullName="Arsenal.ImageMounter" isExposed="False">
-  <Filter entryType="Class" fullName="Arsenal.ImageMounter.API" filterName="API" isExposed="True" />
-  <Filter entryType="Enumeration" fullName="Arsenal.ImageMounter.DeviceFlags" filterName="DeviceFlags" isExposed="True" />
-  <Filter entryType="Class" fullName="Arsenal.ImageMounter.DeviceObject" filterName="DeviceObject" isExposed="True" />
-  <Filter entryType="Class" fullName="Arsenal.ImageMounter.DiskDevice" filterName="DiskDevice" isExposed="True" />
-  <Filter entryType="Class" fullName="Arsenal.ImageMounter.DiskStream" filterName="DiskStream" isExposed="True" />
-  <Filter entryType="Class" fullName="Arsenal.ImageMounter.ScsiAdapter" filterName="ScsiAdapter" isExposed="True" />
-  <Filter entryType="Class" fullName="Arsenal.ImageMounter.ScsiAdapter.DeviceProperties" filterName="ScsiAdapter.DeviceProperties" isExposed="True" />
-</Filter>
+        <Filter entryType="Class" fullName="Arsenal.ImageMounter.API" filterName="API" isExposed="True" />
+        <Filter entryType="Enumeration" fullName="Arsenal.ImageMounter.DeviceFlags" filterName="DeviceFlags" isExposed="True" />
+        <Filter entryType="Class" fullName="Arsenal.ImageMounter.DeviceObject" filterName="DeviceObject" isExposed="True" />
+        <Filter entryType="Class" fullName="Arsenal.ImageMounter.DiskDevice" filterName="DiskDevice" isExposed="True" />
+        <Filter entryType="Class" fullName="Arsenal.ImageMounter.DiskStream" filterName="DiskStream" isExposed="True" />
+        <Filter entryType="Class" fullName="Arsenal.ImageMounter.ScsiAdapter" filterName="ScsiAdapter" isExposed="True" />
+        <Filter entryType="Class" fullName="Arsenal.ImageMounter.ScsiAdapter.DeviceProperties" filterName="ScsiAdapter.DeviceProperties" isExposed="True" />
+      </Filter>
     </ApiFilter>
-    <CopyrightText>Copyright: %28c%29 LinkGard Systems.  All Rights Reserved.</CopyrightText>
+    <CopyrightText>Copyright: %28c%29 Arsenal Consulting.  All Rights Reserved.</CopyrightText>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in
        order for Visual Studio to perform the build.  The others are optional

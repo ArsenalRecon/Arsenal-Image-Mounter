@@ -11,7 +11,6 @@
 '''''
 
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
-Imports System.IO.Pipes
 
 Namespace Server.SpecializedProviders
 
@@ -46,10 +45,13 @@ Namespace Server.SpecializedProviders
         Public Sub New(filename As String)
             MyBase.New(AddressOf dllopen, filename, [readOnly]:=True)
 
-            _SectorSize = getsectorsize(SafeHandle)
         End Sub
 
         Public Overrides ReadOnly Property SectorSize As UInteger
+            Get
+                Return getsectorsize(SafeHandle)
+            End Get
+        End Property
 
         Protected Overrides Function GetLastErrorAsException() As Exception
 

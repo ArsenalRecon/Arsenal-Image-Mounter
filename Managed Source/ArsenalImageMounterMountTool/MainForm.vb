@@ -333,7 +333,7 @@ Public Class MainForm
                         If obj.DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.Ordinal) Then
                             Using New AsyncMessageBox("Please wait...")
                                 Using device As New DiskDevice(obj.DevicePath, FileAccess.ReadWrite)
-                                    device.DiskOffline = False
+                                    device.DiskPolicyOffline = False
                                 End Using
                             End Using
                         End If
@@ -370,7 +370,7 @@ Public Class MainForm
 
             Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.GetDeviceProperties)
 
-            Dim simpleviewtask = Task.Factory.StartNew(Function() parser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result))
+            Dim simpleviewtask = Task.Factory.StartNew(Function() parser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result.ToList()))
 
             'Dim fullviewtask = Task.Factory.StartNew(Function() parser.GetFullView(Adapter.ScsiPortNumber, devicelist.Result))
 
@@ -423,7 +423,7 @@ Public Class MainForm
 
                 Invoke(New Action(AddressOf SetLabelBusy))
 
-                Dim view = listFunction(Adapter.ScsiPortNumber, Adapter.GetDeviceProperties())
+                Dim view = listFunction(Adapter.ScsiPortNumber, Adapter.GetDeviceProperties().ToList())
 
                 If IsClosing OrElse Disposing OrElse IsDisposed Then
                     Return
@@ -620,7 +620,7 @@ Public Class MainForm
 
                     .SupportedAccessModes = DevioServiceFactory.GetSupportedVirtualDiskAccess(ProxyType, Imagefile)
 
-                    If (Flags And DeviceFlags.ReadOnly) <> 0 Then
+                    If Flags.HasFlag(DeviceFlags.ReadOnly) Then
                         .SelectedReadOnly = True
                     Else
                         .SelectedReadOnly = False

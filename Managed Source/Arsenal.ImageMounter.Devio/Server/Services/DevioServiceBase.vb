@@ -98,6 +98,16 @@ Namespace Server.Services
         End Sub
 
         ''' <summary>
+        ''' Event raised when any of the DismountAndStopServiceThread methods are called, before
+        ''' disk device object is removed. Note that this event is not raised if device is directly
+        ''' removed by some other method.
+        ''' </summary>
+        Public Event ServiceStopping As Action
+        Protected Overridable Sub OnServiceStopping()
+            RaiseEvent ServiceStopping()
+        End Sub
+
+        ''' <summary>
         ''' Event raised when service thread exits.
         ''' </summary>
         Public Event ServiceShutdown As Action
@@ -119,7 +129,7 @@ Namespace Server.Services
         End Sub
 
         ''' <summary>
-        ''' Event raised to stop service thread. Service thread handle this event by preparing commnunication for
+        ''' Event raised to stop service thread. Service thread handle this event by preparing communication for
         ''' disconnection.
         ''' </summary>
         Protected Event StopServiceThread As Action
@@ -156,7 +166,7 @@ Namespace Server.Services
 
         ''' <summary>
         ''' When overridden in a derived class, immediately stop service thread. This method will be called internally when
-        ''' service base class methods for eample detect that the device object no longer exists in the driver, or similar
+        ''' service base class methods for example detect that the device object no longer exists in the driver, or similar
         ''' scenarios where the driver cannot be requested to request service thread to shut down.
         ''' </summary>
         Protected MustOverride Sub EmergencyStopServiceThread()
@@ -212,13 +222,21 @@ Namespace Server.Services
         ''' </summary>
         ''' <param name="timeout">Timeout value, or Timeout.Infinite to wait infinitely.</param>
         ''' <returns>Returns True if service thread has exit or no service thread has been
-        ''' created, or False if timeout occured.</returns>
+        ''' created, or False if timeout occurred.</returns>
         Public Overridable Function WaitForServiceThreadExit(timeout As TimeSpan) As Boolean
 
-            If _ServiceThread IsNot Nothing AndAlso _ServiceThread.IsAlive Then
+            If _ServiceThread IsNot Nothing AndAlso
+                _ServiceThread.ManagedThreadId <> Thread.CurrentThread.ManagedThreadId AndAlso
+                _ServiceThread.IsAlive Then
+
+                Trace.WriteLine($"Waiting for service thread to terminate.")
+
                 Return _ServiceThread.Join(timeout)
+
             Else
+
                 Return True
+
             End If
 
         End Function
@@ -232,6 +250,8 @@ Namespace Server.Services
             If _ServiceThread IsNot Nothing AndAlso
                 _ServiceThread.ManagedThreadId <> Thread.CurrentThread.ManagedThreadId AndAlso
                 _ServiceThread.IsAlive Then
+
+                Trace.WriteLine($"Waiting for service thread to terminate.")
 
                 _ServiceThread.Join()
 
@@ -268,7 +288,7 @@ Namespace Server.Services
                                            Flags Or AdditionalFlags Or ProxyModeFlags,
                                            ProxyObjectName,
                                            False,
-                                           WriteOverlayImageName,
+                                           _WriteOverlayImageName,
                                            False,
                                            _DiskDeviceNumber)
 
@@ -289,36 +309,7 @@ Namespace Server.Services
         ''' </summary>
         Public Overridable Sub DismountAndStopServiceThread()
 
-            Dim i = 1
-            Do
-                Try
-                    _ScsiAdapter.RemoveDevice(_DiskDeviceNumber)
-                    Exit Do
-
-                Catch ex As Win32Exception When (
-                  i < 40 AndAlso
-                  ex.NativeErrorCode = NativeFileIO.Win32API.ERROR_ACCESS_DENIED)
-
-                    i += 1
-                    Thread.Sleep(100)
-                    Continue Do
-
-                Catch ex As Win32Exception When _
-                    ex.NativeErrorCode = NativeFileIO.Win32API.ERROR_FILE_NOT_FOUND
-
-                    Trace.WriteLine("Attempt to remove device " & _DiskDeviceNumber.ToString("X6") & " which has already disappeared.")
-
-                    If _ServiceThread IsNot Nothing AndAlso
-                        _ServiceThread.ManagedThreadId <> Thread.CurrentThread.ManagedThreadId Then
-
-                        EmergencyStopServiceThread()
-
-                    End If
-
-                    Exit Do
-
-                End Try
-            Loop
+            RemoveDeviceAndStopServiceThread()
 
             WaitForServiceThreadExit()
 
@@ -331,15 +322,46 @@ Namespace Server.Services
         ''' <param name="timeout">Timeout value to wait for service thread exit, or Timeout.Infinite to wait infinitely.</param>
         Public Overridable Function DismountAndStopServiceThread(timeout As TimeSpan) As Boolean
 
+            RemoveDeviceAndStopServiceThread()
+
+            Dim rc = WaitForServiceThreadExit(timeout)
+
+            If rc Then
+                Trace.WriteLine($"Service for device {_DiskDeviceNumber:X6} shut down successfully.")
+            Else
+                Trace.WriteLine($"Service for device {_DiskDeviceNumber:X6} shut down timed out.")
+            End If
+
+            Return rc
+
+        End Function
+
+        ''' <summary>
+        ''' Dismounts an Arsenal Image Mounter Disk Device created by StartServiceThreadAndMount(). If device
+        ''' was already removed, it calls EmergencyStopServiceThread() to notify service thread.
+        ''' </summary>
+        Protected Sub RemoveDeviceAndStopServiceThread()
+
+            Trace.WriteLine($"Notifying service stopping for device {_DiskDeviceNumber:X6}...")
+
+            OnServiceStopping()
+
+            Trace.WriteLine($"Removing device {_DiskDeviceNumber:X6}...")
+
             Dim i = 1
             Do
                 Try
                     _ScsiAdapter.RemoveDevice(_DiskDeviceNumber)
+
+                    Trace.WriteLine($"Device {_DiskDeviceNumber:X6} removed.")
+
                     Exit Do
 
                 Catch ex As Win32Exception When (
                   i < 40 AndAlso
                   ex.NativeErrorCode = NativeFileIO.Win32API.ERROR_ACCESS_DENIED)
+
+                    Trace.WriteLine($"Access denied attempting to remove device {_DiskDeviceNumber:X6}, retrying...")
 
                     i += 1
                     Thread.Sleep(100)
@@ -348,7 +370,7 @@ Namespace Server.Services
                 Catch ex As Win32Exception When _
                     ex.NativeErrorCode = NativeFileIO.Win32API.ERROR_FILE_NOT_FOUND
 
-                    Trace.WriteLine("Attempt to remove non-existent device " & _DiskDeviceNumber.ToString("X6"))
+                    Trace.WriteLine($"Attempt to remove non-existent device {_DiskDeviceNumber:X6}")
 
                     EmergencyStopServiceThread()
 
@@ -357,9 +379,7 @@ Namespace Server.Services
                 End Try
             Loop
 
-            Return WaitForServiceThreadExit(timeout)
-
-        End Function
+        End Sub
 
         ''' <summary>
         ''' Additional flags that will be passed to API.CreateDevice() in StartServiceThreadAndMount()
@@ -396,7 +416,7 @@ Namespace Server.Services
         ''' </summary>
         ''' <value>Path to write overlay image to pass to driver.</value>
         ''' <returns>Path to write overlay image to pass to driver.</returns>
-        Public Overridable Property WriteOverlayImageName As String
+        Public Property WriteOverlayImageName As String
 
         Private _DiskDeviceNumber As UInteger = UInteger.MaxValue
 
@@ -411,7 +431,7 @@ Namespace Server.Services
         ''' <returns>Disk device
         ''' number for created Arsenal Image Mounter Disk Device.</returns>
         ''' <remarks></remarks>
-        Public Overridable ReadOnly Property DiskDeviceNumber As UInteger
+        Public ReadOnly Property DiskDeviceNumber As UInteger
             Get
                 If _DiskDeviceNumber = UInteger.MaxValue Then
                     Throw New IOException("No Arsenal Image Mounter Disk Device currently associated with this instance.")
@@ -439,6 +459,14 @@ Namespace Server.Services
         ''' </summary>
         Public Overridable Function OpenDiskDevice(access As FileAccess) As DiskDevice
             Return _ScsiAdapter.OpenDevice(DiskDeviceNumber, access)
+        End Function
+
+        ''' <summary>
+        ''' Returns a PhysicalDrive or CdRom device name for a mounted device provided by
+        ''' this service instance.
+        ''' </summary>
+        Public Overridable Function GetDiskDeviceName() As String
+            Return _ScsiAdapter.GetDeviceName(DiskDeviceNumber)
         End Function
 
         ''' <summary>

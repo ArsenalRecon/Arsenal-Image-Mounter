@@ -12,6 +12,7 @@
 
 Imports Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports Arsenal.ImageMounter.IO
 
 Namespace Server.Services
 
@@ -29,24 +30,28 @@ Namespace Server.Services
         Public ReadOnly Property ObjectName As String
 
         ''' <summary>
-        ''' Buffer size used by this instance.
+        ''' Size of the memory block that is shared between driver and this service.
         ''' </summary>
         Public ReadOnly Property BufferSize As Long
 
-        Private InternalShutdownRequestAction As action
+        ''' <summary>
+        ''' Largest size of an I/O transfer between driver and this service. This
+        ''' number depends on the size of the memory block that is shared between
+        ''' driver and this service.
+        ''' </summary>
+        Public ReadOnly Property MaxTransferSize As Integer
+
+        Private InternalShutdownRequestAction As Action
 
         ''' <summary>
         ''' Buffer size that will be automatically selected on this platform when
         ''' an instance is created by a constructor without a BufferSize argument.
+        ''' 
+        ''' Corresponds to MaximumTransferLength that driver reports to
+        ''' storage port driver. This is the largest possible size of an
+        ''' I/O request from the driver.
         ''' </summary>
-        Public Shared ReadOnly Property DefaultBufferSize As Long
-            Get
-                '' Corresponds to MaximumTransferLength that driver reports to
-                '' storage port driver. This is the largest possible size of an
-                '' I/O request from the driver.
-                Return (8 << 20) + IMDPROXY_HEADER_SIZE
-            End Get
-        End Property
+        Public Const DefaultBufferSize As Long = (8 << 20) + IMDPROXY_HEADER_SIZE
 
         Private Shared _random As New Random
         Private Shared Function GetNextRandomValue() As Integer
@@ -63,7 +68,7 @@ Namespace Server.Services
         ''' <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
         ''' <param name="OwnsProvider">Indicates whether DevioProvider object will be automatically closed when this
         ''' instance is disposed.</param>
-        ''' <param name="BufferSize">Buffer size to use for shared memory I/O communication.</param>
+        ''' <param name="BufferSize">Buffer size to use for shared memory I/O communication between driver and this service.</param>
         Public Sub New(ObjectName As String, DevioProvider As IDevioProvider, OwnsProvider As Boolean, BufferSize As Long)
             MyBase.New(DevioProvider, OwnsProvider)
 
@@ -104,7 +109,7 @@ Namespace Server.Services
         ''' instance is disposed.</param>
         ''' <param name="BufferSize">Buffer size to use for shared memory I/O communication.</param>
         Public Sub New(DevioProvider As IDevioProvider, OwnsProvider As Boolean, BufferSize As Long)
-            MyClass.New("devio-" & GetNextRandomValue(), DevioProvider, OwnsProvider, BufferSize)
+            MyClass.New($"devio-{GetNextRandomValue()}", DevioProvider, OwnsProvider, BufferSize)
         End Sub
 
         ''' <summary>
@@ -127,36 +132,62 @@ Namespace Server.Services
 
                 Dim ServerMutex As Mutex
 
-                Try
-                    Trace.WriteLine("Creating objects for shared memory communication '" & ObjectName & "'.")
+                Trace.WriteLine($"Creating objects for shared memory communication '{ObjectName}'.")
 
-                    RequestEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:="Global\" & ObjectName & "_Request")
-                    ResponseEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:="Global\" & ObjectName & "_Response")
-                    ServerMutex = New Mutex(initiallyOwned:=False, name:="Global\" & ObjectName & "_Server")
+                Try
+
+                    RequestEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:=$"Global\{ObjectName}_Request")
+                    ResponseEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:=$"Global\{ObjectName}_Response")
+                    ServerMutex = New Mutex(initiallyOwned:=False, name:=$"Global\{ObjectName}_Server")
 
                     If ServerMutex.WaitOne(0) = False Then
-                        Trace.WriteLine("Service busy.")
-                        Exception = New Exception("Service busy")
-                        OnServiceInitFailed()
-                        Return
+                        Dim message As String = $"Service name '{ObjectName}' busy."
+                        Trace.WriteLine(message)
+                        Throw New Exception(message)
                     End If
 
-                    Mapping = MemoryMappedFile.CreateNew("Global\" & ObjectName,
-                                                             BufferSize,
-                                                             MemoryMappedFileAccess.ReadWrite,
-                                                             MemoryMappedFileOptions.None,
-                                                             Nothing,
-                                                             HandleInheritability.None)
+                Catch ex As Exception
+                    If TypeOf ex Is UnauthorizedAccessException Then
+                        Exception = New Exception($"Service name '{ObjectName}' already in use or not accessible.", ex)
+                    Else
+                        Exception = ex
+                    End If
+                    Dim message As String = $"Service thread initialization failed: {Exception.ToString()}."
+                    Trace.WriteLine(message)
+                    OnServiceInitFailed()
+                    Return
+
+                End Try
+
+                Try
+                    Mapping = MemoryMappedFile.CreateNew($"Global\{ObjectName}",
+                                                         BufferSize,
+                                                         MemoryMappedFileAccess.ReadWrite,
+                                                         MemoryMappedFileOptions.None,
+                                                         Nothing,
+                                                         HandleInheritability.None)
+
+                    DisposableObjects.Add(Mapping)
 
                     MapView = Mapping.CreateViewAccessor().SafeMemoryMappedViewHandle
 
-                    Trace.WriteLine("Created shared memory object, " & MapView.ByteLength & " bytes.")
+                    DisposableObjects.Add(MapView)
+
+                    _MaxTransferSize = CInt(MapView.ByteLength - IMDPROXY_HEADER_SIZE)
+
+                    Trace.WriteLine($"Created shared memory object, {_MaxTransferSize} bytes.")
 
                     Trace.WriteLine("Raising service ready event.")
                     OnServiceReady()
+
                 Catch ex As Exception
-                    Trace.WriteLine("Service thread initialization exception: " & ex.ToString())
-                    Exception = New Exception("Service thread initialization exception", ex)
+                    If TypeOf ex Is UnauthorizedAccessException Then
+                        Exception = New Exception($"This operation requires administrative privileges.", ex)
+                    Else
+                        Exception = ex
+                    End If
+                    Dim message As String = $"Service thread initialization failed: {Exception.ToString()}."
+                    Trace.WriteLine(message)
                     OnServiceInitFailed()
                     Return
 
@@ -185,62 +216,58 @@ Namespace Server.Services
 
                     Trace.WriteLine("Client connected, waiting for request.")
 
-                    Using MapView
+                    InternalShutdownRequestAction =
+                        Sub()
+                            Try
+                                Trace.WriteLine("Emergency service thread shutdown requested, injecting close request...")
+                                ServiceThread.Abort()
 
-                        InternalShutdownRequestAction =
-                            Sub()
-                                Try
-                                    Trace.WriteLine("Emergency service thread shutdown requested, injecting close request...")
-                                    ServiceThread.Abort()
+                            Catch
 
-                                Catch
+                            End Try
+                        End Sub
 
-                                End Try
-                            End Sub
+                    Do
+                        Dim RequestCode = MapView.Read(Of IMDPROXY_REQ)(&H0)
 
-                        Do
-                            Dim RequestCode = MapView.Read(Of IMDPROXY_REQ)(&H0)
+                        'Trace.WriteLine("Got client request: " & RequestCode.ToString())
 
-                            'Trace.WriteLine("Got client request: " & RequestCode.ToString())
+                        Select Case RequestCode
 
-                            Select Case RequestCode
+                            Case IMDPROXY_REQ.IMDPROXY_REQ_INFO
+                                SendInfo(MapView)
 
-                                Case IMDPROXY_REQ.IMDPROXY_REQ_INFO
-                                    SendInfo(MapView)
+                            Case IMDPROXY_REQ.IMDPROXY_REQ_READ
+                                ReadData(MapView)
 
-                                Case IMDPROXY_REQ.IMDPROXY_REQ_READ
-                                    ReadData(MapView)
+                            Case IMDPROXY_REQ.IMDPROXY_REQ_WRITE
+                                WriteData(MapView)
 
-                                Case IMDPROXY_REQ.IMDPROXY_REQ_WRITE
-                                    WriteData(MapView)
+                            Case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE
+                                Trace.WriteLine("Closing connection.")
+                                Return
 
-                                Case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE
-                                    Trace.WriteLine("Closing connection.")
-                                    Return
+                            Case IMDPROXY_REQ.IMDPROXY_REQ_SHARED
+                                SharedKeys(MapView)
 
-                                Case IMDPROXY_REQ.IMDPROXY_REQ_SHARED
-                                    SharedKeys(MapView)
+                            Case Else
+                                Trace.WriteLine($"Unsupported request code: {RequestCode}")
+                                Return
 
-                                Case Else
-                                    Trace.WriteLine("Unsupported request code: " & RequestCode.ToString())
-                                    Return
+                        End Select
 
-                            End Select
+                        'Trace.WriteLine("Sending response and waiting for next request.")
 
-                            'Trace.WriteLine("Sending response and waiting for next request.")
+                        If WaitHandle.SignalAndWait(ResponseEvent, RequestEvent) = False Then
+                            Trace.WriteLine("Synchronization failed.")
+                        End If
 
-                            If WaitHandle.SignalAndWait(ResponseEvent, RequestEvent) = False Then
-                                Trace.WriteLine("Synchronization failed.")
-                            End If
-
-                        Loop
-
-                    End Using
+                    Loop
 
                     Trace.WriteLine("Client disconnected.")
 
                 Catch ex As Exception
-                    Trace.WriteLine("Unhandled exception in service thread: " & ex.ToString())
+                    Trace.WriteLine($"Unhandled exception in service thread: {ex.ToString()}")
                     OnServiceUnhandledException(New UnhandledExceptionEventArgs(ex, True))
 
                 Finally
@@ -276,22 +303,24 @@ Namespace Server.Services
             Static largest_request As Integer
             If ReadLength > largest_request Then
                 largest_request = ReadLength
-                Trace.WriteLine("Largest requested read size is now: " & largest_request & " bytes")
+                Trace.WriteLine($"Largest requested read size is now: {largest_request} bytes")
             End If
 
             Dim Response As IMDPROXY_READ_RESP
 
             Try
-                If ReadLength > MapView.ByteLength - IMDPROXY_HEADER_SIZE Then
-                    Trace.WriteLine("Requested read length " & ReadLength & ", lowered to " & CInt(MapView.ByteLength - CInt(IMDPROXY_HEADER_SIZE)) & " bytes.")
-                    ReadLength = CInt(MapView.ByteLength - CInt(IMDPROXY_HEADER_SIZE))
+                If ReadLength > _MaxTransferSize Then
+#If DEBUG Then
+                    Trace.WriteLine($"Requested read length {ReadLength}, lowered to {_MaxTransferSize} bytes.")
+#End If
+                    ReadLength = _MaxTransferSize
                 End If
                 Response.length = CULng(DevioProvider.Read(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, ReadLength, Offset))
                 Response.errorno = 0
 
             Catch ex As Exception
                 Trace.WriteLine(ex.ToString())
-                Trace.WriteLine("Read request at " & Offset.ToString("X8") & " for " & ReadLength & " bytes.")
+                Trace.WriteLine($"Read request at 0x{Offset:X8} for {ReadLength} bytes.")
                 Response.errorno = 1
                 Response.length = 0
 
@@ -311,18 +340,18 @@ Namespace Server.Services
             Static largest_request As Integer
             If WriteLength > largest_request Then
                 largest_request = WriteLength
-                Trace.WriteLine("Largest requested write size is now: " & largest_request & " bytes")
+                Trace.WriteLine($"Largest requested write size is now: {largest_request} bytes")
             End If
 
             Dim Response As IMDPROXY_WRITE_RESP
 
             Try
-                If WriteLength > MapView.ByteLength - IMDPROXY_HEADER_SIZE Then
-                    Throw New Exception("Requested write length " & WriteLength & ". Buffer size is " & CInt(MapView.ByteLength - CInt(IMDPROXY_HEADER_SIZE)) & " bytes.")
+                If WriteLength > _MaxTransferSize Then
+                    Throw New Exception($"Requested write length {WriteLength}. Buffer size is {_MaxTransferSize} bytes.")
                 End If
                 Dim WrittenLength = DevioProvider.Write(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, WriteLength, Offset)
                 If WrittenLength < 0 Then
-                    Trace.WriteLine("Write request at " & Offset.ToString("X8") & " for " & WriteLength & " bytes, returned " & WrittenLength & ".")
+                    Trace.WriteLine($"Write request at 0x{Offset:X8} for {WriteLength} bytes, returned {WrittenLength}.")
                     Response.errorno = 1
                     Response.length = 0
                     Exit Try
@@ -332,7 +361,7 @@ Namespace Server.Services
 
             Catch ex As Exception
                 Trace.WriteLine(ex.ToString())
-                Trace.WriteLine("Write request at " & Offset.ToString("X8") & " for " & WriteLength & " bytes.")
+                Trace.WriteLine($"Write request at 0x{Offset:X8} for {WriteLength} bytes.")
                 Response.errorno = 1
                 Response.length = 0
 
@@ -341,6 +370,8 @@ Namespace Server.Services
             MapView.Write(&H0, Response)
 
         End Sub
+
+        Private Shared ReadOnly SizeOfULong As Integer = Marshal.SizeOf(GetType(ULong))
 
         Private Sub SharedKeys(MapView As SafeBuffer)
 
@@ -354,7 +385,7 @@ Namespace Server.Services
                 If Keys Is Nothing Then
                     Response.length = 0
                 Else
-                    Response.length = CULng(Keys.Length * Marshal.SizeOf(GetType(ULong)))
+                    Response.length = CULng(Keys.Length * SizeOfULong)
                     MapView.WriteArray(IMDPROXY_HEADER_SIZE, Keys, 0, Keys.Length)
                 End If
 
@@ -386,49 +417,6 @@ Namespace Server.Services
             InternalShutdownRequestAction?.Invoke()
 
         End Sub
-
-        ''' <summary>
-        ''' A System.Collections.Generic.List(Of T) extended with IDisposable implementation that disposes each
-        ''' object in the list when the list is disposed.
-        ''' </summary>
-        ''' <typeparam name="T"></typeparam>
-        <ComVisible(False)> _
-        Private Class DisposableList(Of T As IDisposable)
-            Inherits List(Of T)
-
-            Implements IDisposable
-
-            Private disposedValue As Boolean    ' To detect redundant calls
-
-            ' IDisposable
-            Protected Overridable Sub Dispose(disposing As Boolean)
-                If Not Me.disposedValue Then
-                    If disposing Then
-                        ' TODO: free managed resources when explicitly called
-                        For Each obj In Me
-                            obj.Dispose()
-                        Next
-                    End If
-                End If
-                Me.disposedValue = True
-
-                ' TODO: free shared unmanaged resources
-
-                Clear()
-            End Sub
-
-            ' This code added by Visual Basic to correctly implement the disposable pattern.
-            Public Sub Dispose() Implements IDisposable.Dispose
-                ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-                Dispose(True)
-                GC.SuppressFinalize(Me)
-            End Sub
-
-            Protected Overrides Sub Finalize()
-                Dispose(False)
-                MyBase.Finalize()
-            End Sub
-        End Class
 
     End Class
 

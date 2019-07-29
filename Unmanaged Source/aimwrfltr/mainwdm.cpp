@@ -67,6 +67,13 @@ STATUS_SUCCESS if successful
 {
     AIMWrFltrDriverObject = DriverObject;
 
+#if DBG
+    if (!KdRefreshDebuggerNotPresent())
+    {
+        DbgBreakPoint();
+    }
+#endif
+
     NTSTATUS status;
     HANDLE event_handle;
 
@@ -2136,9 +2143,17 @@ NT Status
 
         IoMarkIrpPending(Irp);
 
-        ExInterlockedInsertTailList(&device_extension->ListHead,
-            &Irp->Tail.Overlay.ListEntry,
-            &device_extension->ListLock);
+        KLOCK_QUEUE_HANDLE lock_handle;
+
+        KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
+
+        AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+            lowest_assumed_irql);
+
+        InsertTailList(&device_extension->ListHead,
+            &Irp->Tail.Overlay.ListEntry);
+
+        AIMWrFltrReleaseLock(&lock_handle, &lowest_assumed_irql);
 
         KeSetEvent(&device_extension->ListEvent, 0, FALSE);
 
@@ -2205,10 +2220,18 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 
     for (;;)
     {
-        PLIST_ENTRY request = ExInterlockedRemoveHeadList(
-            &device_extension->ListHead, &device_extension->ListLock);
+        KLOCK_QUEUE_HANDLE lock_handle;
 
-        if (request == NULL &&
+        KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
+
+        AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+            lowest_assumed_irql);
+
+        PLIST_ENTRY request = RemoveHeadList(&device_extension->ListHead);
+
+        AIMWrFltrReleaseLock(&lock_handle, &lowest_assumed_irql);
+
+        if (request == &device_extension->ListHead &&
             device_extension->ShutdownThread)
         {
             break;
@@ -2238,7 +2261,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
             }
         }
 
-        if (request == NULL)
+        if (request == &device_extension->ListHead)
         {
             KeWaitForSingleObject(&device_extension->ListEvent, Executive,
                 KernelMode, FALSE, NULL);

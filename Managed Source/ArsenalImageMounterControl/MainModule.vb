@@ -170,16 +170,13 @@ Module MainModule
 
             Case OpMode.QueryDevice
                 Using adapter As New ScsiAdapter
-                    Dim DeviceList As ICollection(Of UInt32)
+                    Dim DeviceList As IEnumerable(Of UInt32)
                     If DeviceNumber.HasValue Then
                         DeviceList = {DeviceNumber.Value}
                     Else
                         DeviceList = adapter.GetDeviceList()
                     End If
-                    If DeviceList.Count = 0 Then
-                        Console.WriteLine("No virtual disks defined.")
-                        Return
-                    End If
+
                     For Each Device In DeviceList.Select(AddressOf adapter.QueryDevice)
                         Console.WriteLine()
                         For Each field In Device.GetType().GetFields()
@@ -195,16 +192,16 @@ Module MainModule
                                 If disk.DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase) Then
                                     Dim disknumber = UInteger.Parse(disk.DevicePath.Substring("\\?\PhysicalDrive".Length))
                                     For Each volume In NativeFileIO.GetDiskVolumes(disknumber)
-                                        Console.WriteLine("Contains volume " & volume)
+                                        Console.WriteLine($"Contains volume {volume}")
                                         For Each mount_point In NativeFileIO.GetVolumeMountPoints(volume)
-                                            Console.WriteLine("  Mounted at " & mount_point)
+                                            Console.WriteLine($"  Mounted at {mount_point}")
                                         Next
                                     Next
                                 End If
                             End Using
 
                         Catch ex As Exception
-                            Console.Error.WriteLine("Error opening device: " & ex.JoinMessages())
+                            Console.Error.WriteLine($"Error opening device: {ex.JoinMessages()}")
 
                         End Try
                     Next

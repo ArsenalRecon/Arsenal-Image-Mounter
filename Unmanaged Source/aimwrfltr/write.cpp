@@ -69,30 +69,31 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             device_extension->Statistics.LargestWriteSize >> 10));
     }
 
-#define ALL_WRITES_DEFERRED  // All write operations deferred to worker thread and PASSIVE_LEVEL
+    bool defer_to_worker_thread = false;
 
-#ifndef ALL_WRITES_DEFERRED
+    KIRQL current_irql = KeGetCurrentIrql();
 
-    bool any_block_unmodified = false;
+    if (current_irql >= DISPATCH_LEVEL)
+    {
+        defer_to_worker_thread = true;
+    }
 
     LONG first = (LONG)
         DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Write.ByteOffset.QuadPart);
     LONG last = (LONG)
         DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Write.ByteOffset.QuadPart +
-        io_stack->Parameters.Write.Length - 1);
+            io_stack->Parameters.Write.Length - 1);
 
-    for (LONG i = first; i <= last && !any_block_unmodified; i++)
+    for (LONG i = first; i <= last && !defer_to_worker_thread; i++)
     {
         if (device_extension->AllocationTable[i] == DIFF_BLOCK_UNALLOCATED)
         {
-            any_block_unmodified = true;
+            defer_to_worker_thread = true;
         }
     }
 
-    if (any_block_unmodified)
+    if (defer_to_worker_thread)
     {
-
-#endif
         InterlockedIncrement64(
             &device_extension->Statistics.DeferredWriteRequests);
 
@@ -121,16 +122,19 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         IoMarkIrpPending(Irp);
 
-        ExInterlockedInsertTailList(&device_extension->ListHead,
-            &Irp->Tail.Overlay.ListEntry,
-            &device_extension->ListLock);
+        KLOCK_QUEUE_HANDLE lock_handle;
+
+        AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+            current_irql);
+
+        InsertTailList(&device_extension->ListHead,
+            &Irp->Tail.Overlay.ListEntry);
+
+        AIMWrFltrReleaseLock(&lock_handle, &current_irql);
 
         KeSetEvent(&device_extension->ListEvent, 0, FALSE);
 
         return STATUS_PENDING;
-
-#ifndef ALL_WRITES_DEFERRED
-
     }
 
     InterlockedIncrement64(&device_extension->Statistics.DirectWriteRequests);
@@ -230,8 +234,6 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     scatter->Complete();
 
     return STATUS_PENDING;
-
-#endif
 
 }				// end AIMWrFltrReadWrite()
 

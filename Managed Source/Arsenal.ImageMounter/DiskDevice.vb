@@ -193,7 +193,41 @@ Public Class DiskDevice
             With GetRawDiskStream()
                 .Position = 0
                 .Read(rawsig, 0, rawsig.Length)
-                Array.Copy(newvalue, 0, rawsig, &H1B8, newvalue.Length)
+                Buffer.BlockCopy(newvalue, 0, rawsig, &H1B8, newvalue.Length)
+                .Position = 0
+                .Write(rawsig, 0, rawsig.Length)
+            End With
+        End Set
+    End Property
+
+    ''' <summary>
+    ''' Gets or sets disk signature stored in boot record.
+    ''' </summary>
+    Public Property VBRHiddenSectorsCount As UInt32?
+        Get
+            Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
+
+            With GetRawDiskStream()
+                .Position = 0
+                .Read(rawsig, 0, rawsig.Length)
+            End With
+
+            If BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US Then
+                Return BitConverter.ToUInt32(rawsig, &H1C)
+            End If
+
+            Return Nothing
+        End Get
+        Set
+            If Not Value.HasValue Then
+                Return
+            End If
+            Dim newvalue = BitConverter.GetBytes(Value.Value)
+            Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
+            With GetRawDiskStream()
+                .Position = 0
+                .Read(rawsig, 0, rawsig.Length)
+                Buffer.BlockCopy(newvalue, 0, rawsig, &H1C, newvalue.Length)
                 .Position = 0
                 .Write(rawsig, 0, rawsig.Length)
             End With
@@ -234,7 +268,7 @@ Public Class DiskDevice
     ''' Gets or sets physical disk offline attribute. Only valid for
     ''' physical disk objects, not volumes or partitions.
     ''' </summary>
-    Public Property DiskOffline As Boolean?
+    Public Property DiskPolicyOffline As Boolean?
         Get
             Return NativeFileIO.GetDiskOffline(SafeFileHandle)
         End Get
@@ -249,7 +283,7 @@ Public Class DiskDevice
     ''' Gets or sets physical disk read only attribute. Only valid for
     ''' physical disk objects, not volumes or partitions.
     ''' </summary>
-    Public Property DiskReadOnly As Boolean?
+    Public Property DiskPolicyReadOnly As Boolean?
         Get
             Return NativeFileIO.GetDiskReadOnly(SafeFileHandle)
         End Get
@@ -301,6 +335,12 @@ Public Class DiskDevice
         End Get
     End Property
 
+    Public ReadOnly Property DiskId As String
+        Get
+            Return If(DriveLayoutEx?.ToString(), "(Unknown)")
+        End Get
+    End Property
+
     ''' <summary>
     ''' Retrieves properties for an existing virtual disk.
     ''' </summary>
@@ -324,43 +364,53 @@ Public Class DiskDevice
 
         Using adapter As New ScsiAdapter(scsi_address.PortNumber)
 
-            Dim FillRequestData =
-              Sub(Request As BinaryWriter)
-                  Request.Write(scsi_address.DWordDeviceNumber)
-                  Request.Write(0L)
-                  Request.Write(0UI)
-                  Request.Write(0L)
-                  Request.Write(0UI)
-                  Request.Write(65535US)
-                  Request.Write(New Byte(0 To 65534) {})
-              End Sub
+            DeviceNumber = scsi_address.DWordDeviceNumber
 
-            Dim ReturnCode As Int32
+            adapter.QueryDevice(DeviceNumber,
+                                DiskSize,
+                                BytesPerSector,
+                                ImageOffset,
+                                Flags,
+                                Filename)
 
-            Dim Response =
-                NativeFileIO.PhDiskMntCtl.SendSrbIoControl(
-                    SafeFileHandle,
-                    NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_DEVICE,
-                    0,
-                    FillRequestData,
-                    ReturnCode)
+        End Using
 
-            If ReturnCode <> 0 Then
-                Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
-            End If
+    End Sub
 
-            DeviceNumber = Response.ReadUInt32()
-            DiskSize = Response.ReadInt64()
-            BytesPerSector = Response.ReadUInt32()
-            Response.ReadUInt32()
-            ImageOffset = Response.ReadInt64()
-            Flags = CType(Response.ReadUInt32(), DeviceFlags)
-            Dim FilenameLength = Response.ReadUInt16()
-            If FilenameLength = 0 Then
-                Filename = Nothing
-            Else
-                Filename = Encoding.Unicode.GetString(Response.ReadBytes(FilenameLength))
-            End If
+    ''' <summary>
+    ''' Retrieves properties for an existing virtual disk.
+    ''' </summary>
+    ''' <param name="DeviceNumber">Device number of virtual disk.</param>
+    ''' <param name="DiskSize">Size of virtual disk.</param>
+    ''' <param name="BytesPerSector">Number of bytes per sector for virtual disk geometry.</param>
+    ''' <param name="ImageOffset">A skip offset if virtual disk data does not begin immediately at start of disk image file.
+    ''' Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter or Windows
+    ''' filesystem drivers.</param>
+    ''' <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
+    ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
+    ''' virtual memory type virtual disk.</param>
+    ''' <param name="WriteOverlayImagefile">Path to differencing file used in write-temporary mode.</param>
+    Public Sub QueryDevice(ByRef DeviceNumber As UInt32,
+                           ByRef DiskSize As Int64,
+                           ByRef BytesPerSector As UInt32,
+                           ByRef ImageOffset As Int64,
+                           ByRef Flags As DeviceFlags,
+                           ByRef Filename As String,
+                           ByRef WriteOverlayImagefile As String)
+
+        Dim scsi_address = ScsiAddress.Value
+
+        Using adapter As New ScsiAdapter(scsi_address.PortNumber)
+
+            DeviceNumber = scsi_address.DWordDeviceNumber
+
+            adapter.QueryDevice(DeviceNumber,
+                                DiskSize,
+                                BytesPerSector,
+                                ImageOffset,
+                                Flags,
+                                Filename,
+                                WriteOverlayImagefile)
 
         End Using
 
@@ -371,14 +421,13 @@ Public Class DiskDevice
     ''' </summary>
     Public Function QueryDevice() As ScsiAdapter.DeviceProperties
 
-        Dim DeviceProperties As New ScsiAdapter.DeviceProperties
-        QueryDevice(DeviceProperties.DeviceNumber,
-                    DeviceProperties.DiskSize,
-                    DeviceProperties.BytesPerSector,
-                    DeviceProperties.ImageOffset,
-                    DeviceProperties.Flags,
-                    DeviceProperties.Filename)
-        Return DeviceProperties
+        Dim scsi_address = ScsiAddress.Value
+
+        Using adapter As New ScsiAdapter(scsi_address.PortNumber)
+
+            Return adapter.QueryDevice(scsi_address.DWordDeviceNumber)
+
+        End Using
 
     End Function
 
@@ -445,6 +494,7 @@ Public Class DiskDevice
     Public Function GetWriteOverlayStatus() As WriteFilterStatistics?
 
         Dim statistics As WriteFilterStatistics = Nothing
+
         If Not API.GetWriteOverlayStatus(SafeFileHandle, statistics) Then
             Return Nothing
         End If
@@ -457,20 +507,30 @@ Public Class DiskDevice
     ''' Returns an DiskStream object that can be used to directly access disk data.
     ''' </summary>
     Public Function GetRawDiskStream() As DiskStream
+
         If _RawDiskStream Is Nothing Then
+
             _RawDiskStream = New DiskStream(SafeFileHandle,
                                             If(AccessMode = 0, FileAccess.Read, AccessMode))
+
         End If
+
         Return _RawDiskStream
+
     End Function
 
     Protected Overrides Sub Dispose(disposing As Boolean)
+
         If disposing Then
+
             _RawDiskStream?.Dispose()
+
         End If
+
         _RawDiskStream = Nothing
 
         MyBase.Dispose(disposing)
+
     End Sub
 
 End Class

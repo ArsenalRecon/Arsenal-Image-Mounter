@@ -681,4 +681,119 @@ extern "C"
     extern PKEVENT AIMWrFltrDiffFullEvent;
     extern PDRIVER_OBJECT AIMWrFltrDriverObject;
     extern bool AIMWrFltrLinksCreated;
+
+#if _NT_TARGET_VERSION >= 0x501
+
+    FORCEINLINE
+        VOID
+        __drv_maxIRQL(DISPATCH_LEVEL)
+        __drv_savesIRQLGlobal(QueuedSpinLock, LockHandle)
+        __drv_setsIRQL(DISPATCH_LEVEL)
+        AIMWrFltrAcquireLock_x64(__inout __deref PKSPIN_LOCK SpinLock,
+            __out __deref __drv_acquiresExclusiveResource(KeQueuedSpinLockType)
+            PKLOCK_QUEUE_HANDLE LockHandle,
+            __in KIRQL LowestAssumedIrql)
+    {
+        if (LowestAssumedIrql >= DISPATCH_LEVEL)
+        {
+            ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+            KeAcquireInStackQueuedSpinLockAtDpcLevel(SpinLock, LockHandle);
+        }
+        else
+        {
+            KeAcquireInStackQueuedSpinLock(SpinLock, LockHandle);
+        }
+    }
+
+    FORCEINLINE
+        VOID
+        __drv_requiresIRQL(DISPATCH_LEVEL)
+        __drv_restoresIRQLGlobal(QueuedSpinLock, LockHandle)
+        AIMWrFltrReleaseLock_x64(
+            __in __deref __drv_releasesExclusiveResource(KeQueuedSpinLockType)
+            PKLOCK_QUEUE_HANDLE LockHandle,
+            __inout __deref PKIRQL LowestAssumedIrql)
+    {
+        ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+        if (*LowestAssumedIrql >= DISPATCH_LEVEL)
+        {
+            KeReleaseInStackQueuedSpinLockFromDpcLevel(LockHandle);
+        }
+        else
+        {
+            KeReleaseInStackQueuedSpinLock(LockHandle);
+            *LowestAssumedIrql = LockHandle->OldIrql;
+        }
+    }
+
+#endif >= XP
+
+    FORCEINLINE
+        VOID
+        __drv_maxIRQL(DISPATCH_LEVEL)
+        __drv_savesIRQLGlobal(SpinLock, OldIrql)
+        __drv_setsIRQL(DISPATCH_LEVEL)
+        AIMWrFltrAcquireLock_x86(__inout __deref __drv_acquiresExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
+            __out __deref __drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_savesIRQL) PKIRQL OldIrql,
+            __in KIRQL LowestAssumedIrql)
+    {
+        if (LowestAssumedIrql >= DISPATCH_LEVEL)
+        {
+            ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+            *OldIrql = DISPATCH_LEVEL;
+
+            KeAcquireSpinLockAtDpcLevel(SpinLock);
+        }
+        else
+        {
+            KeAcquireSpinLock(SpinLock, OldIrql);
+        }
+    }
+
+    FORCEINLINE
+        VOID
+        __drv_requiresIRQL(DISPATCH_LEVEL)
+        __drv_restoresIRQLGlobal(SpinLock, OldIrql)
+        AIMWrFltrReleaseLock_x86(
+            __inout __deref __drv_releasesExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
+            __in KIRQL OldIrql,
+            __inout __deref PKIRQL LowestAssumedIrql)
+    {
+        ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+        if (*LowestAssumedIrql >= DISPATCH_LEVEL)
+        {
+            KeReleaseSpinLockFromDpcLevel(SpinLock);
+        }
+        else
+        {
+            KeReleaseSpinLock(SpinLock, OldIrql);
+            *LowestAssumedIrql = OldIrql;
+        }
+    }
+
+#ifdef _AMD64_
+
+#define AIMWrFltrAcquireLock AIMWrFltrAcquireLock_x64
+
+#define AIMWrFltrReleaseLock AIMWrFltrReleaseLock_x64
+
+#else
+
+#define AIMWrFltrAcquireLock(SpinLock, LockHandle, LowestAssumedIrql) \
+    { \
+        (LockHandle)->LockQueue.Lock = (SpinLock); \
+        AIMWrFltrAcquireLock_x86((LockHandle)->LockQueue.Lock, &(LockHandle)->OldIrql, (LowestAssumedIrql)); \
+    }
+
+#define AIMWrFltrReleaseLock(LockHandle, LowestAssumedIrql) \
+    { \
+        AIMWrFltrReleaseLock_x86((LockHandle)->LockQueue.Lock, (LockHandle)->OldIrql, (LowestAssumedIrql)); \
+    }
+
+#endif
+
 }

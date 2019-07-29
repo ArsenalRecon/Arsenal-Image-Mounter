@@ -63,11 +63,11 @@ Namespace Client
 
                 End Using
 
-                RequestEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:="Global\" & ObjectName & "_Request")
+                RequestEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:=$"Global\{ObjectName}_Request")
 
-                ResponseEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:="Global\" & ObjectName & "_Response")
+                ResponseEvent = New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset, name:=$"Global\{ObjectName}_Response")
 
-                ServerMutex = New Mutex(initiallyOwned:=False, name:="Global\" & ObjectName & "_Server")
+                ServerMutex = New Mutex(initiallyOwned:=False, name:=$"Global\{ObjectName}_Server")
 
                 MapView.Write(&H0, IMDPROXY_REQ.IMDPROXY_REQ_INFO)
 
@@ -131,7 +131,7 @@ Namespace Client
 
             Dim Response = MapView.Read(Of IMDPROXY_READ_RESP)(&H0)
             If Response.errorno <> 0 Then
-                Throw New EndOfStreamException("Read error: " & Response.errorno)
+                Throw New EndOfStreamException($"Read error: {Response.errorno}")
             End If
             Dim Length = CInt(Response.length)
 
@@ -159,13 +159,13 @@ Namespace Client
 
             Dim Response = MapView.Read(Of IMDPROXY_WRITE_RESP)(&H0)
             If Response.errorno <> 0 Then
-                Throw New EndOfStreamException("Write error: " & Response.errorno)
+                Throw New EndOfStreamException($"Write error: {Response.errorno}")
             End If
             Dim Length = CInt(Response.length)
             Position += Length
 
             If Length <> count Then
-                Throw New EndOfStreamException("Write length mismatch. Wrote " & Length & " of " & count & " bytes.")
+                Throw New EndOfStreamException($"Write length mismatch. Wrote {Length} of {count} bytes.")
             End If
 
         End Sub

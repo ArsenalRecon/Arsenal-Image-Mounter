@@ -56,7 +56,7 @@ Namespace Server.Services
         ''' </summary>
         ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
         Public Sub New(Imagefile As String, DiskAccess As VirtualDiskAccess)
-            Me.New(Imagefile, DevioServiceFactory.GetDirectFileAccessFlags(DiskAccess))
+            Me.New(Imagefile, GetDirectFileAccessFlags(DiskAccess))
 
         End Sub
 
@@ -68,7 +68,7 @@ Namespace Server.Services
 
         Protected Overrides ReadOnly Property ProxyModeFlags As DeviceFlags
             Get
-                If (DiskAccess And FileAccess.Write) = 0 Then
+                If Not DiskAccess.HasFlag(FileAccess.Write) Then
                     Return DeviceFlags.TypeFile Or DeviceFlags.ReadOnly
                 Else
                     Return DeviceFlags.TypeFile
@@ -90,6 +90,17 @@ Namespace Server.Services
         Public Overrides Sub RunService()
             OnServiceReady()
         End Sub
+
+        Public Overrides Sub DismountAndStopServiceThread()
+            MyBase.DismountAndStopServiceThread()
+            OnServiceShutdown()
+        End Sub
+
+        Public Overrides Function DismountAndStopServiceThread(timeout As TimeSpan) As Boolean
+            Dim rc = MyBase.DismountAndStopServiceThread(timeout)
+            OnServiceShutdown()
+            Return rc
+        End Function
 
         Protected Overrides Sub EmergencyStopServiceThread()
 

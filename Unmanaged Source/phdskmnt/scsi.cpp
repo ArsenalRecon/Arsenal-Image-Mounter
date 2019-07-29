@@ -776,6 +776,39 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         pSrb->DataTransferLength = pCdb->CDB6INQUIRY3.AllocationLength;
     }
 
+    if (pSrb->DataTransferLength > 0 && !MmIsAddressValid(pSrb->DataBuffer))
+    {
+        DbgPrint(
+            "PhDskMnt::ScsiOpInquiry: Detected SCSI inqury request with bad data buffer pointer. Srb=%p, OriginalRequest=%p, DataBuffer=%p, DataTransferLength=%u, Path=%i, Target=%i, Lun=%i, VPD=%i, PageCode=%i\n",
+            pSrb,
+            pSrb->OriginalRequest,
+            pSrb->DataBuffer,
+            pSrb->DataTransferLength,
+            (int)pSrb->PathId,
+            (int)pSrb->TargetId,
+            (int)pSrb->Lun,
+            (int)pCdb->CDB6INQUIRY3.EnableVitalProductData,
+            pCdb->CDB6INQUIRY3.PageCode);
+
+        StoragePortLogError(pHBAExt, pSrb, pSrb->PathId, pSrb->TargetId, pSrb->Lun, SP_INTERNAL_ADAPTER_ERROR, 1001);
+
+        ScsiSetCheckCondition(
+            pSrb,
+            SRB_STATUS_ERROR,
+            SCSI_SENSE_ILLEGAL_REQUEST,
+            SCSI_ADSENSE_INVALID_CDB,
+            0);
+
+#if DBG
+        if (!KD_DEBUGGER_NOT_PRESENT)
+        {
+            DbgBreakPoint();
+        }
+#endif
+
+        return;
+    }
+
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
         KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%X\n", pCdb->CDB6INQUIRY.PageCode));

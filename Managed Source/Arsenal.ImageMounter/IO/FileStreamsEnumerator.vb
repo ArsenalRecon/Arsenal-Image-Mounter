@@ -40,6 +40,10 @@ Namespace IO
             Public ReadOnly Property Current As FindStreamData Implements IEnumerator(Of FindStreamData).Current
                 <SecuritySafeCritical>
                 Get
+                    If disposedValue Then
+                        Throw New ObjectDisposedException("FileStreamsEnumerator.Enumerator")
+                    End If
+
                     Return _current
                 End Get
             End Property
@@ -47,7 +51,7 @@ Namespace IO
             Private ReadOnly Property IEnumerator_Current As Object Implements IEnumerator.Current
                 <SecuritySafeCritical>
                 Get
-                    Return _current
+                    Return Current
                 End Get
             End Property
 
@@ -105,13 +109,13 @@ Namespace IO
                 Me.disposedValue = True
             End Sub
 
-            ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-            <SecuritySafeCritical>
-            Protected Overrides Sub Finalize()
-                ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-                Dispose(False)
-                MyBase.Finalize()
-            End Sub
+            '' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+            '<SecuritySafeCritical>
+            'Protected Overrides Sub Finalize()
+            '    ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+            '    Dispose(False)
+            '    MyBase.Finalize()
+            'End Sub
 
             ' This code added by Visual Basic to correctly implement the disposable pattern.
             <SecuritySafeCritical>

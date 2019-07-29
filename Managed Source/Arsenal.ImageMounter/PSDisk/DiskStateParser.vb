@@ -50,9 +50,9 @@ Namespace PSDisk
                                     view.DevicePath = $"\\?\{view.DeviceName}"
                                     Using device As New DiskDevice(view.DevicePath, FileAccess.Read)
                                         view.RawDiskSignature = device.DiskSignature
-                                        view.FakeDiskSignature = (dev.Flags And DeviceFlags.FakeDiskSignatureIfZero) = DeviceFlags.FakeDiskSignatureIfZero
-                                        view.NativePropertyDiskOffline = device.DiskOffline
-                                        view.NativePropertyDiskOReadOnly = device.DiskReadOnly
+                                        view.FakeDiskSignature = dev.Flags.HasFlag(DeviceFlags.FakeDiskSignatureIfZero)
+                                        view.NativePropertyDiskOffline = device.DiskPolicyOffline
+                                        view.NativePropertyDiskOReadOnly = device.DiskPolicyReadOnly
                                         Dim drive_layout = device.DriveLayoutEx
                                         view.DiskId = TryCast(drive_layout, NativeFileIO.DriveLayoutInformationGPT)?.DriveLayoutInformationGPT.DiskId
                                         If device.HasValidPartitionTable Then

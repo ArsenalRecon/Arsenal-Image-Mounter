@@ -22,7 +22,7 @@ Namespace Server.SpecializedProviders
         End Sub
 
         Public Sub New(Imagefiles As String(), DiskAccess As FileAccess, ShareMode As FileShare)
-            MyBase.New((DiskAccess And FileAccess.Write) = FileAccess.Write, OpenImagefiles(Imagefiles, DiskAccess, ShareMode))
+            MyBase.New(DiskAccess.HasFlag(FileAccess.Write), OpenImagefiles(Imagefiles, DiskAccess, ShareMode))
 
         End Sub
 

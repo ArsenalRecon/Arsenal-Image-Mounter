@@ -10,9 +10,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
-Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
-Imports System.IO.Pipes
 Imports System.Threading.Tasks
+Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 
 Namespace Server.SpecializedProviders
 
@@ -65,6 +64,7 @@ Namespace Server.SpecializedProviders
 
         Public Declare Function memcmp Lib "msvcrt.dll" (<[In]> buf1 As Byte(), <[In]> buf2 As Byte(), count As IntPtr) As Integer
         Public Declare Function memcmp Lib "msvcrt.dll" (<[In]> buf1 As Byte(), buf2 As IntPtr, count As IntPtr) As Integer
+        Public Declare Function memcmp Lib "msvcrt.dll" (buf1 As IntPtr, <[In]> buf2 As Byte(), count As IntPtr) As Integer
         Public Declare Function memcmp Lib "msvcrt.dll" (buf1 As IntPtr, buf2 As IntPtr, count As IntPtr) As Integer
 
         Public Overrides Function Read(buf1 As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
@@ -84,8 +84,7 @@ Namespace Server.SpecializedProviders
             Dim rc2 = compareTask.Result
 
             If rc1 <> rc2 Then
-                Trace.WriteLine("Read request at position " & fileoffset.ToString("X") & ", " & count.ToString("X") &
-                                " bytes, returned " & rc1.ToString("X") & " bytes from image provider and " & rc2.ToString("X") & " bytes from debug compare stream.")
+                Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X)} bytes, returned 0x{rc1:X)} bytes from image provider and 0x{rc2:X} bytes from debug compare stream.")
             End If
 
             Dim cmp As Integer
@@ -100,8 +99,7 @@ Namespace Server.SpecializedProviders
             End Try
 
             If cmp <> 0 Then
-                Trace.WriteLine("Read request at position " & fileoffset.ToString("X") & ", " & count.ToString("X") &
-                                " bytes, returned different data from image provider than from debug compare stream.")
+                Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X} bytes, returned different data from image provider than from debug compare stream.")
             End If
 
             Return rc1
