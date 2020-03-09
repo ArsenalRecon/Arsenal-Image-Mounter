@@ -113,6 +113,7 @@
     <Compile Include="..\CommonAssemblyInfo.vb">
       <Link>CommonAssemblyInfo.vb</Link>
     </Compile>
+    <Compile Include="GlobalCriticalMutex.vb" />
     <Compile Include="IO\BufferedBinaryWriter.vb" />
     <Compile Include="IO\CachedIniFile.vb" />
     <Compile Include="DriverSetup.vb" />
@@ -120,8 +121,10 @@
     <Compile Include="IO\DisposableDictionary.vb" />
     <Compile Include="IO\DisposableList.vb" />
     <Compile Include="IO\FileStreamsEnumerator.vb" />
+    <Compile Include="IO\PinnedBuffer.vb" />
     <Compile Include="IO\VolumeMountPointEnumerator.vb" />
     <Compile Include="IO\VolumeEnumerator.vb" />
+    <Compile Include="IO\WriteFilterStatistics.vb" />
     <Compile Include="PSDisk\DiskStateParser.vb" />
     <Compile Include="PSDisk\DiskStateView.vb" />
     <Compile Include="Flags.vb" />

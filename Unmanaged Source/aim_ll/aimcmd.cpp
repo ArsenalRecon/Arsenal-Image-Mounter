@@ -1606,7 +1606,11 @@ LPWSTR MountPoint)
             return IMSCSI_CLI_ERROR_DEVICE_INACCESSIBLE;
         }
 
-        ImScsiCliQueryStatusWriteFilter(device);
+        if (IMSCSI_WRITE_OVERLAY(config->Flags) &&
+            config->WriteOverlayFileNameLength > 0)
+        {
+            ImScsiCliQueryStatusWriteFilter(device);
+        }
 
         CloseHandle(device);
 

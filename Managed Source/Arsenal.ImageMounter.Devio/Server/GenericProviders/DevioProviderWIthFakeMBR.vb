@@ -1,7 +1,7 @@
 ﻿
 ''''' DevioProviderUnmanagedBase.vb
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -25,13 +25,64 @@ Namespace Server.GenericProviders
 
         Public ReadOnly Property PrefixBuffer As Byte() = New Byte(0 To PrefixLength - 1) {}
 
+        Public ReadOnly Property SuffixBuffer As Byte()
+
         Private Shared ReadOnly _default_boot_code As Byte() = {&HF4, &HEB, &HFD}   ' HLT ; JMP -3
 
+        Public Shared Function GetVBRPartitionLength(baseProvider As IDevioProvider) As Long
+
+            Dim vbr(0 To CInt(baseProvider.SectorSize - 1UI)) As Byte
+
+            If baseProvider.Read(vbr, 0, vbr.Length, 0) < vbr.Length Then
+                Return 0
+            End If
+
+            Dim vbr_sector_size = BitConverter.ToInt16(vbr, &HB)
+
+            If vbr_sector_size <= 0 Then
+                Return 0
+            End If
+
+            Dim total_sectors As Long
+
+            total_sectors = BitConverter.ToUInt16(vbr, &H13)
+
+            If total_sectors = 0 Then
+
+                total_sectors = BitConverter.ToUInt32(vbr, &H20)
+
+            End If
+
+            If total_sectors = 0 Then
+
+                total_sectors = BitConverter.ToInt64(vbr, &H28)
+
+            End If
+
+            If total_sectors < 0 Then
+
+                Return 0
+
+            End If
+
+            Return total_sectors * vbr_sector_size
+
+        End Function
+
         Public Sub New(BaseProvider As IDevioProvider)
+            Me.New(BaseProvider, GetVBRPartitionLength(BaseProvider))
+
+        End Sub
+
+        Public Sub New(BaseProvider As IDevioProvider, PartitionLength As Long)
 
             _BaseProvider = BaseProvider
 
-            Dim virtual_length = BaseProvider.Length + PrefixLength
+            PartitionLength = Math.Max(BaseProvider.Length, PartitionLength)
+
+            _SuffixBuffer = New Byte(0 To CInt(PartitionLength - BaseProvider.Length - 1)) {}
+
+            Dim virtual_length = PrefixLength + PartitionLength
 
             Dim sectorSize = BaseProvider.SectorSize
 
@@ -39,7 +90,7 @@ Namespace Server.GenericProviders
 
             Dim prefix_sector_length = PrefixLength \ sectorSize
 
-            Dim partition_sector_length = BaseProvider.Length \ sectorSize
+            Dim partition_sector_length = PartitionLength \ sectorSize
 
             builder.PartitionTable.CreatePrimaryBySector(prefix_sector_length, prefix_sector_length + partition_sector_length - 1, BiosPartitionTypes.Ntfs, markActive:=True)
 
@@ -55,26 +106,25 @@ Namespace Server.GenericProviders
             stream.Read(_PrefixBuffer, PartitionTableOffset, 16)
 
             _PrefixBuffer(510) = &H55
-
             _PrefixBuffer(511) = &HAA
 
         End Sub
 
         Public ReadOnly Property Length As Long Implements IDevioProvider.Length
             Get
-                Return BaseProvider.Length + PrefixLength
+                Return PrefixLength + _BaseProvider.Length + _SuffixBuffer.Length
             End Get
         End Property
 
         Public ReadOnly Property SectorSize As UInteger Implements IDevioProvider.SectorSize
             Get
-                Return BaseProvider.SectorSize
+                Return _BaseProvider.SectorSize
             End Get
         End Property
 
         Public ReadOnly Property CanWrite As Boolean Implements IDevioProvider.CanWrite
             Get
-                Return BaseProvider.CanWrite
+                Return _BaseProvider.CanWrite
             End Get
         End Property
 
@@ -88,7 +138,7 @@ Namespace Server.GenericProviders
 
             Dim prefix_count = 0
 
-            If fileoffset < PrefixLength Then
+            If count > 0 AndAlso fileoffset < PrefixLength Then
 
                 prefix_count = Math.Min(CInt(PrefixLength - fileoffset), count)
 
@@ -100,21 +150,37 @@ Namespace Server.GenericProviders
 
             End If
 
-            Dim rc As Integer
+            Dim base_count = 0
 
-            If count > 0 Then
+            If count > 0 AndAlso fileoffset < (PrefixLength + _BaseProvider.Length) Then
 
-                rc = _BaseProvider.Read(data, bufferoffset, count, fileoffset - PrefixLength)
+                base_count = CInt(Math.Min(PrefixLength + _BaseProvider.Length - fileoffset, count))
 
-                If rc < 0 Then
+                base_count = _BaseProvider.Read(data, bufferoffset, base_count, fileoffset - PrefixLength)
 
-                    Return rc
+                If base_count < 0 Then
+
+                    Return base_count
 
                 End If
 
+                fileoffset += base_count
+                bufferoffset += base_count
+                count -= base_count
+
             End If
 
-            Return rc + prefix_count
+            Dim suffix_count = 0
+
+            If count > 0 AndAlso fileoffset < Length Then
+
+                suffix_count = CInt(Math.Min(PrefixLength + _BaseProvider.Length + _SuffixBuffer.Length - fileoffset, count))
+
+                Marshal.Copy(_SuffixBuffer, CInt(fileoffset - _BaseProvider.Length - PrefixLength), data + bufferoffset, suffix_count)
+
+            End If
+
+            Return prefix_count + base_count + suffix_count
 
         End Function
 
@@ -122,7 +188,7 @@ Namespace Server.GenericProviders
 
             Dim prefix_count = 0
 
-            If fileoffset < PrefixLength Then
+            If count > 0 AndAlso fileoffset < PrefixLength Then
 
                 prefix_count = Math.Min(CInt(PrefixLength - fileoffset), count)
 
@@ -134,45 +200,137 @@ Namespace Server.GenericProviders
 
             End If
 
-            Dim rc As Integer
+            Dim base_count = 0
 
-            If count > 0 Then
+            If count > 0 AndAlso fileoffset < (PrefixLength + _BaseProvider.Length) Then
 
-                rc = _BaseProvider.Read(data, bufferoffset, count, fileoffset - PrefixLength)
+                base_count = CInt(Math.Min(PrefixLength + _BaseProvider.Length - fileoffset, count))
 
-                If rc < 0 Then
+                base_count = _BaseProvider.Read(data, bufferoffset, base_count, fileoffset - PrefixLength)
 
-                    Return rc
+                If base_count < 0 Then
+
+                    Return base_count
 
                 End If
 
+                fileoffset += base_count
+                bufferoffset += base_count
+                count -= base_count
+
             End If
 
-            Return rc + prefix_count
+            Dim suffix_count = 0
+
+            If count > 0 AndAlso fileoffset < Length Then
+
+                suffix_count = CInt(Math.Min(PrefixLength + _BaseProvider.Length + _SuffixBuffer.Length - fileoffset, count))
+
+                Buffer.BlockCopy(_SuffixBuffer, CInt(fileoffset - _BaseProvider.Length - PrefixLength), data, bufferoffset, suffix_count)
+
+            End If
+
+            Return prefix_count + base_count + suffix_count
 
         End Function
 
-        Public Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
+        Public Function Write(data As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
 
-            If fileoffset < PrefixLength Then
+            Dim prefix_count = 0
 
-                Return -1
+            If count > 0 AndAlso fileoffset < PrefixLength Then
+
+                prefix_count = Math.Min(CInt(PrefixLength - fileoffset), count)
+
+                Marshal.Copy(data + bufferoffset, _PrefixBuffer, CInt(fileoffset), prefix_count)
+
+                fileoffset += prefix_count
+                bufferoffset += prefix_count
+                count -= prefix_count
 
             End If
 
-            Return _BaseProvider.Write(buffer, bufferoffset, count, fileoffset - PrefixLength)
+            Dim base_count = 0
+
+            If count > 0 AndAlso fileoffset < (PrefixLength + _BaseProvider.Length) Then
+
+                base_count = CInt(Math.Min(PrefixLength + _BaseProvider.Length - fileoffset, count))
+
+                base_count = _BaseProvider.Write(data, bufferoffset, base_count, fileoffset - PrefixLength)
+
+                If base_count < 0 Then
+
+                    Return base_count
+
+                End If
+
+                fileoffset += base_count
+                bufferoffset += base_count
+                count -= base_count
+
+            End If
+
+            Dim suffix_count = 0
+
+            If count > 0 AndAlso fileoffset < Length Then
+
+                suffix_count = CInt(Math.Min(PrefixLength + _BaseProvider.Length + _SuffixBuffer.Length - fileoffset, count))
+
+                Marshal.Copy(data + bufferoffset, _SuffixBuffer, CInt(fileoffset - _BaseProvider.Length - PrefixLength), suffix_count)
+
+            End If
+
+            Return prefix_count + base_count + suffix_count
 
         End Function
 
-        Public Function Write(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
+        Public Function Write(data As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
 
-            If fileoffset < PrefixLength Then
+            Dim prefix_count = 0
 
-                Return -1
+            If count > 0 AndAlso fileoffset < PrefixLength Then
+
+                prefix_count = Math.Min(CInt(PrefixLength - fileoffset), count)
+
+                Buffer.BlockCopy(data, bufferoffset, _PrefixBuffer, CInt(fileoffset), prefix_count)
+
+                fileoffset += prefix_count
+                bufferoffset += prefix_count
+                count -= prefix_count
 
             End If
 
-            Return _BaseProvider.Write(buffer, bufferoffset, count, fileoffset - PrefixLength)
+            Dim base_count = 0
+
+            If count > 0 AndAlso fileoffset < (PrefixLength + _BaseProvider.Length) Then
+
+                base_count = CInt(Math.Min(PrefixLength + _BaseProvider.Length - fileoffset, count))
+
+                base_count = _BaseProvider.Write(data, bufferoffset, base_count, fileoffset - PrefixLength)
+
+                If base_count < 0 Then
+
+                    Return base_count
+
+                End If
+
+                fileoffset += base_count
+                bufferoffset += base_count
+                count -= base_count
+
+            End If
+
+            Dim suffix_count = 0
+
+            If count > 0 AndAlso fileoffset < Length Then
+
+                suffix_count = CInt(Math.Min(PrefixLength + _BaseProvider.Length + _SuffixBuffer.Length - fileoffset, count))
+
+                Buffer.BlockCopy(data, bufferoffset, _SuffixBuffer, CInt(fileoffset - _BaseProvider.Length - PrefixLength), suffix_count)
+
+            End If
+
+            Return prefix_count + base_count + suffix_count
 
         End Function
 

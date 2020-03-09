@@ -9,7 +9,7 @@ Imports Microsoft.Win32
 ''''' Routines for accessing some useful Win32 API functions to access features not
 ''''' directly accessible through .NET Framework.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -85,6 +85,8 @@ Namespace IO
             Public Const IOCTL_DISK_GET_PARTITION_INFO_EX As UInt32 = &H70048
             Public Const IOCTL_DISK_GET_DRIVE_LAYOUT As UInt32 = &H7400C
             Public Const IOCTL_DISK_GET_DRIVE_LAYOUT_EX As UInt32 = &H70050
+            Public Const IOCTL_DISK_SET_DRIVE_LAYOUT_EX As UInt32 = &H7C054
+            Public Const IOCTL_DISK_CREATE_DISK As UInt32 = &H7C058
             Public Const IOCTL_DISK_GROW_PARTITION As UInt32 = &H7C0D0
             Public Const IOCTL_DISK_UPDATE_PROPERTIES As UInt32 = &H70140
             Public Const IOCTL_DISK_IS_WRITABLE As UInt32 = &H70024
@@ -105,8 +107,12 @@ Namespace IO
             Public Const SERVICE_KERNEL_DRIVER As UInt32 = &H1
             Public Const SERVICE_FILE_SYSTEM_DRIVER As UInt32 = &H2
             Public Const SERVICE_WIN32_OWN_PROCESS As UInt32 = &H10 'Service that runs in its own process. 
+            Public Const SERVICE_WIN32_INTERACTIVE As UInt32 = &H100 'Service that runs in its own process. 
             Public Const SERVICE_WIN32_SHARE_PROCESS As UInt32 = &H20
 
+            Public Const SERVICE_BOOT_START As UInt32 = &H0
+            Public Const SERVICE_SYSTEM_START As UInt32 = &H1
+            Public Const SERVICE_AUTO_START As UInt32 = &H2
             Public Const SERVICE_DEMAND_START As UInt32 = &H3
             Public Const SERVICE_ERROR_IGNORE As UInt32 = &H0
             Public Const SERVICE_CONTROL_STOP As UInt32 = &H1
@@ -374,11 +380,10 @@ Namespace IO
 
             <StructLayout(LayoutKind.Sequential)>
             Public Structure DRIVE_LAYOUT_INFORMATION_EX
-                Public Enum PARTITION_STYLE As Integer
-                    PARTITION_STYLE_MBR
-                    PARTITION_STYLE_GPT
-                    PARTITION_STYLE_RAW
-                End Enum
+                Public Sub New(PartitionStyle As PARTITION_STYLE, PartitionCount As Integer)
+                    _PartitionStyle = PartitionStyle
+                    _PartitionCount = PartitionCount
+                End Sub
 
                 Public ReadOnly Property PartitionStyle As PARTITION_STYLE
                 Public ReadOnly Property PartitionCount As Integer
@@ -386,6 +391,10 @@ Namespace IO
 
             <StructLayout(LayoutKind.Sequential)>
             Public Structure DRIVE_LAYOUT_INFORMATION_MBR
+                Public Sub New(DiskSignature As UInteger)
+                    _DiskSignature = DiskSignature
+                End Sub
+
                 Public ReadOnly Property DiskSignature As UInteger
                 Public ReadOnly Property Checksum As UInteger
 
@@ -414,14 +423,32 @@ Namespace IO
                 End Function
             End Structure
 
+            Public Enum PARTITION_STYLE As Byte
+                PARTITION_STYLE_MBR
+                PARTITION_STYLE_GPT
+                PARTITION_STYLE_RAW
+            End Enum
+
+            <StructLayout(LayoutKind.Sequential)>
+            Public Structure CREATE_DISK_MBR
+                <MarshalAs(UnmanagedType.I1)>
+                Public PartitionStyle As PARTITION_STYLE
+
+                Public DiskSignature As UInteger
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential)>
+            Public Structure CREATE_DISK_GPT
+                <MarshalAs(UnmanagedType.I1)>
+                Public PartitionStyle As PARTITION_STYLE
+
+                Public DiskId As Guid
+
+                Public MaxPartitionCount As Integer
+            End Structure
+
             <StructLayout(LayoutKind.Sequential, Pack:=8)>
             Public Structure PARTITION_INFORMATION_EX
-
-                Public Enum PARTITION_STYLE As Byte
-                    PARTITION_STYLE_MBR
-                    PARTITION_STYLE_GPT
-                    PARTITION_STYLE_RAW
-                End Enum
 
                 <MarshalAs(UnmanagedType.I1)>
                 Public PartitionStyle As PARTITION_STYLE
@@ -431,8 +458,64 @@ Namespace IO
                 <MarshalAs(UnmanagedType.I1)>
                 Public RewritePartition As Boolean
 
-                <MarshalAs(UnmanagedType.ByValArray, SizeConst:=108)>
-                Private ReadOnly fields As Byte()
+                Private ReadOnly padding1 As Byte
+                Private ReadOnly padding2 As Byte
+                Private ReadOnly padding3 As Byte
+
+                <MarshalAs(UnmanagedType.ByValArray, SizeConst:=112)>
+                Private fields As Byte()
+
+                Public Property MBR As PARTITION_INFORMATION_MBR
+                    Get
+                        Return PinnedBuffer.Deserialize(Of PARTITION_INFORMATION_MBR)(fields)
+                    End Get
+                    Set
+                        Using buffer As New PinnedBuffer(Of Byte)(112)
+                            buffer.Write(0, Value)
+                            fields = buffer.Target
+                        End Using
+                    End Set
+                End Property
+
+                Public Property GPT As PARTITION_INFORMATION_GPT
+                    Get
+                        Return PinnedBuffer.Deserialize(Of PARTITION_INFORMATION_GPT)(fields)
+                    End Get
+                    Set
+                        Using buffer As New PinnedBuffer(Of Byte)(112)
+                            buffer.Write(0, Value)
+                            fields = buffer.Target
+                        End Using
+                    End Set
+                End Property
+
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential, Pack:=4)>
+            Public Structure PARTITION_INFORMATION_MBR
+
+                Public PartitionType As Byte
+
+                <MarshalAs(UnmanagedType.I1)>
+                Public BootIndicator As Boolean
+
+                <MarshalAs(UnmanagedType.I1)>
+                Public RecognizedPartition As Boolean
+
+                Public HiddenSectors As Integer
+
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential, Pack:=4)>
+            Public Structure PARTITION_INFORMATION_GPT
+
+                Public DiskId As Guid
+
+                Public StartingUsableOffset As Long
+
+                Public UsableLength As Long
+
+                Public MaxPartitionCount As Integer
 
             End Structure
 
@@ -595,6 +678,15 @@ Namespace IO
 
             Public Declare Auto Function GetLogicalDrives Lib "kernel32.dll" (
               ) As UInteger
+
+            Public Declare Auto Function GetFileAttributes Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String
+              ) As FileAttributes
+
+            Public Declare Auto Function SetFileAttributes Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
+              dwFileAttributes As FileAttributes
+              ) As Boolean
 
             <StructLayout(LayoutKind.Sequential)>
             Public Structure SERVICE_STATUS
@@ -1737,8 +1829,8 @@ Namespace IO
 
                 Dim indata =
                   Sub(Request As BinaryWriter)
-                      Request.Write(Marshal.SizeOf(GetType(NativeFileIO.PhDiskMntCtl.SRB_IO_CONTROL)))
-                      Request.Write(NativeFileIO.PhDiskMntCtl.SrbIoCtlSignature)
+                      Request.Write(Marshal.SizeOf(GetType(SRB_IO_CONTROL)))
+                      Request.Write(SrbIoCtlSignature)
                       Request.Write(timeout)
                       Request.Write(ctrlcode)
                       Request.Write(0UI)
@@ -1753,9 +1845,8 @@ Namespace IO
                       End If
                   End Sub
 
-                Dim Response =
-                  NativeFileIO.DeviceIoControl(adapter,
-                                               NativeFileIO.Win32API.IOCTL_SCSI_MINIPORT,
+                Dim Response = DeviceIoControl(adapter,
+                                               Win32API.IOCTL_SCSI_MINIPORT,
                                                indata,
                                                0)
 
@@ -1994,7 +2085,7 @@ Namespace IO
 
         End Class
 
-        Public Shared Iterator Function QueryHandleTableHandleInformation(handleTable As IEnumerable(Of Win32API.SystemHandleTableEntryInformation)) As IEnumerable(Of HandleTableEntryInformation)
+        Public Shared Iterator Function EnumerateHandleTableHandleInformation(handleTable As IEnumerable(Of Win32API.SystemHandleTableEntryInformation)) As IEnumerable(Of HandleTableEntryInformation)
 
             Using buffer As New Win32API.HGlobalBuffer(65536),
                 processHandleList = New DisposableDictionary(Of Integer, SafeFileHandle),
@@ -2081,10 +2172,10 @@ Namespace IO
 
         End Function
 
-        Public Shared Function FindProcessesHoldingFileHandle(ParamArray nativeFullPaths As String()) As IEnumerable(Of HandleTableEntryInformation)
+        Public Shared Function EnumerateProcessesHoldingFileHandle(ParamArray nativeFullPaths As String()) As IEnumerable(Of HandleTableEntryInformation)
 
             Return _
-                From handle In QueryHandleTableHandleInformation(GetSystemHandleTable())
+                From handle In EnumerateHandleTableHandleInformation(GetSystemHandleTable())
                 Where
                     Not String.IsNullOrWhiteSpace(handle.ObjectName) AndAlso
                     Array.Exists(nativeFullPaths, AddressOf handle.ObjectName.Equals)
@@ -2186,7 +2277,7 @@ Namespace IO
                 NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_DELETE
             End If
 
-            Dim NativeCreationDisposition As UInt32 = 0
+            Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
                     NativeCreationDisposition = Win32API.CREATE_ALWAYS
@@ -2274,7 +2365,7 @@ Namespace IO
                 NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_DELETE
             End If
 
-            Dim NativeCreationDisposition As UInt32 = 0
+            Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
                     NativeCreationDisposition = Win32API.CREATE_ALWAYS
@@ -2346,7 +2437,7 @@ Namespace IO
                 NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_DELETE
             End If
 
-            Dim NativeCreationDisposition As UInt32 = 0
+            Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
                     NativeCreationDisposition = Win32API.CREATE_ALWAYS
@@ -2816,7 +2907,11 @@ Namespace IO
 
             For search = Convert.ToUInt16(start) To Convert.ToUInt16("Z"c)
                 If (logical_drives And (1 << (search - Convert.ToUInt16("A"c)))) = 0 Then
-                    Return Convert.ToChar(search)
+                    Using key = Registry.CurrentUser.OpenSubKey($"Network\{search}")
+                        If key Is Nothing Then
+                            Return Convert.ToChar(search)
+                        End If
+                    End Using
                 End If
             Next
 
@@ -2824,7 +2919,268 @@ Namespace IO
 
         End Function
 
-        Structure DiskExtent
+        Public Shared Function GetFileVersionInfo(exe As Stream) As Version
+
+            Dim buffer = New Byte(0 To CInt(exe.Length - 1)) {}
+            exe.Read(buffer, 0, buffer.Length)
+
+            Return GetFileVersionInfo(buffer)
+
+        End Function
+
+        Public Shared Function GetFileVersionInfo(exepath As String) As Version
+
+            Dim buffer As Byte()
+
+            Using exe = NativeFileIO.OpenFileStream(exepath, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete)
+                buffer = New Byte(0 To CInt(exe.Length - 1)) {}
+                exe.Read(buffer, 0, buffer.Length)
+            End Using
+
+            Return GetFileVersionInfo(buffer)
+
+        End Function
+
+        Public Shared Function GetFileVersionInfo(exe As Byte()) As Version
+
+            Dim exe_signature = Encoding.ASCII.GetString(exe, 0, 2)
+            If Not exe_signature.Equals("MZ", StringComparison.Ordinal) Then
+                Throw New BadImageFormatException("Invalid executable header signature")
+            End If
+
+            Dim pe = BitConverter.ToInt32(exe, &H3C)
+
+            Dim pe_signature = Encoding.ASCII.GetChars(exe, pe, 4)
+
+            Static expected_pe_signature As String = $"PE{New Char}{New Char}"
+
+            If Not pe_signature.SequenceEqual(expected_pe_signature) Then
+                Throw New BadImageFormatException("Invalid PE header signature")
+            End If
+
+            Dim coff = pe + 4
+
+            Dim num_sections = BitConverter.ToUInt16(exe, coff + 2)
+            Dim opt_header_size = BitConverter.ToUInt16(exe, coff + 16)
+
+            If num_sections = 0 OrElse opt_header_size = 0 Then
+                Throw New BadImageFormatException("Invalid PE file")
+            End If
+
+            Dim opt_header = coff + 20
+
+            Dim opt_header_signature = BitConverter.ToUInt16(exe, opt_header)
+
+            Dim data_dir = opt_header + 96
+
+            Dim va_res = BitConverter.ToInt32(exe, data_dir + 8 * 2)
+
+            Dim sec_table = opt_header + opt_header_size
+
+            Static expected_section_name As String = $".rsrc{New Char}"
+
+            For i = 0 To num_sections - 1
+                Dim sec = sec_table + 40 * i
+                Dim sec_name = Encoding.ASCII.GetChars(exe, sec, expected_section_name.Length)
+
+                If Not sec_name.SequenceEqual(expected_section_name) Then
+                    Continue For
+                End If
+
+                Dim va_sec = BitConverter.ToInt32(exe, sec + 12)
+                Dim raw = BitConverter.ToInt32(exe, sec + 20)
+                Dim res_sec = raw + (va_res - va_sec)
+
+                Dim num_named = BitConverter.ToUInt16(exe, res_sec + 12)
+                Dim num_id = BitConverter.ToUInt16(exe, res_sec + 14)
+                Dim num = CInt(num_named) + num_id
+
+                If num = 0 Then
+                    Exit For
+                End If
+
+                For j = 0 To num - 1
+
+                    Dim res = res_sec + 16 + 8 * j
+                    Dim name = BitConverter.ToUInt32(exe, res)
+
+                    If name <> 16 Then
+                        Continue For
+                    End If
+
+                    Dim offs = BitConverter.ToUInt32(exe, res + 4)
+
+                    If (offs And &H80000000UI) = 0 Then
+                        Exit For
+                    End If
+
+                    Dim ver_dir = res_sec + CInt(offs And &H7FFFFFFFUI)
+
+                    num_named = BitConverter.ToUInt16(exe, ver_dir + 12)
+                    num_id = BitConverter.ToUInt16(exe, ver_dir + 14)
+                    num = CInt(num_named) + num_id
+
+                    If num = 0 Then
+                        Exit For
+                    End If
+
+                    res = ver_dir + 16
+
+                    offs = BitConverter.ToUInt32(exe, res + 4)
+
+                    If (offs And &H80000000UI) = 0 Then
+                        Exit For
+                    End If
+
+                    ver_dir = res_sec + CInt(offs And &H7FFFFFFFUI)
+
+                    num_named = BitConverter.ToUInt16(exe, ver_dir + 12)
+                    num_id = BitConverter.ToUInt16(exe, ver_dir + 14)
+                    num = CInt(num_named) + num_id
+
+                    If num = 0 Then
+                        Exit For
+                    End If
+
+                    res = ver_dir + 16
+
+                    offs = BitConverter.ToUInt32(exe, res + 4)
+
+                    If (offs And &H80000000UI) <> 0 Then
+                        Exit For
+                    End If
+
+                    ver_dir = res_sec + CInt(offs)
+
+                    Dim ver_va = BitConverter.ToInt32(exe, ver_dir)
+
+                    Dim version = raw + (ver_va - va_sec)
+
+                    Dim off As Integer
+
+                    Dim len = BitConverter.ToUInt16(exe, version)
+                    Dim val_len = BitConverter.ToUInt16(exe, version + 2)
+                    Dim type = BitConverter.ToUInt16(exe, version + 4)
+
+                    off = 6
+                    Do
+                        Dim c = BitConverter.ToChar(exe, version + off)
+                        If c = New Char Then
+                            Exit Do
+                        End If
+                        off += 2
+                    Loop
+
+                    Dim info = Encoding.Unicode.GetString(exe, version + 6, off - 6)
+
+                    off += 2
+
+                    off = PadValue(off, 4)
+
+                    If info.Equals("VS_VERSION_INFO", StringComparison.Ordinal) Then
+
+                        Dim fixed = version + off
+
+                        Dim fileA = BitConverter.ToUInt16(exe, fixed + 10)
+                        Dim fileB = BitConverter.ToUInt16(exe, fixed + 8)
+                        Dim fileC = BitConverter.ToUInt16(exe, fixed + 14)
+                        Dim fileD = BitConverter.ToUInt16(exe, fixed + 12)
+                        'Dim prodA = BitConverter.ToUInt16(exe, fixed + 18)
+                        'Dim prodB = BitConverter.ToUInt16(exe, fixed + 16)
+                        'Dim prodC = BitConverter.ToUInt16(exe, fixed + 22)
+                        'Dim prodD = BitConverter.ToUInt16(exe, fixed + 20)
+
+                        Dim file_version As New Version(fileA, fileB, fileC, fileD)
+                        'Dim prod_version As New Version(prodA, prodB, prodC, prodD)
+
+                        Return file_version
+
+                    End If
+
+                Next
+
+            Next
+
+            Throw New KeyNotFoundException("No version resource exists in file")
+
+        End Function
+
+        Public Enum IMAGE_FILE_MACHINE As UShort
+            I386 = &H14C '// x86
+            IA64 = &H200 '// Intel Itanium
+            AMD64 = &H8664 '// x64
+        End Enum
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure ImageFileHeader
+            Public ReadOnly Property Machine As IMAGE_FILE_MACHINE
+            Public ReadOnly Property NumberOfSections As UShort
+            Public ReadOnly Property TimeDateStamp As UInteger
+            Public ReadOnly Property PointerToSymbolTable As UInteger
+            Public ReadOnly Property NumberOfSymbols As UInteger
+            Public ReadOnly Property SizeOfOptionalHeader As UShort
+            Public ReadOnly Property Characteristics As UShort
+        End Structure
+
+        Public Shared Function GetExeFileHeader(exe As Stream) As ImageFileHeader
+
+            Dim buffer = New Byte(0 To CInt(exe.Length - 1)) {}
+            exe.Read(buffer, 0, buffer.Length)
+
+            Return GetExeFileHeader(buffer)
+
+        End Function
+
+        Public Shared Function GetExeFileHeader(exepath As String) As ImageFileHeader
+
+            Dim buffer As Byte()
+
+            Using exe = NativeFileIO.OpenFileStream(exepath, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete)
+                buffer = New Byte(0 To CInt(exe.Length - 1)) {}
+                exe.Read(buffer, 0, buffer.Length)
+            End Using
+
+            Return GetExeFileHeader(buffer)
+
+        End Function
+
+        Public Shared Function GetExeFileHeader(exe As Byte()) As ImageFileHeader
+
+            Dim exe_signature = Encoding.ASCII.GetString(exe, 0, 2)
+
+            If Not exe_signature.Equals("MZ", StringComparison.Ordinal) Then
+                Throw New BadImageFormatException("Invalid executable header signature")
+            End If
+
+            Dim pe = BitConverter.ToInt32(exe, &H3C)
+
+            Dim pe_signature = Encoding.ASCII.GetChars(exe, pe, 4)
+
+            Static expected_pe_signature As String = $"PE{New Char}{New Char}"
+
+            If Not pe_signature.SequenceEqual(expected_pe_signature) Then
+                Throw New BadImageFormatException("Invalid PE header signature")
+            End If
+
+            Dim coff = pe + 4
+
+            Dim handle = GCHandle.Alloc(exe, GCHandleType.Pinned)
+
+            Try
+                Return CType(Marshal.PtrToStructure(handle.AddrOfPinnedObject() + coff, GetType(ImageFileHeader)), ImageFileHeader)
+
+            Finally
+                handle.Free()
+
+            End Try
+
+        End Function
+
+        Private Shared Function PadValue(value As Integer, align As Integer) As Integer
+            Return (value + align - 1) And -align
+        End Function
+
+        Public Structure DiskExtent
             Public DiskNumber As UInteger
             Public StartingOffset As Long
             Public ExtentLength As Long
@@ -2880,10 +3236,10 @@ Namespace IO
 
             Public ReadOnly Property DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX
 
-            Public ReadOnly Property Partitions As ReadOnlyCollection(Of Win32API.PARTITION_INFORMATION_EX)
+            Public ReadOnly Property Partitions As Win32API.PARTITION_INFORMATION_EX()
 
             Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
-                           Partitions As ReadOnlyCollection(Of Win32API.PARTITION_INFORMATION_EX))
+                           Partitions As Win32API.PARTITION_INFORMATION_EX())
 
                 _DriveLayoutInformation = DriveLayoutInformation
                 _Partitions = Partitions
@@ -2902,22 +3258,22 @@ Namespace IO
         Public Class DriveLayoutInformationMBR
             Inherits DriveLayoutInformation
 
-            Public ReadOnly Property DriveLayoutInformationMBR As Win32API.DRIVE_LAYOUT_INFORMATION_MBR
+            Public ReadOnly Property MBR As Win32API.DRIVE_LAYOUT_INFORMATION_MBR
 
             Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
-                           Partitions As ReadOnlyCollection(Of Win32API.PARTITION_INFORMATION_EX),
+                           Partitions As Win32API.PARTITION_INFORMATION_EX(),
                            DriveLayoutInformationMBR As Win32API.DRIVE_LAYOUT_INFORMATION_MBR)
                 MyBase.New(DriveLayoutInformation, Partitions)
 
-                _DriveLayoutInformationMBR = DriveLayoutInformationMBR
+                _MBR = DriveLayoutInformationMBR
             End Sub
 
             Public Overrides Function GetHashCode() As Integer
-                Return _DriveLayoutInformationMBR.GetHashCode()
+                Return _MBR.GetHashCode()
             End Function
 
             Public Overrides Function ToString() As String
-                Return _DriveLayoutInformationMBR.ToString()
+                Return _MBR.ToString()
             End Function
 
         End Class
@@ -2925,22 +3281,22 @@ Namespace IO
         Public Class DriveLayoutInformationGPT
             Inherits DriveLayoutInformation
 
-            Public ReadOnly Property DriveLayoutInformationGPT As Win32API.DRIVE_LAYOUT_INFORMATION_GPT
+            Public ReadOnly Property GPT As Win32API.DRIVE_LAYOUT_INFORMATION_GPT
 
             Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
-                           Partitions As ReadOnlyCollection(Of Win32API.PARTITION_INFORMATION_EX),
+                           Partitions As Win32API.PARTITION_INFORMATION_EX(),
                            DriveLayoutInformationGPT As Win32API.DRIVE_LAYOUT_INFORMATION_GPT)
                 MyBase.New(DriveLayoutInformation, Partitions)
 
-                _DriveLayoutInformationGPT = DriveLayoutInformationGPT
+                _GPT = DriveLayoutInformationGPT
             End Sub
 
             Public Overrides Function GetHashCode() As Integer
-                Return _DriveLayoutInformationGPT.GetHashCode()
+                Return _GPT.GetHashCode()
             End Function
 
             Public Overrides Function ToString() As String
-                Return _DriveLayoutInformationGPT.ToString()
+                Return _GPT.ToString()
             End Function
 
         End Class
@@ -2980,18 +3336,17 @@ Namespace IO
                     End If
 
                     Dim partition_offset = 48
-                    Dim partitions_array(0 To layout.PartitionCount - 1) As Win32API.PARTITION_INFORMATION_EX
+                    Dim partitions(0 To layout.PartitionCount - 1) As Win32API.PARTITION_INFORMATION_EX
                     For i = 0 To layout.PartitionCount - 1
-                        partitions_array(i) = CType(Marshal.PtrToStructure(buffer.DangerousGetHandle() + 48 + i * partition_struct_size,
+                        partitions(i) = CType(Marshal.PtrToStructure(buffer.DangerousGetHandle() + 48 + i * partition_struct_size,
                                                                            GetType(Win32API.PARTITION_INFORMATION_EX)),
                                                                            Win32API.PARTITION_INFORMATION_EX)
                     Next
-                    Dim partitions = Array.AsReadOnly(partitions_array)
 
-                    If layout.PartitionStyle = Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_MBR Then
+                    If layout.PartitionStyle = Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR Then
                         Dim mbr = buffer.Read(Of Win32API.DRIVE_LAYOUT_INFORMATION_MBR)(8)
                         Return New DriveLayoutInformationMBR(layout, partitions, mbr)
-                    ElseIf layout.PartitionStyle = Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_GPT Then
+                    ElseIf layout.PartitionStyle = Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT Then
                         Dim gpt = buffer.Read(Of Win32API.DRIVE_LAYOUT_INFORMATION_GPT)(8)
                         Return New DriveLayoutInformationGPT(layout, partitions, gpt)
                     Else
@@ -3003,6 +3358,103 @@ Namespace IO
             Loop
 
         End Function
+
+        Public Shared Sub SetDriveLayoutEx(disk As SafeFileHandle, layout As DriveLayoutInformation)
+
+            Static partition_struct_size As Integer = Marshal.SizeOf(GetType(Win32API.PARTITION_INFORMATION_EX))
+
+            Static drive_layout_information_ex_size As Integer = Marshal.SizeOf(GetType(Win32API.DRIVE_LAYOUT_INFORMATION_EX))
+
+            Static drive_layout_information_record_size As Integer = Marshal.SizeOf(GetType(Win32API.DRIVE_LAYOUT_INFORMATION_GPT))
+
+            Dim partition_count = Math.Min(layout.Partitions.Count, layout.DriveLayoutInformation.PartitionCount)
+
+            Dim size_needed = drive_layout_information_ex_size +
+                drive_layout_information_record_size +
+                partition_count * partition_struct_size
+
+            Dim pos = 0
+
+            Using buffer As New Win32API.HGlobalBuffer(size_needed)
+
+                buffer.Write(CULng(pos), layout.DriveLayoutInformation)
+
+                pos += drive_layout_information_ex_size
+
+                Select Case layout.DriveLayoutInformation.PartitionStyle
+
+                    Case Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        buffer.Write(CULng(pos), DirectCast(layout, DriveLayoutInformationMBR).MBR)
+
+                    Case Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT
+                        buffer.Write(CULng(pos), DirectCast(layout, DriveLayoutInformationGPT).GPT)
+
+                End Select
+
+                pos += drive_layout_information_record_size
+
+                For i = 0 To partition_count - 1
+                    Marshal.StructureToPtr(layout.Partitions(i),
+                                           buffer.DangerousGetHandle() + pos + i * partition_struct_size,
+                                           False)
+                Next
+
+                Dim rc = Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_SET_DRIVE_LAYOUT_EX,
+                                                  buffer, CUInt(buffer.ByteLength), IntPtr.Zero, 0,
+                                                  0, IntPtr.Zero)
+
+                For i = 0 To partition_count - 1
+                    Marshal.DestroyStructure(buffer.DangerousGetHandle() + pos + i * partition_struct_size,
+                                             GetType(Win32API.PARTITION_INFORMATION_EX))
+                Next
+
+                Win32Try(rc)
+
+            End Using
+
+        End Sub
+
+        Public Shared Sub InitializeDisk(disk As SafeFileHandle, PartitionStyle As Win32API.PARTITION_STYLE)
+
+            Using buffer As New Win32API.HGlobalBuffer(Marshal.SizeOf(GetType(Win32API.CREATE_DISK_GPT)))
+
+                Select Case PartitionStyle
+
+                    Case Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        Dim mbr As New Win32API.CREATE_DISK_MBR With {
+                            .PartitionStyle = Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        }
+
+                        Win32API.RtlGenRandom(mbr.DiskSignature, 4)
+
+                        mbr.DiskSignature = mbr.DiskSignature Or &H80808081UI
+                        mbr.DiskSignature = mbr.DiskSignature And &HFEFEFEFFUI
+
+                        buffer.Write(0, mbr)
+
+                    Case Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT
+                        Dim gpt As New Win32API.CREATE_DISK_GPT With {
+                            .PartitionStyle = Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT,
+                            .DiskId = Guid.NewGuid(),
+                            .MaxPartitionCount = 128
+                        }
+
+                        buffer.Write(0, gpt)
+
+                    Case Else
+                        Throw New ArgumentOutOfRangeException(NameOf(PartitionStyle))
+
+                End Select
+
+                Dim rc = Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_CREATE_DISK,
+                                                      buffer, CUInt(buffer.ByteLength), IntPtr.Zero, 0,
+                                                      0, IntPtr.Zero)
+
+                Win32Try(rc)
+
+            End Using
+
+        End Sub
 
         Public Shared Sub FlushBuffers(handle As SafeFileHandle)
             Win32Try(Win32API.FlushFileBuffers(handle))
@@ -3100,15 +3552,15 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetDiskVolumesMountPoints(DiskDevice As String) As IEnumerable(Of String)
+        Public Shared Function EnumerateDiskVolumesMountPoints(DiskDevice As String) As IEnumerable(Of String)
 
-            Return GetDiskVolumes(DiskDevice).SelectMany(AddressOf GetVolumeMountPoints)
+            Return EnumerateDiskVolumes(DiskDevice).SelectMany(AddressOf GetVolumeMountPoints)
 
         End Function
 
-        Public Shared Function GetDiskVolumesMountPoints(DiskNumber As UInteger) As IEnumerable(Of String)
+        Public Shared Function EnumerateDiskVolumesMountPoints(DiskNumber As UInteger) As IEnumerable(Of String)
 
-            Return GetDiskVolumes(DiskNumber).SelectMany(AddressOf GetVolumeMountPoints)
+            Return EnumerateDiskVolumes(DiskNumber).SelectMany(AddressOf GetVolumeMountPoints)
 
         End Function
 
@@ -3188,7 +3640,7 @@ Namespace IO
                                                 Nothing)
 
                             If Not rc Then
-                                Trace.WriteLine("IOCTL_DISK_GET_LENGTH_INFO failed for device " & drv & ": Error 0x" & Marshal.GetLastWin32Error().ToString("X"))
+                                Trace.WriteLine($"IOCTL_DISK_GET_LENGTH_INFO failed for device {drv}: Error 0x{Marshal.GetLastWin32Error().ToString("X")}")
                                 Return Nothing
                             End If
 
@@ -3196,7 +3648,7 @@ Namespace IO
                         End Using
 
                     Catch ex As Exception
-                        Trace.WriteLine("Exception attempting to find SCSI address for device " & drv & ": " & ex.ToString())
+                        Trace.WriteLine($"Exception attempting to find SCSI address for device {drv}: {ex.ToString()}")
                         Return Nothing
 
                     End Try
@@ -3234,17 +3686,17 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetDiskVolumes(DevicePath As String) As IEnumerable(Of String)
+        Public Shared Function EnumerateDiskVolumes(DevicePath As String) As IEnumerable(Of String)
 
             If DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase) Then          ' \\?\PhysicalDrive paths to partitioned disks
-                Return GetDiskVolumes(UInteger.Parse(DevicePath.Substring("\\?\PhysicalDrive".Length)))
+                Return EnumerateDiskVolumes(UInteger.Parse(DevicePath.Substring("\\?\PhysicalDrive".Length)))
             Else
-                Return GetVolumeNamesForDeviceObject(QueryDosDevice(DevicePath.Substring("\\?\".Length)).First())     ' \\?\C: or similar paths to mounted volumes
+                Return EnumerateVolumeNamesForDeviceObject(QueryDosDevice(DevicePath.Substring("\\?\".Length)).First())     ' \\?\C: or similar paths to mounted volumes
             End If
 
         End Function
 
-        Public Shared Function GetDiskVolumes(DiskNumber As UInteger) As IEnumerable(Of String)
+        Public Shared Function EnumerateDiskVolumes(DiskNumber As UInteger) As IEnumerable(Of String)
 
             Return (New VolumeEnumerator).Where(
                 Function(volumeGuid)
@@ -3260,7 +3712,7 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetVolumeNamesForDeviceObject(DeviceObject As String) As IEnumerable(Of String)
+        Public Shared Function EnumerateVolumeNamesForDeviceObject(DeviceObject As String) As IEnumerable(Of String)
 
             Return (New VolumeEnumerator).Where(
                 Function(volumeGuid)
@@ -3388,15 +3840,15 @@ Namespace IO
 
         Public Shared Sub RunDLLInstallHinfSection(OwnerWindow As IntPtr, InfPath As String, InfSection As String)
 
-            Dim cmdLine = InfSection & " 132 " & InfPath
-            Trace.WriteLine("RunDLLInstallFromInfSection: " & cmdLine)
+            Dim cmdLine = $"{InfSection} 132 {InfPath}"
+            Trace.WriteLine($"RunDLLInstallFromInfSection: {cmdLine}")
 
             If InfPath.Contains(" ") Then
-                Throw New ArgumentException("Arguments to this method cannot contain spaces.", "InfPath")
+                Throw New ArgumentException("Arguments to this method cannot contain spaces.", NameOf(InfPath))
             End If
 
             If InfSection.Contains(" ") Then
-                Throw New ArgumentException("Arguments to this method cannot contain spaces.", "InfSection")
+                Throw New ArgumentException("Arguments to this method cannot contain spaces.", NameOf(InfSection))
             End If
 
             InfPath = Path.GetFullPath(InfPath)
@@ -3413,7 +3865,7 @@ Namespace IO
 
         Public Shared Sub InstallFromInfSection(OwnerWindow As IntPtr, InfPath As String, InfSection As String)
 
-            Trace.WriteLine("InstallFromInfSection: InfPath=""" & InfPath & """, InfSection=""" & InfSection & """")
+            Trace.WriteLine($"InstallFromInfSection: InfPath=""{InfPath}"", InfSection=""{InfSection}""")
 
             ''
             '' Inf must be a full pathname
@@ -3429,7 +3881,7 @@ Namespace IO
                                                  &H2UI,
                                                  ErrorLine)
             If hInf.IsInvalid Then
-                Throw New Win32Exception("Line number: " & ErrorLine)
+                Throw New Win32Exception($"Line number: {ErrorLine}")
             End If
 
             Using hInf
@@ -3455,7 +3907,7 @@ Namespace IO
 
         Public Shared Sub CreateRootPnPDevice(OwnerWindow As IntPtr, InfPath As String, hwid As String)
 
-            Trace.WriteLine("CreateOrUpdateRootPnPDevice: InfPath=""" & InfPath & """, hwid=""" & hwid & """")
+            Trace.WriteLine($"CreateOrUpdateRootPnPDevice: InfPath=""{InfPath}"", hwid=""{hwid}""")
 
             ''
             '' Inf must be a full pathname
@@ -3481,13 +3933,12 @@ Namespace IO
                                                  CUInt(ClassName.Length),
                                                  0))
 
-            Trace.WriteLine("CreateOrUpdateRootPnPDevice: ClassGUID=""" & ClassGUID.ToString() & """, ClassName=""" & New String(ClassName) & """")
+            Trace.WriteLine($"CreateOrUpdateRootPnPDevice: ClassGUID=""{ClassGUID}"", ClassName=""{New String(ClassName)}""")
 
             ''
             '' Create the container for the to-be-created Device Information Element.
             ''
-            Dim DeviceInfoSet = Win32API.SetupDiCreateDeviceInfoList(ClassGUID,
-                                                                     OwnerWindow)
+            Dim DeviceInfoSet = Win32API.SetupDiCreateDeviceInfoList(ClassGUID, OwnerWindow)
             If DeviceInfoSet.IsInvalid Then
                 Throw New Win32Exception
             End If
@@ -3539,7 +3990,7 @@ Namespace IO
 
         Public Shared Iterator Function EnumerateDevices(devInst As UInt32) As IEnumerable(Of UInt32)
 
-            Dim child As UInt32
+            Dim child As UInteger
 
             Dim rc = Win32API.CM_Get_Child(child, devInst, 0)
 
@@ -3732,23 +4183,26 @@ Namespace IO
 
         Public Shared Function RemoveFilter(devInst As UInt32, driver As String) As Boolean
 
-            Dim filters = GetRegisteredFilters(devInst)?.ToList()
+            Dim filters = GetRegisteredFilters(devInst)
 
             If filters Is Nothing Then
                 Trace.WriteLine($"No filters registered for devinst {devInst}")
                 Return False
             End If
 
-            Dim c = filters.RemoveAll(Function(f) f.Equals(driver, StringComparison.OrdinalIgnoreCase))
+            Dim newfilters =
+                filters.
+                Where(Function(f) Not f.Equals(driver, StringComparison.OrdinalIgnoreCase)).
+                ToArray()
 
-            If c <= 0 Then
+            If newfilters.Length = filters.Length Then
                 Trace.WriteLine($"Filter '{driver}' not registered for devinst {devInst}")
                 Return False
             End If
 
             Trace.WriteLine($"Removing filter '{driver}' from devinst {devInst}")
 
-            SetRegisteredFilters(devInst, filters.ToArray())
+            SetRegisteredFilters(devInst, newfilters)
 
             Return True
 
@@ -3756,23 +4210,26 @@ Namespace IO
 
         Public Shared Function RemoveFilter(devClass As Guid, driver As String) As Boolean
 
-            Dim filters = GetRegisteredFilters(devClass)?.ToList()
+            Dim filters = GetRegisteredFilters(devClass)
 
             If filters Is Nothing Then
                 Trace.WriteLine($"No filters registered for class {devClass}")
                 Return False
             End If
 
-            Dim c = filters.RemoveAll(Function(f) f.Equals(driver, StringComparison.OrdinalIgnoreCase))
+            Dim newfilters =
+                filters.
+                Where(Function(f) Not f.Equals(driver, StringComparison.OrdinalIgnoreCase)).
+                ToArray()
 
-            If c <= 0 Then
+            If newfilters.Length = filters.Length Then
                 Trace.WriteLine($"Filter '{driver}' not registered for class {devClass}")
                 Return False
             End If
 
             Trace.WriteLine($"Removing filter '{driver}' from class {devClass}")
 
-            SetRegisteredFilters(devClass, filters.ToArray())
+            SetRegisteredFilters(devClass, newfilters)
 
             Return True
 
@@ -3961,7 +4418,7 @@ Namespace IO
         ''' exceptions are thrown on error, but any exceptions from underlying API calls are
         ''' logged to trace log.
         ''' </summary>
-        ''' <returns>Returns number of disk devices found with specified device number.</returns>
+        ''' <returns>Returns a value indicating whether operation was successful or not.</returns>
         Public Shared Function UpdateDiskProperties(ScsiAddress As Win32API.SCSI_ADDRESS) As Boolean
 
             Try
@@ -3981,6 +4438,38 @@ Namespace IO
 
             Catch ex As Exception
                 Trace.WriteLine($"Error updating disk properties for {ScsiAddress}: {ex.ToString()}")
+
+            End Try
+
+            Return False
+
+        End Function
+
+        ''' <summary>
+        ''' Re-enumerates partitions on a disk device with a specified device path. No
+        ''' exceptions are thrown on error, but any exceptions from underlying API calls are
+        ''' logged to trace log.
+        ''' </summary>
+        ''' <returns>Returns a value indicating whether operation was successful or not.</returns>
+        Public Shared Function UpdateDiskProperties(DevicePath As String) As Boolean
+
+            Try
+                Using devicehandle = OpenFileHandle(DevicePath, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, 0)
+
+                    Dim rc = Win32API.DeviceIoControl(devicehandle, Win32API.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+
+                    If Not rc Then
+
+                        Trace.WriteLine($"Updating disk properties failed for {DevicePath}: {New Win32Exception().Message}")
+
+                    End If
+
+                    Return rc
+
+                End Using
+
+            Catch ex As Exception
+                Trace.WriteLine($"Error updating disk properties for {DevicePath}: {ex.ToString()}")
 
             End Try
 
@@ -4296,231 +4785,5 @@ Namespace IO
         End Structure
 
     End Class
-
-    <StructLayout(LayoutKind.Sequential)>
-    Public Structure WriteFilterStatistics
-
-        Public Sub Initialize()
-            _Version = Marshal.SizeOf(Me)
-        End Sub
-
-        ''
-        '' Version of structure. Set to sizeof(AIMWRFLTR_DEVICE_STATISTICS)
-        ''
-        Public ReadOnly Property Version As Integer
-
-        ''
-        '' TRUE if volume Is protected by filter driver, FALSE otherwise.
-        ''
-        Public ReadOnly Property IsProtected As Byte
-
-        ''
-        '' TRUE if all initialization Is complete for protection of this
-        '' device
-        ''
-        Public ReadOnly Property Initialized As Byte
-
-        ''
-        '' Last NTSTATUS error code if failed to attach a diff device.
-        ''
-        Public ReadOnly Property LastErrorCode As Integer
-
-        ''
-        '' Total size of protected volume in bytes.
-        ''
-        Public ReadOnly Property Size As Long
-
-        ''
-        '' Number of allocation blocks reserved at the beginning of
-        '' diff device for future use for saving allocation table
-        '' between reboots.
-        ''
-        Public ReadOnly Property AllocationTableBlocks As Integer
-
-        ''
-        '' Value of AllocationTableBlocks converted to bytes instead
-        '' of number of allocation blocks.
-        ''
-        Public ReadOnly Property AllocationTableSize As Long
-            Get
-                Return CLng(_AllocationTableBlocks) << _DiffBlockBits
-            End Get
-        End Property
-
-        ''
-        '' Last allocated block at diff device.
-        ''
-        Public ReadOnly Property LastAllocatedBlock As Integer
-
-        ''
-        '' Value of LastAllocatedBlock converted to bytes instead of
-        '' number of allocation block. This gives the total number of
-        '' bytes currently in use at diff device.
-        ''
-        Public ReadOnly Property UsedDiffSize As Long
-            Get
-                Return CLng(_LastAllocatedBlock) << _DiffBlockBits
-            End Get
-        End Property
-
-        ''
-        '' Number of bits in block size calculations.
-        ''
-        Public ReadOnly Property DiffBlockBits As Byte
-
-        ''
-        '' Calculates allocation block size.
-        ''
-        Public ReadOnly Property DiffBlockSize As Integer
-            Get
-                Return 1 << _DiffBlockBits
-            End Get
-        End Property
-
-        ''
-        '' Number of next allocation block at diff device that will
-        '' receive a TRIM request while the filter driver Is idle.
-        ''
-        Public ReadOnly Property NextIdleTrimBlock As Integer
-
-        ''
-        '' Number of read requests.
-        ''
-        Public ReadOnly Property ReadRequests As Long
-
-        ''
-        '' Total number of bytes for all read requests.
-        ''
-        Public ReadOnly Property ReadBytes As Long
-
-        ''
-        '' Largest requested read operation.
-        ''
-        Public ReadOnly Property LargestReadSize As UInteger
-
-        ''
-        '' Number of read requests redirected to original device.
-        ''
-        Public ReadOnly Property ReadRequestsReroutedToOriginal As Long
-
-        ''
-        '' Total number of bytes for read requests redirected to
-        '' original device.
-        ''
-        Public ReadOnly Property ReadBytesReroutedToOriginal As Long
-
-        ''
-        '' Number of read requests split into smaller requests due
-        '' to fragmentation at diff device Or to fetch data from
-        '' both original device And diff device to fill a complete
-        '' request.
-        ''
-        Public ReadOnly Property SplitReads As Long
-
-        ''
-        '' Number of bytes read from original device in split requests.
-        ''
-        Public ReadOnly Property ReadBytesFromOriginal As Long
-
-        ''
-        '' Number of bytes read from diff device.
-        ''
-        Public ReadOnly Property ReadBytesFromDiff As Long
-
-        ''
-        '' Number of write requests.
-        ''
-        Public ReadOnly Property WriteRequests As Long
-
-        ''
-        '' Total number of bytes written.
-        ''
-        Public ReadOnly Property WrittenBytes As Long
-
-        ''
-        '' Largest requested write operation.
-        ''
-        Public ReadOnly Property LargestWriteSize As UInteger
-
-        ''
-        '' Number of write requests split into smaller requests due
-        '' to fragmentation at diff device Or where parts of request
-        '' need to allocate New allocation blocks.
-        ''
-        Public ReadOnly Property SplitWrites As Long
-
-        ''
-        '' Number of write requests sent directly to diff device.
-        '' (All blocks already allocated in previous writes.)
-        ''
-        Public ReadOnly Property DirectWriteRequests As Long
-
-        ''
-        '' Total number of bytes in DirectWriteRequests.
-        ''
-        Public ReadOnly Property DirectWrittenBytes As Long
-
-        ''
-        '' Number of write requests deferred to worker thread due
-        '' to needs to allocate New blocks.
-        ''
-        Public ReadOnly Property DeferredWriteRequests As Long
-
-        ''
-        '' Total number of bytes in DeferredWriteRequests.
-        ''
-        Public ReadOnly Property DeferredWrittenBytes As Long
-
-        ''
-        '' Number of read requests issued to original device as
-        '' part of allocating New blocks at diff device. This Is
-        '' done to fill up complete allocation blocks with both
-        '' data to write And padding with data from original device.
-        ''
-        Public ReadOnly Property FillReads As Long
-
-        ''
-        '' Total number of bytes read in FillReads requests.
-        ''
-        Public ReadOnly Property FillReadBytes As Long
-
-        ''
-        '' Number of TRIM requests sent from filesystem drivers above.
-        ''
-        Public ReadOnly Property TrimRequests As Long
-
-        ''
-        '' Total number of bytes for TRIM requests forwarded to diff
-        '' device.
-        ''
-        Public ReadOnly Property TrimBytesForwarded As Long
-
-        ''
-        '' Total number of bytes for TRIM requests ignored. This
-        '' happens when TRIM requests are received for areas Not yet
-        '' allocated at diff device. That Is, Not yet written to.
-        ''
-        Public ReadOnly Property TrimBytesIgnored As Long
-
-        ''
-        '' Number of TRIM requests split due to fragmentation at diff
-        '' device.
-        ''
-        Public ReadOnly Property SplitTrims As Long
-
-        ''
-        '' Number of paging files, hibernation files And similar at
-        '' filtered device.
-        ''
-        Public ReadOnly Property PagingPathCount As Integer
-
-        ''
-        '' Copy of diff device volume boot record. This structure holds
-        '' information about offset to private data/log data/etc.
-        ''
-        <MarshalAs(UnmanagedType.ByValArray, SizeConst:=512)>
-        Private ReadOnly DiffDeviceVbr As Byte()
-
-    End Structure
 
 End Namespace

@@ -54,18 +54,18 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public Property NativePartitionLayout As IO.NativeFileIO.Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE?
+        Public Property NativePartitionLayout As IO.NativeFileIO.Win32API.PARTITION_STYLE?
 
         Public ReadOnly Property PartitionLayout As String
             Get
                 If _NativePartitionLayout.HasValue Then
 
                     Select Case _NativePartitionLayout.Value
-                        Case IO.NativeFileIO.Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_GPT
+                        Case IO.NativeFileIO.Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT
                             Return "GPT"
-                        Case IO.NativeFileIO.Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        Case IO.NativeFileIO.Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR
                             Return "MBR"
-                        Case IO.NativeFileIO.Win32API.DRIVE_LAYOUT_INFORMATION_EX.PARTITION_STYLE.PARTITION_STYLE_RAW
+                        Case IO.NativeFileIO.Win32API.PARTITION_STYLE.PARTITION_STYLE_RAW
                             Return "RAW"
                         Case Else
                             Return "Unknown"
@@ -132,6 +132,10 @@ Namespace PSDisk
 
         Public ReadOnly Property MountPointsString As String
             Get
+                If _MountPoints Is Nothing OrElse _MountPoints.Length = 0 Then
+                    Return String.Empty
+                End If
+
                 Return String.Join(Environment.NewLine, _MountPoints)
             End Get
         End Property

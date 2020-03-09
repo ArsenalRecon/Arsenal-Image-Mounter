@@ -2,7 +2,7 @@
 ''''' MainForm.vb
 ''''' GUI mount tool.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -53,7 +53,7 @@ Public Class MainForm
                     loadedVersion = Adapter.GetDriverSubVersion()
 
                 Catch ex As Exception
-                    Trace.WriteLine("Error checking driver version: " & ex.ToString())
+                    Trace.WriteLine($"Error checking driver version: {ex.ToString()}")
 
                 End Try
 
@@ -347,7 +347,7 @@ Public Class MainForm
                     Catch ex As Exception
                         Trace.WriteLine(ex.ToString())
                         MessageBox.Show(Me,
-                                        "An error occurred: " & ex.JoinMessages(),
+                                        $"An error occurred: {ex.JoinMessages()}",
                                         ex.GetBaseException().GetType().Name,
                                         MessageBoxButtons.OK,
                                         MessageBoxIcon.Hand)
@@ -368,7 +368,7 @@ Public Class MainForm
 
             Dim parser As New DiskStateParser()
 
-            Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.GetDeviceProperties)
+            Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.EnumerateDevicesProperties)
 
             Dim simpleviewtask = Task.Factory.StartNew(Function() parser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result.ToList()))
 
@@ -423,7 +423,7 @@ Public Class MainForm
 
                 Invoke(New Action(AddressOf SetLabelBusy))
 
-                Dim view = listFunction(Adapter.ScsiPortNumber, Adapter.GetDeviceProperties().ToList())
+                Dim view = listFunction(Adapter.ScsiPortNumber, Adapter.EnumerateDevicesProperties().ToList())
 
                 If IsClosing OrElse Disposing OrElse IsDisposed Then
                     Return
@@ -434,13 +434,13 @@ Public Class MainForm
             Loop
 
         Catch ex As Exception
-            Trace.WriteLine("Device list view thread caught exception: " & ex.ToString())
-            LogMessage("Device list view thread caught exception: " & ex.ToString())
+            Trace.WriteLine($"Device list view thread caught exception: {ex.ToString()}")
+            LogMessage($"Device list view thread caught exception: {ex.ToString()}")
 
             Dim action =
                 Sub()
                     MessageBox.Show(Me,
-                                    "Exception while enumerating disk drives: " & ex.JoinMessages(),
+                                    $"Exception while enumerating disk drives: {ex.JoinMessages()}",
                                     ex.GetBaseException().GetType().Name,
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Error)
@@ -491,7 +491,7 @@ Public Class MainForm
 
                 Dim paths = API.GetPhysicalDeviceObjectPath(DeviceItem.DeviceProperties.DeviceNumber).ToArray()
 
-                Dim processes = NativeFileIO.FindProcessesHoldingFileHandle(paths)
+                Dim processes = NativeFileIO.EnumerateProcessesHoldingFileHandle(paths)
 
                 Dim processlist = String.Join(Environment.NewLine, From proc In processes Select $"Id = {proc.HandleTableEntry.ProcessId} Name = {proc.ProcessName}")
 
@@ -614,7 +614,7 @@ Public Class MainForm
             Dim SectorSize As UInteger
             Dim DiskAccess As DevioServiceFactory.VirtualDiskAccess
 
-            Using FormMountOptions As New Devio.FormMountOptions
+            Using FormMountOptions As New FormMountOptions
 
                 With FormMountOptions
 
@@ -781,11 +781,11 @@ Public Class MainForm
 
         Catch ex As Exception
             Dim msg = ex.ToString()
-            Trace.WriteLine("Exception on driver install: " & msg)
+            Trace.WriteLine($"Exception on driver install: {msg}")
             LogMessage(msg)
 
             MessageBox.Show(Me,
-                            "An error occurred while installing driver: " & ex.JoinMessages(),
+                            $"An error occurred while installing driver: {ex.JoinMessages()}",
                             "Driver Setup",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error)
@@ -849,9 +849,15 @@ Public Class MainForm
     Private Sub btnRAMDisk_Click(sender As Object, e As EventArgs) Handles btnRAMDisk.Click
 
         Try
-            If DiscUtilsInteraction.InteractiveCreateRAMDisk(Me, Adapter) Then
-                RefreshDeviceList()
+            Dim ramdisk = DiscUtilsInteraction.InteractiveCreateRAMDisk(Adapter)
+
+            If ramdisk Is Nothing Then
+                Return
             End If
+
+            AddServiceToShutdownHandler(New ServiceListItem With {.ImageFile = "RAM disk", .Service = ramdisk})
+
+            RefreshDeviceList()
 
         Catch ex As Exception
             MessageBox.Show(Me, ex.JoinMessages(), "Error",

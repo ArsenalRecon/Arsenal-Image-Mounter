@@ -80,16 +80,58 @@
     </AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="DiscUtils, Version=0.11.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>DLL\DiscUtils.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Dmg, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Dmg.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Fat, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Fat.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Ntfs, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Ntfs.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.OpticalDisk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.OpticalDisk.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Streams, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Streams.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Vdi, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Vdi.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Vhd, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Vhd.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Vhdx, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Vhdx.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Vmdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Vmdk.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Xva, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Source\DiscUtils\Library\DiscUtils\bin\Release\net40\DiscUtils.Xva.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Import Include="DiscUtils" />
+    <Import Include="DiscUtils.Streams" />
     <Import Include="Microsoft.Win32.SafeHandles" />
     <Import Include="System" />
     <Import Include="System.Collections" />
@@ -116,6 +158,7 @@
     <Compile Include="Client\DevioStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderDLLWrapperBase.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderWIthFakeMBR.vb" />
+    <Compile Include="Server\GenericProviders\DummyProvider.vb" />
     <Compile Include="Server\Interaction\DiscUtilsInteraction.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderFromStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderManagedBase.vb" />
@@ -177,6 +220,7 @@
       <CustomToolNamespace>My</CustomToolNamespace>
       <LastGenOutput>Settings.Designer.vb</LastGenOutput>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj">
@@ -185,7 +229,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="DLL\DiscUtils.dll" />
+    <Folder Include="DLL\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

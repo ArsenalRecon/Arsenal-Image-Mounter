@@ -2,7 +2,7 @@
 ''''' Support routines for creating provider and service instances given a known
 ''''' proxy provider.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -55,7 +55,7 @@ Namespace Server.Interaction
 
         End Enum
 
-        Private Shared SupportedVirtualDiskAccess As New Dictionary(Of ProxyType, ReadOnlyCollection(Of VirtualDiskAccess)) From
+        Private Shared ReadOnly SupportedVirtualDiskAccess As New Dictionary(Of ProxyType, ReadOnlyCollection(Of VirtualDiskAccess)) From
             {
                 {ProxyType.None,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
@@ -79,7 +79,7 @@ Namespace Server.Interaction
                                    VirtualDiskAccess.ReadOnlyFileSystem})}
             }
 
-        Private Shared NotSupportedFormatsForWriteOverlay As String() =
+        Private Shared ReadOnly NotSupportedFormatsForWriteOverlay As String() =
             {
                 ".vdi",
                 ".xva"
@@ -156,7 +156,7 @@ Namespace Server.Interaction
 
             GetSupportedVirtualDiskAccess = Nothing
             If Not SupportedVirtualDiskAccess.TryGetValue(Proxy, GetSupportedVirtualDiskAccess) Then
-                Throw New ArgumentException($"Proxy type not supported: {Proxy}", "Proxy")
+                Throw New ArgumentException($"Proxy type not supported: {Proxy}", NameOf(Proxy))
             End If
 
             If Proxy = ProxyType.DiscUtils AndAlso
@@ -188,17 +188,57 @@ Namespace Server.Interaction
             Select Case Proxy
 
                 Case ProxyType.DiscUtils
-                    virtualdisk = VirtualDisk.OpenDisk(Imagefile, DiskAccess)
-
-                Case ProxyType.None
-                    virtualdisk = New Raw.Disk(Imagefile, DiskAccess)
+                    If Imagefile.EndsWith(".ova", StringComparison.OrdinalIgnoreCase) Then
+                        virtualdisk = OpenOVA(Imagefile, DiskAccess)
+                    Else
+                        virtualdisk = VirtualDisk.OpenDisk(Imagefile, DiskAccess)
+                    End If
 
                 Case Else
-                    virtualdisk = New Raw.Disk(New Client.DevioDirectStream(GetProvider(Imagefile, DiskAccess, Proxy), ownsProvider:=True), ownsStream:=Ownership.Dispose)
+                    Dim provider = GetProvider(Imagefile, DiskAccess, Proxy)
+                    Dim geom = Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize))
+                    virtualdisk = New Raw.Disk(New Client.DevioDirectStream(provider, ownsProvider:=True), Ownership.Dispose, geom)
 
             End Select
 
             Return virtualdisk
+
+        End Function
+
+        ''' <summary>
+        ''' Opens a VMDK image file embedded in an OVA archive.
+        ''' </summary>
+        ''' <param name="imagefile">Path to OVA archive file</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        ''' <returns></returns>
+        Public Shared Function OpenOVA(imagefile As String, diskAccess As FileAccess) As VirtualDisk
+
+            If (diskAccess.HasFlag(FileAccess.Write)) Then
+                Throw New NotSupportedException("Cannot modify OVA files")
+            End If
+
+            Dim ova = File.Open(imagefile, FileMode.Open, FileAccess.Read)
+
+            Try
+                Dim vmdk = Aggregate file In Archives.TarFile.EnumerateFiles(ova)
+                           Into FirstOrDefault(file.Name.EndsWith(".vmdk", StringComparison.OrdinalIgnoreCase))
+
+                If vmdk Is Nothing Then
+
+                    Throw New NotSupportedException($"The OVA file {imagefile} does not contain an embedded vmdk file.")
+
+                End If
+
+                Dim virtual_disk As New Vmdk.Disk(vmdk.GetStream(), Ownership.Dispose)
+                AddHandler virtual_disk.Disposed, Sub() ova.Dispose()
+                Return virtual_disk
+
+            Catch ex As Exception
+                ova.Dispose()
+
+                Throw New Exception($"Error opening {imagefile}", ex)
+
+            End Try
 
         End Function
 
@@ -264,13 +304,13 @@ Namespace Server.Interaction
 
         Private Shared Function GetProviderRaw(Imagefile As String, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
 
-            Return New DevioProviderFromStream(NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, GetDirectFileAccessFlags(DiskAccess), FileShare.Read Or FileShare.Delete), ownsStream:=True)
+            Return New DevioProviderFromStream(NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, GetDirectFileAccessFlags(DiskAccess), FileShare.Read Or FileShare.Delete), ownsStream:=True) With {.CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)}
 
         End Function
 
         Private Shared Function GetProviderRaw(Imagefile As String, DiskAccess As FileAccess) As DevioProviderFromStream
 
-            Return New DevioProviderFromStream(NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete), ownsStream:=True)
+            Return New DevioProviderFromStream(NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete), ownsStream:=True) With {.CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)}
 
         End Function
 
@@ -308,7 +348,26 @@ Namespace Server.Interaction
             _InstalledProvidersByNameAndVirtualDiskAccess.Add("MultipartRaw", AddressOf GetProviderMultiPartRaw)
             _InstalledProvidersByNameAndVirtualDiskAccess.Add("None", AddressOf GetProviderRaw)
 
+            For Each asm In DiscUtilsAssemblies.Distinct()
+                Trace.WriteLine($"Registering DiscUtils assembly '{asm.FullName}'...")
+                Setup.SetupHelper.RegisterAssembly(asm)
+            Next
+
         End Sub
+
+        Friend Shared Sub Initialize()
+        End Sub
+
+        Private Shared ReadOnly DiscUtilsAssemblies As Assembly() = {
+            GetType(Vmdk.Disk).Assembly,
+            GetType(Vhdx.Disk).Assembly,
+            GetType(Vhd.Disk).Assembly,
+            GetType(Vdi.Disk).Assembly,
+            GetType(Dmg.Disk).Assembly,
+            GetType(Xva.Disk).Assembly,
+            GetType(OpticalDisk.Disc).Assembly,
+            GetType(Raw.Disk).Assembly
+        }
 
         ''' <summary>
         ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
@@ -346,9 +405,9 @@ Namespace Server.Interaction
 
             End If
 
-            Dim Service = New DevioShmService(Provider, OwnsProvider:=True)
-
-            Service.Description = $"Image file {Imagefile}"
+            Dim Service = New DevioShmService(Provider, OwnsProvider:=True) With {
+                .Description = $"Image file {Imagefile}"
+            }
 
             Return Service
 
@@ -383,7 +442,7 @@ Namespace Server.Interaction
 
         Friend Shared Function GetDirectFileAccessFlags(DiskAccess As VirtualDiskAccess) As FileAccess
             If (DiskAccess And Not FileAccess.ReadWrite) <> 0 Then
-                Throw New ArgumentException($"Unsupported VirtualDiskAccess flags For direct file access: {DiskAccess}", "DiskAccess")
+                Throw New ArgumentException($"Unsupported VirtualDiskAccess flags For direct file access: {DiskAccess}", NameOf(DiskAccess))
             End If
             Return CType(DiskAccess, FileAccess)
         End Function
@@ -406,7 +465,7 @@ Namespace Server.Interaction
                     VirtualDiskAccess = VirtualDiskAccess.ReadWriteOriginal
 
                 Case Else
-                    Throw New ArgumentException($"Unsupported DiskAccess for DiscUtils: {DiskAccess}", "DiskAccess")
+                    Throw New ArgumentException($"Unsupported DiskAccess for DiscUtils: {DiskAccess}", NameOf(DiskAccess))
 
             End Select
 
@@ -435,13 +494,13 @@ Namespace Server.Interaction
                     FileAccess = FileAccess.Read
 
                 Case Else
-                    Throw New ArgumentException($"Unsupported DiskAccess for DiscUtils: {DiskAccess}", "DiskAccess")
+                    Throw New ArgumentException($"Unsupported DiskAccess for DiscUtils: {DiskAccess}", NameOf(DiskAccess))
 
             End Select
 
-            Trace.WriteLine("Opening image " & Imagefile)
+            Trace.WriteLine($"Opening image {Imagefile}")
 
-            Dim Disk = VirtualDisk.OpenDisk(Imagefile, FileAccess)
+            Dim Disk = GetDiscUtilsVirtualDisk(Imagefile, FileAccess, ProxyType.DiscUtils)
 
             If Disk Is Nothing Then
                 Dim fs As New FileStream(Imagefile, FileMode.Open, FileAccess, FileShare.Read Or FileShare.Delete)
@@ -453,13 +512,12 @@ Namespace Server.Interaction
             End If
 
             If Disk Is Nothing Then
-                Trace.WriteLine("Image not recognized by DiscUtils." & Environment.NewLine &
-                                  Environment.NewLine &
-                                  "Formats currently supported: " & String.Join(", ", VirtualDisk.SupportedDiskTypes),
+                Trace.WriteLine($"Image not recognized by DiscUtils.{Environment.NewLine}
+{Environment.NewLine}Formats currently supported: {String.Join(", ", VirtualDiskManager.SupportedDiskTypes)}",
                                   "Error")
                 Return Nothing
             End If
-            Trace.WriteLine("Image type class: " & Disk.GetType().ToString())
+            Trace.WriteLine($"Image type class: {Disk.GetType().ToString()}")
 
             Dim DisposableObjects As New List(Of IDisposable) From {
                 Disk
@@ -505,7 +563,7 @@ Namespace Server.Interaction
                             Exit Do
 
                         Catch ex As Exception When _
-                                ex.Enumerate().All(Function(iex) Not TypeOf iex Is OperationCanceledException) AndAlso
+                                Not ex.Enumerate().OfType(Of OperationCanceledException)().Any() AndAlso
                                 HandleDifferencingDiskCreationError(ex, DifferencingPath)
 
                         End Try
@@ -527,16 +585,15 @@ Namespace Server.Interaction
                     .CustomSectorSize = SectorSize
                 }
 
-                AddHandler provider.Disposed,
-                    Sub() DisposableObjects.ForEach(Sub(obj) obj.Dispose())
+                AddHandler provider.Disposed, Sub() DisposableObjects.ForEach(Sub(obj) obj.Dispose())
 
                 Return provider
 
-            Catch When (Function()
-                            DisposableObjects.ForEach(Sub(obj) obj.Dispose())
-                            Return False
-                        End Function)()
-                Throw
+            Catch ex As Exception
+
+                DisposableObjects.ForEach(Sub(obj) obj.Dispose())
+
+                Throw New Exception($"Error opening {Imagefile}", ex)
 
             End Try
 
@@ -653,7 +710,7 @@ Namespace Server.Interaction
                     FileAccess = FileAccess.ReadWrite
 
                 Case Else
-                    Throw New ArgumentException($"Unsupported VirtualDiskAccess for libewf: {DiskAccess}", "DiskAccess")
+                    Throw New ArgumentException($"Unsupported VirtualDiskAccess for libewf: {DiskAccess}", NameOf(DiskAccess))
 
             End Select
 
@@ -736,12 +793,12 @@ Namespace Server.Interaction
                     providers(i) = GetProviderLibAFF4(Imagefile, i)
                 Next
 
-            Catch When (Function()
-                            Array.ForEach(providers, Sub(p) p?.Dispose())
-                            Return False
-                        End Function)()
+            Catch ex As Exception
 
-                Throw
+                Array.ForEach(providers, Sub(p) p?.Dispose())
+
+                Throw New Exception("Error in libaff4.dll", ex)
+
             End Try
 
             Return providers
@@ -756,7 +813,7 @@ Namespace Server.Interaction
         ''' <param name="index">Index of image to mount within container file.</param>
         Public Shared Function GetProviderLibAFF4(containerfile As String, index As Integer) As IDevioProvider
 
-            Return New DevioProviderLibAFF4(containerfile & ContainerIndexSeparator & index.ToString())
+            Return New DevioProviderLibAFF4(String.Concat(containerfile, ContainerIndexSeparator, index.ToString()))
 
         End Function
 

@@ -1,7 +1,7 @@
 ﻿''''' DiskDevice.vb
 ''''' Class for controlling Arsenal Image Mounter Disk Devices.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -21,9 +21,8 @@ Public Class DiskDevice
 
     Private _RawDiskStream As DiskStream
 
-    Private _CachedDeviceNumber As UInteger?
-    Private _CachedPortNumber As Byte?
-
+    Private _CachedAddress As NativeFileIO.Win32API.SCSI_ADDRESS?
+    '
     ''' <summary>
     ''' Returns the device path used to open this device object, if opened by name.
     ''' If the object was opened in any other way, such as by supplying an already
@@ -83,21 +82,21 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves device number for this disk.
     ''' </summary>
-    Public Function GetDeviceNumber() As UInt32
+    Public ReadOnly Property DeviceNumber As UInt32
+        Get
+            If _CachedAddress Is Nothing Then
+                Dim scsi_address = ScsiAddress.Value
 
-        If _CachedDeviceNumber Is Nothing Then
-            Dim scsi_address = ScsiAddress.Value
+                Using driver As New ScsiAdapter(scsi_address.PortNumber)
+                End Using
 
-            Using driver As New ScsiAdapter(scsi_address.PortNumber)
-            End Using
+                _CachedAddress = scsi_address
+            End If
 
-            _CachedDeviceNumber = scsi_address.DWordDeviceNumber
-            _CachedPortNumber = scsi_address.PortNumber
-        End If
+            Return _CachedAddress.Value.DWordDeviceNumber
 
-        Return _CachedDeviceNumber.Value
-
-    End Function
+        End Get
+    End Property
 
     ''' <summary>
     ''' Retrieves SCSI address for this disk.
@@ -120,7 +119,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Enumerates disk volumes that use extents of this disk.
     ''' </summary>
-    Public Function GetDiskVolumes() As IEnumerable(Of String)
+    Public Function EnumerateDiskVolumes() As IEnumerable(Of String)
 
         Dim disk_number = StorageDeviceNumber
 
@@ -130,7 +129,7 @@ Public Class DiskDevice
 
         Trace.WriteLine($"Found disk number: {disk_number.Value.DeviceNumber}")
 
-        Return NativeFileIO.GetDiskVolumes(disk_number.Value.DeviceNumber)
+        Return NativeFileIO.EnumerateDiskVolumes(disk_number.Value.DeviceNumber)
 
     End Function
 
@@ -167,7 +166,7 @@ Public Class DiskDevice
     ''' </summary>
     Public Property DiskSignature As UInt32?
         Get
-            Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
+            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
             With GetRawDiskStream()
                 .Position = 0
                 .Read(rawsig, 0, rawsig.Length)
@@ -189,7 +188,7 @@ Public Class DiskDevice
                 Return
             End If
             Dim newvalue = BitConverter.GetBytes(Value.Value)
-            Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
+            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
             With GetRawDiskStream()
                 .Position = 0
                 .Read(rawsig, 0, rawsig.Length)
@@ -205,7 +204,7 @@ Public Class DiskDevice
     ''' </summary>
     Public Property VBRHiddenSectorsCount As UInt32?
         Get
-            Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
+            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
 
             With GetRawDiskStream()
                 .Position = 0
@@ -223,7 +222,7 @@ Public Class DiskDevice
                 Return
             End If
             Dim newvalue = BitConverter.GetBytes(Value.Value)
-            Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
+            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
             With GetRawDiskStream()
                 .Position = 0
                 .Read(rawsig, 0, rawsig.Length)
@@ -241,7 +240,7 @@ Public Class DiskDevice
     Public ReadOnly Property HasValidPartitionTable As Boolean
         Get
 
-            Dim rawsig(0 To Convert.ToInt32(Geometry.BytesPerSector - 1UI)) As Byte
+            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
 
             With GetRawDiskStream()
                 .Position = 0
@@ -261,7 +260,11 @@ Public Class DiskDevice
     ''' Flush buffers for a disk or volume.
     ''' </summary>
     Public Sub FlushBuffers()
-        NativeFileIO.FlushBuffers(SafeFileHandle)
+        If _RawDiskStream IsNot Nothing Then
+            _RawDiskStream.Flush()
+        Else
+            NativeFileIO.FlushBuffers(SafeFileHandle)
+        End If
     End Sub
 
     ''' <summary>
@@ -329,11 +332,22 @@ Public Class DiskDevice
     ''' Gets information about a disk partitions. This property is available
     ''' for physical disks, not disk partitions.
     ''' </summary>
-    Public ReadOnly Property DriveLayoutEx As NativeFileIO.DriveLayoutInformation
+    Public Property DriveLayoutEx As NativeFileIO.DriveLayoutInformation
         Get
             Return NativeFileIO.GetDriveLayoutEx(SafeFileHandle)
         End Get
+        Set
+            NativeFileIO.SetDriveLayoutEx(SafeFileHandle, Value)
+        End Set
     End Property
+
+    ''' <summary>
+    ''' Initialize a raw disk device for use with Windows. This method is available
+    ''' for physical disks, not disk partitions.
+    ''' </summary>
+    Public Sub InitializeDisk(PartitionStyle As NativeFileIO.Win32API.PARTITION_STYLE)
+        NativeFileIO.InitializeDisk(SafeFileHandle, PartitionStyle)
+    End Sub
 
     Public ReadOnly Property DiskId As String
         Get
@@ -491,17 +505,17 @@ Public Class DiskDevice
     ''' <summary>
     ''' Get live statistics from write filter driver.
     ''' </summary>
-    Public Function GetWriteOverlayStatus() As WriteFilterStatistics?
+    Public ReadOnly Property WriteOverlayStatus As WriteFilterStatistics?
+        Get
+            Dim statistics As WriteFilterStatistics = Nothing
 
-        Dim statistics As WriteFilterStatistics = Nothing
+            If Not API.GetWriteOverlayStatus(SafeFileHandle, statistics) Then
+                Return Nothing
+            End If
 
-        If Not API.GetWriteOverlayStatus(SafeFileHandle, statistics) Then
-            Return Nothing
-        End If
-
-        Return statistics
-
-    End Function
+            Return statistics
+        End Get
+    End Property
 
     ''' <summary>
     ''' Returns an DiskStream object that can be used to directly access disk data.

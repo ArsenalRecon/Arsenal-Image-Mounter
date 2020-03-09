@@ -24,8 +24,8 @@ Public Class FormMountOptions
         Get
             Return rbReadOnly.Checked
         End Get
-        Set(value As Boolean)
-            If value Then
+        Set
+            If Value Then
                 rbReadOnly.Checked = True
             ElseIf rbWriteOverlay.Enabled Then
                 rbWriteOverlay.Checked = True
@@ -47,8 +47,8 @@ Public Class FormMountOptions
                 Throw New InvalidOperationException("No supported combination of VirtualDiskAccess modes selected.")
             End If
         End Get
-        Set(value As DevioServiceFactory.VirtualDiskAccess)
-            Select Case value
+        Set
+            Select Case Value
                 Case DevioServiceFactory.VirtualDiskAccess.ReadOnly
                     rbReadOnly.Checked = True
                 Case DevioServiceFactory.VirtualDiskAccess.ReadWriteOriginal
@@ -56,7 +56,7 @@ Public Class FormMountOptions
                 Case DevioServiceFactory.VirtualDiskAccess.ReadWriteOverlay
                     rbWriteOverlay.Checked = True
                 Case Else
-                    Throw New InvalidOperationException("Not a supported combination of VirtualDiskAccess modes: " & value.ToString())
+                    Throw New InvalidOperationException($"Not a supported combination of VirtualDiskAccess modes: {Value}")
             End Select
         End Set
     End Property
@@ -65,8 +65,8 @@ Public Class FormMountOptions
         Get
             Return UInteger.Parse(cbSectorSize.Text)
         End Get
-        Set(value As UInteger)
-            cbSectorSize.Text = value.ToString()
+        Set
+            cbSectorSize.Text = Value.ToString()
         End Set
     End Property
 

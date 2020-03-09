@@ -54,7 +54,7 @@ Namespace PSDisk
                                         view.NativePropertyDiskOffline = device.DiskPolicyOffline
                                         view.NativePropertyDiskOReadOnly = device.DiskPolicyReadOnly
                                         Dim drive_layout = device.DriveLayoutEx
-                                        view.DiskId = TryCast(drive_layout, NativeFileIO.DriveLayoutInformationGPT)?.DriveLayoutInformationGPT.DiskId
+                                        view.DiskId = TryCast(drive_layout, NativeFileIO.DriveLayoutInformationGPT)?.GPT.DiskId
                                         If device.HasValidPartitionTable Then
                                             view.NativePartitionLayout = drive_layout?.DriveLayoutInformation.PartitionStyle
                                         Else
@@ -68,7 +68,7 @@ Namespace PSDisk
                                 End Try
 
                                 Try
-                                    view.Volumes = NativeFileIO.GetDiskVolumes(view.DevicePath).ToArray()
+                                    view.Volumes = NativeFileIO.EnumerateDiskVolumes(view.DevicePath).ToArray()
                                     view.MountPoints = view.Volumes.SelectMany(AddressOf NativeFileIO.GetVolumeMountPoints).ToArray()
 
                                 Catch ex As Exception
@@ -83,7 +83,7 @@ Namespace PSDisk
 
             Catch ex As Exception When _
                 Function()
-                    Trace.WriteLine("Exception in GetSimpleView: " & ex.ToString())
+                    Trace.WriteLine($"Exception in GetSimpleView: {ex.ToString()}")
 
                     Return False
                 End Function()

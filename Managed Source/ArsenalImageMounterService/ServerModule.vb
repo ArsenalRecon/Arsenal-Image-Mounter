@@ -2,7 +2,7 @@
 ''''' ServerModule.vb
 ''''' Main module for PhysicalDiskMounterService application.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -18,8 +18,10 @@ Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.IO
 Imports DiscUtils
+Imports System.Globalization
+Imports System.Runtime.CompilerServices
 
-Module ServerModule
+Public Module ServerModule
 
     Private Event RunToEnd As EventHandler
 
@@ -46,7 +48,7 @@ Module ServerModule
 
     End Function
 
-    Private ReadOnly assemblyPaths As New List(Of String)(3) From {
+    Private ReadOnly assemblyPaths As String() = {
         Path.Combine("lib", GetArchitectureLibPath()),
         "Lib",
         "DiskDriver"
@@ -66,24 +68,82 @@ Module ServerModule
 
     End Sub
 
-    <MTAThread()>
+    <MTAThread>
     Public Function Main(ParamArray args As String()) As Integer
 
         Try
+            Dim cmdline = $"{Environment.CommandLine} "
+
+            Dim pos = cmdline.IndexOf(" /background ", StringComparison.OrdinalIgnoreCase)
+
+            If pos >= 0 Then
+
+                cmdline = $"{cmdline.Substring(0, pos)} /detach {cmdline.Substring(pos + " /background ".Length)}"
+
+                Dim pstart As New ProcessStartInfo With {
+                    .UseShellExecute = False
+                }
+
+                Dim arguments_pos = 0
+
+                While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = " "c
+                    arguments_pos += 1
+                End While
+
+                If arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = """"c Then
+
+                    Do
+                        arguments_pos += 1
+                    Loop While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) <> """"c
+
+                    arguments_pos += 1
+
+                Else
+
+                    While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) <> " "c
+                        arguments_pos += 1
+                    End While
+
+                End If
+
+                If arguments_pos < cmdline.Length Then
+
+                    pstart.FileName = cmdline.Substring(0, arguments_pos)
+
+                    While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = " "c
+                        arguments_pos += 1
+                    End While
+
+                    pstart.Arguments = cmdline.Substring(arguments_pos)
+
+                End If
+
+                With New Process
+
+                    .StartInfo = pstart
+
+                    .Start()
+
+                End With
+
+                Return 0
+
+            End If
+
             Return SafeMain(args)
 
         Catch ex As AbandonedMutexException
+            Trace.WriteLine(ex.ToString())
             Console.ForegroundColor = ConsoleColor.Red
             Console.Error.WriteLine("Unexpected client exit.")
             Console.ResetColor()
-            Trace.WriteLine(ex.ToString())
             Return -1
 
         Catch ex As Exception
+            Trace.WriteLine(ex.ToString())
             Console.ForegroundColor = ConsoleColor.Red
             Console.Error.WriteLine(ex.JoinMessages(Environment.NewLine))
             Console.ResetColor()
-            Trace.WriteLine(ex.ToString())
             Return -1
 
         Finally
@@ -103,51 +163,50 @@ Module ServerModule
         Dim file_ver = FileVersionInfo.GetVersionInfo(asm_file)
 
         Console.WriteLine(
-            "Integrated command line interface to Arsenal Image Mounter virtual" & Environment.NewLine &
-            "SCSI miniport driver." & Environment.NewLine &
-            Environment.NewLine &
-            "Version " & file_ver.FileVersion.ToString() & Environment.NewLine &
-            Environment.NewLine &
-            "Copyright (C) 2012-2019 Arsenal Recon." & Environment.NewLine &
-            Environment.NewLine &
-            Environment.NewLine &
-            "http://www.ArsenalRecon.com" & Environment.NewLine &
-            Environment.NewLine &
-            "Arsenal Image Mounter including its kernel driver, API library," & Environment.NewLine &
-            "command line and graphical user applications (""the Software"")" & Environment.NewLine &
-            "are provided ""AS Is"" and ""WITH ALL FAULTS,"" without warranty" & Environment.NewLine &
-            "of any kind, including without limitation the warranties of" & Environment.NewLine &
-            "merchantability, fitness for a particular purpose and" & Environment.NewLine &
-            "non - infringement.Arsenal makes no warranty that the Software" & Environment.NewLine &
-            "is free of defects or is suitable for any particular purpose." & Environment.NewLine &
-            "In no event shall Arsenal be responsible for loss or damages" & Environment.NewLine &
-            "arising from the installation or use of the Software, including" & Environment.NewLine &
-            "but not limited to any indirect, punitive, special, incidental" & Environment.NewLine &
-            "or consequential damages of any character including, without" & Environment.NewLine &
-            "limitation, damages for loss of goodwill, work stoppage," & Environment.NewLine &
-            "computer failure or malfunction, or any and all other" & Environment.NewLine &
-            "commercial damages or losses.The entire risk as to the" & Environment.NewLine &
-            "quality and performance of the Software is borne by you.Should" & Environment.NewLine &
-            "the Software prove defective, you and not Arsenal assume the" & Environment.NewLine &
-            "entire cost of any service and repair." & Environment.NewLine &
-            Environment.NewLine &
-            "Arsenal Consulting, Inc. (d/b/a Arsenal Recon) retains the copyright to the" & Environment.NewLine &
-            "Arsenal Image Mounter source code being made available under terms of the" & Environment.NewLine &
-            "Affero General Public License v3." & Environment.NewLine &
-            "(http://www.fsf.org/licensing/licenses/agpl-3.0.html). This source code may" & Environment.NewLine &
-            "be used in projects that are licensed so as to be compatible with AGPL v3." & Environment.NewLine &
-            Environment.NewLine &
-            "Contributors to Arsenal Image Mounter must sign the Arsenal Contributor" & Environment.NewLine &
-            "Agreement(""ACA"").The ACA gives Arsenal and the contributor joint" & Environment.NewLine &
-            "copyright interests in the code." & Environment.NewLine &
-            Environment.NewLine &
-            "If your project is not licensed under an AGPL v3 compatible license," & Environment.NewLine &
-            "contact us directly regarding alternative licensing.")
+            $"Integrated command line interface to Arsenal Image Mounter virtual
+SCSI miniport driver.
+
+Version {file_ver.FileVersion}
+            
+Copyright (C) 2012-2020 Arsenal Recon.
+
+http://www.ArsenalRecon.com
+
+Arsenal Image Mounter including its kernel driver, API library,
+command line and graphical user applications (""the Software"")
+are provided ""AS Is"" and ""WITH ALL FAULTS,"" without warranty
+of any kind, including without limitation the warranties of
+merchantability, fitness for a particular purpose and
+non - infringement.Arsenal makes no warranty that the Software
+is free of defects or is suitable for any particular purpose.
+In no event shall Arsenal be responsible for loss or damages
+arising from the installation or use of the Software, including
+but not limited to any indirect, punitive, special, incidental
+or consequential damages of any character including, without
+limitation, damages for loss of goodwill, work stoppage,
+computer failure or malfunction, or any and all other
+commercial damages or losses.The entire risk as to the
+quality and performance of the Software is borne by you.Should
+the Software prove defective, you and not Arsenal assume the
+entire cost of any service and repair.
+
+Arsenal Consulting, Inc. (d/b/a Arsenal Recon) retains the copyright to the
+Arsenal Image Mounter source code being made available under terms of the
+Affero General Public License v3.
+(http://www.fsf.org/licensing/licenses/agpl-3.0.html). This source code may
+be used in projects that are licensed so as to be compatible with AGPL v3.
+
+Contributors to Arsenal Image Mounter must sign the Arsenal Contributor
+Agreement(""ACA"").The ACA gives Arsenal and the contributor joint
+copyright interests in the code.
+
+If your project is not licensed under an AGPL v3 compatible license,
+contact us directly regarding alternative licensing.")
 
 
     End Sub
 
-    Private Function SafeMain(ParamArray args As String()) As Integer
+    Private Function SafeMain(args As IEnumerable(Of String)) As Integer
 
         Dim DeviceName As String = Nothing
         Dim WriteOverlayImageFile As String = Nothing
@@ -165,6 +224,9 @@ Module ServerModule
         Dim libewfDebugOutput As String = "CONOUT$"
         Dim OutputImage As String = Nothing
         Dim OutputImageVariant As String = "dynamic"
+        Dim Dismount As String = Nothing
+        Dim ForceDismount As Boolean
+        Dim BackgroundMode As Boolean
 
         For Each arg In args
             If arg.Equals("/trace", StringComparison.OrdinalIgnoreCase) Then
@@ -209,6 +271,14 @@ Module ServerModule
                 libewfDebugOutput = arg.Substring("/libewfoutput=".Length)
             ElseIf arg.StartsWith("/debugcompare=", StringComparison.OrdinalIgnoreCase) Then
                 DebugCompare = arg.Substring("/debugcompare=".Length)
+            ElseIf arg.Equals("/dismount", StringComparison.OrdinalIgnoreCase) Then
+                Dismount = "*"
+            ElseIf arg.StartsWith("/dismount=", StringComparison.OrdinalIgnoreCase) Then
+                Dismount = arg.Substring("/dismount=".Length)
+            ElseIf arg.Equals("/force", StringComparison.OrdinalIgnoreCase) Then
+                ForceDismount = True
+            ElseIf arg.Equals("/detach", StringComparison.OrdinalIgnoreCase) Then
+                BackgroundMode = True
             ElseIf arg = "/?" OrElse arg.Equals("/help", StringComparison.OrdinalIgnoreCase) Then
                 ShowHelp = True
                 Exit For
@@ -223,12 +293,12 @@ Module ServerModule
         Next
 
         If _
-          ShowHelp OrElse
-          String.IsNullOrWhiteSpace(DeviceName) Then
+            ShowHelp OrElse
+            (String.IsNullOrWhiteSpace(DeviceName) AndAlso String.IsNullOrWhiteSpace(Dismount)) Then
 
             Dim asmname = Assembly.GetExecutingAssembly().GetName().Name
 
-            Dim providers = String.Join(", ", DevioServiceFactory.InstalledProvidersByNameAndFileAccess.Keys)
+            Dim providers = String.Join("|", DevioServiceFactory.InstalledProvidersByNameAndFileAccess.Keys)
 
             Console.WriteLine($"{asmname}.
 
@@ -240,23 +310,29 @@ For version information, license, copyrights and credits, type aim_cli /version
 Syntax to mount an image file as a virtual disk:
 {asmname} /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly]
     /filename=imagefilename /provider={providers}
-    [/writeoverlay=differencingimagefile]
+    [/writeoverlay=differencingimagefile] [/background]
 
 Syntax, start shared memory service mode, for mounting from other applications:
 {asmname} /name=objectname [/buffersize=bytes] [/readonly]
-    /filename=imagefilename /provider={providers}
+    /filename=imagefilename /provider={providers} [/background]
 
 Syntax, start TCP/IP service mode, for mounting from other computers:
 {asmname} [/ipaddress=listenaddress] /port=tcpport [/readonly]
-    /filename=imagefilename /provider={providers}
+    /filename=imagefilename /provider={providers} [/background]
 
 Syntax, convert image file without mounting as virtual disk:
-{asmname}  /filename=imagefilename /provider={providers}
-    /convert=outimagefilename [/variant=fixed|dynamic]
+{asmname} /filename=imagefilename /provider={providers}
+    /convert=outimagefilename [/variant=fixed|dynamic] [/background]
+
+Syntax, dismount a mounted device:
+    /dismount[=devicenumber] [/force]
 
 DiscUtils and MultiPartRaw provider libraries are included embedded in this
 application. Libewf provider needs libewf.dll and LibAFF4 provider needs
 libaff4.dll.
+
+The /background switch re-launches in a new process and detaches from inherited
+console window and continues in background.
 
 When converting, output image type can be DD, IMG or RAW for raw format or VHD,
 VHDX, VDI or VMDK virtual machine disk formats. For virtual machine disk
@@ -264,6 +340,94 @@ formats, the optional /variant switch can be used to specify either fixed or
 dynamically expanding formats. Default is dynamic.")
 
             Return 1
+
+        End If
+
+        If Not String.IsNullOrWhiteSpace(Dismount) Then
+
+            Dim devicenumber As UInteger
+
+            If Dismount.Equals("*", StringComparison.Ordinal) Then
+
+                devicenumber = ScsiAdapter.AutoDeviceNumber
+
+            ElseIf Not UInteger.TryParse(Dismount, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, devicenumber) Then
+
+                Console.WriteLine($"Invalid device number: {Dismount}
+
+Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
+
+                Return 1
+            End If
+
+            Try
+                Using adapter As New ScsiAdapter
+
+                    If devicenumber = ScsiAdapter.AutoDeviceNumber Then
+
+                        If Not adapter.EnumerateDevices().Any() Then
+
+                            Console.ForegroundColor = ConsoleColor.Red
+                            Console.Error.WriteLine("No mounted devices.")
+                            Console.ResetColor()
+                            Return 2
+
+                        End If
+
+                        If ForceDismount Then
+
+                            adapter.RemoveAllDevices()
+
+                        Else
+
+                            adapter.RemoveAllDevicesSafe()
+
+                        End If
+
+                        Console.WriteLine("All devices dismounted.")
+
+                    Else
+
+                        If Not adapter.EnumerateDevices().Any(AddressOf devicenumber.Equals) Then
+
+                            Console.ForegroundColor = ConsoleColor.Red
+                            Console.Error.WriteLine($"No device mounted with device number {devicenumber:X6}.")
+                            Console.ResetColor()
+                            Return 2
+
+                        End If
+
+                        If ForceDismount Then
+
+                            adapter.RemoveDevice(devicenumber)
+
+                        Else
+
+                            adapter.RemoveDeviceSafe(devicenumber)
+
+                        End If
+
+                        Console.WriteLine("Devices dismounted.")
+
+                    End If
+
+                End Using
+
+            Catch ex As Exception
+                Trace.WriteLine(ex.ToString())
+                Console.ForegroundColor = ConsoleColor.Red
+                Console.Error.WriteLine(ex.JoinMessages())
+                Console.ResetColor()
+
+                Return 2
+
+            End Try
+
+        End If
+
+        If String.IsNullOrWhiteSpace(DeviceName) Then
+
+            Return 0
 
         End If
 
@@ -307,7 +471,8 @@ dynamically expanding formats. Default is dynamic.")
 
         ElseIf OutputImage IsNot Nothing Then
 
-            ConvertToImage(Provider, OutputImage, OutputImageVariant)
+            Provider.ConvertToImage(OutputImage, OutputImageVariant, BackgroundMode)
+
             Return 0
 
         Else
@@ -336,31 +501,61 @@ dynamically expanding formats. Default is dynamic.")
             End Try
 
             Service.StartServiceThreadAndMount(adapter, DeviceFlags)
+
             Using device = Service.OpenDiskDevice(0)
                 Console.WriteLine($"Virtual disk is {device.DevicePath} with SCSI address {device.ScsiAddress}")
             End Using
-            Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
+
         Else
+
             Service.StartServiceThread()
-            Console.WriteLine("Image file opened, waiting for incoming connections. Press Ctrl+C to exit.")
+
         End If
 
-        AddHandler Console.CancelKeyPress,
-            Sub(sender, e)
-                Try
-                    Console.WriteLine("Stopping service...")
-                    Service.Dispose()
+        If BackgroundMode Then
 
-                    e.Cancel = True
+            If Mount Then
 
-                Catch ex As Exception
-                    Trace.WriteLine(ex.ToString())
-                    Console.ForegroundColor = ConsoleColor.Red
-                    Console.Error.WriteLine(ex.JoinMessages())
-                    Console.ResetColor()
+                Console.WriteLine($"Virtual disk created. To dismount, type aim_cli /dismount={Service.DiskDeviceNumber:X6}")
 
-                End Try
-            End Sub
+            Else
+
+                Console.WriteLine("Image file opened, ready for incoming connections.")
+
+            End If
+
+            NativeFileIO.Win32API.FreeConsole()
+
+        Else
+
+            If Mount Then
+
+                Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
+
+            Else
+
+                Console.WriteLine("Image file opened, waiting for incoming connections. Press Ctrl+C to exit.")
+
+            End If
+
+            AddHandler Console.CancelKeyPress,
+                Sub(sender, e)
+                    Try
+                        Console.WriteLine("Stopping service...")
+                        Service.Dispose()
+
+                        e.Cancel = True
+
+                    Catch ex As Exception
+                        Trace.WriteLine(ex.ToString())
+                        Console.ForegroundColor = ConsoleColor.Red
+                        Console.Error.WriteLine(ex.JoinMessages())
+                        Console.ResetColor()
+
+                    End Try
+                End Sub
+
+        End If
 
         Service.WaitForServiceThreadExit()
 
@@ -376,38 +571,52 @@ dynamically expanding formats. Default is dynamic.")
 
     Public Property ImageIoBufferSize As Integer = 2 << 20
 
-    Public Sub ConvertToImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String)
+    <Extension>
+    Public Sub ConvertToImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, background As Boolean)
 
         Using provider
 
             Using cancel As New CancellationTokenSource
 
-                AddHandler Console.CancelKeyPress,
-                    Sub(sender, e)
-                        Try
-                            Console.WriteLine("Stopping...")
-                            cancel.Cancel()
-
-                            e.Cancel = True
-
-                        Catch ex As Exception
-                            Trace.WriteLine(ex.ToString())
-                            Console.WriteLine(ex.JoinMessages())
-
-                        End Try
-                    End Sub
-
                 Console.WriteLine($"Converting to new image file '{outputImage}'...")
+
+                If background Then
+
+                    NativeFileIO.Win32API.FreeConsole()
+
+                Else
+
+                    AddHandler Console.CancelKeyPress,
+                        Sub(sender, e)
+                            Try
+                                Console.WriteLine("Stopping...")
+                                cancel.Cancel()
+
+                                e.Cancel = True
+
+                            Catch ex As Exception
+                                Trace.WriteLine(ex.ToString())
+                                Console.WriteLine(ex.JoinMessages())
+
+                            End Try
+                        End Sub
+
+                End If
 
                 Dim image_type = Path.GetExtension(outputImage).TrimStart("."c).ToUpperInvariant()
 
                 Select Case image_type
 
                     Case "VHD", "VHDX", "VDI", "VMDK"
-                        ConvertToDiscUtilsImage(provider, outputImage, image_type, OutputImageVariant, cancel.Token)
+                        provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, cancel.Token)
 
                     Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN"
-                        ConvertToRawImage(provider, outputImage, OutputImageVariant, cancel.Token)
+                        provider.ConvertToRawImage(outputImage, OutputImageVariant, cancel.Token)
+
+                    Case Else
+                        Console.WriteLine($"Image format '{image_type}' not supported.")
+
+                        Return
 
                 End Select
 
@@ -419,6 +628,7 @@ dynamically expanding formats. Default is dynamic.")
 
     End Sub
 
+    <Extension>
     Public Sub ConvertToDiscUtilsImage(provider As IDevioProvider, outputImage As String, type As String, OutputImageVariant As String, cancel As CancellationToken)
 
         Using builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize)), Nothing)
@@ -431,6 +641,7 @@ dynamically expanding formats. Default is dynamic.")
 
     End Sub
 
+    <Extension>
     Public Sub ConvertToRawImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, cancel As CancellationToken)
 
         Using target As New FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageIoBufferSize)

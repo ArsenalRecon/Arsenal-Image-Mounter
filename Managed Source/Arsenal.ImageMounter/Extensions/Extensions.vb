@@ -1,6 +1,5 @@
 ﻿Imports System.Reflection
 Imports System.Runtime.CompilerServices
-Imports System.Threading.Tasks
 Imports Microsoft.Win32
 
 Namespace Extensions
@@ -168,6 +167,11 @@ Namespace Extensions
             End If
 
         End Sub
+
+        <Extension>
+        Public Function GetSynchronizationContext(owner As ISynchronizeInvoke) As SynchronizationContext
+            Return DirectCast(owner.Invoke(New Func(Of SynchronizationContext)(Function() SynchronizationContext.Current), Nothing), SynchronizationContext)
+        End Function
 
     End Module
 

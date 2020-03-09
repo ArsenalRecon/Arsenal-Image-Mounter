@@ -2181,6 +2181,12 @@ __in __deref PETHREAD ClientThread)
                 0x80808081UL) & 0xFEFEFEFFUL;
     }
 
+    if (IMSCSI_SPARSE_FILE(CreateData->Fields.Flags) ||
+        pLUExt->UseProxy)
+    {
+        pLUExt->ProvisioningType = PROVISIONING_TYPE_THIN;
+    }
+
     if ((pLUExt->FileObject == NULL) &&
         (!pLUExt->AWEAllocDisk) &&
         (!pLUExt->VMDisk) &&
@@ -2246,7 +2252,7 @@ __in __deref PETHREAD ClientThread)
         status = ZwCreateFile(&write_overlay, GENERIC_READ | GENERIC_WRITE,
             &object_attributes, &io_status, NULL, FILE_ATTRIBUTE_NORMAL,
             FILE_SHARE_READ | FILE_SHARE_DELETE, FILE_OPEN_IF,
-            FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS |
+            FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS | FILE_WRITE_THROUGH |
             FILE_NO_INTERMEDIATE_BUFFERING | FILE_SYNCHRONOUS_IO_NONALERT,
             NULL, 0);
 

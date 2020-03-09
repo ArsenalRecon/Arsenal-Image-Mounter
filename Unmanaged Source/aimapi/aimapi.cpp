@@ -215,23 +215,10 @@ ImScsiOpenScsiAdapter(OUT LPBYTE PortNumber)
             continue;
         }
 
-        SRB_IMSCSI_CHECK check;
-        ImScsiInitializeSrbIoBlock(&check.SrbIoControl, sizeof(check),
-            SMP_IMSCSI_CHECK, 0);
-
-        DWORD dw;
-        if (!DeviceIoControl(handle,
-            IOCTL_SCSI_MINIPORT,
-            &check,
-            sizeof(check),
-            &check,
-            sizeof(check),
-            &dw,
-            NULL))
+        if (!ImScsiCheckDriverVersion(handle))
         {
             last_error = GetLastError();
             NtClose(handle);
-
             continue;
         }
 
@@ -725,8 +712,6 @@ ImScsiCheckDriverVersion(HANDLE Device)
         &check, sizeof(check),
         &dw, NULL))
     {
-
-
         return FALSE;
     }
 

@@ -39,7 +39,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>cli</RootNamespace>
     <ProjectName>aim_ll</ProjectName>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
     <WindowsSDKDesktopARMSupport>true</WindowsSDKDesktopARMSupport>
     <WindowsSDKDesktopARM64Support>true</WindowsSDKDesktopARM64Support>
   </PropertyGroup>
@@ -242,6 +242,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SetChecksum>false</SetChecksum>
     </Link>
+    <PreLinkEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -312,6 +313,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <PreLinkEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="aimcmd.cpp" />

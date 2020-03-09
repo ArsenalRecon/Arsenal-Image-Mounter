@@ -123,7 +123,7 @@
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
     <RootNamespace>phdskmnt</RootNamespace>
     <ProjectName>phdskmnt</ProjectName>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'">
     <TargetVersion>WindowsV6.3</TargetVersion>
@@ -435,6 +435,30 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
     <Inf />
     <Inf />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|ARM64'">
+    <ClCompile />
+    <PreLinkEvent />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|ARM64'">
+    <ClCompile />
+    <PreLinkEvent />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|ARM64'">
+    <ClCompile />
+    <PreLinkEvent />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|ARM64'">
+    <ClCompile />
+    <PreLinkEvent />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|ARM64'">
+    <ClCompile />
+    <PreLinkEvent />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|ARM64'">
+    <ClCompile />
+    <PreLinkEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <!-- We only add items (e.g. form ClSourceFiles) that do not already exist (e.g in the ClCompile list), this avoids duplication -->

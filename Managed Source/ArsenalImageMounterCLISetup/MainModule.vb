@@ -2,7 +2,7 @@
 ''''' MainModule.vb
 ''''' Console driver setup application, for scripting and similar.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -37,7 +37,7 @@ Module MainModule
             ElseIf args(0).Equals("/status", StringComparison.OrdinalIgnoreCase) Then
                 opMode = OpMode.Status
             Else
-                Trace.WriteLine("Syntax: PDMSetup /install|/uninstall|/status")
+                Trace.WriteLine($"Syntax: {Assembly.GetExecutingAssembly().GetName().Name} /install|/uninstall|/status")
             End If
         End If
 

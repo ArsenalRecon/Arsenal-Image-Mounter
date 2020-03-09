@@ -1,13 +1,9 @@
-﻿Imports System.Text
-Imports System.Collections.Specialized
-Imports Arsenal.ImageMounter.IO
-
-Namespace IO
+﻿Namespace IO
 
     ''' <summary>
     ''' Class that caches a text INI file
     ''' </summary>
-    <ComVisible(False)> _
+    <ComVisible(False)>
     Public Class CachedIniFile
         Inherits NullSafeDictionary(Of String, NullSafeDictionary(Of String, String))
 
@@ -16,6 +12,14 @@ Namespace IO
             Add(Key, new_section)
             Return new_section
         End Function
+
+        ''' <summary>
+        ''' Flushes registry mapping for all INI files.
+        ''' is thrown.
+        ''' </summary>
+        Public Shared Sub Flush()
+            NativeFileIO.Win32API.WritePrivateProfileString(Nothing, Nothing, Nothing, Nothing)
+        End Sub
 
         ''' <summary>
         ''' Saves a value to an INI file by calling Win32 API function WritePrivateProfileString. If call fails and exception
@@ -50,7 +54,7 @@ Namespace IO
         ''' <param name="SettingName">Name of value to save</param>
         Public Sub SaveValue(SectionName As String, SettingName As String)
             If String.IsNullOrEmpty(_Filename) Then
-                Throw New ArgumentNullException("Filename", "Filename property not set on this object.")
+                Throw New InvalidOperationException("Filename property not set on this object.")
             End If
             SaveValue(SectionName, SettingName, Item(SectionName)(SettingName), _Filename)
         End Sub
@@ -84,7 +88,7 @@ Namespace IO
         End Function
 
         Public Sub WriteTo(Stream As Stream)
-            WriteTo(New StreamWriter(Stream, _Encoding))
+            WriteTo(New StreamWriter(Stream, _Encoding) With {.AutoFlush = True})
         End Sub
 
         Public Sub WriteTo(Writer As TextWriter)

@@ -2,7 +2,9 @@
 Imports Arsenal.ImageMounter.Extensions
 Imports System.Windows.Forms
 Imports System.Security.AccessControl
-Imports System.Security.Principal
+Imports Buffer = System.Buffer
+Imports Arsenal.ImageMounter.Devio.Server.Services
+Imports DiscUtils.Partitions
 
 Namespace Server.Interaction
 
@@ -11,115 +13,168 @@ Namespace Server.Interaction
         Private Sub New()
         End Sub
 
-        Public Shared Function InteractiveCreateRAMDisk(owner As IWin32Window, adapter As ScsiAdapter) As Boolean
+        Shared Sub New()
+            DevioServiceFactory.Initialize()
+        End Sub
+
+        Public Shared Function InteractiveCreateRAMDisk(adapter As ScsiAdapter) As RAMDiskService
 
             Dim DeviceNumber As UInteger = ScsiAdapter.AutoDeviceNumber
 
-            Dim ssize = Microsoft.VisualBasic.InputBox("Enter size in MB", "RAM disk", "0")
+            Dim strsize = Microsoft.VisualBasic.InputBox("Enter size in MB", "RAM disk", "0")
 
-            Dim size As Long
-            If Not Long.TryParse(ssize, size) Then
-                Return False
+            Dim size_mb As Long
+            If Not Long.TryParse(strsize, size_mb) Then
+                Return Nothing
             End If
 
-            Dim Flags As DeviceFlags = 0
+            Dim ramdisk As New RAMDiskService(adapter, size_mb << 20, RAMDiskFileSystem.NTFS)
 
-            If NativeFileIO.TestFileOpen("\\?\awealloc") Then
-                Flags = Flags Or DeviceFlags.FileTypeAwe
+            If ramdisk.MountPoint IsNot Nothing Then
+                Try
+                    Process.Start(ramdisk.MountPoint)
+
+                Catch ex As Exception
+                    MessageBox.Show($"Failed to open Explorer window for created RAM disk: {ex.JoinMessages()}")
+
+                End Try
             End If
 
-            CreateRamDisk(owner, adapter, size << 20, Flags, DeviceNumber)
-
-            Return True
+            Return ramdisk
 
         End Function
 
-        Public Shared Sub CreateRamDisk(Owner As IWin32Window, Adapter As ScsiAdapter, DiskSize As Long, Flags As DeviceFlags, ByRef DeviceNumber As UInteger)
+        Public Shared Property RAMDiskPartitionOffset As Integer = 65536
+        Public Shared Property RAMDiskEndOfDiskFreeSpace As Integer = 1 << 20
 
-            Adapter.CreateDevice(DiskSize, 0, 0, Flags, Nothing, False, DeviceNumber)
+        Public Enum RAMDiskFileSystem
+            None
+            NTFS
+            FAT
+        End Enum
 
-            Dim created_device = DeviceNumber
+        Public Class RAMDiskService
+            Inherits DevioNoneService
 
-            Try
-                Using device = Adapter.OpenDevice(DeviceNumber, FileAccess.ReadWrite)
+            Public ReadOnly Property Volume As String
 
-                    device.DiskPolicyOffline = True
-                    device.DiskPolicyReadOnly = False
+            Public ReadOnly Property MountPoint As String
 
-                    Dim kernel_geometry = device.Geometry
-                    Dim discutils_geometry As New Geometry(
-                        device.DiskSize,
-                        kernel_geometry.TracksPerCylinder,
-                        kernel_geometry.SectorsPerTrack,
-                        kernel_geometry.BytesPerSector)
+            Public Sub New(Adapter As ScsiAdapter, DiskSize As Long, FormatFileSystem As RAMDiskFileSystem)
+                MyBase.New(DiskSize)
 
-                    Using disk As New Raw.Disk(device.GetRawDiskStream(), Ownership.None, discutils_geometry)
+                Try
+                    StartServiceThreadAndMount(Adapter, 0)
 
-                        Partitions.BiosPartitionTable.Initialize(disk).CreatePrimaryBySector(
-                            first:=(1 << 20) \ discutils_geometry.BytesPerSector,
-                            last:=(device.DiskSize - (1 << 20)) \ discutils_geometry.BytesPerSector,
-                            type:=7,
-                            markActive:=True)
+                    Using device = OpenDiskDevice(FileAccess.ReadWrite)
 
-                        'Fat.FatFileSystem.FormatPartition(disk, 0, "RAM disk")
+                        device.DiskPolicyReadOnly = False
 
-                        Using fs = Ntfs.NtfsFileSystem.Format(disk.Partitions(0).Open(), "RAM disk", discutils_geometry, 0,
-                                                   (device.DiskSize - (2 << 20)) \ discutils_geometry.BytesPerSector)
+                        ' Initialize partition table
 
-                            fs.SetSecurity("\", New RawSecurityDescriptor("O:LAG:BUD:(A;OICI;FA;;;BA)(A;OICI;FA;;;SY)(A;OICI;FA;;;CO)(A;OICI;FA;;;WD)"))
+                        device.DiskPolicyOffline = True
+
+                        Dim kernel_geometry = device.Geometry
+
+                        Dim discutils_geometry As New Geometry(
+                            device.DiskSize,
+                            kernel_geometry.TracksPerCylinder,
+                            kernel_geometry.SectorsPerTrack,
+                            kernel_geometry.BytesPerSector)
+
+                        Dim disk As New Raw.Disk(device.GetRawDiskStream(), Ownership.None, discutils_geometry)
+
+                        Dim partition_table = BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsNtfs)
+
+                        ' Format file system
+
+                        Dim partition = partition_table(0)
+
+                        Select Case FormatFileSystem
+
+                            Case RAMDiskFileSystem.NTFS
+                                Using fs = Ntfs.NtfsFileSystem.Format(partition.Open(), "RAM disk", discutils_geometry, 0, partition.SectorCount)
+
+                                    fs.SetSecurity("\", New RawSecurityDescriptor("O:LAG:BUD:(A;OICI;FA;;;BA)(A;OICI;FA;;;SY)(A;OICI;FA;;;CO)(A;OICI;FA;;;WD)"))
+
+                                End Using
+
+                            Case RAMDiskFileSystem.FAT
+                                Using fs = Fat.FatFileSystem.FormatPartition(partition.Open(), "RAM disk", discutils_geometry, 0, CInt(partition.SectorCount), 0)
+
+                                End Using
+
+                        End Select
+
+                        '' Adjust hidden sectors count
+
+                        Using raw = partition.Open()
+
+                            Dim vbr(0 To disk.SectorSize - 1) As Byte
+
+                            raw.Read(vbr, 0, vbr.Length)
+
+                            Dim newvalue = BitConverter.GetBytes(CUInt(partition.FirstSector))
+                            Buffer.BlockCopy(newvalue, 0, vbr, &H1C, newvalue.Length)
+
+                            raw.Position = 0
+
+                            raw.Write(vbr, 0, vbr.Length)
 
                         End Using
 
-                    End Using
+                        device.FlushBuffers()
 
-                    Try
                         device.DiskPolicyOffline = False
 
-                        device.UpdateProperties()
+                        Do
+                            _Volume = NativeFileIO.EnumerateDiskVolumes(device.DevicePath).FirstOrDefault()
 
-                        For Each volume In NativeFileIO.GetDiskVolumes(device.DevicePath)
+                            If _Volume IsNot Nothing Then
+                                Exit Do
+                            End If
 
-                            Dim mountPoints = NativeFileIO.GetVolumeMountPoints(volume)
+                            device.UpdateProperties()
 
-                            If mountPoints.Length = 0 Then
+                            Thread.Sleep(200)
 
-                                Dim driveletter = NativeFileIO.FindFirstFreeDriveLetter()
+                        Loop
 
-                                If driveletter <> Nothing Then
+                        Dim mountPoints = NativeFileIO.GetVolumeMountPoints(_Volume)
 
-                                    Dim mountPoint = $"{driveletter}:\"
+                        If mountPoints.Length = 0 Then
 
-                                    NativeFileIO.SetVolumeMountPoint(mountPoint, volume)
+                            Dim driveletter = NativeFileIO.FindFirstFreeDriveLetter()
 
-                                    mountPoints = {mountPoint}
+                            If driveletter <> Nothing Then
 
-                                End If
+                                Dim newMountPoint = $"{driveletter}:\"
+
+                                NativeFileIO.SetVolumeMountPoint(newMountPoint, _Volume)
+
+                                mountPoints = {newMountPoint}
 
                             End If
 
-                            Array.ForEach(mountPoints, AddressOf Process.Start)
+                        End If
 
-                        Next
+                        _MountPoint = mountPoints.FirstOrDefault()
 
-                    Catch ex As Exception
-                        Dim errmsg = ex.JoinMessages()
+                        Return
 
-                        MessageBox.Show(
-                                Owner, errmsg, "Arsenal Image Mounter",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    End Using
 
-                    End Try
+                Catch ex As Exception
 
-                End Using
+                    Dispose()
 
-            Catch When Function()
-                           Adapter.RemoveDevice(created_device)
-                           Return False
-                       End Function()
+                    Throw New Exception("Failed to create RAM disk", ex)
 
-            End Try
+                End Try
 
-        End Sub
+            End Sub
+
+        End Class
 
     End Class
 

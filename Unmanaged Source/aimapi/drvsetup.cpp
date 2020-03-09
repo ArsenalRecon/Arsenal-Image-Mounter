@@ -34,6 +34,8 @@
 
 #include <dbt.h>
 
+#include <stdio.h>
+
 #pragma comment(lib, "version.lib")
 #pragma comment(lib, "newdev.lib")
 #pragma comment(lib, "setupapi.lib")

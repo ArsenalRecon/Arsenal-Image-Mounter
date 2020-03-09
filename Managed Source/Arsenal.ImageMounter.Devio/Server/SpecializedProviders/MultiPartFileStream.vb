@@ -1,6 +1,6 @@
 ﻿''''' MultiPartFileStream.vb
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -28,10 +28,10 @@ Namespace Server.SpecializedProviders
 
         Private Shared Function OpenImagefiles(Imagefiles As String(), DiskAccess As FileAccess, ShareMode As FileShare) As FileStream()
             If Imagefiles Is Nothing Then
-                Throw New ArgumentNullException("Imagefiles")
+                Throw New ArgumentNullException(NameOf(Imagefiles))
             End If
             If Imagefiles.Length = 0 Then
-                Throw New ArgumentException("No image file names provided.", "Imagefiles")
+                Throw New ArgumentException("No image file names provided.", NameOf(Imagefiles))
             End If
 
             Dim imagestreams As FileStream() = Nothing

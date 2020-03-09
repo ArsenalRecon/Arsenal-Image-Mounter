@@ -1,6 +1,6 @@
 ﻿''''' DevioServiceBase.vb
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -178,8 +178,8 @@ Namespace Server.Services
         Public Overridable Function StartServiceThread() As Boolean
 
             Using _
-              ServiceReadyEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset),
-              ServiceInitFailedEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset)
+                ServiceReadyEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset),
+                ServiceInitFailedEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset)
 
                 Dim ServiceReadyHandler As New Action(AddressOf ServiceReadyEvent.Set)
                 AddHandler ServiceReady, ServiceReadyHandler
@@ -269,7 +269,7 @@ Namespace Server.Services
         ''' need to be specified in this parameter. A common value to pass however, is DeviceFlags.ReadOnly
         ''' to create a read-only virtual disk device.</param>
         Public Overridable Sub StartServiceThreadAndMount(ScsiAdapter As ScsiAdapter,
-                                                                Flags As DeviceFlags)
+                                                          Flags As DeviceFlags)
 
             _ScsiAdapter = ScsiAdapter
 
@@ -283,21 +283,22 @@ Namespace Server.Services
 
             Try
                 ScsiAdapter.CreateDevice(DiskSize,
-                                           SectorSize,
-                                           Offset,
-                                           Flags Or AdditionalFlags Or ProxyModeFlags,
-                                           ProxyObjectName,
-                                           False,
-                                           _WriteOverlayImageName,
-                                           False,
-                                           _DiskDeviceNumber)
+                                         SectorSize,
+                                         Offset,
+                                         Flags Or AdditionalFlags Or ProxyModeFlags,
+                                         ProxyObjectName,
+                                         False,
+                                         _WriteOverlayImageName,
+                                         False,
+                                         _DiskDeviceNumber)
 
                 OnDiskDeviceCreated()
 
-            Catch When (Function()
-                            OnStopServiceThread()
-                            Return False
-                        End Function)()
+            Catch ex As Exception
+
+                OnStopServiceThread()
+
+                Throw New Exception($"Error when starting service thread or mounting {ProxyObjectName}", ex)
 
             End Try
 

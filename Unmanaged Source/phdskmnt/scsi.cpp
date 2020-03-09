@@ -1378,7 +1378,7 @@ ScsiOpVPDDiskUnit(
             outputBuffer->DeviceType = pLUExt->DeviceType;
             outputBuffer->PageCode = VPD_LOGICAL_BLOCK_PROVISIONING;
             outputBuffer->PageLength[1] = 0x04;      // 8 bytes data in total 
-            outputBuffer->ProvisioningType = PROVISIONING_TYPE_THIN;
+            outputBuffer->ProvisioningType = pLUExt->ProvisioningType;
             outputBuffer->DP = 0;
             outputBuffer->ANC_SUP = pLUExt->SupportsUnmap;
             outputBuffer->LBPRZ = pLUExt->SupportsUnmap;

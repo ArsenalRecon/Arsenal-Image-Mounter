@@ -46,11 +46,11 @@ DefaultDestDir = 12
 [Manufacturer]
 %ARSENALRECON%=ARSENALRECON, NTx86, NTia64, NTamd64, NTARM, NTARM64
 
-[DeviceInstall32]
-AddDevice = ROOT\PhDskMnt,,PhDskMnt_RootEnumInstall
-
-[PhDskMnt_RootEnumInstall]
-HardwareIds = ROOT\PhDskMnt
+; [DeviceInstall32]
+; AddDevice = ROOT\PhDskMnt,,PhDskMnt_RootEnumInstall
+; 
+; [PhDskMnt_RootEnumInstall]
+; HardwareIds = ROOT\PhDskMnt
 
 [ARSENALRECON.NTx86]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt

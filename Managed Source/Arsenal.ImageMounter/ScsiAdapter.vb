@@ -1,7 +1,7 @@
 ﻿''''' ScsiAdapter.vb
 ''''' Class for controlling Arsenal Image Mounter Devices.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -200,7 +200,7 @@ Public Class ScsiAdapter
     ''' Retrieves a list of virtual disks on this adapter. Each element in returned list holds device number of an existing
     ''' virtual disk.
     ''' </summary>
-    Public Iterator Function GetDeviceList() As IEnumerable(Of UInt32)
+    Public Iterator Function EnumerateDevices() As IEnumerable(Of UInt32)
 
         Dim ReturnCode As Int32
 
@@ -216,7 +216,7 @@ Public Class ScsiAdapter
         End If
 
         Dim NumberOfDevices = Response.ReadInt32()
-        Dim DeviceList As New List(Of UInt32)(NumberOfDevices)
+
         For i = 1 To NumberOfDevices
             Yield Response.ReadUInt32()
         Next
@@ -226,9 +226,9 @@ Public Class ScsiAdapter
     ''' <summary>
     ''' Retrieves a list of DeviceProperties objects for each virtual disk on this adapter.
     ''' </summary>
-    Public Function GetDeviceProperties() As IEnumerable(Of DeviceProperties)
+    Public Function EnumerateDevicesProperties() As IEnumerable(Of DeviceProperties)
 
-        Return GetDeviceList().Select(AddressOf QueryDevice)
+        Return EnumerateDevices().Select(AddressOf QueryDevice)
 
     End Function
 
@@ -346,143 +346,170 @@ Public Class ScsiAdapter
         '' Show what we got
         Trace.WriteLine($"ScsiAdapter.CreateDevice: Native filename='{Filename}'")
 
-        If (Not String.IsNullOrWhiteSpace(WriteOverlayFilename)) AndAlso (Not WriteOverlayNativePath) Then
-            WriteOverlayFilename = NativeFileIO.GetNtPath(WriteOverlayFilename)
-            NativeFileIO.AddFilter(NativeFileIO.Win32API.DiskDriveGuid, "aimwrfltr", addfirst:=True)
-        End If
+        Dim write_filter_added As GlobalCriticalMutex = Nothing
 
-        '' Show what we got
-        Trace.WriteLine($"ScsiAdapter.CreateDevice: Native write overlay filename='{WriteOverlayFilename}'")
+        Try
 
-        Dim ReservedField(0 To 3) As Byte
+            If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
 
-        If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
-            Dim bytes = BitConverter.GetBytes(CUShort(WriteOverlayFilename.Length * 2))
-            Buffer.BlockCopy(bytes, 0, ReservedField, 0, bytes.Length)
-        End If
-
-        Dim FillRequestData =
-          Sub(Request As BinaryWriter)
-              Request.Write(devnr)
-              Request.Write(DiskSize)
-              Request.Write(BytesPerSector)
-              Request.Write(ReservedField)
-              Request.Write(ImageOffset)
-              Request.Write(CUInt(Flags))
-              If String.IsNullOrEmpty(Filename) Then
-                  Request.Write(0US)
-              Else
-                  Dim bytes = Encoding.Unicode.GetBytes(Filename)
-                  Request.Write(CUShort(bytes.Length))
-                  Request.Write(bytes)
-              End If
-              If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
-                  Dim bytes = Encoding.Unicode.GetBytes(WriteOverlayFilename)
-                  Request.Write(bytes)
-              End If
-          End Sub
-
-        Dim ReturnCode As Int32
-
-        Dim Response =
-          NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
-                                                      NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
-                                                      0,
-                                                      FillRequestData,
-                                                      ReturnCode)
-
-        If ReturnCode <> 0 Then
-            Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
-        End If
-
-        DeviceNumber = Response.ReadUInt32()
-        DiskSize = Response.ReadInt64()
-        BytesPerSector = Response.ReadUInt32()
-        ReservedField = Response.ReadBytes(4)
-        ImageOffset = Response.ReadInt64()
-        Flags = CType(Response.ReadUInt32(), DeviceFlags)
-
-        While Not GetDeviceList().Contains(DeviceNumber)
-            Trace.WriteLine($"Waiting for new device {DeviceNumber:X6} to be registered by driver...")
-            Thread.Sleep(2500)
-        End While
-
-        Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
-        Dim DiskDevice As DiskDevice
-
-        Dim waittime = TimeSpan.FromMilliseconds(500)
-        Do
-
-            Thread.Sleep(waittime)
-
-            Try
-                DiskDevice = New DiskDevice(ScsiAddress, FileAccess.Read)
-
-            Catch ex As DriveNotFoundException
-                Trace.WriteLine($"Error opening device: {ex.JoinMessages()}")
-                waittime += TimeSpan.FromMilliseconds(500)
-
-                Trace.WriteLine("Not ready, rescanning SCSI adapter...")
-
-                RescanBus()
-
-                Continue Do
-
-            End Try
-
-            Using DiskDevice
-
-                If DiskDevice.DiskSize = 0 Then
-
-                    '' Wait at most 20 x 500 msec for device to get initialized by driver
-                    For i = 1 To 20
-
-                        Thread.Sleep(500 * i)
-
-                        If DiskDevice.DiskSize <> 0 Then
-                            Exit For
-                        End If
-
-                        Trace.WriteLine("Updating disk properties...")
-                        DiskDevice.UpdateProperties()
-
-                    Next
-
+                If (Not WriteOverlayNativePath) Then
+                    WriteOverlayFilename = NativeFileIO.GetNtPath(WriteOverlayFilename)
                 End If
 
-                If Flags.HasFlag(DeviceFlags.WriteOverlay) AndAlso
+                Trace.WriteLine($"ScsiAdapter.CreateDevice: Thread {Thread.CurrentThread.ManagedThreadId} entering global critical section")
+
+                write_filter_added = New GlobalCriticalMutex()
+
+                NativeFileIO.AddFilter(NativeFileIO.Win32API.DiskDriveGuid, "aimwrfltr", addfirst:=True)
+
+            End If
+
+            '' Show what we got
+            Trace.WriteLine($"ScsiAdapter.CreateDevice: Native write overlay filename='{WriteOverlayFilename}'")
+
+            Dim ReservedField(0 To 3) As Byte
+
+            If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
+                Dim bytes = BitConverter.GetBytes(CUShort(WriteOverlayFilename.Length * 2))
+                Buffer.BlockCopy(bytes, 0, ReservedField, 0, bytes.Length)
+            End If
+
+            Dim FillRequestData =
+                Sub(Request As BinaryWriter)
+                    Request.Write(devnr)
+                    Request.Write(DiskSize)
+                    Request.Write(BytesPerSector)
+                    Request.Write(ReservedField)
+                    Request.Write(ImageOffset)
+                    Request.Write(CUInt(Flags))
+                    If String.IsNullOrEmpty(Filename) Then
+                        Request.Write(0US)
+                    Else
+                        Dim bytes = Encoding.Unicode.GetBytes(Filename)
+                        Request.Write(CUShort(bytes.Length))
+                        Request.Write(bytes)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
+                        Dim bytes = Encoding.Unicode.GetBytes(WriteOverlayFilename)
+                        Request.Write(bytes)
+                    End If
+                End Sub
+
+            Dim ReturnCode As Int32
+
+            Dim Response =
+                NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                           NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
+                                                           0,
+                                                           FillRequestData,
+                                                           ReturnCode)
+
+            If ReturnCode <> 0 Then
+                Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
+            End If
+
+            DeviceNumber = Response.ReadUInt32()
+            DiskSize = Response.ReadInt64()
+            BytesPerSector = Response.ReadUInt32()
+            ReservedField = Response.ReadBytes(4)
+            ImageOffset = Response.ReadInt64()
+            Flags = CType(Response.ReadUInt32(), DeviceFlags)
+
+            While Not EnumerateDevices().Contains(DeviceNumber)
+                Trace.WriteLine($"Waiting for new device {DeviceNumber:X6} to be registered by driver...")
+                Thread.Sleep(2500)
+            End While
+
+            Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+            Dim DiskDevice As DiskDevice
+
+            Dim waittime = TimeSpan.FromMilliseconds(500)
+            Do
+
+                Thread.Sleep(waittime)
+
+                Try
+                    DiskDevice = New DiskDevice(ScsiAddress, FileAccess.Read)
+
+                Catch ex As DriveNotFoundException
+                    Trace.WriteLine($"Error opening device: {ex.JoinMessages()}")
+                    waittime += TimeSpan.FromMilliseconds(500)
+
+                    Trace.WriteLine("Not ready, rescanning SCSI adapter...")
+
+                    RescanBus()
+
+                    Continue Do
+
+                End Try
+
+                Using DiskDevice
+
+                    If DiskDevice.DiskSize = 0 Then
+
+                        '' Wait at most 20 x 500 msec for device to get initialized by driver
+                        For i = 1 To 20
+
+                            Thread.Sleep(500 * i)
+
+                            If DiskDevice.DiskSize <> 0 Then
+                                Exit For
+                            End If
+
+                            Trace.WriteLine("Updating disk properties...")
+                            DiskDevice.UpdateProperties()
+
+                        Next
+
+                    End If
+
+                    If Flags.HasFlag(DeviceFlags.WriteOverlay) AndAlso
                     Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
 
-                    Dim status = DiskDevice.GetWriteOverlayStatus()
+                        Dim status = DiskDevice.WriteOverlayStatus
 
-                    If status.HasValue Then
+                        If status.HasValue Then
 
-                        Trace.WriteLine($"Write filter attached, {status.Value.UsedDiffSize} differencing bytes used.")
+                            Trace.WriteLine($"Write filter attached, {status.Value.UsedDiffSize} differencing bytes used.")
+
+                            Exit Do
+
+                        End If
+
+                        Trace.WriteLine("Write filter not registered. Registering and restarting device...")
+
+                    Else
 
                         Exit Do
 
                     End If
 
-                    Trace.WriteLine("Write filter not registered. Registering and restarting device...")
+                End Using
 
-                Else
+                Try
+                    API.RegisterWriteFilter(DeviceNumber, API.RegisterWriteFilterOperation.Register)
 
-                    Exit Do
+                Catch ex As Exception
+                    RemoveDevice(DeviceNumber)
+                    Throw New Exception("Failed to register write filter driver", ex)
 
-                End If
+                End Try
 
-            End Using
+            Loop
 
-            Try
-                API.RegisterWriteFilter(DeviceNumber, API.RegisterWriteFilterOperation.Register)
+        Finally
 
-            Catch ex As Exception
-                RemoveDevice(DeviceNumber)
-                Throw New Exception("Failed to register write filter driver", ex)
+            If write_filter_added IsNot Nothing Then
 
-            End Try
+                NativeFileIO.RemoveFilter(NativeFileIO.Win32API.DiskDriveGuid, "aimwrfltr")
 
-        Loop
+                Trace.WriteLine($"ScsiAdapter.CreateDevice: Thread {Thread.CurrentThread.ManagedThreadId} leaving global critical section")
+
+                write_filter_added.Dispose()
+
+            End If
+
+        End Try
 
         Trace.WriteLine("CreateDevice done.")
 
@@ -511,7 +538,7 @@ Public Class ScsiAdapter
 
             If disk.IsDiskWritable Then
 
-                volumes = disk.GetDiskVolumes()
+                volumes = disk.EnumerateDiskVolumes()
 
             End If
 
@@ -543,7 +570,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Sub RemoveAllDevicesSafe()
 
-        Parallel.ForEach(GetDeviceList(), AddressOf RemoveDeviceSafe)
+        Parallel.ForEach(EnumerateDevices(), AddressOf RemoveDeviceSafe)
 
     End Sub
 
@@ -782,8 +809,8 @@ Public Class ScsiAdapter
             Return True
         End If
 
-        Trace.WriteLine("Library version: " & CompatibleDriverVersion.ToString("X4"))
-        Trace.WriteLine("Driver version: " & ReturnCode.ToString("X4"))
+        Trace.WriteLine($"Library version: {CompatibleDriverVersion:X4}")
+        Trace.WriteLine($"Driver version: {ReturnCode:X4}")
 
         Return False
 
@@ -849,7 +876,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Sub UpdateDiskProperties()
 
-        For Each device In GetDeviceList()
+        For Each device In EnumerateDevices()
 
             UpdateDiskProperties(device)
 

@@ -22,7 +22,10 @@
 #if defined(_NTDDK_) && !defined(_UNICODE)
 #define _UNICODE
 #endif
-#include <tchar.h>
+#define _T(x) L##x
+#ifndef _WINNT_
+#include <ntdef.h>
+#endif
 #endif
 
 #define IMSCSI_DRIVER_VERSION           ((ULONG) 0x0101)

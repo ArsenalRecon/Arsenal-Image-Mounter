@@ -1,6 +1,6 @@
 ﻿''''' DevioNoneService.vb
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -11,14 +11,14 @@
 
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
-Imports Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory
+Imports Arsenal.ImageMounter.IO
 
 Namespace Server.Services
 
     ''' <summary>
     ''' Class deriving from DevioServiceBase, but without providing a proxy service. Instead,
-    ''' it just passes a disk image file name for direct mounting internally in Arsenal Image Mounter
-    ''' SCSI Adapter.
+    ''' it just passes a disk image file name or RAM disk information for direct mounting
+    ''' internally in Arsenal Image Mounter SCSI Adapter.
     ''' </summary>
     Public Class DevioNoneService
         Inherits DevioServiceBase
@@ -40,12 +40,21 @@ Namespace Server.Services
         ''' </summary>
         ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
         Public Sub New(Imagefile As String, DiskAccess As FileAccess)
-            MyBase.New(New DevioProviderFromStream(New FileStream(Imagefile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete), ownsStream:=True), OwnsProvider:=True)
+            MyBase.New(New DevioProviderFromStream(New FileStream(Imagefile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete), ownsStream:=True) With {.CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)}, OwnsProvider:=True)
 
             Offset = API.GetOffsetByFileExt(Imagefile)
-            SectorSize = API.GetSectorSizeFromFileName(Imagefile)
+
             Me.DiskAccess = DiskAccess
+
             Me.Imagefile = Imagefile
+
+            If Not DiskAccess.HasFlag(FileAccess.Write) Then
+                _ProxyModeFlags = DeviceFlags.TypeFile Or DeviceFlags.ReadOnly
+            Else
+                _ProxyModeFlags = DeviceFlags.TypeFile
+            End If
+
+            _ProxyObjectName = Imagefile
 
         End Sub
 
@@ -55,26 +64,33 @@ Namespace Server.Services
         ''' SCSI Adapter.
         ''' </summary>
         ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
-        Public Sub New(Imagefile As String, DiskAccess As VirtualDiskAccess)
-            Me.New(Imagefile, GetDirectFileAccessFlags(DiskAccess))
+        Public Sub New(Imagefile As String, DiskAccess As DevioServiceFactory.VirtualDiskAccess)
+            Me.New(Imagefile, DevioServiceFactory.GetDirectFileAccessFlags(DiskAccess))
+
+        End Sub
+
+        ''' <summary>
+        ''' Creates a DevioServiceBase compatible object, but without providing a proxy service.
+        ''' Instead, it just passes a disk size for directly mounting a RAM disk internally in
+        ''' SCSI Adapter.
+        ''' </summary>
+        ''' <param name="DiskSize">Size in bytes of RAM disk to create.</param>
+        Public Sub New(DiskSize As Long)
+            MyBase.New(New DummyProvider(DiskSize), OwnsProvider:=True)
+
+            DiskAccess = FileAccess.ReadWrite
+
+            If NativeFileIO.TestFileOpen("\\?\awealloc") Then
+                AdditionalFlags = DeviceFlags.TypeFile Or DeviceFlags.FileTypeAwe
+            Else
+                AdditionalFlags = DeviceFlags.TypeVM
+            End If
 
         End Sub
 
         Protected Overrides ReadOnly Property ProxyObjectName As String
-            Get
-                Return Imagefile
-            End Get
-        End Property
 
         Protected Overrides ReadOnly Property ProxyModeFlags As DeviceFlags
-            Get
-                If Not DiskAccess.HasFlag(FileAccess.Write) Then
-                    Return DeviceFlags.TypeFile Or DeviceFlags.ReadOnly
-                Else
-                    Return DeviceFlags.TypeFile
-                End If
-            End Get
-        End Property
 
         ''' <summary>
         ''' Dummy implementation that always returns True.

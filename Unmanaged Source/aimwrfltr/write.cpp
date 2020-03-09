@@ -1,5 +1,7 @@
 #include "aimwrfltr.h"
 
+#define AIMWRFLTR_DEFER_ALL_WRITES
+
 NTSTATUS
 AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
@@ -73,16 +75,22 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     KIRQL current_irql = KeGetCurrentIrql();
 
-    if (current_irql >= DISPATCH_LEVEL)
-    {
-        defer_to_worker_thread = true;
-    }
-
     LONG first = (LONG)
         DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Write.ByteOffset.QuadPart);
     LONG last = (LONG)
         DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Write.ByteOffset.QuadPart +
             io_stack->Parameters.Write.Length - 1);
+
+#ifdef AIMWRFLTR_DEFER_ALL_WRITES
+
+    defer_to_worker_thread = true;
+
+#else
+
+    if (current_irql >= DISPATCH_LEVEL)
+    {
+        defer_to_worker_thread = true;
+    }
 
     for (LONG i = first; i <= last && !defer_to_worker_thread; i++)
     {
@@ -91,6 +99,8 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             defer_to_worker_thread = true;
         }
     }
+
+#endif
 
     if (defer_to_worker_thread)
     {
@@ -182,7 +192,7 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         while ((page_offset_this_iter + bytes_this_iter) > block_size)
         {
-            // Contigous? Then merge with next iteration
+            // Contiguous? Then merge with next iteration
             if (device_extension->AllocationTable[i + 1] ==
                 device_extension->AllocationTable[i] + 1)
             {

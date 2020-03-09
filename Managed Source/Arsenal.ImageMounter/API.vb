@@ -2,7 +2,7 @@
 ''''' API for manipulating flag values, issuing SCSI bus rescans and similar
 ''''' tasks.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -37,7 +37,7 @@ Public Class API
           devinstances.Length = 0 OrElse
           Array.TrueForAll(devinstances, AddressOf String.IsNullOrWhiteSpace) Then
 
-            Trace.WriteLine("No devices found serviced by 'phdskmnt'. status=0x" & status.ToString("X"))
+            Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}")
             Return Nothing
         End If
 
@@ -106,7 +106,7 @@ Public Class API
           devinstances.Length = 0 OrElse
           Array.TrueForAll(devinstances, AddressOf String.IsNullOrWhiteSpace) Then
 
-            Trace.WriteLine("No devices found serviced by 'phdskmnt'. status=0x" & status.ToString("X"))
+            Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}")
             Return Nothing
         End If
 
@@ -145,9 +145,9 @@ Public Class API
         For Each devInst In devInsts
             Dim status = NativeFileIO.Win32API.CM_Reenumerate_DevNode(devInst, 0)
             If status <> 0 Then
-                Trace.WriteLine("Re-enumeration of '" & devInst & "' failed: 0x" & status.ToString("X"))
+                Trace.WriteLine($"Re-enumeration of '{devInst}' failed: 0x{status:X}")
             Else
-                Trace.WriteLine("Re-enumeration of '" & devInst & "' successful.")
+                Trace.WriteLine($"Re-enumeration of '{devInst}' successful.")
                 rc = True
             End If
         Next
@@ -207,7 +207,7 @@ Public Class API
 
         For Each m In multipliers
             If size >= m.Key Then
-                Return (size / m.Key).ToString("0.000") & m.Value
+                Return $"{size / m.Key:0.000}{m.Value}"
             End If
         Next
 
@@ -219,11 +219,11 @@ Public Class API
 
         For Each m In multipliers
             If Math.Abs(size) >= m.Key Then
-                Return (size / m.Key).ToString("0.000") & m.Value
+                Return $"{size / m.Key:0.000}{m.Value}"
             End If
         Next
 
-        Return size.ToString() & " byte"
+        Return $"{size} byte"
 
     End Function
 
@@ -372,7 +372,7 @@ Public Class API
 
         Next
 
-        Dim in_use_apps = NativeFileIO.FindProcessesHoldingFileHandle(dev_path).ToArray()
+        Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev_path).ToArray()
 
         If in_use_apps.Length = 0 AndAlso last_error > 0 Then
             Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
@@ -453,7 +453,7 @@ Public Class API
 
             Next
 
-            Dim in_use_apps = NativeFileIO.FindProcessesHoldingFileHandle(dev.path).ToArray()
+            Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).ToArray()
 
             If in_use_apps.Length = 0 AndAlso last_error > 0 Then
                 Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
@@ -491,7 +491,9 @@ Public Class API
 
         Statistics.Initialize()
 
-        Return DeviceIoControl(hDevice, IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics))), Nothing, Nothing)
+        Static WriteFilterStatisticsSize As UInteger = CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics)))
+
+        Return DeviceIoControl(hDevice, IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, WriteFilterStatisticsSize, Nothing, Nothing)
 
     End Function
 

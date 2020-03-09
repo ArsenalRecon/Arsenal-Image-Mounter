@@ -75,12 +75,10 @@ Public Module MainModule
 
         Try
             File.AppendAllText(logfile,
-                                 "---------------" & Environment.NewLine &
-                                 Date.Now.ToString("yyyy-MM-dd HH:mm:ss") & Environment.NewLine &
-                                 msg & Environment.NewLine)
+                                 $"---------------{Environment.NewLine}{Date.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}{msg}{Environment.NewLine}")
 
         Catch ex As Exception
-            Trace.WriteLine("Exception while logging message: " & ex.ToString())
+            Trace.WriteLine($"Exception while logging message: {ex.ToString()}")
 
         End Try
 
@@ -90,22 +88,19 @@ Public Module MainModule
 
         Dim msg = e.ExceptionObject.ToString()
 
-        Trace.WriteLine("AppDomain.UnhandledException: " & msg)
+        Trace.WriteLine($"AppDomain.UnhandledException: {msg}")
 
         LogMessage(msg)
 
         If e.IsTerminating Then
             Dim rc =
-                MessageBox.Show("Fatal error: " & msg,
+                MessageBox.Show($"Fatal error: {msg}",
                                 e.ExceptionObject.GetType().ToString(),
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Stop)
         Else
             Dim rc =
-                MessageBox.Show("Unhandled error: " & msg &
-                            Environment.NewLine &
-                            Environment.NewLine &
-                            "Ignore error and continue?",
+                MessageBox.Show($"Unhandled error: {msg}{Environment.NewLine}{Environment.NewLine}Ignore error and continue?",
                             e.ExceptionObject.GetType().ToString(),
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Stop)

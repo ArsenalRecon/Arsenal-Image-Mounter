@@ -1,7 +1,7 @@
 ﻿
 ''''' DebugProvider.vb
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -28,15 +28,15 @@ Namespace Server.SpecializedProviders
 
         Public Sub New(BaseProvider As IDevioProvider, DebugCompareStream As Stream)
             If BaseProvider Is Nothing Then
-                Throw New ArgumentNullException("BaseProvider")
+                Throw New ArgumentNullException(NameOf(BaseProvider))
             End If
 
             If DebugCompareStream Is Nothing Then
-                Throw New ArgumentNullException("DebugCompareStream")
+                Throw New ArgumentNullException(NameOf(DebugCompareStream))
             End If
 
             If (Not DebugCompareStream.CanSeek) OrElse (Not DebugCompareStream.CanRead) Then
-                Throw New ArgumentException("Debug compare stream must support seek and read operations.", "DebugCompareStream")
+                Throw New ArgumentException("Debug compare stream must support seek and read operations.", NameOf(DebugCompareStream))
             End If
 
             Me.BaseProvider = BaseProvider

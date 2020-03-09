@@ -272,6 +272,7 @@ extern "C" {
         BOOLEAN               SupportsUnmap;
         BOOLEAN               SupportsZero;
         BOOLEAN               NoFileLevelTrim;
+        BOOLEAN               ProvisioningType;
         PUCHAR                ImageBuffer;
         BOOLEAN               UseProxy;
         PFILE_OBJECT          FileObject;

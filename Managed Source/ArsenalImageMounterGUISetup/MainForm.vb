@@ -1,7 +1,7 @@
 ﻿''''' MainForm.vb
 ''''' GUI driver setup application.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -115,7 +115,7 @@ Public Class MainForm
 
         Catch ex As Exception
             Trace.WriteLine(ex.ToString())
-            tbStatus.Text = "Exception: " & ex.JoinMessages()
+            tbStatus.Text = $"Exception: {ex.JoinMessages()}"
 
         Finally
             ResumeLayout()

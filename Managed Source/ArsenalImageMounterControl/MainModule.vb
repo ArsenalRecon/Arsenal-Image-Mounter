@@ -3,7 +3,7 @@
 ''''' Main module for control application.
 ''''' 
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -87,7 +87,7 @@ Module MainModule
                     Case "comm"
                         Flags = Flags Or DeviceFlags.ProxyTypeComm
                     Case Else
-                        Console.WriteLine("Unsupported proxy type: " & ProxyType)
+                        Console.WriteLine($"Unsupported proxy type: {ProxyType}")
                         ShowHelp = True
                         Exit For
                 End Select
@@ -115,7 +115,7 @@ Module MainModule
                 ShowHelp = True
                 Exit For
             Else
-                Console.WriteLine("Unsupported switch: " & arg)
+                Console.WriteLine($"Unsupported switch: {arg}")
                 ShowHelp = True
                 Exit For
             End If
@@ -136,7 +136,7 @@ Module MainModule
             Return
         End If
 
-        Trace.WriteLine("Selected device number: " & If(DeviceNumber Is Nothing, "Auto", DeviceNumber.Value.ToString("X6")))
+        Trace.WriteLine($"Selected device number: {If(DeviceNumber Is Nothing, "Auto", DeviceNumber.Value.ToString("X6"))}")
 
         Select Case Mode
 
@@ -151,7 +151,7 @@ Module MainModule
                                          NativePath:=False,
                                          DeviceNumber:=CreateDeviceNumber)
                 End Using
-                Console.WriteLine("Created device (format: LLTTPP hex): " & CreateDeviceNumber.ToString("X6"))
+                Console.WriteLine($"Created device (format: LLTTPP hex): {CreateDeviceNumber:X6}")
 
             Case OpMode.Remove
                 Using adapter As New ScsiAdapter
@@ -164,8 +164,7 @@ Module MainModule
 
             Case OpMode.GetDeviceNumber
                 Using disk As New DiskDevice(DiskPath, FileAccess.ReadWrite)
-                    Dim Device = disk.GetDeviceNumber()
-                    Console.WriteLine("DeviceNumber (format: LLTTPP hex): " & Device.ToString("X6"))
+                    Console.WriteLine($"DeviceNumber (format: LLTTPP hex): {disk.DeviceNumber:X6}")
                 End Using
 
             Case OpMode.QueryDevice
@@ -174,16 +173,16 @@ Module MainModule
                     If DeviceNumber.HasValue Then
                         DeviceList = {DeviceNumber.Value}
                     Else
-                        DeviceList = adapter.GetDeviceList()
+                        DeviceList = adapter.EnumerateDevices()
                     End If
 
                     For Each Device In DeviceList.Select(AddressOf adapter.QueryDevice)
                         Console.WriteLine()
                         For Each field In Device.GetType().GetFields()
                             If field.FieldType Is GetType(UInt32) Then
-                                Console.WriteLine(field.Name & " = " & DirectCast(field.GetValue(Device), UInt32).ToString("X8"))
+                                Console.WriteLine($"{field.Name} = {DirectCast(field.GetValue(Device), UInt32).ToString("X8")}")
                             Else
-                                Console.WriteLine(field.Name & " = " & If(field.GetValue(Device), "(null)").ToString())
+                                Console.WriteLine($"{field.Name} = {If(field.GetValue(Device), "(null)").ToString()}")
                             End If
                         Next
                         Try
@@ -191,7 +190,7 @@ Module MainModule
                                 Console.WriteLine(disk.DevicePath)
                                 If disk.DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase) Then
                                     Dim disknumber = UInteger.Parse(disk.DevicePath.Substring("\\?\PhysicalDrive".Length))
-                                    For Each volume In NativeFileIO.GetDiskVolumes(disknumber)
+                                    For Each volume In NativeFileIO.EnumerateDiskVolumes(disknumber)
                                         Console.WriteLine($"Contains volume {volume}")
                                         For Each mount_point In NativeFileIO.GetVolumeMountPoints(volume)
                                             Console.WriteLine($"  Mounted at {mount_point}")
@@ -209,7 +208,7 @@ Module MainModule
 
             Case OpMode.ListDevices
                 Using adapter As New ScsiAdapter
-                    Dim DeviceList = adapter.GetDeviceList()
+                    Dim DeviceList = adapter.EnumerateDevices()
                     If DeviceList.Count = 0 Then
                         Console.WriteLine("No virtual disks defined.")
                         Return
@@ -222,7 +221,7 @@ Module MainModule
 
             Case OpMode.Rescan
                 Dim result = API.RescanScsiAdapter()
-                Console.WriteLine("Result: " & result)
+                Console.WriteLine($"Result: {result}")
 
             Case Else
                 Console.WriteLine("Nothing to do.")

@@ -1,6 +1,6 @@
 ﻿''''' Driver Version / Setup Verify application.
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -10,6 +10,7 @@
 '''''
 
 Imports System.IO
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 
 Module Module1
@@ -39,7 +40,7 @@ Module Module1
                 Console.WriteLine("Successful.")
 
             Catch ex As Exception
-                Console.WriteLine("Error: " & ex.ToString())
+                Console.WriteLine($"Error: {ex.ToString()}")
 
             End Try
         Next
@@ -50,13 +51,13 @@ Module Module1
             Console.Write(dev)
             Console.Write(" => ")
             Try
-                Using h = NativeFileIO.OpenFileHandle("\\?\" & dev, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, False)
+                Using h = NativeFileIO.OpenFileHandle($"\\?\{dev}", FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, False)
                     Dim ReturnCode = CheckDriverVersion(h)
-                    Console.WriteLine("Driver version: " & ReturnCode.ToString("X4"))
+                    Console.WriteLine($"Driver version: {ReturnCode:X4}")
                 End Using
 
             Catch ex As Exception
-                Console.WriteLine("Error: " & ex.Message)
+                Console.WriteLine($"Error: {ex.JoinMessages()}")
 
             End Try
         Next

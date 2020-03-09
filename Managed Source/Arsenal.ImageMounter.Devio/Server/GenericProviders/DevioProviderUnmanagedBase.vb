@@ -1,7 +1,7 @@
 ﻿
 ''''' DevioProviderUnmanagedBase.vb
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -51,7 +51,7 @@ Namespace Server.GenericProviders
         Private Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
 
             If buffer Is Nothing Then
-                Throw New ArgumentNullException("buffer")
+                Throw New ArgumentNullException(NameOf(buffer))
             ElseIf bufferoffset + count > buffer.Length Then
                 Throw New ArgumentException("buffer too small")
             End If
@@ -80,7 +80,7 @@ Namespace Server.GenericProviders
         Private Function Write(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
 
             If buffer Is Nothing Then
-                Throw New ArgumentNullException("buffer")
+                Throw New ArgumentNullException(NameOf(buffer))
             ElseIf bufferoffset + count > buffer.Length Then
                 Throw New ArgumentException("buffer too small")
             End If

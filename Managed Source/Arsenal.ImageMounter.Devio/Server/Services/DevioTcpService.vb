@@ -1,7 +1,7 @@
 ﻿
 ''''' DevioTcpService.vb
 ''''' 
-''''' Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -80,7 +80,7 @@ Namespace Server.Services
                     Listener.Start()
 
                 Catch ex As Exception
-                    Trace.WriteLine("Listen failed: " & ex.ToString())
+                    Trace.WriteLine($"Listen failed: {ex.ToString()}")
                     Exception = New Exception("Listen failed on tcp port", ex)
                     OnServiceInitFailed()
                     Return
@@ -164,7 +164,7 @@ Namespace Server.Services
                 Trace.WriteLine("Client disconnected.")
 
             Catch ex As Exception
-                Trace.WriteLine("Unhandled exception in service thread: " & ex.ToString())
+                Trace.WriteLine($"Unhandled exception in service thread: {ex.ToString()}")
                 OnServiceUnhandledException(New UnhandledExceptionEventArgs(ex, True))
 
             Finally
@@ -198,7 +198,7 @@ Namespace Server.Services
 
             Catch ex As Exception
                 Trace.WriteLine(ex.ToString())
-                Trace.WriteLine("Read request at " & Offset.ToString("X8") & " for " & ReadLength & " bytes.")
+                Trace.WriteLine($"Read request at {Offset:X8} for {ReadLength} bytes.")
                 ErrorCode = 1
                 WriteLength = 0
 
@@ -230,7 +230,7 @@ Namespace Server.Services
 
             Catch ex As Exception
                 Trace.WriteLine(ex.ToString())
-                Trace.WriteLine("Write request at " & Offset.ToString("X8") & " for " & Length & " bytes.")
+                Trace.WriteLine($"Write request at {Offset:X8} for {Length} bytes.")
                 ErrorCode = 1
                 WriteLength = 0
 

@@ -189,7 +189,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         {
             ULONG block_size = DIFF_BLOCK_SIZE;
 
-            // Contigous? Then merge with next iteration
+            // Contiguous? Then merge with next iteration
             while ((page_offset_this_iter + bytes_this_iter) > block_size)
             {
                 if (device_extension->AllocationTable[i + 1] ==
@@ -217,7 +217,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             ULONG block_size = DIFF_BLOCK_SIZE;
             LONG block_base = device_extension->AllocationTable[i];
 
-            // Contigous? Then merge with next iteration
+            // Contiguous? Then merge with next iteration
             while ((page_offset_this_iter + bytes_this_iter) > block_size)
             {
                 if (device_extension->AllocationTable[i + 1] ==
