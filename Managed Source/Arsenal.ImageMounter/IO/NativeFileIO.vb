@@ -24,10 +24,12 @@ Namespace IO
     ''' Provides wrappers for Win32 file API. This makes it possible to open everything that
     ''' CreateFile() can open and get a FileStream based .NET wrapper around the file handle.
     ''' </summary>
-    Public Class NativeFileIO
+    <SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification:="<Pending>")>
+    Public NotInheritable Class NativeFileIO
 
 #Region "Win32 API"
-        Public Class Win32API
+
+        Public NotInheritable Class NativeConstants
 
             Public Const GENERIC_READ As UInt32 = &H80000000UI
             Public Const GENERIC_WRITE As UInt32 = &H40000000UI
@@ -127,554 +129,21 @@ Namespace IO
             Public Shared ReadOnly StoragePortClassGuid As New Guid("{2ACCFE60-C130-11D2-B082-00A0C91EFB8B}")
             Public Shared ReadOnly ComPortClassGuid As New Guid("{86E0D1E0-8089-11D0-9CE4-08003E301F73}")
 
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure STORAGE_DEVICE_NUMBER
+            Private Sub New()
+            End Sub
 
-                Public DeviceType As UInt32
+        End Class
 
-                Public DeviceNumber As UInt32
+        <SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")>
+        Public NotInheritable Class SafeNativeMethods
 
-                Public PartitionNumber As Int32
+            Public Declare Auto Function AllocConsole Lib "kernel32.dll" (
+              ) As Boolean
 
-            End Structure
+            Public Declare Auto Function FreeConsole Lib "kernel32.dll" (
+              ) As Boolean
 
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure SCSI_ADDRESS
-                Implements IEquatable(Of SCSI_ADDRESS)
-
-                Public ReadOnly Property Length As UInt32
-                Public ReadOnly Property PortNumber As Byte
-                Public ReadOnly Property PathId As Byte
-                Public ReadOnly Property TargetId As Byte
-                Public ReadOnly Property Lun As Byte
-
-                Public Sub New(PortNumber As Byte, DWordDeviceNumber As UInt32)
-                    Me.Length = CUInt(Marshal.SizeOf(Me))
-                    Me.PortNumber = PortNumber
-                    Me.DWordDeviceNumber = DWordDeviceNumber
-                End Sub
-
-                Public Sub New(DWordDeviceNumber As UInt32)
-                    Me.Length = CUInt(Marshal.SizeOf(Me))
-                    Me.DWordDeviceNumber = DWordDeviceNumber
-                End Sub
-
-                Public Property DWordDeviceNumber As UInt32
-                    Get
-                        Return CUInt(_PathId) Or (CUInt(_TargetId) << 8) Or (CUInt(_Lun) << 16)
-                    End Get
-                    Set
-                        _PathId = CByte(Value And &HFF)
-                        _TargetId = CByte((Value >> 8) And &HFF)
-                        _Lun = CByte((Value >> 16) And &HFF)
-                    End Set
-                End Property
-
-                Public Overrides Function ToString() As String
-                    Return $"Port = {_PortNumber}, Path = {_PathId}, Target = {_TargetId}, Lun = {_Lun}"
-                End Function
-
-                Public Overloads Function Equals(other As SCSI_ADDRESS) As Boolean Implements IEquatable(Of SCSI_ADDRESS).Equals
-                    Return _
-                        _PortNumber.Equals(other._PortNumber) AndAlso
-                        _PathId.Equals(other._PathId) AndAlso
-                        _TargetId.Equals(other._TargetId) AndAlso
-                        _Lun.Equals(other._Lun)
-                End Function
-
-                Public Overrides Function Equals(obj As Object) As Boolean
-                    If Not TypeOf obj Is SCSI_ADDRESS Then
-                        Return False
-                    End If
-
-                    Return Equals(DirectCast(obj, SCSI_ADDRESS))
-                End Function
-
-                Public Overrides Function GetHashCode() As Integer
-                    Return CInt(_PathId) Or (CInt(_TargetId) << 8) Or (CInt(_Lun) << 16)
-                End Function
-
-                Public Shared Operator =(first As SCSI_ADDRESS, second As SCSI_ADDRESS) As Boolean
-                    Return first.Equals(second)
-                End Operator
-
-                Public Shared Operator <>(first As SCSI_ADDRESS, second As SCSI_ADDRESS) As Boolean
-                    Return Not first.Equals(second)
-                End Operator
-
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure UNICODE_STRING
-                Public Length As UInt16
-                Public MaximumLength As UInt16
-                Public Buffer As IntPtr
-
-                Public Overrides Function ToString() As String
-                    Try
-                        If Length = 0 Then
-                            Return String.Empty
-                        Else
-                            Return Marshal.PtrToStringUni(Buffer, Length >> 1)
-                        End If
-
-                    Catch ex As Exception
-                        Return $"{{{ex.Message}}}"
-
-                    End Try
-                End Function
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Structure DISK_GEOMETRY
-                Public Enum MEDIA_TYPE As Int32
-                    Unknown = &H0
-                    F5_1Pt2_512 = &H1
-                    F3_1Pt44_512 = &H2
-                    F3_2Pt88_512 = &H3
-                    F3_20Pt8_512 = &H4
-                    F3_720_512 = &H5
-                    F5_360_512 = &H6
-                    F5_320_512 = &H7
-                    F5_320_1024 = &H8
-                    F5_180_512 = &H9
-                    F5_160_512 = &HA
-                    RemovableMedia = &HB
-                    FixedMedia = &HC
-                    F3_120M_512 = &HD
-                    F3_640_512 = &HE
-                    F5_640_512 = &HF
-                    F5_720_512 = &H10
-                    F3_1Pt2_512 = &H11
-                    F3_1Pt23_1024 = &H12
-                    F5_1Pt23_1024 = &H13
-                    F3_128Mb_512 = &H14
-                    F3_230Mb_512 = &H15
-                    F8_256_128 = &H16
-                    F3_200Mb_512 = &H17
-                    F3_240M_512 = &H18
-                    F3_32M_512 = &H19
-                End Enum
-
-                Public Cylinders As Int64
-                Public MediaType As MEDIA_TYPE
-                Public TracksPerCylinder As Int32
-                Public SectorsPerTrack As Int32
-                Public BytesPerSector As Int32
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
-            Public Structure OSVERSIONINFO
-                Public OSVersionInfoSize As Int32
-                Public MajorVersion As Int32
-                Public MinorVersion As Int32
-                Public BuildNumber As Int32
-                Public PlatformId As PlatformID
-
-                <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=128)>
-                Public CSDVersion As String
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
-            Public Structure OSVERSIONINFOEX
-                Public OSVersionInfoSize As Int32
-                Public MajorVersion As Int32
-                Public MinorVersion As Int32
-                Public BuildNumber As Int32
-                Public PlatformId As PlatformID
-
-                <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=128)>
-                Public CSDVersion As String
-
-                Public ServicePackMajor As UShort
-
-                Public ServicePackMinor As UShort
-
-                Public SuiteMask As Short
-
-                Public ProductType As Byte
-
-                Public Reserved As Byte
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential, Pack:=8)>
-            Public Structure PARTITION_INFORMATION
-                Public Enum PARTITION_TYPE As Byte
-                    PARTITION_ENTRY_UNUSED = &H0      ' Entry unused
-                    PARTITION_FAT_12 = &H1      ' 12-bit FAT entries
-                    PARTITION_XENIX_1 = &H2      ' Xenix
-                    PARTITION_XENIX_2 = &H3      ' Xenix
-                    PARTITION_FAT_16 = &H4      ' 16-bit FAT entries
-                    PARTITION_EXTENDED = &H5      ' Extended partition entry
-                    PARTITION_HUGE = &H6      ' Huge partition MS-DOS V4
-                    PARTITION_IFS = &H7      ' IFS Partition
-                    PARTITION_OS2BOOTMGR = &HA      ' OS/2 Boot Manager/OPUS/Coherent swap
-                    PARTITION_FAT32 = &HB      ' FAT32
-                    PARTITION_FAT32_XINT13 = &HC      ' FAT32 using extended int13 services
-                    PARTITION_XINT13 = &HE      ' Win95 partition using extended int13 services
-                    PARTITION_XINT13_EXTENDED = &HF      ' Same as type 5 but uses extended int13 services
-                    PARTITION_PREP = &H41      ' PowerPC Reference Platform (PReP) Boot Partition
-                    PARTITION_LDM = &H42      ' Logical Disk Manager partition
-                    PARTITION_UNIX = &H63      ' Unix
-                    PARTITION_NTFT = &H80      ' NTFT partition      
-                End Enum
-
-                Public StartingOffset As Int64
-                Public PartitionLength As Int64
-                Public HiddenSectors As UInt32
-                Public PartitionNumber As UInt32
-                Public PartitionType As PARTITION_TYPE
-                Public BootIndicator As Byte
-                Public RecognizedPartition As Byte
-                Public RewritePartition As Byte
-
-                ''' <summary>
-                ''' Indicates whether this partition entry represents a Windows NT fault tolerant partition,
-                ''' such as mirror or stripe set.
-                ''' </summary>
-                ''' <value>
-                ''' Indicates whether this partition entry represents a Windows NT fault tolerant partition,
-                ''' such as mirror or stripe set.
-                ''' </value>
-                ''' <returns>True if this partition entry represents a Windows NT fault tolerant partition,
-                ''' such as mirror or stripe set. False otherwise.</returns>
-                Public ReadOnly Property IsFTPartition As Boolean
-                    Get
-                        Return PartitionType.HasFlag(PARTITION_TYPE.PARTITION_NTFT)
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' If this partition entry represents a Windows NT fault tolerant partition, such as mirror or stripe,
-                ''' set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
-                ''' partitions.
-                ''' </summary>
-                ''' <value>
-                ''' If this partition entry represents a Windows NT fault tolerant partition, such as mirror or stripe,
-                ''' set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
-                ''' partitions.
-                ''' </value>
-                ''' <returns>If this partition entry represents a Windows NT fault tolerant partition, such as mirror or
-                ''' stripe, set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
-                ''' partitions.</returns>
-                Public ReadOnly Property FTPartitionSubType As PARTITION_TYPE
-                    Get
-                        Return PartitionType And Not PARTITION_TYPE.PARTITION_NTFT
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' Indicates whether this partition entry represents a container partition, also known as extended
-                ''' partition, where an extended partition table can be found in first sector.
-                ''' </summary>
-                ''' <value>
-                ''' Indicates whether this partition entry represents a container partition.
-                ''' </value>
-                ''' <returns>True if this partition entry represents a container partition. False otherwise.</returns>
-                Public ReadOnly Property IsContainerPartition As Boolean
-                    Get
-                        Return (PartitionType = PARTITION_TYPE.PARTITION_EXTENDED) OrElse (PartitionType = PARTITION_TYPE.PARTITION_XINT13_EXTENDED)
-                    End Get
-                End Property
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure DRIVE_LAYOUT_INFORMATION_EX
-                Public Sub New(PartitionStyle As PARTITION_STYLE, PartitionCount As Integer)
-                    _PartitionStyle = PartitionStyle
-                    _PartitionCount = PartitionCount
-                End Sub
-
-                Public ReadOnly Property PartitionStyle As PARTITION_STYLE
-                Public ReadOnly Property PartitionCount As Integer
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure DRIVE_LAYOUT_INFORMATION_MBR
-                Public Sub New(DiskSignature As UInteger)
-                    _DiskSignature = DiskSignature
-                End Sub
-
-                Public ReadOnly Property DiskSignature As UInteger
-                Public ReadOnly Property Checksum As UInteger
-
-                Public Overrides Function GetHashCode() As Integer
-                    Return _DiskSignature.GetHashCode()
-                End Function
-
-                Public Overrides Function ToString() As String
-                    Return _DiskSignature.ToString("X8")
-                End Function
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure DRIVE_LAYOUT_INFORMATION_GPT
-                Public ReadOnly Property DiskId As Guid
-                Public ReadOnly Property StartingUsableOffset As Long
-                Public ReadOnly Property UsableLength As Long
-                Public ReadOnly Property MaxPartitionCount As Integer
-
-                Public Overrides Function GetHashCode() As Integer
-                    Return _DiskId.GetHashCode()
-                End Function
-
-                Public Overrides Function ToString() As String
-                    Return _DiskId.ToString("b")
-                End Function
-            End Structure
-
-            Public Enum PARTITION_STYLE As Byte
-                PARTITION_STYLE_MBR
-                PARTITION_STYLE_GPT
-                PARTITION_STYLE_RAW
-            End Enum
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure CREATE_DISK_MBR
-                <MarshalAs(UnmanagedType.I1)>
-                Public PartitionStyle As PARTITION_STYLE
-
-                Public DiskSignature As UInteger
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure CREATE_DISK_GPT
-                <MarshalAs(UnmanagedType.I1)>
-                Public PartitionStyle As PARTITION_STYLE
-
-                Public DiskId As Guid
-
-                Public MaxPartitionCount As Integer
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential, Pack:=8)>
-            Public Structure PARTITION_INFORMATION_EX
-
-                <MarshalAs(UnmanagedType.I1)>
-                Public PartitionStyle As PARTITION_STYLE
-                Public StartingOffset As Int64
-                Public PartitionLength As Int64
-                Public PartitionNumber As UInt32
-                <MarshalAs(UnmanagedType.I1)>
-                Public RewritePartition As Boolean
-
-                Private ReadOnly padding1 As Byte
-                Private ReadOnly padding2 As Byte
-                Private ReadOnly padding3 As Byte
-
-                <MarshalAs(UnmanagedType.ByValArray, SizeConst:=112)>
-                Private fields As Byte()
-
-                Public Property MBR As PARTITION_INFORMATION_MBR
-                    Get
-                        Return PinnedBuffer.Deserialize(Of PARTITION_INFORMATION_MBR)(fields)
-                    End Get
-                    Set
-                        Using buffer As New PinnedBuffer(Of Byte)(112)
-                            buffer.Write(0, Value)
-                            fields = buffer.Target
-                        End Using
-                    End Set
-                End Property
-
-                Public Property GPT As PARTITION_INFORMATION_GPT
-                    Get
-                        Return PinnedBuffer.Deserialize(Of PARTITION_INFORMATION_GPT)(fields)
-                    End Get
-                    Set
-                        Using buffer As New PinnedBuffer(Of Byte)(112)
-                            buffer.Write(0, Value)
-                            fields = buffer.Target
-                        End Using
-                    End Set
-                End Property
-
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential, Pack:=4)>
-            Public Structure PARTITION_INFORMATION_MBR
-
-                Public PartitionType As Byte
-
-                <MarshalAs(UnmanagedType.I1)>
-                Public BootIndicator As Boolean
-
-                <MarshalAs(UnmanagedType.I1)>
-                Public RecognizedPartition As Boolean
-
-                Public HiddenSectors As Integer
-
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential, Pack:=4)>
-            Public Structure PARTITION_INFORMATION_GPT
-
-                Public DiskId As Guid
-
-                Public StartingUsableOffset As Long
-
-                Public UsableLength As Long
-
-                Public MaxPartitionCount As Integer
-
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure DISK_GROW_PARTITION
-                Public PartitionNumber As Int32
-                Public BytesToGrow As Int64
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure COMMTIMEOUTS
-                Public ReadIntervalTimeout As UInt32
-                Public ReadTotalTimeoutMultiplier As UInt32
-                Public ReadTotalTimeoutConstant As UInt32
-                Public WriteTotalTimeoutMultiplier As UInt32
-                Public WriteTotalTimeoutConstant As UInt32
-            End Structure
-
-            ''' <summary>
-            ''' Encapsulates a FindVolume handle that is closed by calling FindVolumeClose() Win32 API.
-            ''' </summary>
-            Public NotInheritable Class SafeFindVolumeHandle
-                Inherits SafeHandleMinusOneIsInvalid
-
-                Private Declare Auto Function FindVolumeClose Lib "kernel32.dll" (
-                  h As IntPtr) As Boolean
-
-                ''' <summary>
-                ''' Initiates a new instance with an existing open handle.
-                ''' </summary>
-                ''' <param name="open_handle">Existing open handle.</param>
-                ''' <param name="owns_handle">Indicates whether handle should be closed when this
-                ''' instance is released.</param>
-                Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
-                    MyBase.New(owns_handle)
-
-                    SetHandle(open_handle)
-                End Sub
-
-                ''' <summary>
-                ''' Creates a new empty instance. This constructor is used by native to managed
-                ''' handle marshaller.
-                ''' </summary>
-                Protected Sub New()
-                    MyBase.New(ownsHandle:=True)
-
-                End Sub
-
-                ''' <summary>
-                ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
-                ''' </summary>
-                ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
-                Protected Overrides Function ReleaseHandle() As Boolean
-                    Return FindVolumeClose(handle)
-                End Function
-            End Class
-
-            ''' <summary>
-            ''' Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
-            ''' </summary>
-            Public NotInheritable Class SafeFindVolumeMountPointHandle
-                Inherits SafeHandleMinusOneIsInvalid
-
-                Private Declare Auto Function FindVolumeMountPointClose Lib "kernel32.dll" (
-                  h As IntPtr) As Boolean
-
-                ''' <summary>
-                ''' Initiates a new instance with an existing open handle.
-                ''' </summary>
-                ''' <param name="open_handle">Existing open handle.</param>
-                ''' <param name="owns_handle">Indicates whether handle should be closed when this
-                ''' instance is released.</param>
-                Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
-                    MyBase.New(owns_handle)
-
-                    SetHandle(open_handle)
-                End Sub
-
-                ''' <summary>
-                ''' Creates a new empty instance. This constructor is used by native to managed
-                ''' handle marshaller.
-                ''' </summary>
-                Protected Sub New()
-                    MyBase.New(ownsHandle:=True)
-
-                End Sub
-
-                ''' <summary>
-                ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
-                ''' </summary>
-                ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
-                Protected Overrides Function ReleaseHandle() As Boolean
-                    Return FindVolumeMountPointClose(handle)
-                End Function
-            End Class
-
-            Public Declare Auto Function GetFileInformationByHandle Lib "kernel32.dll" (
-                hFile As SafeFileHandle,
-                <Out> ByRef lpFileInformation As ByHandleFileInformation) As Boolean
-
-            Public Declare Auto Function GetFileTime Lib "kernel32.dll" (
-                hFile As SafeFileHandle,
-                <Out, [Optional]> ByRef lpCreationTime As Int64,
-                <Out, [Optional]> ByRef lpLastAccessTime As Int64,
-                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
-
-            Public Declare Auto Function GetFileTime Lib "kernel32.dll" (
-                hFile As SafeFileHandle,
-                <Out, [Optional]> ByRef lpCreationTime As Int64,
-                lpLastAccessTime As IntPtr,
-                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
-
-            Public Declare Auto Function GetFileTime Lib "kernel32.dll" (
-                hFile As SafeFileHandle,
-                lpCreationTime As IntPtr,
-                lpLastAccessTime As IntPtr,
-                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
-
-            Public Declare Auto Function GetFileTime Lib "kernel32.dll" (
-                hFile As SafeFileHandle,
-                <Out, [Optional]> ByRef lpCreationTime As Int64,
-                lpLastAccessTime As IntPtr,
-                lpLastWriteTime As IntPtr) As Boolean
-
-            Public Declare Auto Function FindFirstStream Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
-              InfoLevel As UInt32,
-              <[Out]> ByRef lpszVolumeMountPoint As FindStreamData,
-              dwFlags As UInt32) As SafeFindHandle
-
-            Public Declare Auto Function FindNextStream Lib "kernel32.dll" (
-              hFindStream As SafeFindHandle,
-              <[Out]> ByRef lpszVolumeMountPoint As FindStreamData) As Boolean
-
-            Public Declare Auto Function FindFirstVolumeMountPoint Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszRootPathName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeMountPoint As StringBuilder,
-              cchBufferLength As Integer) As SafeFindVolumeMountPointHandle
-
-            Public Declare Auto Function FindNextVolumeMountPoint Lib "kernel32.dll" (
-              hFindVolumeMountPoint As SafeFindVolumeMountPointHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeMountPoint As StringBuilder,
-              cchBufferLength As Integer) As Boolean
-
-            Public Declare Auto Function FindFirstVolume Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeName As StringBuilder,
-              cchBufferLength As Integer) As SafeFindVolumeHandle
-
-            Public Declare Auto Function FindNextVolume Lib "kernel32.dll" (
-              hFindVolumeMountPoint As SafeFindVolumeHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeName As StringBuilder,
-              cchBufferLength As Integer) As Boolean
-
-            Public Declare Auto Function DeleteVolumeMountPoint Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeMountPoint As String) As Boolean
-
-            Public Declare Auto Function SetVolumeMountPoint Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeMountPoint As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String) As Boolean
+            Public Declare Auto Function GetConsoleWindow Lib "kernel32.dll" () As IntPtr
 
             Public Declare Auto Function GetLogicalDrives Lib "kernel32.dll" (
               ) As UInteger
@@ -688,70 +157,81 @@ Namespace IO
               dwFileAttributes As FileAttributes
               ) As Boolean
 
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure SERVICE_STATUS
-                Public dwServiceType As Integer
-                Public dwCurrentState As Integer
-                Public dwControlsAccepted As Integer
-                Public dwWin32ExitCode As Integer
-                Public dwServiceSpecificExitCode As Integer
-                Public dwCheckPoint As Integer
-                Public dwWaitHint As Integer
-            End Structure
+        End Class
 
-            <Flags()>
-            Public Enum DEFINE_DOS_DEVICE_FLAGS As UInt32
-                DDD_EXACT_MATCH_ON_REMOVE = &H4
-                DDD_NO_BROADCAST_SYSTEM = &H8
-                DDD_RAW_TARGET_PATH = &H1
-                DDD_REMOVE_DEFINITION = &H2
-            End Enum
+        Public NotInheritable Class UnsafeNativeMethods
 
-            ''' <summary>
-            ''' Encapsulates a Service Control Management object handle that is closed by calling CloseServiceHandle() Win32 API.
-            ''' </summary>
-            Public NotInheritable Class SafeServiceHandle
-                Inherits SafeHandleZeroOrMinusOneIsInvalid
+            Friend Declare Auto Function GetFileInformationByHandle Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                <Out> ByRef lpFileInformation As ByHandleFileInformation) As Boolean
 
-                Private Declare Auto Function CloseServiceHandle Lib "advapi32.dll" (
-                  hSCObject As IntPtr) As Boolean
+            Friend Declare Auto Function GetFileTime Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                <Out, [Optional]> ByRef lpCreationTime As Int64,
+                <Out, [Optional]> ByRef lpLastAccessTime As Int64,
+                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
 
-                ''' <summary>
-                ''' Initiates a new instance with an existing open handle.
-                ''' </summary>
-                ''' <param name="open_handle">Existing open handle.</param>
-                ''' <param name="owns_handle">Indicates whether handle should be closed when this
-                ''' instance is released.</param>
-                Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
-                    MyBase.New(owns_handle)
+            Friend Declare Auto Function GetFileTime Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                <Out, [Optional]> ByRef lpCreationTime As Int64,
+                lpLastAccessTime As IntPtr,
+                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
 
-                    SetHandle(open_handle)
-                End Sub
+            Friend Declare Auto Function GetFileTime Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                lpCreationTime As IntPtr,
+                lpLastAccessTime As IntPtr,
+                <Out, [Optional]> ByRef lpLastWriteTime As Int64) As Boolean
 
-                ''' <summary>
-                ''' Creates a new empty instance. This constructor is used by native to managed
-                ''' handle marshaller.
-                ''' </summary>
-                Protected Sub New()
-                    MyBase.New(ownsHandle:=True)
+            Friend Declare Auto Function GetFileTime Lib "kernel32.dll" (
+                hFile As SafeFileHandle,
+                <Out, [Optional]> ByRef lpCreationTime As Int64,
+                lpLastAccessTime As IntPtr,
+                lpLastWriteTime As IntPtr) As Boolean
 
-                End Sub
+            Friend Declare Auto Function FindFirstStream Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
+              InfoLevel As UInt32,
+              <[Out]> ByRef lpszVolumeMountPoint As FindStreamData,
+              dwFlags As UInt32) As SafeFindHandle
 
-                ''' <summary>
-                ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
-                ''' </summary>
-                ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
-                Protected Overrides Function ReleaseHandle() As Boolean
-                    Return CloseServiceHandle(handle)
-                End Function
-            End Class
+            Friend Declare Auto Function FindNextStream Lib "kernel32.dll" (
+              hFindStream As SafeFindHandle,
+              <[Out]> ByRef lpszVolumeMountPoint As FindStreamData) As Boolean
 
-            Public Declare Auto Function OpenSCManager Lib "advapi32.dll" (
+            Friend Declare Auto Function FindFirstVolumeMountPoint Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszRootPathName As String,
+              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeMountPoint As StringBuilder,
+              cchBufferLength As Integer) As SafeFindVolumeMountPointHandle
+
+            Friend Declare Auto Function FindNextVolumeMountPoint Lib "kernel32.dll" (
+              hFindVolumeMountPoint As SafeFindVolumeMountPointHandle,
+              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeMountPoint As StringBuilder,
+              cchBufferLength As Integer) As Boolean
+
+            Friend Declare Auto Function FindFirstVolume Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeName As StringBuilder,
+              cchBufferLength As Integer) As SafeFindVolumeHandle
+
+            Friend Declare Auto Function FindNextVolume Lib "kernel32.dll" (
+              hFindVolumeMountPoint As SafeFindVolumeHandle,
+              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeName As StringBuilder,
+              cchBufferLength As Integer) As Boolean
+
+            Friend Declare Auto Function DeleteVolumeMountPoint Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeMountPoint As String) As Boolean
+
+            Friend Declare Auto Function SetVolumeMountPoint Lib "kernel32.dll" (
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeMountPoint As String,
+              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String) As Boolean
+
+
+            Friend Declare Auto Function OpenSCManager Lib "advapi32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpMachineName As String,
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpDatabaseName As String,
               dwDesiredAccess As Integer) As SafeServiceHandle
 
-            Public Declare Auto Function CreateService Lib "advapi32.dll" (
+            Friend Declare Auto Function CreateService Lib "advapi32.dll" (
               hSCManager As SafeServiceHandle,
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpServiceName As String,
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpDisplayName As String,
@@ -766,69 +246,73 @@ Namespace IO
               <MarshalAs(UnmanagedType.LPTStr), [In]> lp As String,
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpPassword As String) As SafeServiceHandle
 
-            Public Declare Auto Function OpenService Lib "advapi32.dll" (
+            Friend Declare Auto Function OpenService Lib "advapi32.dll" (
               hSCManager As SafeServiceHandle,
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpServiceName As String,
               dwDesiredAccess As Integer) As SafeServiceHandle
 
-            Public Declare Auto Function ControlService Lib "advapi32.dll" (
+            Friend Declare Auto Function ControlService Lib "advapi32.dll" (
               hSCManager As SafeServiceHandle,
               dwControl As Integer,
               ByRef lpServiceStatus As SERVICE_STATUS) As Boolean
 
-            Public Declare Auto Function DeleteService Lib "advapi32.dll" (
+            Friend Declare Auto Function DeleteService Lib "advapi32.dll" (
               hSCObject As SafeServiceHandle) As Boolean
 
-            Public Declare Auto Function StartService Lib "advapi32.dll" (
+            Friend Declare Auto Function StartService Lib "advapi32.dll" (
               hService As SafeServiceHandle,
               dwNumServiceArgs As Integer,
               lpServiceArgVectors As IntPtr) As Boolean
 
-            Public Declare Auto Function GetModuleHandle Lib "kernel32.dll" (
+            Friend Declare Auto Function GetModuleHandle Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> ModuleName As String) As IntPtr
 
-            Public Declare Auto Function LoadLibrary Lib "kernel32.dll" (
+            Friend Declare Auto Function LoadLibrary Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String) As IntPtr
 
-            Public Declare Auto Function FreeLibrary Lib "kernel32.dll" (
+            Friend Declare Auto Function FreeLibrary Lib "kernel32.dll" (
               hModule As IntPtr) As Boolean
 
-            Public Declare Auto Function AllocConsole Lib "kernel32.dll" (
-              ) As Boolean
+            Friend Declare Function GetFileType Lib "kernel32.dll" (handle As IntPtr) As Win32FileType
 
-            Public Declare Auto Function FreeConsole Lib "kernel32.dll" (
-              ) As Boolean
+            Friend Declare Function GetFileType Lib "kernel32.dll" (handle As SafeFileHandle) As Win32FileType
 
-            Public Declare Auto Function DefineDosDevice Lib "kernel32.dll" (
+            Friend Declare Function GetStdHandle Lib "kernel32.dll" (nStdHandle As StdHandle) As IntPtr
+
+            Friend Declare Function GetConsoleScreenBufferInfo Lib "kernel32.dll" (hConsoleOutput As IntPtr, <Out()> ByRef lpConsoleScreenBufferInfo As CONSOLE_SCREEN_BUFFER_INFO) As Boolean
+
+            Friend Declare Function GetConsoleScreenBufferInfo Lib "kernel32.dll" (hConsoleOutput As SafeFileHandle, <Out()> ByRef lpConsoleScreenBufferInfo As CONSOLE_SCREEN_BUFFER_INFO) As Boolean
+
+            Friend Declare Auto Function DefineDosDevice Lib "kernel32.dll" (
               dwFlags As DEFINE_DOS_DEVICE_FLAGS,
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpDeviceName As String,
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpTargetPath As String) As Boolean
 
-            Public Declare Auto Function QueryDosDevice Lib "kernel32.dll" (
+            Friend Declare Auto Function QueryDosDevice Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpDeviceName As String,
               <Out, MarshalAs(UnmanagedType.LPArray)> lpTargetPath As Char(),
               ucchMax As UInt32) As UInt32
 
-            Public Declare Auto Function GetVolumePathNamesForVolumeName Lib "kernel32.dll" (
+            Friend Declare Auto Function GetVolumePathNamesForVolumeName Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
               <Out, MarshalAs(UnmanagedType.LPArray)> lpszVolumePathNames As Char(),
               cchBufferLength As UInt32,
               <Out> ByRef lpcchReturnLength As UInt32) As UInt32
 
-            Public Declare Auto Function GetVolumeNameForVolumeMountPoint Lib "kernel32.dll" (
+            Friend Declare Auto Function GetVolumeNameForVolumeMountPoint Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
               <MarshalAs(UnmanagedType.LPTStr), [In](), Out> DestinationInfFileName As StringBuilder,
               DestinationInfFileNameSize As Int32) As UInt32
 
-            Public Declare Auto Function GetCommTimeouts Lib "kernel32" (
+            Friend Declare Auto Function GetCommTimeouts Lib "kernel32" (
               hFile As SafeFileHandle,
               <Out> ByRef lpCommTimeouts As COMMTIMEOUTS) As Boolean
 
-            Public Declare Auto Function SetCommTimeouts Lib "kernel32" (
+            Friend Declare Auto Function SetCommTimeouts Lib "kernel32" (
               hFile As SafeFileHandle,
               <[In]()> ByRef lpCommTimeouts As COMMTIMEOUTS) As Boolean
 
-            Public Declare Auto Function CreateFile Lib "kernel32" (
+            Friend Declare Auto Function CreateFile Lib "kernel32" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
               dwDesiredAccess As UInt32,
               dwShareMode As UInt32,
@@ -837,7 +321,7 @@ Namespace IO
               dwFlagsAndAttributes As UInt32,
               hTemplateFile As IntPtr) As SafeFileHandle
 
-            Public Declare Auto Function CreateFile Lib "kernel32" (
+            Friend Declare Auto Function CreateFile Lib "kernel32" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
               dwDesiredAccess As UInt32,
               dwShareMode As UInt32,
@@ -846,14 +330,14 @@ Namespace IO
               dwFlagsAndAttributes As Int32,
               hTemplateFile As IntPtr) As SafeFileHandle
 
-            Public Declare Function FlushFileBuffers Lib "kernel32" (
+            Friend Declare Function FlushFileBuffers Lib "kernel32" (
               handle As SafeFileHandle) As Boolean
 
-            Public Declare Function GetFileSize Lib "kernel32" Alias "GetFileSizeEx" (
+            Friend Declare Function GetFileSize Lib "kernel32" Alias "GetFileSizeEx" (
               hFile As SafeFileHandle,
               <Out> ByRef liFileSize As Int64) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" Alias "DeviceIoControl" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" Alias "DeviceIoControl" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               <[In], MarshalAs(UnmanagedType.I1)> ByRef lpInBuffer As Boolean,
@@ -863,7 +347,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
@@ -873,7 +357,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               <MarshalAs(UnmanagedType.LPArray), [In]()> lpInBuffer As Byte(),
@@ -883,7 +367,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               <MarshalAs(UnmanagedType.LPArray), [In]()> lpInBuffer As Byte(),
@@ -893,7 +377,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
@@ -903,7 +387,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
@@ -913,7 +397,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As SafeBuffer,
@@ -923,7 +407,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As SafeBuffer,
@@ -933,7 +417,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
@@ -943,104 +427,104 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
-              <[In]()> ByRef lpInBuffer As Win32API.DISK_GROW_PARTITION,
+              <[In]()> ByRef lpInBuffer As DISK_GROW_PARTITION,
               nInBufferSize As UInt32,
               lpOutBuffer As IntPtr,
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
               nInBufferSize As UInt32,
-              <Out> ByRef lpOutBuffer As Win32API.DISK_GEOMETRY,
+              <Out> ByRef lpOutBuffer As DISK_GEOMETRY,
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
               nInBufferSize As UInt32,
-              <Out> ByRef lpOutBuffer As Win32API.PARTITION_INFORMATION,
+              <Out> ByRef lpOutBuffer As PARTITION_INFORMATION,
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
               nInBufferSize As UInt32,
-              <Out> ByRef lpOutBuffer As Win32API.PARTITION_INFORMATION_EX,
+              <Out> ByRef lpOutBuffer As PARTITION_INFORMATION_EX,
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
               nInBufferSize As UInt32,
-              <Out> ByRef lpOutBuffer As Win32API.SCSI_ADDRESS,
+              <Out> ByRef lpOutBuffer As SCSI_ADDRESS,
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Function DeviceIoControl Lib "kernel32" (
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
               nInBufferSize As UInt32,
-              <Out> ByRef lpOutBuffer As Win32API.STORAGE_DEVICE_NUMBER,
+              <Out> ByRef lpOutBuffer As STORAGE_DEVICE_NUMBER,
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
 
-            Public Declare Auto Function GetModuleFileName Lib "kernel32" (
+            Friend Declare Auto Function GetModuleFileName Lib "kernel32" (
               hModule As IntPtr,
               <Out, MarshalAs(UnmanagedType.LPTStr)> lpFilename As String,
               nSize As Int32) As Int32
 
-            Public Declare Ansi Function GetProcAddress Lib "kernel32" (
+            Friend Declare Ansi Function GetProcAddress Lib "kernel32" (
               hModule As IntPtr,
               <[In](), MarshalAs(UnmanagedType.LPStr)> lpEntryName As String) As IntPtr
 
-            Public Declare Ansi Function GetProcAddress Lib "kernel32" (
+            Friend Declare Ansi Function GetProcAddress Lib "kernel32" (
               hModule As IntPtr,
               ordinal As IntPtr) As IntPtr
 
-            Public Declare Unicode Function RtlDosPathNameToNtPathName_U Lib "ntdll.dll" (
+            Friend Declare Unicode Function RtlDosPathNameToNtPathName_U Lib "ntdll.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]()> DosName As String,
               ByRef NtName As UNICODE_STRING,
               DosFilePath As IntPtr,
               NtFilePath As IntPtr) As Boolean
 
-            Public Declare Sub RtlFreeUnicodeString Lib "ntdll.dll" (
+            Friend Declare Sub RtlFreeUnicodeString Lib "ntdll.dll" (
               ByRef UnicodeString As UNICODE_STRING)
 
-            Public Declare Function RtlNtStatusToDosError Lib "ntdll.dll" (
+            Friend Declare Function RtlNtStatusToDosError Lib "ntdll.dll" (
               NtStatus As Int32) As Int32
 
-            Public Declare Auto Function WritePrivateProfileString Lib "kernel32" (
+            Friend Declare Auto Function WritePrivateProfileString Lib "kernel32" (
               <[In](), MarshalAs(UnmanagedType.LPTStr)> SectionName As String,
               <[In](), MarshalAs(UnmanagedType.LPTStr)> SettingName As String,
               <[In](), MarshalAs(UnmanagedType.LPTStr)> Value As String,
               <[In](), MarshalAs(UnmanagedType.LPTStr)> FileName As String) As Boolean
 
-            Public Declare Auto Sub InstallHinfSection Lib "setupapi.dll" (
+            Friend Declare Auto Sub InstallHinfSection Lib "setupapi.dll" (
               hwndOwner As IntPtr,
               hModule As IntPtr,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> lpCmdLine As String,
               nCmdShow As Int32)
 
-            Public Declare Auto Function SetupCopyOEMInf Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupCopyOEMInf Lib "setupapi.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]()> SourceInfFileName As String,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> OEMSourceMediaLocation As String,
               OEMSourceMediaType As UInt32,
@@ -1054,28 +538,28 @@ Namespace IO
             Public Const DRIVER_PACKAGE_FORCE = &H4UI
             Public Const DRIVER_PACKAGE_SILENT = &H2UI
 
-            Public Declare Auto Function DriverPackagePreinstall Lib "difxapi.dll" (
+            Friend Declare Auto Function DriverPackagePreinstall Lib "difxapi.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]()> SourceInfFileName As String,
               Options As UInt32) As Integer
 
-            Public Declare Auto Function DriverPackageInstall Lib "difxapi.dll" (
+            Friend Declare Auto Function DriverPackageInstall Lib "difxapi.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]()> SourceInfFileName As String,
               Options As UInt32,
               pInstallerInfo As IntPtr,
               ByRef pNeedReboot As Boolean) As Integer
 
-            Public Declare Auto Function DriverPackageUninstall Lib "difxapi.dll" (
+            Friend Declare Auto Function DriverPackageUninstall Lib "difxapi.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]()> SourceInfFileName As String,
               Options As UInt32,
               pInstallerInfo As IntPtr,
               ByRef pNeedReboot As Boolean) As Integer
 
-            Public Declare Auto Function CM_Locate_DevNode Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Locate_DevNode Lib "setupapi.dll" (
               ByRef devInst As UInt32,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> rootid As String,
               Flags As UInt32) As UInt32
 
-            Public Declare Auto Function CM_Get_DevNode_Registry_Property Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Get_DevNode_Registry_Property Lib "setupapi.dll" (
               DevInst As UInt32,
               Prop As CmDevNodeRegistryProperty,
               <Out> ByRef RegDataType As RegistryValueKind,
@@ -1083,14 +567,14 @@ Namespace IO
               <[In], Out> ByRef BufferLength As Int32,
               Flags As UInt32) As UInt32
 
-            Public Declare Auto Function CM_Set_DevNode_Registry_Property Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Set_DevNode_Registry_Property Lib "setupapi.dll" (
               DevInst As UInt32,
               Prop As CmDevNodeRegistryProperty,
               <[In], MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=3)> Buffer As Byte(),
               length As Int32,
               Flags As UInt32) As UInt32
 
-            Public Declare Auto Function CM_Get_Class_Registry_Property Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Get_Class_Registry_Property Lib "setupapi.dll" (
               <[In]> ByRef ClassGuid As Guid,
               Prop As CmClassRegistryProperty,
               <Out> ByRef RegDataType As RegistryValueKind,
@@ -1099,7 +583,7 @@ Namespace IO
               Flags As UInt32,
               Optional hMachine As IntPtr = Nothing) As UInt32
 
-            Public Declare Auto Function CM_Set_Class_Registry_Property Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Set_Class_Registry_Property Lib "setupapi.dll" (
               <[In]> ByRef ClassGuid As Guid,
               Prop As CmClassRegistryProperty,
               <[In], MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=3)> Buffer As Byte(),
@@ -1107,116 +591,37 @@ Namespace IO
               Flags As UInt32,
               Optional hMachine As IntPtr = Nothing) As UInt32
 
-            Public Declare Auto Function CM_Get_Child Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Get_Child Lib "setupapi.dll" (
               <Out> ByRef dnDevInst As UInt32,
               DevInst As UInt32,
               Flags As UInt32) As UInt32
 
-            Public Declare Auto Function CM_Get_Sibling Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Get_Sibling Lib "setupapi.dll" (
               <Out> ByRef dnDevInst As UInt32,
               DevInst As UInt32,
               Flags As UInt32) As UInt32
 
-            Public Declare Function CM_Reenumerate_DevNode Lib "setupapi.dll" (
+            Friend Declare Function CM_Reenumerate_DevNode Lib "setupapi.dll" (
               devInst As UInt32,
               Flags As UInt32) As UInt32
 
             Public Const CM_GETIDLIST_FILTER_SERVICE As UInt32 = &H2UI
 
-            Public Declare Auto Function CM_Get_Device_ID_List_Size Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Get_Device_ID_List_Size Lib "setupapi.dll" (
               ByRef Length As UInt32,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> filter As String,
               Flags As UInt32) As UInt32
 
-            Public Declare Auto Function CM_Get_Device_ID_List Lib "setupapi.dll" (
+            Friend Declare Auto Function CM_Get_Device_ID_List Lib "setupapi.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]()> filter As String,
               <Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=2)> Buffer As Char(),
               BufferLength As UInt32,
               Flags As UInt32) As UInt32
 
-            Public Declare Auto Function SetupSetNonInteractiveMode Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupSetNonInteractiveMode Lib "setupapi.dll" (
               state As Boolean) As Boolean
 
-            ''' <summary>
-            ''' Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
-            ''' </summary>
-            Public NotInheritable Class SafeInfHandle
-                Inherits SafeHandleMinusOneIsInvalid
-
-                Private Declare Auto Sub SetupCloseInfFile Lib "setupapi.dll" (
-                  hInf As IntPtr)
-
-                ''' <summary>
-                ''' Initiates a new instance with an existing open handle.
-                ''' </summary>
-                ''' <param name="open_handle">Existing open handle.</param>
-                ''' <param name="owns_handle">Indicates whether handle should be closed when this
-                ''' instance is released.</param>
-                Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
-                    MyBase.New(owns_handle)
-
-                    SetHandle(open_handle)
-                End Sub
-
-                ''' <summary>
-                ''' Creates a new empty instance. This constructor is used by native to managed
-                ''' handle marshaller.
-                ''' </summary>
-                Protected Sub New()
-                    MyBase.New(ownsHandle:=True)
-
-                End Sub
-
-                ''' <summary>
-                ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
-                ''' </summary>
-                ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
-                Protected Overrides Function ReleaseHandle() As Boolean
-                    SetupCloseInfFile(handle)
-                    Return True
-                End Function
-            End Class
-
-            ''' <summary>
-            ''' Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
-            ''' </summary>
-            Public NotInheritable Class SafeDeviceInfoSetHandle
-                Inherits SafeHandleMinusOneIsInvalid
-
-                Private Declare Auto Function SetupDiDestroyDeviceInfoList Lib "setupapi.dll" (
-                  handle As IntPtr) As Boolean
-
-                ''' <summary>
-                ''' Initiates a new instance with an existing open handle.
-                ''' </summary>
-                ''' <param name="open_handle">Existing open handle.</param>
-                ''' <param name="owns_handle">Indicates whether handle should be closed when this
-                ''' instance is released.</param>
-                Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
-                    MyBase.New(owns_handle)
-
-                    SetHandle(open_handle)
-                End Sub
-
-                ''' <summary>
-                ''' Creates a new empty instance. This constructor is used by native to managed
-                ''' handle marshaller.
-                ''' </summary>
-                Protected Sub New()
-                    MyBase.New(ownsHandle:=True)
-
-                End Sub
-
-                ''' <summary>
-                ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
-                ''' </summary>
-                ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
-                Protected Overrides Function ReleaseHandle() As Boolean
-                    Return SetupDiDestroyDeviceInfoList(handle)
-                End Function
-            End Class
-
-            Public Declare Auto Function SetupOpenInfFile Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupOpenInfFile Lib "setupapi.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]()> FileName As String,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> InfClass As String,
               InfStyle As UInt32,
@@ -1227,7 +632,7 @@ Namespace IO
                                                        Param1 As UIntPtr,
                                                        Param2 As UIntPtr) As UInt32
 
-            Public Declare Auto Function SetupInstallFromInfSection Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupInstallFromInfSection Lib "setupapi.dll" (
               hWnd As IntPtr,
               InfHandle As SafeInfHandle,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> SectionName As String,
@@ -1240,7 +645,7 @@ Namespace IO
               DeviceInfoSet As IntPtr,
               DeviceInfoData As IntPtr) As Boolean
 
-            Public Declare Auto Function SetupInstallFromInfSection Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupInstallFromInfSection Lib "setupapi.dll" (
               hWnd As IntPtr,
               InfHandle As SafeInfHandle,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> SectionName As String,
@@ -1259,34 +664,34 @@ Namespace IO
             Public Const DIGCF_PROFILE As UInt32 = &H8
             Public Const DIGCF_DEVICEINTERFACE As UInt32 = &H10
 
-            Public Declare Auto Function SetupDiGetINFClass Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiGetINFClass Lib "setupapi.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]()> InfPath As String,
               <Out> ByRef ClassGuid As Guid,
               <Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=3)> ClassName As Char(),
               ClassNameSize As UInt32,
               <Out> ByRef RequiredSize As UInt32) As Boolean
 
-            Public Declare Auto Function SetupDiOpenDeviceInfo Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiOpenDeviceInfo Lib "setupapi.dll" (
               DevInfoSet As SafeDeviceInfoSetHandle,
               <[In](), MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
               hWndParent As IntPtr,
               Flags As UInt32,
               DeviceInfoData As IntPtr) As Boolean
 
-            Public Declare Auto Function SetupDiOpenDeviceInfo Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiOpenDeviceInfo Lib "setupapi.dll" (
               DevInfoSet As SafeDeviceInfoSetHandle,
               Enumerator As Byte(),
               hWndParent As IntPtr,
               Flags As UInt32,
               DeviceInfoData As IntPtr) As Boolean
 
-            Public Declare Auto Function SetupDiGetClassDevs Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiGetClassDevs Lib "setupapi.dll" (
               <[In]()> ByRef ClassGuid As Guid,
               <[In](), MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
               hWndParent As IntPtr,
               Flags As UInt32) As SafeDeviceInfoSetHandle
 
-            Public Declare Auto Function SetupDiGetClassDevs Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiGetClassDevs Lib "setupapi.dll" (
               ClassGuid As IntPtr,
               <[In](), MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
               hWndParent As IntPtr,
@@ -1294,24 +699,32 @@ Namespace IO
 
             <StructLayout(LayoutKind.Sequential)>
             Public Structure SP_DEVICE_INTERFACE_DATA
-                Public cbSize As UInt32
-                Public InterfaceClassGuid As Guid
-                Public Flags As UInt32
-                Public Reserved As UIntPtr
+                Public ReadOnly Property cbSize As UInt32
+                Public ReadOnly Property InterfaceClassGuid As Guid
+                Public ReadOnly Property Flags As UInt32
+                Public ReadOnly Property Reserved As IntPtr
 
                 Public Sub Initialize()
-                    cbSize = CUInt(Marshal.SizeOf(Me))
+                    _cbSize = CUInt(Marshal.SizeOf(Me))
                 End Sub
             End Structure
 
             <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
             Public Structure SP_DEVICE_INTERFACE_DETAIL_DATA
-                Public cbSize As UInt32
+
+                Public ReadOnly Property cbSize As UInt32
+
+                Public ReadOnly Property DevicePath As String
+                    Get
+                        Return _devicePath
+                    End Get
+                End Property
+
                 <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=32768)>
-                Public DevicePath As String
+                Private ReadOnly _devicePath As String
 
                 Public Sub Initialize()
-                    cbSize = CUInt(Marshal.SizeOf(Me))
+                    _cbSize = CUInt(Marshal.SizeOf(Me))
                 End Sub
             End Structure
 
@@ -1320,64 +733,73 @@ Namespace IO
 
                 Public Const SP_MAX_MACHINENAME_LENGTH = 263
 
-                Public cbSize As UInt32
+                Public ReadOnly Property cbSize As UInt32
 
-                Public ClassGUID As Guid
+                Public ReadOnly Property ClassGUID As Guid
 
-                Public RemoteMachineHandle As IntPtr
+                Public ReadOnly Property RemoteMachineHandle As IntPtr
+
+                Public Property RemoteMachineName As String
+                    Get
+                        Return _remoteMachineName
+                    End Get
+                    Set(value As String)
+                        _remoteMachineName = value
+                    End Set
+                End Property
 
                 <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=SP_MAX_MACHINENAME_LENGTH)>
-                Public RemoteMachineName As String
+                Private _remoteMachineName As String
 
                 Public Sub Initialize()
-                    cbSize = CUInt(Marshal.SizeOf(Me))
+                    _cbSize = CUInt(Marshal.SizeOf(Me))
                 End Sub
             End Structure
 
-            Public Declare Auto Function SetupDiEnumDeviceInfo Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiEnumDeviceInfo Lib "setupapi.dll" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               MemberIndex As UInt32,
               <[Out]()> ByRef DeviceInterfaceData As SP_DEVINFO_DATA) As Boolean
 
-            Public Declare Auto Function SetupDiRestartDevices Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiRestartDevices Lib "setupapi.dll" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               <[In], [Out]> ByRef DeviceInterfaceData As SP_DEVINFO_DATA) As Boolean
 
-            Public Declare Auto Function SetupDiEnumDeviceInterfaces Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiEnumDeviceInterfaces Lib "setupapi.dll" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               DeviceInfoData As IntPtr,
               <[In]()> ByRef ClassGuid As Guid,
               MemberIndex As UInt32,
               <[Out]()> ByRef DeviceInterfaceData As SP_DEVICE_INTERFACE_DATA) As Boolean
 
-            Public Declare Auto Function SetupDiEnumDeviceInterfaces Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiEnumDeviceInterfaces Lib "setupapi.dll" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               DeviceInfoData As IntPtr,
               ClassGuid As IntPtr,
               MemberIndex As UInt32,
               <[Out]()> ByRef DeviceInterfaceData As SP_DEVICE_INTERFACE_DATA) As Boolean
 
-            Public Declare Auto Function SetupDiCreateDeviceInfoListEx Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiCreateDeviceInfoListEx Lib "setupapi.dll" (
               <[In]()> ByRef ClassGuid As Guid,
               hwndParent As IntPtr,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> MachineName As String,
               Reserved As IntPtr) As SafeDeviceInfoSetHandle
 
-            Public Declare Auto Function SetupDiCreateDeviceInfoListEx Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiCreateDeviceInfoListEx Lib "setupapi.dll" (
               ClassGuid As IntPtr,
               hwndParent As IntPtr,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> MachineName As String,
               Reserved As IntPtr) As SafeDeviceInfoSetHandle
 
-            Public Declare Auto Function SetupDiCreateDeviceInfoList Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiCreateDeviceInfoList Lib "setupapi.dll" (
               <[In]()> ByRef ClassGuid As Guid,
               hwndParent As IntPtr) As SafeDeviceInfoSetHandle
 
-            Public Declare Auto Function SetupDiCreateDeviceInfoList Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiCreateDeviceInfoList Lib "setupapi.dll" (
               ClassGuid As IntPtr,
               hwndParent As IntPtr) As SafeDeviceInfoSetHandle
 
-            Public Declare Auto Function SetupDiGetDeviceInterfaceDetail Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiGetDeviceInterfaceDetail Lib "setupapi.dll" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               <[In]()> ByRef DeviceInterfaceData As SP_DEVICE_INTERFACE_DATA,
               <[Out](), MarshalAs(UnmanagedType.LPStruct, SizeParamIndex:=3)> ByRef DeviceInterfaceDetailData As SP_DEVICE_INTERFACE_DETAIL_DATA,
@@ -1385,11 +807,11 @@ Namespace IO
               <Out> ByRef RequiredSize As UInt32,
               DeviceInfoData As IntPtr) As Boolean
 
-            Public Declare Auto Function SetupDiGetDeviceInfoListDetail Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiGetDeviceInfoListDetail Lib "setupapi.dll" (
               devinfo As SafeDeviceInfoSetHandle,
               <Out> ByRef DeviceInfoDetailData As SP_DEVINFO_LIST_DETAIL_DATA) As Boolean
 
-            Public Declare Auto Function SetupDiCreateDeviceInfo Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiCreateDeviceInfo Lib "setupapi.dll" (
               hDevInfo As SafeDeviceInfoSetHandle,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> DeviceName As String,
               <[In]()> ByRef ClassGuid As Guid,
@@ -1400,36 +822,34 @@ Namespace IO
 
             <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
             Public Structure SP_DEVINFO_DATA
-                Public cbSize As UInt32
-                Public ClassGuid As Guid
-                Public DevInst As UInt32
-                Public Reserved As UIntPtr
+                Public ReadOnly Property cbSize As UInt32
+                Public ReadOnly Property ClassGuid As Guid
+                Public ReadOnly Property DevInst As UInt32
+                Public ReadOnly Property Reserved As UIntPtr
 
                 Public Sub Initialize()
-                    cbSize = CUInt(Marshal.SizeOf(Me))
+                    _cbSize = CUInt(Marshal.SizeOf(Me))
                 End Sub
             End Structure
 
-            Public Declare Auto Function SetupDiSetDeviceRegistryProperty Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiSetDeviceRegistryProperty Lib "setupapi.dll" (
               hDevInfo As SafeDeviceInfoSetHandle,
               ByRef DeviceInfoData As SP_DEVINFO_DATA,
               [Property] As UInt32,
               <[In](), MarshalAs(UnmanagedType.LPArray)> PropertyBuffer As Byte(),
               PropertyBufferSize As UInt32) As Boolean
 
-            Public Declare Auto Function SetupDiCallClassInstaller Lib "setupapi.dll" (
+            Friend Declare Auto Function SetupDiCallClassInstaller Lib "setupapi.dll" (
               InstallFunction As UInt32,
               hDevInfo As SafeDeviceInfoSetHandle,
               <[In]()> ByRef DeviceInfoData As SP_DEVINFO_DATA) As Boolean
 
-            Public Declare Auto Function UpdateDriverForPlugAndPlayDevices Lib "newdev.dll" (
+            Friend Declare Auto Function UpdateDriverForPlugAndPlayDevices Lib "newdev.dll" (
               owner As IntPtr,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> HardwareId As String,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> InfPath As String,
               InstallFlags As UInt32,
               RebootRequired As IntPtr) As Boolean
-
-            Public Declare Auto Function GetConsoleWindow Lib "kernel32.dll" () As IntPtr
 
             Public Enum CmClassRegistryProperty As UInt32
                 CM_CRP_UPPERFILTERS = &H12
@@ -1453,75 +873,75 @@ Namespace IO
             End Enum
 
             <Flags>
-            Public Enum ShutdownReason As UInt32
+            Public Enum ShutdownReasons As UInt32
                 ReasonFlagPlanned = &H80000000UI
             End Enum
 
-            Public Declare Auto Function ExitWindowsEx Lib "kernel32.dll" (
+            Friend Declare Auto Function ExitWindowsEx Lib "kernel32.dll" (
               flags As ShutdownFlags,
-              reason As ShutdownReason) As Boolean
+              reason As ShutdownReasons) As Boolean
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <MarshalAs(UnmanagedType.LPArray), Out> buffer As Byte(),
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               buffer As IntPtr,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As SByte,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As Int16,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As Int32,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As Int64,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As Byte,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As UInt16,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As UInt32,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As UInt64,
               length As Int32) As Byte
 
-            Public Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
+            Friend Declare Auto Function RtlGenRandom Lib "advapi32" Alias "SystemFunction036" (
               <Out> ByRef buffer As Guid,
               length As Int32) As Byte
 
-            Public Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
+            Friend Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
               <[In], Out> ByRef os_version As OSVERSIONINFO) As Integer
 
-            Public Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
+            Friend Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
               <[In], Out> ByRef os_version As OSVERSIONINFOEX) As Integer
 
-            Public Declare Auto Function LookupPrivilegeValue Lib "advapi32.dll" (
+            Friend Declare Auto Function LookupPrivilegeValue Lib "advapi32.dll" (
               <[In], MarshalAs(UnmanagedType.LPTStr)> lpSystemName As String,
               <[In], MarshalAs(UnmanagedType.LPTStr)> lpName As String,
               <Out> ByRef lpLuid As Int64) As Boolean
 
-            Public Declare Auto Function OpenProcessToken Lib "advapi32.dll" (
+            Friend Declare Auto Function OpenProcessToken Lib "advapi32.dll" (
               <[In]> hProcess As IntPtr,
               <[In]> dwAccess As UInteger,
               <Out> ByRef lpTokenHandle As SafeFileHandle) As Boolean
 
-            Public Declare Auto Function AdjustTokenPrivileges Lib "advapi32.dll" (
+            Friend Declare Auto Function AdjustTokenPrivileges Lib "advapi32.dll" (
               <[In]> TokenHandle As SafeFileHandle,
               <[In]> DisableAllPrivileges As Boolean,
               <[In]> NewStates As SafeBuffer,
@@ -1529,15 +949,34 @@ Namespace IO
               <[In]> PreviousState As SafeBuffer,
               <Out> ByRef ReturnLength As Integer) As Boolean
 
-            <StructLayout(LayoutKind.Sequential, Pack:=1)>
-            Public Structure LUID_AND_ATTRIBUTES
-                Public Property LUID As Long
-                Public Property Attributes As Integer
+            Friend Declare Unicode Function NtQuerySystemInformation Lib "ntdll.dll" (
+              <[In]> SystemInformationClass As SystemInfoClass,
+              <[In]> pSystemInformation As SafeBuffer,
+              <[In]> uSystemInformationLength As Integer,
+              <Out> ByRef puReturnLength As Integer) As Integer
 
-                Public Overrides Function ToString() As String
-                    Return $"LUID = 0x{LUID.ToString("X")}, Attributes = 0x{Attributes.ToString("X")}"
-                End Function
-            End Structure
+            Friend Declare Unicode Function NtQueryObject Lib "ntdll.dll" (
+              <[In]> ObjectHandle As SafeFileHandle,
+              <[In]> ObjectInformationClass As ObjectInfoClass,
+              <[In]> ObjectInformation As SafeBuffer,
+              <[In]> ObjectInformationLength As Integer,
+              <Out> ByRef puReturnLength As Integer) As Integer
+
+            Friend Declare Unicode Function NtDuplicateObject Lib "ntdll.dll" (
+              <[In]> SourceProcessHandle As SafeHandle,
+              <[In]> SourceHandle As IntPtr,
+              <[In]> TargetProcessHandle As IntPtr,
+              <Out> ByRef TargetHandle As SafeFileHandle,
+              <[In]> DesiredAccess As UInteger,
+              <[In]> HandleAttributes As UInteger,
+              <[In]> Options As UInteger) As Integer
+
+            Friend Declare Unicode Function GetCurrentProcess Lib "kernel32.dll" () As IntPtr
+
+            Friend Declare Unicode Function OpenProcess Lib "kernel32.dll" (
+              <[In]> DesiredAccess As UInteger,
+              <[In]> InheritHandle As Boolean,
+              <[In]> ProcessId As Integer) As SafeFileHandle
 
             Public Const SE_BACKUP_NAME = "SeBackupPrivilege"
             Public Const SE_RESTORE_NAME = "SeRestorePrivilege"
@@ -1547,137 +986,6 @@ Namespace IO
             Public Const SE_TCB_NAME = "SeTcbPrivilege"
             Public Const SE_SHUTDOWN_NAME = "SeShutdownPrivilege"
 
-            Public Enum SystemInfoClass As UInteger
-                SystemBasicInformation  '' 0x002C 
-                SystemProcessorInformation  '' 0x000C 
-                SystemPerformanceInformation    '' 0x0138 
-                SystemTimeInformation   '' 0x0020 
-                SystemPathInformation   '' Not implemented 
-                SystemProcessInformation    '' 0x00C8+ per process 
-                SystemCallInformation   '' 0x0018 + (n * 0x0004) 
-                SystemConfigurationInformation  '' 0x0018 
-                SystemProcessorCounters '' 0x0030 per cpu 
-                SystemGlobalFlag        '' 0x0004 (fails If size != 4) 
-                SystemCallTimeInformation   '' Not implemented 
-                SystemModuleInformation '' 0x0004 + (n * 0x011C) 
-                SystemLockInformation   '' 0x0004 + (n * 0x0024) 
-                SystemStackTraceInformation '' Not implemented 
-                SystemPagedPoolInformation  '' checked build only 
-                SystemNonPagedPoolInformation   '' checked build only 
-                SystemHandleInformation '' 0x0004 + (n * 0x0010) 
-                SystemObjectTypeInformation '' 0x0038+ + (n * 0x0030+) 
-                SystemPageFileInformation   '' 0x0018+ per page file 
-                SystemVdmInstemulInformation    '' 0x0088 
-                SystemVdmBopInformation '' invalid info Class 
-                SystemCacheInformation  '' 0x0024 
-                SystemPoolTagInformation    '' 0x0004 + (n * 0x001C) 
-                SystemInterruptInformation  '' 0x0000 Or 0x0018 per cpu 
-                SystemDpcInformation    '' 0x0014 
-                SystemFullMemoryInformation '' checked build only 
-                SystemLoadDriver        '' 0x0018 Set mode only 
-                SystemUnloadDriver      '' 0x0004 Set mode only 
-                SystemTimeAdjustmentInformation '' 0x000C 0x0008 writeable 
-                SystemSummaryMemoryInformation  '' checked build only 
-                SystemNextEventIdInformation    '' checked build only 
-                SystemEventIdsInformation   '' checked build only 
-                SystemCrashDumpInformation  '' 0x0004 
-                SystemExceptionInformation  '' 0x0010 
-                SystemCrashDumpStateInformation '' 0x0004 
-                SystemDebuggerInformation   '' 0x0002 
-                SystemContextSwitchInformation  '' 0x0030 
-                SystemRegistryQuotaInformation  '' 0x000C 
-                SystemAddDriver     '' 0x0008 Set mode only 
-                SystemPrioritySeparationInformation '' 0x0004 Set mode only 
-                SystemPlugPlayBusInformation    '' Not implemented 
-                SystemDockInformation   '' Not implemented 
-                SystemPowerInfo     '' 0x0060 (XP only!) 
-                SystemProcessorSpeedInformation '' 0x000C (XP only!) 
-                SystemTimeZoneInformation   '' 0x00AC 
-                SystemLookasideInformation  '' n * 0x0020 
-                SystemSetTimeSlipEvent
-                SystemCreateSession '' Set mode only 
-                SystemDeleteSession '' Set mode only 
-                SystemInvalidInfoClass1 '' invalid info Class 
-                SystemRangeStartInformation '' 0x0004 (fails If size != 4) 
-                SystemVerifierInformation
-                SystemAddVerifier
-                SystemSessionProcessesInformation   '' checked build only 
-                MaxSystemInfoClass
-            End Enum
-
-            Public Enum ObjectInfoClass As UInteger
-                ObjectBasicInformation  '' 0 Y N 
-                ObjectNameInformation   '' 1 Y N 
-                ObjectTypeInformation   '' 2 Y N 
-                ObjectAllTypesInformation   '' 3 Y N 
-                ObjectHandleInformation '' 4 Y Y 
-            End Enum
-
-            Public Enum ObType As Byte
-                OB_TYPE_TYPE = 1
-                OB_TYPE_DIRECTORY = 2
-                OB_TYPE_SYMBOLIC_LINK = 3
-                OB_TYPE_TOKEN = 4
-                OB_TYPE_PROCESS = 5
-                OB_TYPE_THREAD = 6
-                OB_TYPE_EVENT = 7
-                OB_TYPE_EVENT_PAIR = 8
-                OB_TYPE_MUTANT = 9
-                OB_TYPE_SEMAPHORE = 10
-                OB_TYPE_TIMER = 11
-                OB_TYPE_PROFILE = 12
-                OB_TYPE_WINDOW_STATION = 13
-                OB_TYPE_DESKTOP = 14
-                OB_TYPE_SECTION = 15
-                OB_TYPE_KEY = 16
-                OB_TYPE_PORT = 17
-                OB_TYPE_ADAPTER = 18
-                OB_TYPE_CONTROLLER = 19
-                OB_TYPE_DEVICE = 20
-                OB_TYPE_DRIVER = 21
-                OB_TYPE_IO_COMPLETION = 22
-                OB_TYPE_FILE = 23
-            End Enum
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure SystemHandleTableEntryInformation
-                Public ReadOnly Property ProcessId As Integer
-                Public ReadOnly Property ObjectType As ObType     '' OB_TYPE_* (OB_TYPE_TYPE, etc.) 
-                Public ReadOnly Property Flags As Byte      '' HANDLE_FLAG_* (HANDLE_FLAG_INHERIT, etc.) 
-                Public ReadOnly Property Handle As UShort
-                Public ReadOnly Property [Object] As IntPtr
-                Public ReadOnly Property GrantedAccess As UInteger
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential)>
-            Public Structure ObjectTypeInformation
-                Public ReadOnly Property Name As UNICODE_STRING
-                Public ReadOnly Property ObjectCount As UInteger
-                Public ReadOnly Property HandleCount As UInteger
-                Private ReadOnly Reserved11 As UInteger
-                Private ReadOnly Reserved12 As UInteger
-                Private ReadOnly Reserved13 As UInteger
-                Private ReadOnly Reserved14 As UInteger
-                Public ReadOnly Property PeakObjectCount As UInteger
-                Public ReadOnly Property PeakHandleCount As UInteger
-                Private ReadOnly Reserved21 As UInteger
-                Private ReadOnly Reserved22 As UInteger
-                Private ReadOnly Reserved23 As UInteger
-                Private ReadOnly Reserved24 As UInteger
-                Public ReadOnly Property InvalidAttributes As UInteger
-                Public ReadOnly Property GenericRead As UInteger
-                Public ReadOnly Property GenericWrite As UInteger
-                Public ReadOnly Property GenericExecute As UInteger
-                Public ReadOnly Property GenericAll As UInteger
-                Public ReadOnly Property ValidAccess As UInteger
-                Private ReadOnly Unknown As Byte
-                <MarshalAs(UnmanagedType.I1)> Private ReadOnly MaintainHandleDatabase As Boolean
-                Private ReadOnly Reserved3 As UShort
-                Public ReadOnly Property PoolType As Integer
-                Public ReadOnly Property PagedPoolUsage As UInteger
-                Public ReadOnly Property NonPagedPoolUsage As UInteger
-            End Structure
-
             Public Const PROCESS_DUP_HANDLE As UInteger = &H40
             Public Const PROCESS_QUERY_LIMITED_INFORMATION As UInteger = &H1000
 
@@ -1686,87 +994,12 @@ Namespace IO
 
             Public Const SE_PRIVILEGE_ENABLED As Integer = &H2
 
-            Public Declare Unicode Function NtQuerySystemInformation Lib "ntdll.dll" (
-              <[In]> SystemInformationClass As SystemInfoClass,
-              <[In]> pSystemInformation As SafeBuffer,
-              <[In]> uSystemInformationLength As Integer,
-              <Out> ByRef puReturnLength As Integer) As Integer
-
-            Public Declare Unicode Function NtQueryObject Lib "ntdll.dll" (
-              <[In]> ObjectHandle As SafeFileHandle,
-              <[In]> ObjectInformationClass As ObjectInfoClass,
-              <[In]> ObjectInformation As SafeBuffer,
-              <[In]> ObjectInformationLength As Integer,
-              <Out> ByRef puReturnLength As Integer) As Integer
-
-            Public Declare Unicode Function NtDuplicateObject Lib "ntdll.dll" (
-              <[In]> SourceProcessHandle As SafeHandle,
-              <[In]> SourceHandle As IntPtr,
-              <[In]> TargetProcessHandle As IntPtr,
-              <Out> ByRef TargetHandle As SafeFileHandle,
-              <[In]> DesiredAccess As UInteger,
-              <[In]> HandleAttributes As UInteger,
-              <[In]> Options As UInteger) As Integer
-
-            Public Declare Unicode Function GetCurrentProcess Lib "kernel32.dll" () As IntPtr
-
-            Public Declare Unicode Function OpenProcess Lib "kernel32.dll" (
-              <[In]> DesiredAccess As UInteger,
-              <[In]> InheritHandle As Boolean,
-              <[In]> ProcessId As Integer) As SafeFileHandle
-
             Public Const STATUS_INFO_LENGTH_MISMATCH As Integer = &HC0000004
             Public Const STATUS_OBJECT_NAME_NOT_FOUND As Integer = &HC0000034
 
-            Public Class HGlobalBuffer
-                Inherits SafeBuffer
+            Friend Declare Auto Function CreateHardLink Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPTStr), [In]> newlink As String, <MarshalAs(UnmanagedType.LPTStr), [In]> existing As String, security As IntPtr) As Boolean
 
-                Public Sub New(numBytes As IntPtr)
-                    MyBase.New(ownsHandle:=True)
-                    Dim ptr = Marshal.AllocHGlobal(numBytes)
-                    MyBase.SetHandle(ptr)
-                    MyBase.Initialize(CULng(numBytes))
-                End Sub
-
-                Public Sub New(numBytes As Integer)
-                    MyBase.New(ownsHandle:=True)
-                    Dim ptr = Marshal.AllocHGlobal(numBytes)
-                    MyBase.SetHandle(ptr)
-                    MyBase.Initialize(CULng(numBytes))
-                End Sub
-
-                Public Sub New(ptr As IntPtr, numBytes As ULong, ownsHandle As Boolean)
-                    MyBase.New(ownsHandle)
-                    MyBase.SetHandle(ptr)
-                    MyBase.Initialize(numBytes)
-                End Sub
-
-                Public Sub Resize(newSize As Integer)
-                    handle = Marshal.AllocHGlobal(newSize)
-                    MyBase.Initialize(CULng(newSize))
-                End Sub
-
-                Public Sub Resize(newSize As IntPtr)
-                    handle = Marshal.AllocHGlobal(newSize)
-                    MyBase.Initialize(CULng(newSize))
-                End Sub
-
-                Protected Overrides Function ReleaseHandle() As Boolean
-                    Try
-                        Marshal.FreeHGlobal(handle)
-                        Return True
-
-                    Catch
-                        Return False
-
-                    End Try
-                End Function
-
-            End Class
-
-            Public Declare Auto Function CreateHardLink Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPTStr), [In]> newlink As String, <MarshalAs(UnmanagedType.LPTStr), [In]> existing As String, security As IntPtr) As Boolean
-
-            Public Declare Auto Function MoveFile Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPTStr), [In]> existing As String, <MarshalAs(UnmanagedType.LPTStr), [In]> newname As String) As Boolean
+            Friend Declare Auto Function MoveFile Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPTStr), [In]> existing As String, <MarshalAs(UnmanagedType.LPTStr), [In]> newname As String) As Boolean
 
         End Class
 #End Region
@@ -1776,7 +1009,7 @@ Namespace IO
         ''' <summary>
         ''' Control methods for direct communication with SCSI miniport.
         ''' </summary>
-        Public Class PhDiskMntCtl
+        Public NotInheritable Class PhDiskMntCtl
 
             Public Const SMP_IMSCSI = &H83730000UI
             Public Const SMP_IMSCSI_QUERY_VERSION = SMP_IMSCSI Or &H800UI
@@ -1800,14 +1033,22 @@ Namespace IO
             <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Ansi)>
             <ComVisible(False)>
             Public Structure SRB_IO_CONTROL
-                Public HeaderLength As UInt32
+                Public Property HeaderLength As UInt32
                 <MarshalAs(UnmanagedType.ByValArray, SizeConst:=8)>
-                Public Signature As Byte()
-                Public Timeout As UInt32
-                Public ControlCode As UInt32
-                Public ReturnCode As UInt32
-                Public Length As UInt32
+                Private _signature As Byte()
+                Public Property Timeout As UInt32
+                Public Property ControlCode As UInt32
+                Public Property ReturnCode As UInt32
+                Public Property Length As UInt32
 
+                Friend Property Signature As Byte()
+                    Get
+                        Return _signature
+                    End Get
+                    Set
+                        _signature = Value
+                    End Set
+                End Property
             End Structure
 
             ''' <summary>
@@ -1816,7 +1057,7 @@ Namespace IO
             ''' <param name="adapter">Open handle to SCSI adapter.</param>
             ''' <param name="ctrlcode">Control code to set in SRB_IO_CONTROL header.</param>
             ''' <param name="timeout">Timeout to set in SRB_IO_CONTROL header.</param>
-            ''' <param name="filldata">Optional function to fill request data after SRB_IO_CONTROL header. The Length field in
+            ''' <param name="databytes">Optional request data after SRB_IO_CONTROL header. The Length field in
             ''' SRB_IO_CONTROL header will be automatically adjusted to reflect the amount of data passed by this function.</param>
             ''' <param name="returncode">ReturnCode value from SRB_IO_CONTROL header upon return.</param>
             ''' <returns>This method returns a BinaryReader object that can be used to read and parse data returned after the
@@ -1824,40 +1065,41 @@ Namespace IO
             Public Shared Function SendSrbIoControl(adapter As SafeFileHandle,
                                                     ctrlcode As UInt32,
                                                     timeout As UInt32,
-                                                    filldata As Action(Of BinaryWriter),
-                                                    ByRef returncode As Int32) As BinaryReader
+                                                    databytes As Byte(),
+                                                    ByRef returncode As Int32) As Byte()
 
-                Dim indata =
-                  Sub(Request As BinaryWriter)
-                      Request.Write(Marshal.SizeOf(GetType(SRB_IO_CONTROL)))
-                      Request.Write(SrbIoCtlSignature)
-                      Request.Write(timeout)
-                      Request.Write(ctrlcode)
-                      Request.Write(0UI)
-                      If filldata Is Nothing Then
-                          Request.Write(0UI)
-                      Else
-                          Dim data As New BinaryWriter(New MemoryStream, Encoding.Unicode)
-                          filldata(data)
-                          Dim databytes = DirectCast(data.BaseStream, MemoryStream).ToArray()
-                          Request.Write(databytes.Length)
-                          Request.Write(databytes)
-                      End If
-                  End Sub
+                Dim indata(0 To 28 - 1 + If(databytes?.Length, 0)) As Byte
+
+                Using Request = PinnedBuffer.Create(indata)
+
+                    Request.Write(0, Marshal.SizeOf(GetType(SRB_IO_CONTROL)))
+                    Request.WriteArray(4, SrbIoCtlSignature, 0, 8)
+                    Request.Write(12, timeout)
+                    Request.Write(16, ctrlcode)
+
+                    If databytes Is Nothing Then
+                        Request.Write(24, 0UI)
+                    Else
+                        Request.Write(24, databytes.Length)
+                        Buffer.BlockCopy(databytes, 0, indata, 28, databytes.Length)
+                    End If
+
+                End Using
 
                 Dim Response = DeviceIoControl(adapter,
-                                               Win32API.IOCTL_SCSI_MINIPORT,
+                                               NativeConstants.IOCTL_SCSI_MINIPORT,
                                                indata,
                                                0)
 
-                Response.ReadUInt32()
-                Response.ReadBytes(8)
-                Response.ReadUInt32()
-                Response.ReadUInt32()
-                returncode = Response.ReadInt32()
-                Dim ResponseLength = Response.ReadInt32()
+                returncode = BitConverter.ToInt32(Response, 20)
 
-                Return New BinaryReader(New MemoryStream(Response.ReadBytes(ResponseLength)))
+                If databytes IsNot Nothing Then
+                    Dim ResponseLength = Math.Min(Math.Min(BitConverter.ToInt32(Response, 24), Response.Length - 28), databytes.Length)
+                    Buffer.BlockCopy(Response, 28, databytes, 0, ResponseLength)
+                    Array.Resize(databytes, ResponseLength)
+                End If
+
+                Return databytes
 
             End Function
 
@@ -1868,6 +1110,8 @@ Namespace IO
         Public Shared ReadOnly SystemArchitecture As String
         Public Shared ReadOnly ProcessArchitecture As String
 
+        <SuppressMessage("Performance", "CA1810:Initialize reference type static fields inline", Justification:="<Pending>")>
+        <SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification:="<Pending>")>
         Shared Sub New()
 
             SystemArchitecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")
@@ -1877,17 +1121,17 @@ Namespace IO
             If SystemArchitecture Is Nothing Then
                 SystemArchitecture = "x86"
             End If
-            SystemArchitecture = SystemArchitecture.ToLowerInvariant()
+            SystemArchitecture = String.Intern(SystemArchitecture.ToLowerInvariant())
 
-            Trace.WriteLine("System architecture is: " & SystemArchitecture)
+            Trace.WriteLine($"System architecture is: {SystemArchitecture}")
 
             ProcessArchitecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
             If ProcessArchitecture Is Nothing Then
                 ProcessArchitecture = "x86"
             End If
-            ProcessArchitecture = ProcessArchitecture.ToLowerInvariant()
+            ProcessArchitecture = String.Intern(ProcessArchitecture.ToLowerInvariant())
 
-            Trace.WriteLine("Process architecture is: " & ProcessArchitecture)
+            Trace.WriteLine($"Process architecture is: {ProcessArchitecture}")
 
         End Sub
 
@@ -1938,7 +1182,7 @@ Namespace IO
         Public Shared Function NtDllTry(result As Integer) As Integer
 
             If result < 0 Then
-                Throw New Win32Exception(Win32API.RtlNtStatusToDosError(result))
+                Throw New Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(result))
             End If
 
             Return result
@@ -1948,12 +1192,12 @@ Namespace IO
         Public Shared Sub EnableFileSecurityBypassPrivileges()
 
             Dim privileges_enabled = EnablePrivileges(
-                Win32API.SE_BACKUP_NAME,
-                Win32API.SE_RESTORE_NAME,
-                Win32API.SE_DEBUG_NAME,
-                Win32API.SE_MANAGE_VOLUME_NAME,
-                Win32API.SE_SECURITY_NAME,
-                Win32API.SE_TCB_NAME)
+                UnsafeNativeMethods.SE_BACKUP_NAME,
+                UnsafeNativeMethods.SE_RESTORE_NAME,
+                UnsafeNativeMethods.SE_DEBUG_NAME,
+                UnsafeNativeMethods.SE_MANAGE_VOLUME_NAME,
+                UnsafeNativeMethods.SE_SECURITY_NAME,
+                UnsafeNativeMethods.SE_TCB_NAME)
 
             If privileges_enabled IsNot Nothing Then
                 Trace.WriteLine($"Enabled privileges: {String.Join(", ", privileges_enabled)}")
@@ -1966,22 +1210,22 @@ Namespace IO
         Public Shared Function EnablePrivileges(ParamArray privileges As String()) As String()
 
             Dim token As SafeFileHandle = Nothing
-            Win32Try(Win32API.OpenProcessToken(Win32API.GetCurrentProcess(), Win32API.TOKEN_ADJUST_PRIVILEGES Or Win32API.TOKEN_QUERY, token))
+            Win32Try(UnsafeNativeMethods.OpenProcessToken(UnsafeNativeMethods.GetCurrentProcess(), UnsafeNativeMethods.TOKEN_ADJUST_PRIVILEGES Or UnsafeNativeMethods.TOKEN_QUERY, token))
 
             Using token
 
                 Dim intsize = CLng(Marshal.SizeOf(GetType(Integer)))
-                Dim structsize = Marshal.SizeOf(GetType(Win32API.LUID_AND_ATTRIBUTES))
+                Dim structsize = Marshal.SizeOf(GetType(LUID_AND_ATTRIBUTES))
 
-                Dim luid_and_attribs_list As New Dictionary(Of String, Win32API.LUID_AND_ATTRIBUTES)(privileges.Length)
+                Dim luid_and_attribs_list As New Dictionary(Of String, LUID_AND_ATTRIBUTES)(privileges.Length)
 
                 For Each privilege In privileges
 
-                    Dim luid_and_attribs As New Win32API.LUID_AND_ATTRIBUTES With {
-                        .Attributes = Win32API.SE_PRIVILEGE_ENABLED
+                    Dim luid_and_attribs As New LUID_AND_ATTRIBUTES With {
+                        .Attributes = UnsafeNativeMethods.SE_PRIVILEGE_ENABLED
                     }
 
-                    If Win32API.LookupPrivilegeValue(Nothing, privilege, luid_and_attribs.LUID) Then
+                    If UnsafeNativeMethods.LookupPrivilegeValue(Nothing, privilege, luid_and_attribs.LUID) Then
 
                         luid_and_attribs_list.Add(privilege, luid_and_attribs)
 
@@ -1995,17 +1239,17 @@ Namespace IO
 
                 End If
 
-                Using buffer As New Win32API.HGlobalBuffer(New IntPtr(intsize + privileges.LongLength * structsize))
+                Using buffer As New HGlobalBuffer(New IntPtr(intsize + privileges.LongLength * structsize))
 
                     buffer.Write(0, luid_and_attribs_list.Count)
 
                     buffer.WriteArray(CULng(intsize), luid_and_attribs_list.Values.ToArray(), 0, luid_and_attribs_list.Count)
 
-                    Win32Try(Win32API.AdjustTokenPrivileges(token, False, buffer, CInt(buffer.ByteLength), buffer, Nothing))
+                    Win32Try(UnsafeNativeMethods.AdjustTokenPrivileges(token, False, buffer, CInt(buffer.ByteLength), buffer, Nothing))
 
-                    If Marshal.GetLastWin32Error() = Win32API.ERROR_NOT_ALL_ASSIGNED Then
+                    If Marshal.GetLastWin32Error() = NativeConstants.ERROR_NOT_ALL_ASSIGNED Then
                         Dim count = buffer.Read(Of Integer)(0)
-                        Dim enabled_luids(0 To count - 1) As Win32API.LUID_AND_ATTRIBUTES
+                        Dim enabled_luids(0 To count - 1) As LUID_AND_ATTRIBUTES
                         buffer.ReadArray(CULng(intsize), enabled_luids, 0, count)
                         Dim enabled_privileges = Aggregate enabled_luid In enabled_luids
                                                      Join privilege_name In luid_and_attribs_list
@@ -2024,21 +1268,71 @@ Namespace IO
 
         End Function
 
+        Public Shared Function GenRandomInt32() As Integer
+
+            Dim value As Integer
+
+            UnsafeNativeMethods.RtlGenRandom(value, 4)
+
+            Return value
+
+        End Function
+
+        Public Shared Function GenRandomInt64() As Long
+
+            Dim value As Long
+
+            UnsafeNativeMethods.RtlGenRandom(value, 8)
+
+            Return value
+
+        End Function
+
+        Public Shared Function GenRandomUInt32() As UInteger
+
+            Dim value As UInteger
+
+            UnsafeNativeMethods.RtlGenRandom(value, 4)
+
+            Return value
+
+        End Function
+
+        Public Shared Function GenRandomUInt64() As ULong
+
+            Dim value As ULong
+
+            UnsafeNativeMethods.RtlGenRandom(value, 8)
+
+            Return value
+
+        End Function
+
+        Public Shared Function GenRandomGuid() As Guid
+
+            Dim value As Guid
+
+            UnsafeNativeMethods.RtlGenRandom(value, 16)
+
+            Return value
+
+        End Function
+
         ''' <summary>
         ''' Returns current system handle table.
         ''' </summary>
-        Public Shared Function GetSystemHandleTable() As Win32API.SystemHandleTableEntryInformation()
+        Public Shared Function GetSystemHandleTable() As SystemHandleTableEntryInformation()
 
-            Using buffer As New Win32API.HGlobalBuffer(65536)
+            Using buffer As New HGlobalBuffer(65536)
 
                 Do
-                    Dim status = Win32API.NtQuerySystemInformation(
-                        Win32API.SystemInfoClass.SystemHandleInformation,
+                    Dim status = UnsafeNativeMethods.NtQuerySystemInformation(
+                        SystemInfoClass.SystemHandleInformation,
                         buffer,
                         CInt(buffer.ByteLength),
                         Nothing)
 
-                    If status = Win32API.STATUS_INFO_LENGTH_MISMATCH Then
+                    If status = UnsafeNativeMethods.STATUS_INFO_LENGTH_MISMATCH Then
                         buffer.Resize(CType(buffer.ByteLength << 1, IntPtr))
                         Continue Do
                     End If
@@ -2050,7 +1344,7 @@ Namespace IO
 
                 Dim handlecount = buffer.Read(Of Integer)(0)
                 Dim arrayoffset = IntPtr.Size
-                Dim array(0 To handlecount - 1) As Win32API.SystemHandleTableEntryInformation
+                Dim array(0 To handlecount - 1) As SystemHandleTableEntryInformation
                 buffer.ReadArray(CULng(arrayoffset), array, 0, handlecount)
 
                 Return array
@@ -2059,19 +1353,19 @@ Namespace IO
 
         End Function
 
-        Public Class HandleTableEntryInformation
+        Public NotInheritable Class HandleTableEntryInformation
 
-            Public ReadOnly Property HandleTableEntry As Win32API.SystemHandleTableEntryInformation
+            Public ReadOnly Property HandleTableEntry As SystemHandleTableEntryInformation
 
-            Public ReadOnly Property ObjectTypeInfo As Win32API.ObjectTypeInformation
+            Public ReadOnly Property ObjectTypeInfo As ObjectTypeInformation
 
             Public ReadOnly Property ObjectName As String
             Public ReadOnly Property ProcessName As String
             Public ReadOnly Property ProcessStartTime As Date
             Public ReadOnly Property SessionId As Integer
 
-            Protected Friend Sub New(HandleTableEntry As Win32API.SystemHandleTableEntryInformation,
-                                     ObjectTypeInfo As Win32API.ObjectTypeInformation,
+            Friend Sub New(HandleTableEntry As SystemHandleTableEntryInformation,
+                                     ObjectTypeInfo As ObjectTypeInformation,
                                      ObjectName As String,
                                      Process As Process)
 
@@ -2085,9 +1379,11 @@ Namespace IO
 
         End Class
 
-        Public Shared Iterator Function EnumerateHandleTableHandleInformation(handleTable As IEnumerable(Of Win32API.SystemHandleTableEntryInformation)) As IEnumerable(Of HandleTableEntryInformation)
+        Public Shared Iterator Function EnumerateHandleTableHandleInformation(handleTable As IEnumerable(Of SystemHandleTableEntryInformation)) As IEnumerable(Of HandleTableEntryInformation)
 
-            Using buffer As New Win32API.HGlobalBuffer(65536),
+            handleTable.NullCheck(NameOf(handleTable))
+
+            Using buffer As New HGlobalBuffer(65536),
                 processHandleList = New DisposableDictionary(Of Integer, SafeFileHandle),
                 processInfoList = New DisposableDictionary(Of Integer, Process)
 
@@ -2106,7 +1402,7 @@ Namespace IO
 
                     Dim processHandle As SafeFileHandle = Nothing
                     If Not processHandleList.TryGetValue(handle.ProcessId, processHandle) Then
-                        processHandle = Win32API.OpenProcess(Win32API.PROCESS_DUP_HANDLE Or Win32API.PROCESS_QUERY_LIMITED_INFORMATION, False, handle.ProcessId)
+                        processHandle = UnsafeNativeMethods.OpenProcess(UnsafeNativeMethods.PROCESS_DUP_HANDLE Or UnsafeNativeMethods.PROCESS_QUERY_LIMITED_INFORMATION, False, handle.ProcessId)
                         If processHandle.IsInvalid Then
                             processHandle = Nothing
                         End If
@@ -2115,20 +1411,22 @@ Namespace IO
                     If processHandle Is Nothing Then
                         Continue For
                     End If
+#Disable Warning CA2000 ' Dispose objects before losing scope
                     Dim duphandle As New SafeFileHandle(Nothing, True)
-                    Dim status = Win32API.NtDuplicateObject(processHandle, New IntPtr(handle.Handle), Win32API.GetCurrentProcess(), duphandle, 0, 0, 0)
+#Enable Warning CA2000 ' Dispose objects before losing scope
+                    Dim status = UnsafeNativeMethods.NtDuplicateObject(processHandle, New IntPtr(handle.Handle), UnsafeNativeMethods.GetCurrentProcess(), duphandle, 0, 0, 0)
                     If status < 0 Then
                         Continue For
                     End If
 
-                    Dim object_type_info As Win32API.ObjectTypeInformation = Nothing
+                    Dim object_type_info As ObjectTypeInformation = Nothing
                     Dim object_name As String = Nothing
 
                     Try
                         Using duphandle
                             Dim newbuffersize As Integer
                             Do
-                                status = Win32API.NtQueryObject(duphandle, Win32API.ObjectInfoClass.ObjectTypeInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+                                status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInfoClass.ObjectTypeInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
                                 If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
                                     buffer.Resize(newbuffersize)
                                     Continue Do
@@ -2138,13 +1436,13 @@ Namespace IO
                                 Exit Do
                             Loop
 
-                            object_type_info = buffer.Read(Of Win32API.ObjectTypeInformation)(0)
+                            object_type_info = buffer.Read(Of ObjectTypeInformation)(0)
 
                             If handle.GrantedAccess <> &H12019F AndAlso
                                 handle.GrantedAccess <> &H120189 Then
 
                                 Do
-                                    status = Win32API.NtQueryObject(duphandle, Win32API.ObjectInfoClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+                                    status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInfoClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
                                     If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
                                         buffer.Resize(newbuffersize)
                                         Continue Do
@@ -2154,7 +1452,7 @@ Namespace IO
                                     Exit Do
                                 Loop
 
-                                Dim name = buffer.Read(Of Win32API.UNICODE_STRING)(0)
+                                Dim name = buffer.Read(Of UNICODE_STRING)(0)
                                 If name.Length > 0 Then
                                     object_name = name.ToString()
                                 End If
@@ -2187,37 +1485,28 @@ Namespace IO
         ''' </summary>
         ''' <param name="device">Open handle to filer or device.</param>
         ''' <param name="ctrlcode">IOCTL or FSCTL control code.</param>
-        ''' <param name="indata">Optional function to create input data for the control function.</param>
+        ''' <param name="data">Optional function to create input data for the control function.</param>
         ''' <param name="outdatasize">Number of bytes returned in output buffer by driver.</param>
         ''' <returns>This method returns a BinaryReader object that can be used to read and parse data returned by
         ''' driver in the output buffer.</returns>
         Public Shared Function DeviceIoControl(device As SafeFileHandle,
                                                ctrlcode As UInt32,
-                                               indata As Action(Of BinaryWriter),
-                                               ByRef outdatasize As UInt32) As BinaryReader
+                                               data As Byte(),
+                                               ByRef outdatasize As UInt32) As Byte()
 
-            Dim bytes As Byte() = Nothing
-
-            If indata IsNot Nothing Then
-                Using Request As New BinaryWriter(New MemoryStream, Encoding.Unicode)
-                    indata(Request)
-                    bytes = DirectCast(Request.BaseStream, MemoryStream).ToArray()
-                End Using
-            End If
-
-            Dim indatasize = If(bytes Is Nothing, 0UI, CUInt(bytes.Length))
+            Dim indatasize = If(data Is Nothing, 0UI, CUInt(data.Length))
 
             If outdatasize > indatasize Then
-                Array.Resize(bytes, CInt(outdatasize))
+                Array.Resize(data, CInt(outdatasize))
             End If
 
             Dim rc =
-              Win32API.DeviceIoControl(device,
+              UnsafeNativeMethods.DeviceIoControl(device,
                                         ctrlcode,
-                                        bytes,
+                                        data,
                                         indatasize,
-                                        bytes,
-                                        If(bytes Is Nothing, 0UI, CUInt(bytes.Length)),
+                                        data,
+                                        If(data Is Nothing, 0UI, CUInt(data.Length)),
                                         outdatasize,
                                         IntPtr.Zero)
 
@@ -2225,20 +1514,20 @@ Namespace IO
                 Throw New Win32Exception
             End If
 
-            Array.Resize(bytes, CInt(outdatasize))
+            Array.Resize(data, CInt(outdatasize))
 
-            Return New BinaryReader(New MemoryStream(bytes), Encoding.Unicode)
+            Return data
 
         End Function
 
         Public Shared Function ConvertManagedFileAccess(DesiredAccess As FileAccess) As UInt32
 
-            Dim NativeDesiredAccess As UInt32 = Win32API.FILE_READ_ATTRIBUTES
+            Dim NativeDesiredAccess As UInt32 = NativeConstants.FILE_READ_ATTRIBUTES
             If DesiredAccess.HasFlag(FileAccess.Read) Then
-                NativeDesiredAccess = NativeDesiredAccess Or Win32API.GENERIC_READ
+                NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_READ
             End If
             If DesiredAccess.HasFlag(FileAccess.Write) Then
-                NativeDesiredAccess = NativeDesiredAccess Or Win32API.GENERIC_WRITE
+                NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_WRITE
             End If
 
             Return NativeDesiredAccess
@@ -2268,37 +1557,37 @@ Namespace IO
 
             Dim NativeShareMode As UInt32 = 0
             If ShareMode.HasFlag(FileShare.Read) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_READ
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_READ
             End If
             If ShareMode.HasFlag(FileShare.Write) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_WRITE
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_WRITE
             End If
             If ShareMode.HasFlag(FileShare.Delete) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_DELETE
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_DELETE
             End If
 
             Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
-                    NativeCreationDisposition = Win32API.CREATE_ALWAYS
+                    NativeCreationDisposition = NativeConstants.CREATE_ALWAYS
                 Case FileMode.CreateNew
-                    NativeCreationDisposition = Win32API.CREATE_NEW
+                    NativeCreationDisposition = NativeConstants.CREATE_NEW
                 Case FileMode.Open
-                    NativeCreationDisposition = Win32API.OPEN_EXISTING
+                    NativeCreationDisposition = NativeConstants.OPEN_EXISTING
                 Case FileMode.OpenOrCreate
-                    NativeCreationDisposition = Win32API.OPEN_ALWAYS
+                    NativeCreationDisposition = NativeConstants.OPEN_ALWAYS
                 Case FileMode.Truncate
-                    NativeCreationDisposition = Win32API.TRUNCATE_EXISTING
+                    NativeCreationDisposition = NativeConstants.TRUNCATE_EXISTING
                 Case Else
                     Throw New NotImplementedException
             End Select
 
-            Dim NativeFlagsAndAttributes As UInt32 = Win32API.FILE_ATTRIBUTE_NORMAL
+            Dim NativeFlagsAndAttributes As UInt32 = NativeConstants.FILE_ATTRIBUTE_NORMAL
             If Overlapped Then
-                NativeFlagsAndAttributes += Win32API.FILE_FLAG_OVERLAPPED
+                NativeFlagsAndAttributes += NativeConstants.FILE_FLAG_OVERLAPPED
             End If
 
-            Dim Handle = Win32API.CreateFile(FileName,
+            Dim Handle = UnsafeNativeMethods.CreateFile(FileName,
                                              NativeDesiredAccess,
                                              NativeShareMode,
                                              IntPtr.Zero,
@@ -2356,36 +1645,36 @@ Namespace IO
 
             Dim NativeShareMode As UInt32 = 0
             If ShareMode.HasFlag(FileShare.Read) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_READ
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_READ
             End If
             If ShareMode.HasFlag(FileShare.Write) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_WRITE
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_WRITE
             End If
             If ShareMode.HasFlag(FileShare.Delete) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_DELETE
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_DELETE
             End If
 
             Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
-                    NativeCreationDisposition = Win32API.CREATE_ALWAYS
+                    NativeCreationDisposition = NativeConstants.CREATE_ALWAYS
                 Case FileMode.CreateNew
-                    NativeCreationDisposition = Win32API.CREATE_NEW
+                    NativeCreationDisposition = NativeConstants.CREATE_NEW
                 Case FileMode.Open
-                    NativeCreationDisposition = Win32API.OPEN_EXISTING
+                    NativeCreationDisposition = NativeConstants.OPEN_EXISTING
                 Case FileMode.OpenOrCreate
-                    NativeCreationDisposition = Win32API.OPEN_ALWAYS
+                    NativeCreationDisposition = NativeConstants.OPEN_ALWAYS
                 Case FileMode.Truncate
-                    NativeCreationDisposition = Win32API.TRUNCATE_EXISTING
+                    NativeCreationDisposition = NativeConstants.TRUNCATE_EXISTING
                 Case Else
                     Throw New NotImplementedException
             End Select
 
-            Dim NativeFlagsAndAttributes As UInt32 = Win32API.FILE_ATTRIBUTE_NORMAL
+            Dim NativeFlagsAndAttributes As UInt32 = NativeConstants.FILE_ATTRIBUTE_NORMAL
 
             NativeFlagsAndAttributes += Options
 
-            Dim Handle = Win32API.CreateFile(FileName,
+            Dim Handle = UnsafeNativeMethods.CreateFile(FileName,
                                              NativeDesiredAccess,
                                              NativeShareMode,
                                              IntPtr.Zero,
@@ -2418,44 +1707,44 @@ Namespace IO
                 Throw New ArgumentNullException(NameOf(FilePath))
             End If
 
-            Dim NativeDesiredAccess As UInt32 = Win32API.FILE_READ_ATTRIBUTES
+            Dim NativeDesiredAccess As UInt32 = NativeConstants.FILE_READ_ATTRIBUTES
             If DesiredAccess.HasFlag(FileAccess.Read) Then
-                NativeDesiredAccess = NativeDesiredAccess Or Win32API.GENERIC_READ
+                NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_READ
             End If
             If DesiredAccess.HasFlag(FileAccess.Write) Then
-                NativeDesiredAccess = NativeDesiredAccess Or Win32API.GENERIC_WRITE
+                NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_WRITE
             End If
 
             Dim NativeShareMode As UInt32 = 0
             If ShareMode.HasFlag(FileShare.Read) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_READ
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_READ
             End If
             If ShareMode.HasFlag(FileShare.Write) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_WRITE
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_WRITE
             End If
             If ShareMode.HasFlag(FileShare.Delete) Then
-                NativeShareMode = NativeShareMode Or Win32API.FILE_SHARE_DELETE
+                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_DELETE
             End If
 
             Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
-                    NativeCreationDisposition = Win32API.CREATE_ALWAYS
+                    NativeCreationDisposition = NativeConstants.CREATE_ALWAYS
                 Case FileMode.CreateNew
-                    NativeCreationDisposition = Win32API.CREATE_NEW
+                    NativeCreationDisposition = NativeConstants.CREATE_NEW
                 Case FileMode.Open
-                    NativeCreationDisposition = Win32API.OPEN_EXISTING
+                    NativeCreationDisposition = NativeConstants.OPEN_EXISTING
                 Case FileMode.OpenOrCreate
-                    NativeCreationDisposition = Win32API.OPEN_ALWAYS
+                    NativeCreationDisposition = NativeConstants.OPEN_ALWAYS
                 Case FileMode.Truncate
-                    NativeCreationDisposition = Win32API.TRUNCATE_EXISTING
+                    NativeCreationDisposition = NativeConstants.TRUNCATE_EXISTING
                 Case Else
                     Throw New NotImplementedException
             End Select
 
-            Dim NativeFlagsAndAttributes As UInt32 = Win32API.FILE_FLAG_BACKUP_SEMANTICS
+            Dim NativeFlagsAndAttributes As UInt32 = NativeConstants.FILE_FLAG_BACKUP_SEMANTICS
 
-            Dim Handle = Win32API.CreateFile(FilePath,
+            Dim Handle = UnsafeNativeMethods.CreateFile(FilePath,
                                              NativeDesiredAccess,
                                              NativeShareMode,
                                              IntPtr.Zero,
@@ -2562,8 +1851,8 @@ Namespace IO
 
             Dim pinptr = GCHandle.Alloc(State, GCHandleType.Pinned)
             Try
-                Win32Try(Win32API.DeviceIoControl(SafeFileHandle,
-                                                  Win32API.FSCTL_SET_COMPRESSION,
+                Win32Try(UnsafeNativeMethods.DeviceIoControl(SafeFileHandle,
+                                                  NativeConstants.FSCTL_SET_COMPRESSION,
                                                   pinptr.AddrOfPinnedObject(),
                                                   2UI,
                                                   IntPtr.Zero,
@@ -2582,7 +1871,7 @@ Namespace IO
 
             Dim FileSize As Int64
 
-            Win32Try(Win32API.GetFileSize(SafeFileHandle, FileSize))
+            Win32Try(UnsafeNativeMethods.GetFileSize(SafeFileHandle, FileSize))
 
             Return FileSize
 
@@ -2592,7 +1881,7 @@ Namespace IO
 
             Dim FileSize As Int64
 
-            Win32Try(Win32API.DeviceIoControl(SafeFileHandle, Win32API.IOCTL_DISK_GET_LENGTH_INFO, IntPtr.Zero, 0UI, FileSize, CUInt(Marshal.SizeOf(FileSize)), 0UI, IntPtr.Zero))
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_GET_LENGTH_INFO, IntPtr.Zero, 0UI, FileSize, CUInt(Marshal.SizeOf(FileSize)), 0UI, IntPtr.Zero))
 
             Return FileSize
 
@@ -2600,12 +1889,12 @@ Namespace IO
 
         Public Shared Function IsDiskWritable(SafeFileHandle As SafeFileHandle) As Boolean
 
-            Dim rc = Win32API.DeviceIoControl(SafeFileHandle, Win32API.IOCTL_DISK_IS_WRITABLE, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+            Dim rc = UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_IS_WRITABLE, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
             If rc Then
                 Return True
             Else
                 Dim err = Marshal.GetLastWin32Error()
-                If err = Win32API.ERROR_WRITE_PROTECT Then
+                If err = NativeConstants.ERROR_WRITE_PROTECT Then
                     Return False
                 Else
                     Throw New Win32Exception(err)
@@ -2616,34 +1905,34 @@ Namespace IO
 
         Public Shared Sub UpdateDiskProperties(SafeFileHandle As SafeFileHandle)
 
-            Win32Try(Win32API.DeviceIoControl(SafeFileHandle, Win32API.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
 
         End Sub
 
         Public Shared Sub GrowPartition(DiskHandle As SafeFileHandle, PartitionNumber As Integer, BytesToGrow As Int64)
 
-            Dim DiskGrowPartition As Win32API.DISK_GROW_PARTITION
+            Dim DiskGrowPartition As DISK_GROW_PARTITION
             DiskGrowPartition.PartitionNumber = PartitionNumber
             DiskGrowPartition.BytesToGrow = BytesToGrow
-            Win32Try(Win32API.DeviceIoControl(DiskHandle, Win32API.IOCTL_DISK_GROW_PARTITION, DiskGrowPartition, CUInt(Marshal.SizeOf(DiskGrowPartition.GetType())), IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(DiskHandle, NativeConstants.IOCTL_DISK_GROW_PARTITION, DiskGrowPartition, CUInt(Marshal.SizeOf(DiskGrowPartition.GetType())), IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
 
         End Sub
 
         Public Shared Sub CompressFile(SafeFileHandle As SafeFileHandle)
 
-            SetFileCompressionState(SafeFileHandle, Win32API.COMPRESSION_FORMAT_DEFAULT)
+            SetFileCompressionState(SafeFileHandle, NativeConstants.COMPRESSION_FORMAT_DEFAULT)
 
         End Sub
 
         Public Shared Sub UncompressFile(SafeFileHandle As SafeFileHandle)
 
-            SetFileCompressionState(SafeFileHandle, Win32API.COMPRESSION_FORMAT_NONE)
+            SetFileCompressionState(SafeFileHandle, NativeConstants.COMPRESSION_FORMAT_NONE)
 
         End Sub
 
         Public Shared Sub AllowExtendedDASDIO(SafeFileHandle As SafeFileHandle)
 
-            Win32Try(Win32API.DeviceIoControl(SafeFileHandle, Win32API.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
 
         End Sub
 
@@ -2710,13 +1999,13 @@ Namespace IO
         ''' successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
         Public Shared Function DismountVolumeFilesystem(Device As SafeFileHandle, Force As Boolean) As Boolean
 
-            If Not Win32API.DeviceIoControl(Device, Win32API.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing) Then
+            If Not UnsafeNativeMethods.DeviceIoControl(Device, NativeConstants.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing) Then
                 If Not Force Then
                     Return False
                 End If
             End If
 
-            Return Win32API.DeviceIoControl(Device, Win32API.FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing)
+            Return UnsafeNativeMethods.DeviceIoControl(Device, NativeConstants.FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing)
 
         End Function
 
@@ -2724,13 +2013,19 @@ Namespace IO
         ''' Retrieves disk geometry.
         ''' </summary>
         ''' <param name="hDevice">Handle to device.</param>
-        Public Shared Function GetDiskGeometry(hDevice As SafeFileHandle) As Win32API.DISK_GEOMETRY
+        Public Shared Function GetDiskGeometry(hDevice As SafeFileHandle) As DISK_GEOMETRY?
 
-            Dim DiskGeometry As Win32API.DISK_GEOMETRY
+            Dim DiskGeometry As DISK_GEOMETRY
 
-            Win32Try(Win32API.DeviceIoControl(hDevice, Win32API.IOCTL_DISK_GET_DRIVE_GEOMETRY, IntPtr.Zero, 0, DiskGeometry, CUInt(Marshal.SizeOf(GetType(Win32API.DISK_GEOMETRY))), Nothing, Nothing))
+            If UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_DISK_GET_DRIVE_GEOMETRY, IntPtr.Zero, 0, DiskGeometry, CUInt(Marshal.SizeOf(GetType(DISK_GEOMETRY))), Nothing, Nothing) Then
 
-            Return DiskGeometry
+                Return DiskGeometry
+
+            Else
+
+                Return Nothing
+
+            End If
 
         End Function
 
@@ -2738,11 +2033,11 @@ Namespace IO
         ''' Retrieves SCSI address.
         ''' </summary>
         ''' <param name="hDevice">Handle to device.</param>
-        Public Shared Function GetScsiAddress(hDevice As SafeFileHandle) As Win32API.SCSI_ADDRESS?
+        Public Shared Function GetScsiAddress(hDevice As SafeFileHandle) As SCSI_ADDRESS?
 
-            Dim ScsiAddress As Win32API.SCSI_ADDRESS
+            Dim ScsiAddress As SCSI_ADDRESS
 
-            If Win32API.DeviceIoControl(hDevice, Win32API.IOCTL_SCSI_GET_ADDRESS, IntPtr.Zero, 0, ScsiAddress, CUInt(Marshal.SizeOf(GetType(Win32API.SCSI_ADDRESS))), Nothing, Nothing) Then
+            If UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_SCSI_GET_ADDRESS, IntPtr.Zero, 0, ScsiAddress, CUInt(Marshal.SizeOf(GetType(SCSI_ADDRESS))), Nothing, Nothing) Then
                 Return ScsiAddress
             Else
                 Return Nothing
@@ -2754,7 +2049,7 @@ Namespace IO
         ''' Retrieves SCSI address.
         ''' </summary>
         ''' <param name="Device">Path to device.</param>
-        Public Shared Function GetScsiAddress(Device As String) As Win32API.SCSI_ADDRESS?
+        Public Shared Function GetScsiAddress(Device As String) As SCSI_ADDRESS?
 
             Using hDevice = OpenFileHandle(Device, 0, FileShare.ReadWrite, FileMode.Open, False)
 
@@ -2768,11 +2063,11 @@ Namespace IO
         ''' Retrieves storage device number.
         ''' </summary>
         ''' <param name="hDevice">Handle to device.</param>
-        Public Shared Function GetStorageDeviceNumber(hDevice As SafeFileHandle) As Win32API.STORAGE_DEVICE_NUMBER?
+        Public Shared Function GetStorageDeviceNumber(hDevice As SafeFileHandle) As STORAGE_DEVICE_NUMBER?
 
-            Dim StorageDeviceNumber As Win32API.STORAGE_DEVICE_NUMBER
+            Dim StorageDeviceNumber As STORAGE_DEVICE_NUMBER
 
-            If Win32API.DeviceIoControl(hDevice, Win32API.IOCTL_STORAGE_GET_DEVICE_NUMBER, IntPtr.Zero, 0, StorageDeviceNumber, CUInt(Marshal.SizeOf(GetType(Win32API.STORAGE_DEVICE_NUMBER))), Nothing, Nothing) Then
+            If UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_STORAGE_GET_DEVICE_NUMBER, IntPtr.Zero, 0, StorageDeviceNumber, CUInt(Marshal.SizeOf(GetType(STORAGE_DEVICE_NUMBER))), Nothing, Nothing) Then
                 Return StorageDeviceNumber
             Else
                 Return Nothing
@@ -2789,7 +2084,7 @@ Namespace IO
 
             Directory.CreateDirectory(source)
 
-            Using hdir = OpenFileHandle(source, FileAccess.Write, FileShare.Read, FileMode.Open, Win32API.FILE_FLAG_BACKUP_SEMANTICS Or Win32API.FILE_FLAG_OPEN_REPARSE_POINT)
+            Using hdir = OpenFileHandle(source, FileAccess.Write, FileShare.Read, FileMode.Open, NativeConstants.FILE_FLAG_BACKUP_SEMANTICS Or NativeConstants.FILE_FLAG_OPEN_REPARSE_POINT)
                 CreateDirectoryJunction(hdir, target)
             End Using
 
@@ -2797,7 +2092,7 @@ Namespace IO
 
         Public Shared Sub SetFileSparseFlag(file As SafeFileHandle, flag As Boolean)
 
-            Win32Try(Win32API.DeviceIoControl(file, Win32API.FSCTL_SET_SPARSE, flag, 1, Nothing, 0, Nothing, Nothing))
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(file, NativeConstants.FSCTL_SET_SPARSE, flag, 1, Nothing, 0, Nothing, Nothing))
 
         End Sub
 
@@ -2810,37 +2105,39 @@ Namespace IO
 
             Dim name = Encoding.Unicode.GetBytes(target)
 
-            Dim wr As New BufferedBinaryWriter
-            wr.Write(Win32API.IO_REPARSE_TAG_MOUNT_POINT) ' DWORD ReparseTag
-            wr.Write(8S + CShort(name.Length) + 2S + CShort(name.Length) + 2S) ' WORD ReparseDataLength
-            wr.Write(0S) ' WORD Reserved
-            wr.Write(0S) ' WORD NameOffset
-            wr.Write(CShort(name.Length)) ' WORD NameLength
-            wr.Write(CShort(name.Length) + 2S) ' WORD DisplayNameOffset
-            wr.Write(CShort(name.Length)) ' WORD DisplayNameLength
-            wr.Write(name)
-            wr.Write(New Char)
-            wr.Write(name)
-            wr.Write(New Char)
+            Using wr As New BufferedBinaryWriter
+                wr.Write(NativeConstants.IO_REPARSE_TAG_MOUNT_POINT) ' DWORD ReparseTag
+                wr.Write(8S + CShort(name.Length) + 2S + CShort(name.Length) + 2S) ' WORD ReparseDataLength
+                wr.Write(0S) ' WORD Reserved
+                wr.Write(0S) ' WORD NameOffset
+                wr.Write(CShort(name.Length)) ' WORD NameLength
+                wr.Write(CShort(name.Length) + 2S) ' WORD DisplayNameOffset
+                wr.Write(CShort(name.Length)) ' WORD DisplayNameLength
+                wr.Write(name)
+                wr.Write(New Char)
+                wr.Write(name)
+                wr.Write(New Char)
 
-            Dim buffer = wr.ToArray()
+                Dim buffer = wr.ToArray()
 
-            If Not Win32API.DeviceIoControl(source, Win32API.FSCTL_SET_REPARSE_POINT, buffer, CUInt(buffer.Length), IntPtr.Zero, 0UI, 0UI, IntPtr.Zero) Then
-                Throw New Win32Exception
-            End If
+                If Not UnsafeNativeMethods.DeviceIoControl(source, NativeConstants.FSCTL_SET_REPARSE_POINT, buffer, CUInt(buffer.Length), IntPtr.Zero, 0UI, 0UI, IntPtr.Zero) Then
+                    Throw New Win32Exception
+                End If
+
+            End Using
 
         End Sub
 
         Public Shared Function GetProcAddress(hModule As IntPtr, procedureName As String, delegateType As Type) As [Delegate]
 
-            Return Marshal.GetDelegateForFunctionPointer(Win32Try(Win32API.GetProcAddress(hModule, procedureName)), delegateType)
+            Return Marshal.GetDelegateForFunctionPointer(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)), delegateType)
 
         End Function
 
         Public Shared Function GetProcAddress(moduleName As String, procedureName As String, delegateType As Type) As [Delegate]
 
-            Dim hModule = Win32Try(Win32API.LoadLibrary(moduleName))
-            Return Marshal.GetDelegateForFunctionPointer(Win32Try(Win32API.GetProcAddress(hModule, procedureName)), delegateType)
+            Dim hModule = Win32Try(UnsafeNativeMethods.LoadLibrary(moduleName))
+            Return Marshal.GetDelegateForFunctionPointer(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)), delegateType)
 
         End Function
 
@@ -2854,7 +2151,7 @@ Namespace IO
 
             Dim TargetPath(0 To 65536) As Char
 
-            Dim length = Win32API.QueryDosDevice(DosDevice, TargetPath, CUInt(TargetPath.Length))
+            Dim length = UnsafeNativeMethods.QueryDosDevice(DosDevice, TargetPath, CUInt(TargetPath.Length))
 
             If length < 2 Then
                 Return Nothing
@@ -2868,29 +2165,29 @@ Namespace IO
 
         Public Shared Function GetNtPath(Win32Path As String) As String
 
-            Dim UnicodeString As Win32API.UNICODE_STRING
+            Dim unicode_string As UNICODE_STRING
 
-            Dim RC = Win32API.RtlDosPathNameToNtPathName_U(Win32Path, UnicodeString, Nothing, Nothing)
+            Dim RC = UnsafeNativeMethods.RtlDosPathNameToNtPathName_U(Win32Path, unicode_string, Nothing, Nothing)
             If Not RC Then
                 Throw New IOException($"Invalid path: '{Win32Path}'")
             End If
 
             Try
-                Return Marshal.PtrToStringUni(UnicodeString.Buffer, UnicodeString.Length \ 2)
+                Return unicode_string.ToString()
 
             Finally
-                Win32API.RtlFreeUnicodeString(UnicodeString)
+                UnsafeNativeMethods.RtlFreeUnicodeString(unicode_string)
 
             End Try
 
         End Function
 
         Public Shared Sub DeleteVolumeMountPoint(VolumeMountPoint As String)
-            Win32Try(Win32API.DeleteVolumeMountPoint(VolumeMountPoint))
+            Win32Try(UnsafeNativeMethods.DeleteVolumeMountPoint(VolumeMountPoint))
         End Sub
 
         Public Shared Sub SetVolumeMountPoint(VolumeMountPoint As String, VolumeName As String)
-            Win32Try(Win32API.SetVolumeMountPoint(VolumeMountPoint, VolumeName))
+            Win32Try(UnsafeNativeMethods.SetVolumeMountPoint(VolumeMountPoint, VolumeName))
         End Sub
 
         Public Shared Function FindFirstFreeDriveLetter() As Char
@@ -2903,7 +2200,7 @@ Namespace IO
                 Throw New ArgumentOutOfRangeException(NameOf(start))
             End If
 
-            Dim logical_drives = Win32API.GetLogicalDrives()
+            Dim logical_drives = SafeNativeMethods.GetLogicalDrives()
 
             For search = Convert.ToUInt16(start) To Convert.ToUInt16("Z"c)
                 If (logical_drives And (1 << (search - Convert.ToUInt16("A"c)))) = 0 Then
@@ -2921,7 +2218,7 @@ Namespace IO
 
         Public Shared Function GetFileVersionInfo(exe As Stream) As Version
 
-            Dim buffer = New Byte(0 To CInt(exe.Length - 1)) {}
+            Dim buffer = New Byte(0 To CInt(exe.NullCheck(NameOf(exe)).Length - 1)) {}
             exe.Read(buffer, 0, buffer.Length)
 
             Return GetFileVersionInfo(buffer)
@@ -3181,34 +2478,33 @@ Namespace IO
         End Function
 
         Public Structure DiskExtent
-            Public DiskNumber As UInteger
-            Public StartingOffset As Long
-            Public ExtentLength As Long
+            Public ReadOnly Property DiskNumber As UInteger
+            Public ReadOnly Property StartingOffset As Long
+            Public ReadOnly Property ExtentLength As Long
         End Structure
 
         Public Shared Function GetVolumeDiskExtents(volume As SafeFileHandle) As DiskExtent()
 
             ' 776 is enough to hold 32 disk extent items
-            Dim reader = DeviceIoControl(volume, Win32API.IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, Nothing, 776)
-            Dim number = reader.ReadInt32()
-            reader.ReadInt32()
-            Dim array(0 To number - 1) As DiskExtent
-            For i = 0 To number - 1
-                array(i).DiskNumber = reader.ReadUInt32()
-                reader.ReadInt32()
-                array(i).StartingOffset = reader.ReadInt64()
-                array(i).ExtentLength = reader.ReadInt64()
-            Next
+            Using buffer = PinnedBuffer.Create(DeviceIoControl(volume, NativeConstants.IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, Nothing, 776))
 
-            Return array
+                Dim number = buffer.Read(Of Integer)(0)
+
+                Dim array(0 To number - 1) As DiskExtent
+
+                buffer.ReadArray(8, array, 0, number)
+
+                Return array
+
+            End Using
 
         End Function
 
-        Public Shared Function GetPartitionInformation(disk As SafeFileHandle) As Win32API.PARTITION_INFORMATION?
+        Public Shared Function GetPartitionInformation(disk As SafeFileHandle) As PARTITION_INFORMATION?
 
-            Dim partition_info As Win32API.PARTITION_INFORMATION = Nothing
+            Dim partition_info As PARTITION_INFORMATION = Nothing
 
-            If Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_GET_PARTITION_INFO_EX,
+            If UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX,
                                               IntPtr.Zero, 0, partition_info, CUInt(Marshal.SizeOf(partition_info)),
                                               0, IntPtr.Zero) Then
                 Return partition_info
@@ -3218,11 +2514,11 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetPartitionInformationEx(disk As SafeFileHandle) As Win32API.PARTITION_INFORMATION_EX?
+        Public Shared Function GetPartitionInformationEx(disk As SafeFileHandle) As PARTITION_INFORMATION_EX?
 
-            Dim partition_info As Win32API.PARTITION_INFORMATION_EX = Nothing
+            Dim partition_info As PARTITION_INFORMATION_EX = Nothing
 
-            If Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_GET_PARTITION_INFO_EX,
+            If UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX,
                                               IntPtr.Zero, 0, partition_info, CUInt(Marshal.SizeOf(partition_info)),
                                               0, IntPtr.Zero) Then
                 Return partition_info
@@ -3234,15 +2530,15 @@ Namespace IO
 
         Public Class DriveLayoutInformation
 
-            Public ReadOnly Property DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX
+            Public ReadOnly Property DriveLayoutInformation As DRIVE_LAYOUT_INFORMATION_EX
 
-            Public ReadOnly Property Partitions As Win32API.PARTITION_INFORMATION_EX()
+            Public ReadOnly Property Partitions As ReadOnlyCollection(Of PARTITION_INFORMATION_EX)
 
-            Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
-                           Partitions As Win32API.PARTITION_INFORMATION_EX())
+            Public Sub New(DriveLayoutInformation As DRIVE_LAYOUT_INFORMATION_EX,
+                           Partitions As IList(Of PARTITION_INFORMATION_EX))
 
                 _DriveLayoutInformation = DriveLayoutInformation
-                _Partitions = Partitions
+                _Partitions = New ReadOnlyCollection(Of PARTITION_INFORMATION_EX)(Partitions)
             End Sub
 
             Public Overrides Function GetHashCode() As Integer
@@ -3258,11 +2554,11 @@ Namespace IO
         Public Class DriveLayoutInformationMBR
             Inherits DriveLayoutInformation
 
-            Public ReadOnly Property MBR As Win32API.DRIVE_LAYOUT_INFORMATION_MBR
+            Public ReadOnly Property MBR As DRIVE_LAYOUT_INFORMATION_MBR
 
-            Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
-                           Partitions As Win32API.PARTITION_INFORMATION_EX(),
-                           DriveLayoutInformationMBR As Win32API.DRIVE_LAYOUT_INFORMATION_MBR)
+            Public Sub New(DriveLayoutInformation As DRIVE_LAYOUT_INFORMATION_EX,
+                           Partitions As PARTITION_INFORMATION_EX(),
+                           DriveLayoutInformationMBR As DRIVE_LAYOUT_INFORMATION_MBR)
                 MyBase.New(DriveLayoutInformation, Partitions)
 
                 _MBR = DriveLayoutInformationMBR
@@ -3281,11 +2577,11 @@ Namespace IO
         Public Class DriveLayoutInformationGPT
             Inherits DriveLayoutInformation
 
-            Public ReadOnly Property GPT As Win32API.DRIVE_LAYOUT_INFORMATION_GPT
+            Public ReadOnly Property GPT As DRIVE_LAYOUT_INFORMATION_GPT
 
-            Public Sub New(DriveLayoutInformation As Win32API.DRIVE_LAYOUT_INFORMATION_EX,
-                           Partitions As Win32API.PARTITION_INFORMATION_EX(),
-                           DriveLayoutInformationGPT As Win32API.DRIVE_LAYOUT_INFORMATION_GPT)
+            Public Sub New(DriveLayoutInformation As DRIVE_LAYOUT_INFORMATION_EX,
+                           Partitions As PARTITION_INFORMATION_EX(),
+                           DriveLayoutInformationGPT As DRIVE_LAYOUT_INFORMATION_GPT)
                 MyBase.New(DriveLayoutInformation, Partitions)
 
                 _GPT = DriveLayoutInformationGPT
@@ -3303,23 +2599,23 @@ Namespace IO
 
         Public Shared Function GetDriveLayoutEx(disk As SafeFileHandle) As DriveLayoutInformation
 
-            Static partition_struct_size As Integer = Marshal.SizeOf(GetType(Win32API.PARTITION_INFORMATION_EX))
+            Static partition_struct_size As Integer = Marshal.SizeOf(GetType(PARTITION_INFORMATION_EX))
 
             Dim max_partitions = 1
 
             Do
 
-                Dim size_needed = Marshal.SizeOf(GetType(Win32API.DRIVE_LAYOUT_INFORMATION_EX)) +
-                    Marshal.SizeOf(GetType(Win32API.DRIVE_LAYOUT_INFORMATION_GPT)) +
+                Dim size_needed = Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_EX)) +
+                    Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_GPT)) +
                     max_partitions * partition_struct_size
 
-                Using buffer As New Win32API.HGlobalBuffer(size_needed)
+                Using buffer As New HGlobalBuffer(size_needed)
 
-                    If Not Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_GET_DRIVE_LAYOUT_EX,
+                    If Not UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_DRIVE_LAYOUT_EX,
                                                   IntPtr.Zero, 0, buffer, CUInt(buffer.ByteLength),
                                                   0, IntPtr.Zero) Then
 
-                        If Marshal.GetLastWin32Error() = Win32API.ERROR_INSUFFICIENT_BUFFER Then
+                        If Marshal.GetLastWin32Error() = NativeConstants.ERROR_INSUFFICIENT_BUFFER Then
                             max_partitions *= 2
                             Continue Do
                         End If
@@ -3328,26 +2624,25 @@ Namespace IO
 
                     End If
 
-                    Dim layout = buffer.Read(Of Win32API.DRIVE_LAYOUT_INFORMATION_EX)(0)
+                    Dim layout = buffer.Read(Of DRIVE_LAYOUT_INFORMATION_EX)(0)
 
                     If layout.PartitionCount > max_partitions Then
                         max_partitions *= 2
                         Continue Do
                     End If
 
-                    Dim partition_offset = 48
-                    Dim partitions(0 To layout.PartitionCount - 1) As Win32API.PARTITION_INFORMATION_EX
+                    Dim partitions(0 To layout.PartitionCount - 1) As PARTITION_INFORMATION_EX
                     For i = 0 To layout.PartitionCount - 1
                         partitions(i) = CType(Marshal.PtrToStructure(buffer.DangerousGetHandle() + 48 + i * partition_struct_size,
-                                                                           GetType(Win32API.PARTITION_INFORMATION_EX)),
-                                                                           Win32API.PARTITION_INFORMATION_EX)
+                                                                           GetType(PARTITION_INFORMATION_EX)),
+                                                                           PARTITION_INFORMATION_EX)
                     Next
 
-                    If layout.PartitionStyle = Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR Then
-                        Dim mbr = buffer.Read(Of Win32API.DRIVE_LAYOUT_INFORMATION_MBR)(8)
+                    If layout.PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_MBR Then
+                        Dim mbr = buffer.Read(Of DRIVE_LAYOUT_INFORMATION_MBR)(8)
                         Return New DriveLayoutInformationMBR(layout, partitions, mbr)
-                    ElseIf layout.PartitionStyle = Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT Then
-                        Dim gpt = buffer.Read(Of Win32API.DRIVE_LAYOUT_INFORMATION_GPT)(8)
+                    ElseIf layout.PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_GPT Then
+                        Dim gpt = buffer.Read(Of DRIVE_LAYOUT_INFORMATION_GPT)(8)
                         Return New DriveLayoutInformationGPT(layout, partitions, gpt)
                     Else
                         Return New DriveLayoutInformation(layout, partitions)
@@ -3361,11 +2656,13 @@ Namespace IO
 
         Public Shared Sub SetDriveLayoutEx(disk As SafeFileHandle, layout As DriveLayoutInformation)
 
-            Static partition_struct_size As Integer = Marshal.SizeOf(GetType(Win32API.PARTITION_INFORMATION_EX))
+            Static partition_struct_size As Integer = Marshal.SizeOf(GetType(PARTITION_INFORMATION_EX))
 
-            Static drive_layout_information_ex_size As Integer = Marshal.SizeOf(GetType(Win32API.DRIVE_LAYOUT_INFORMATION_EX))
+            Static drive_layout_information_ex_size As Integer = Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_EX))
 
-            Static drive_layout_information_record_size As Integer = Marshal.SizeOf(GetType(Win32API.DRIVE_LAYOUT_INFORMATION_GPT))
+            Static drive_layout_information_record_size As Integer = Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_GPT))
+
+            layout.NullCheck(NameOf(layout))
 
             Dim partition_count = Math.Min(layout.Partitions.Count, layout.DriveLayoutInformation.PartitionCount)
 
@@ -3375,7 +2672,7 @@ Namespace IO
 
             Dim pos = 0
 
-            Using buffer As New Win32API.HGlobalBuffer(size_needed)
+            Using buffer As New HGlobalBuffer(size_needed)
 
                 buffer.Write(CULng(pos), layout.DriveLayoutInformation)
 
@@ -3383,10 +2680,10 @@ Namespace IO
 
                 Select Case layout.DriveLayoutInformation.PartitionStyle
 
-                    Case Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR
+                    Case PARTITION_STYLE.PARTITION_STYLE_MBR
                         buffer.Write(CULng(pos), DirectCast(layout, DriveLayoutInformationMBR).MBR)
 
-                    Case Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT
+                    Case PARTITION_STYLE.PARTITION_STYLE_GPT
                         buffer.Write(CULng(pos), DirectCast(layout, DriveLayoutInformationGPT).GPT)
 
                 End Select
@@ -3399,13 +2696,13 @@ Namespace IO
                                            False)
                 Next
 
-                Dim rc = Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_SET_DRIVE_LAYOUT_EX,
+                Dim rc = UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_SET_DRIVE_LAYOUT_EX,
                                                   buffer, CUInt(buffer.ByteLength), IntPtr.Zero, 0,
                                                   0, IntPtr.Zero)
 
                 For i = 0 To partition_count - 1
                     Marshal.DestroyStructure(buffer.DangerousGetHandle() + pos + i * partition_struct_size,
-                                             GetType(Win32API.PARTITION_INFORMATION_EX))
+                                             GetType(PARTITION_INFORMATION_EX))
                 Next
 
                 Win32Try(rc)
@@ -3414,27 +2711,27 @@ Namespace IO
 
         End Sub
 
-        Public Shared Sub InitializeDisk(disk As SafeFileHandle, PartitionStyle As Win32API.PARTITION_STYLE)
+        Public Shared Sub InitializeDisk(disk As SafeFileHandle, PartitionStyle As PARTITION_STYLE)
 
-            Using buffer As New Win32API.HGlobalBuffer(Marshal.SizeOf(GetType(Win32API.CREATE_DISK_GPT)))
+            Using buffer As New HGlobalBuffer(Marshal.SizeOf(GetType(CREATE_DISK_GPT)))
 
                 Select Case PartitionStyle
 
-                    Case Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR
-                        Dim mbr As New Win32API.CREATE_DISK_MBR With {
-                            .PartitionStyle = Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR
+                    Case PARTITION_STYLE.PARTITION_STYLE_MBR
+                        Dim mbr As New CREATE_DISK_MBR With {
+                            .PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_MBR
                         }
 
-                        Win32API.RtlGenRandom(mbr.DiskSignature, 4)
+                        UnsafeNativeMethods.RtlGenRandom(mbr.DiskSignature, 4)
 
                         mbr.DiskSignature = mbr.DiskSignature Or &H80808081UI
                         mbr.DiskSignature = mbr.DiskSignature And &HFEFEFEFFUI
 
                         buffer.Write(0, mbr)
 
-                    Case Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT
-                        Dim gpt As New Win32API.CREATE_DISK_GPT With {
-                            .PartitionStyle = Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT,
+                    Case PARTITION_STYLE.PARTITION_STYLE_GPT
+                        Dim gpt As New CREATE_DISK_GPT With {
+                            .PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_GPT,
                             .DiskId = Guid.NewGuid(),
                             .MaxPartitionCount = 128
                         }
@@ -3446,7 +2743,7 @@ Namespace IO
 
                 End Select
 
-                Dim rc = Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_CREATE_DISK,
+                Dim rc = UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_CREATE_DISK,
                                                       buffer, CUInt(buffer.ByteLength), IntPtr.Zero, 0,
                                                       0, IntPtr.Zero)
 
@@ -3457,7 +2754,7 @@ Namespace IO
         End Sub
 
         Public Shared Sub FlushBuffers(handle As SafeFileHandle)
-            Win32Try(Win32API.FlushFileBuffers(handle))
+            Win32Try(UnsafeNativeMethods.FlushFileBuffers(handle))
         End Sub
 
         Public Shared Function GetDiskOffline(disk As SafeFileHandle) As Boolean?
@@ -3465,7 +2762,7 @@ Namespace IO
             Dim attribs_size As Byte = 16
             Dim attribs(0 To attribs_size - 1) As Byte
 
-            If Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_GET_DISK_ATTRIBUTES,
+            If UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_DISK_ATTRIBUTES,
                                               IntPtr.Zero, 0, attribs, attribs_size,
                                               0, IntPtr.Zero) Then
                 Return (attribs(8) And 1) <> 0
@@ -3485,7 +2782,7 @@ Namespace IO
                 attribs(8) = 1
             End If
 
-            Win32Try(Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_SET_DISK_ATTRIBUTES,
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_SET_DISK_ATTRIBUTES,
                                               attribs, attribs_size, IntPtr.Zero, 0,
                                               0, IntPtr.Zero))
 
@@ -3496,7 +2793,7 @@ Namespace IO
             Dim attribs_size As Byte = 16
             Dim attribs(0 To attribs_size - 1) As Byte
 
-            If Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_GET_DISK_ATTRIBUTES,
+            If UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_DISK_ATTRIBUTES,
                                               IntPtr.Zero, 0, attribs, attribs_size,
                                               0, IntPtr.Zero) Then
 
@@ -3517,7 +2814,7 @@ Namespace IO
                 attribs(8) = 2
             End If
 
-            Win32Try(Win32API.DeviceIoControl(disk, Win32API.IOCTL_DISK_SET_DISK_ATTRIBUTES,
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_SET_DISK_ATTRIBUTES,
                                               attribs, attribs_size, IntPtr.Zero, 0,
                                               0, IntPtr.Zero))
 
@@ -3525,9 +2822,9 @@ Namespace IO
 
         Public Shared Sub SetVolumeOffline(disk As SafeFileHandle, offline As Boolean)
 
-            Win32Try(Win32API.DeviceIoControl(disk, If(offline,
-                                                       Win32API.IOCTL_VOLUME_OFFLINE,
-                                                       Win32API.IOCTL_VOLUME_ONLINE),
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(disk, If(offline,
+                                                       NativeConstants.IOCTL_VOLUME_OFFLINE,
+                                                       NativeConstants.IOCTL_VOLUME_ONLINE),
                                               IntPtr.Zero, 0, IntPtr.Zero, 0,
                                               0, IntPtr.Zero))
 
@@ -3535,7 +2832,7 @@ Namespace IO
 
         Public Shared Function GetExceptionForNtStatus(NtStatus As Int32) As Exception
 
-            Return New Win32Exception(Win32API.RtlNtStatusToDosError(NtStatus))
+            Return New Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(NtStatus))
 
         End Function
 
@@ -3543,7 +2840,7 @@ Namespace IO
 
             Dim str As New String(Nothing, 32768)
 
-            Dim PathLength = Win32API.GetModuleFileName(hModule, str, str.Length)
+            Dim PathLength = UnsafeNativeMethods.GetModuleFileName(hModule, str, str.Length)
             If PathLength = 0 Then
                 Throw New Win32Exception
             End If
@@ -3568,7 +2865,7 @@ Namespace IO
 
             Dim str As New StringBuilder(65536)
 
-            Win32Try(Win32API.GetVolumeNameForVolumeMountPoint(MountPoint, str, str.Capacity))
+            Win32Try(UnsafeNativeMethods.GetVolumeNameForVolumeMountPoint(MountPoint, str, str.Capacity))
 
             Return str.ToString()
 
@@ -3577,11 +2874,11 @@ Namespace IO
         Public Structure ScsiAddressAndLength
             Implements IEquatable(Of ScsiAddressAndLength)
 
-            Public ReadOnly Property ScsiAddress As Win32API.SCSI_ADDRESS
+            Public ReadOnly Property ScsiAddress As SCSI_ADDRESS
 
             Public ReadOnly Property Length As Long
 
-            Public Sub New(ScsiAddress As Win32API.SCSI_ADDRESS, Length As Long)
+            Public Sub New(ScsiAddress As SCSI_ADDRESS, Length As Long)
                 _ScsiAddress = ScsiAddress
                 _Length = Length
             End Sub
@@ -3594,28 +2891,40 @@ Namespace IO
                 Return Equals(DirectCast(obj, ScsiAddressAndLength))
             End Function
 
+            Public Overrides Function GetHashCode() As Integer
+                Return _ScsiAddress.GetHashCode() Xor _Length.GetHashCode
+            End Function
+
             Public Overrides Function ToString() As String
-                Return ScsiAddress.ToString() & ", Length = " & _Length.ToString()
+                Return $"{_ScsiAddress}, Length = {_Length}"
             End Function
 
             Public Overloads Function Equals(other As ScsiAddressAndLength) As Boolean Implements IEquatable(Of ScsiAddressAndLength).Equals
                 Return _Length.Equals(other._Length) AndAlso _ScsiAddress.Equals(other._ScsiAddress)
             End Function
+
+            Shared Operator =(a As ScsiAddressAndLength, b As ScsiAddressAndLength) As Boolean
+                Return a.Equals(b)
+            End Operator
+
+            Shared Operator <>(a As ScsiAddressAndLength, b As ScsiAddressAndLength) As Boolean
+                Return a.Equals(b)
+            End Operator
         End Structure
 
         Public Shared Function GetDevicesScsiAddresses(portnumber As Byte) As Dictionary(Of ScsiAddressAndLength, String)
 
             Static SizeOfLong As UInt32 = CUInt(Marshal.SizeOf(GetType(Long)))
-            Static SizeOfScsiAddress As UInt32 = CUInt(Marshal.SizeOf(GetType(Win32API.SCSI_ADDRESS)))
+            Static SizeOfScsiAddress As UInt32 = CUInt(Marshal.SizeOf(GetType(SCSI_ADDRESS)))
 
             Dim GetScsiAddressAndLength =
                 Function(drv As String) As ScsiAddressAndLength?
                     Try
                         Using disk As New DiskDevice(drv, FileAccess.Read)
-                            Dim ScsiAddress As Win32API.SCSI_ADDRESS
-                            Dim rc = Win32API.
+                            Dim ScsiAddress As SCSI_ADDRESS
+                            Dim rc = UnsafeNativeMethods.
                                 DeviceIoControl(disk.SafeFileHandle,
-                                                Win32API.IOCTL_SCSI_GET_ADDRESS,
+                                                NativeConstants.IOCTL_SCSI_GET_ADDRESS,
                                                 IntPtr.Zero,
                                                 0,
                                                 ScsiAddress,
@@ -3624,14 +2933,14 @@ Namespace IO
                                                 Nothing)
 
                             If Not rc Then
-                                Trace.WriteLine("IOCTL_SCSI_GET_ADDRESS failed for device " & drv & ": Error 0x" & Marshal.GetLastWin32Error().ToString("X"))
+                                Trace.WriteLine($"IOCTL_SCSI_GET_ADDRESS failed for device {drv}: Error 0x{Marshal.GetLastWin32Error().ToString("X")}")
                                 Return Nothing
                             End If
 
                             Dim Length As Long
-                            rc = Win32API.
+                            rc = UnsafeNativeMethods.
                                 DeviceIoControl(disk.SafeFileHandle,
-                                                Win32API.IOCTL_DISK_GET_LENGTH_INFO,
+                                                NativeConstants.IOCTL_DISK_GET_LENGTH_INFO,
                                                 IntPtr.Zero,
                                                 0,
                                                 Length,
@@ -3674,7 +2983,7 @@ Namespace IO
 
             Dim length As UInt32
 
-            Win32Try(Win32API.GetVolumePathNamesForVolumeName(VolumeName, TargetPath, CUInt(TargetPath.Length), length))
+            Win32Try(UnsafeNativeMethods.GetVolumePathNamesForVolumeName(VolumeName, TargetPath, CUInt(TargetPath.Length), length))
 
             If length <= 2 Then
                 Return {}
@@ -3688,7 +2997,7 @@ Namespace IO
 
         Public Shared Function EnumerateDiskVolumes(DevicePath As String) As IEnumerable(Of String)
 
-            If DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase) Then          ' \\?\PhysicalDrive paths to partitioned disks
+            If DevicePath.NullCheck(NameOf(DevicePath)).StartsWith("\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase) Then          ' \\?\PhysicalDrive paths to partitioned disks
                 Return EnumerateDiskVolumes(UInteger.Parse(DevicePath.Substring("\\?\PhysicalDrive".Length)))
             Else
                 Return EnumerateVolumeNamesForDeviceObject(QueryDosDevice(DevicePath.Substring("\\?\".Length)).First())     ' \\?\C: or similar paths to mounted volumes
@@ -3738,7 +3047,7 @@ Namespace IO
 
         Public Shared Function VolumeUsesDisk(VolumeGuid As String, DiskNumber As UInteger) As Boolean
 
-            Using volume As New DiskDevice(VolumeGuid.TrimEnd("\"c), 0)
+            Using volume As New DiskDevice(VolumeGuid.NullCheck(NameOf(VolumeGuid)).TrimEnd("\"c), 0)
 
                 Try
                     Dim extents = GetVolumeDiskExtents(volume.SafeFileHandle)
@@ -3746,7 +3055,7 @@ Namespace IO
                     Return extents.Any(Function(extent) extent.DiskNumber.Equals(DiskNumber))
 
                 Catch ex As Win32Exception When _
-                    ex.NativeErrorCode = Win32API.ERROR_INVALID_FUNCTION
+                    ex.NativeErrorCode = NativeConstants.ERROR_INVALID_FUNCTION
 
                     Return False
 
@@ -3765,28 +3074,28 @@ Namespace IO
         Public Shared Function ScanForHardwareChanges(rootid As String) As UInt32
 
             Dim devInst As UInt32
-            Dim status = Win32API.CM_Locate_DevNode(devInst, rootid, 0)
+            Dim status = UnsafeNativeMethods.CM_Locate_DevNode(devInst, rootid, 0)
             If status <> 0 Then
                 Return status
             End If
 
-            Return Win32API.CM_Reenumerate_DevNode(devInst, 0)
+            Return UnsafeNativeMethods.CM_Reenumerate_DevNode(devInst, 0)
 
         End Function
 
         Public Shared Function GetDeviceInstancesForService(service As String, <Out> ByRef instances As String()) As UInt32
 
             Dim length As UInt32
-            Dim status = Win32API.CM_Get_Device_ID_List_Size(length, service, Win32API.CM_GETIDLIST_FILTER_SERVICE)
+            Dim status = UnsafeNativeMethods.CM_Get_Device_ID_List_Size(length, service, UnsafeNativeMethods.CM_GETIDLIST_FILTER_SERVICE)
             If status <> 0 Then
                 Return status
             End If
 
             Dim Buffer(0 To CInt(length) - 1) As Char
-            status = Win32API.CM_Get_Device_ID_List(service,
+            status = UnsafeNativeMethods.CM_Get_Device_ID_List(service,
                                                     Buffer,
                                                     CUInt(Buffer.Length),
-                                                    Win32API.CM_GETIDLIST_FILTER_SERVICE)
+                                                    UnsafeNativeMethods.CM_GETIDLIST_FILTER_SERVICE)
             If status <> 0 Then
                 Return status
             End If
@@ -3800,18 +3109,18 @@ Namespace IO
         Public Shared Sub RestartDevice(devclass As Guid, devinst As UInt32)
 
             '' get a list of devices which support the given interface
-            Using devinfo = Win32API.SetupDiGetClassDevs(devclass,
+            Using devinfo = UnsafeNativeMethods.SetupDiGetClassDevs(devclass,
                 Nothing,
                 Nothing,
-                Win32API.DIGCF_PROFILE Or
-                Win32API.DIGCF_DEVICEINTERFACE Or
-                Win32API.DIGCF_PRESENT)
+                UnsafeNativeMethods.DIGCF_PROFILE Or
+                UnsafeNativeMethods.DIGCF_DEVICEINTERFACE Or
+                UnsafeNativeMethods.DIGCF_PRESENT)
 
                 If devinfo.IsInvalid Then
                     Throw New Exception("Device not found")
                 End If
 
-                Dim devInfoData As Win32API.SP_DEVINFO_DATA
+                Dim devInfoData As UnsafeNativeMethods.SP_DEVINFO_DATA
                 '' as per DDK docs on SetupDiEnumDeviceInfo
                 devInfoData.Initialize()
 
@@ -3820,9 +3129,9 @@ Namespace IO
                 '' when there Is no device at the given index.
                 Dim deviceIndex = 0UI
 
-                While Win32API.SetupDiEnumDeviceInfo(devinfo, deviceIndex, devInfoData)
+                While UnsafeNativeMethods.SetupDiEnumDeviceInfo(devinfo, deviceIndex, devInfoData)
                     If devInfoData.DevInst.Equals(devinst) Then
-                        If Win32API.SetupDiRestartDevices(devinfo, devInfoData) Then
+                        If UnsafeNativeMethods.SetupDiRestartDevices(devinfo, devInfoData) Then
                             Return
                         End If
 
@@ -3843,11 +3152,11 @@ Namespace IO
             Dim cmdLine = $"{InfSection} 132 {InfPath}"
             Trace.WriteLine($"RunDLLInstallFromInfSection: {cmdLine}")
 
-            If InfPath.Contains(" ") Then
+            If InfPath.NullCheck(NameOf(InfPath)).Contains(" ") Then
                 Throw New ArgumentException("Arguments to this method cannot contain spaces.", NameOf(InfPath))
             End If
 
-            If InfSection.Contains(" ") Then
+            If InfSection.NullCheck(NameOf(InfSection)).Contains(" ") Then
                 Throw New ArgumentException("Arguments to this method cannot contain spaces.", NameOf(InfSection))
             End If
 
@@ -3856,7 +3165,7 @@ Namespace IO
                 Throw New FileNotFoundException("File not found", InfPath)
             End If
 
-            Win32API.InstallHinfSection(OwnerWindow,
+            UnsafeNativeMethods.InstallHinfSection(OwnerWindow,
                                         Nothing,
                                         cmdLine,
                                         0)
@@ -3876,7 +3185,7 @@ Namespace IO
             End If
 
             Dim ErrorLine As UInt32
-            Dim hInf = Win32API.SetupOpenInfFile(InfPath,
+            Dim hInf = UnsafeNativeMethods.SetupOpenInfFile(InfPath,
                                                  Nothing,
                                                  &H2UI,
                                                  ErrorLine)
@@ -3886,7 +3195,7 @@ Namespace IO
 
             Using hInf
 
-                Win32Try(Win32API.SetupInstallFromInfSection(OwnerWindow,
+                Win32Try(UnsafeNativeMethods.SetupInstallFromInfSection(OwnerWindow,
                                                              hInf,
                                                              InfSection,
                                                              &H1FFUI,
@@ -3927,7 +3236,7 @@ Namespace IO
             ''
             Dim ClassGUID As Guid
             Dim ClassName(0 To 31) As Char
-            Win32Try(Win32API.SetupDiGetINFClass(InfPath,
+            Win32Try(UnsafeNativeMethods.SetupDiGetINFClass(InfPath,
                                                  ClassGUID,
                                                  ClassName,
                                                  CUInt(ClassName.Length),
@@ -3938,7 +3247,7 @@ Namespace IO
             ''
             '' Create the container for the to-be-created Device Information Element.
             ''
-            Dim DeviceInfoSet = Win32API.SetupDiCreateDeviceInfoList(ClassGUID, OwnerWindow)
+            Dim DeviceInfoSet = UnsafeNativeMethods.SetupDiCreateDeviceInfoList(ClassGUID, OwnerWindow)
             If DeviceInfoSet.IsInvalid Then
                 Throw New Win32Exception
             End If
@@ -3949,9 +3258,9 @@ Namespace IO
                 '' Now create the element.
                 '' Use the Class GUID and Name from the INF file.
                 ''
-                Dim DeviceInfoData As Win32API.SP_DEVINFO_DATA
+                Dim DeviceInfoData As UnsafeNativeMethods.SP_DEVINFO_DATA
                 DeviceInfoData.Initialize()
-                Win32Try(Win32API.SetupDiCreateDeviceInfo(DeviceInfoSet,
+                Win32Try(UnsafeNativeMethods.SetupDiCreateDeviceInfo(DeviceInfoSet,
                                                           ClassName,
                                                           ClassGUID,
                                                           Nothing,
@@ -3962,7 +3271,7 @@ Namespace IO
                 ''
                 '' Add the HardwareID to the Device's HardwareID property.
                 ''
-                Win32Try(Win32API.SetupDiSetDeviceRegistryProperty(DeviceInfoSet,
+                Win32Try(UnsafeNativeMethods.SetupDiSetDeviceRegistryProperty(DeviceInfoSet,
                                                                    DeviceInfoData,
                                                                    &H1UI,
                                                                    hwIdList,
@@ -3972,7 +3281,7 @@ Namespace IO
                 '' Transform the registry element into an actual devnode
                 '' in the PnP HW tree.
                 ''
-                Win32Try(Win32API.SetupDiCallClassInstaller(DIF_REGISTERDEVICE,
+                Win32Try(UnsafeNativeMethods.SetupDiCallClassInstaller(DIF_REGISTERDEVICE,
                                                             DeviceInfoSet,
                                                             DeviceInfoData))
 
@@ -3992,7 +3301,7 @@ Namespace IO
 
             Dim child As UInteger
 
-            Dim rc = Win32API.CM_Get_Child(child, devInst, 0)
+            Dim rc = UnsafeNativeMethods.CM_Get_Child(child, devInst, 0)
 
             While rc = 0
 
@@ -4000,7 +3309,7 @@ Namespace IO
 
                 Yield child
 
-                rc = Win32API.CM_Get_Sibling(child, child, 0)
+                rc = UnsafeNativeMethods.CM_Get_Sibling(child, child, 0)
 
             End While
 
@@ -4013,7 +3322,7 @@ Namespace IO
             Dim buffer(0 To 518) As Byte
             Dim buffersize = buffer.Length
 
-            Dim rc = Win32API.CM_Get_DevNode_Registry_Property(devInst, Win32API.CmDevNodeRegistryProperty.CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, regtype, buffer, buffersize, 0)
+            Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, UnsafeNativeMethods.CmDevNodeRegistryProperty.CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, regtype, buffer, buffersize, 0)
 
             If rc <> 0 Then
                 Trace.WriteLine($"Error getting registry property for device {devInst}. Status=0x{rc:X}")
@@ -4035,7 +3344,7 @@ Namespace IO
             Dim buffer(0 To 65535) As Byte
             Dim buffersize = buffer.Length
 
-            Dim rc = Win32API.CM_Get_DevNode_Registry_Property(devInst, Win32API.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
+            Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, UnsafeNativeMethods.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
 
             If rc <> 0 Then
                 Dim msg = $"Error getting registry property for device. Status=0x{rc:X}"
@@ -4089,7 +3398,7 @@ Namespace IO
             Dim buffer = Encoding.Unicode.GetBytes(str)
             Dim buffersize = buffer.Length
 
-            Dim rc = Win32API.CM_Set_DevNode_Registry_Property(devInst, Win32API.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, buffer, buffersize, 0)
+            Dim rc = UnsafeNativeMethods.CM_Set_DevNode_Registry_Property(devInst, UnsafeNativeMethods.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, buffer, buffersize, 0)
 
             If rc <> 0 Then
                 Throw New Exception($"Error setting registry property for device. Status=0x{rc:X}")
@@ -4103,7 +3412,7 @@ Namespace IO
             Dim buffer = Encoding.Unicode.GetBytes(str)
             Dim buffersize = buffer.Length
 
-            Dim rc = Win32API.CM_Set_Class_Registry_Property(devClass, Win32API.CmClassRegistryProperty.CM_CRP_UPPERFILTERS, buffer, buffersize, 0)
+            Dim rc = UnsafeNativeMethods.CM_Set_Class_Registry_Property(devClass, UnsafeNativeMethods.CmClassRegistryProperty.CM_CRP_UPPERFILTERS, buffer, buffersize, 0)
 
             If rc <> 0 Then
                 Throw New Exception($"Error setting registry property for class. Status=0x{rc:X}")
@@ -4136,6 +3445,8 @@ Namespace IO
         End Function
 
         Public Shared Function AddFilter(devClass As Guid, driver As String, addfirst As Boolean) As Boolean
+
+            driver.NullCheck(NameOf(driver))
 
             Dim filters = GetRegisteredFilters(devClass)
 
@@ -4242,7 +3553,7 @@ Namespace IO
             ''
             '' Create the container for the to-be-created Device Information Element.
             ''
-            Dim DeviceInfoSet = Win32API.SetupDiCreateDeviceInfoList(IntPtr.Zero,
+            Dim DeviceInfoSet = UnsafeNativeMethods.SetupDiCreateDeviceInfoList(IntPtr.Zero,
                                                                      OwnerWindow)
             If DeviceInfoSet.IsInvalid Then
                 Throw New Win32Exception("SetupDiCreateDeviceInfoList")
@@ -4250,17 +3561,17 @@ Namespace IO
 
             Using DeviceInfoSet
 
-                If Not Win32API.SetupDiOpenDeviceInfo(DeviceInfoSet, hwid, OwnerWindow, 0, IntPtr.Zero) Then
+                If Not UnsafeNativeMethods.SetupDiOpenDeviceInfo(DeviceInfoSet, hwid, OwnerWindow, 0, IntPtr.Zero) Then
                     Return 0
                 End If
 
-                Dim DeviceInfoData As Win32API.SP_DEVINFO_DATA
+                Dim DeviceInfoData As UnsafeNativeMethods.SP_DEVINFO_DATA
                 DeviceInfoData.Initialize()
 
                 Dim i As UInteger
                 Dim done As Integer
                 Do
-                    If Not Win32API.SetupDiEnumDeviceInfo(DeviceInfoSet, i, DeviceInfoData) Then
+                    If Not UnsafeNativeMethods.SetupDiEnumDeviceInfo(DeviceInfoSet, i, DeviceInfoData) Then
                         If i = 0 Then
                             Throw New Win32Exception("SetupDiEnumDeviceInfo")
                         Else
@@ -4268,7 +3579,7 @@ Namespace IO
                         End If
                     End If
 
-                    If Win32API.SetupDiCallClassInstaller(DIF_REMOVE, DeviceInfoSet, DeviceInfoData) Then
+                    If UnsafeNativeMethods.SetupDiCallClassInstaller(DIF_REMOVE, DeviceInfoSet, DeviceInfoData) Then
                         done += 1
                     End If
 
@@ -4294,7 +3605,7 @@ Namespace IO
             ''
             '' make use of UpdateDriverForPlugAndPlayDevices
             ''
-            Win32Try(Win32API.UpdateDriverForPlugAndPlayDevices(OwnerWindow,
+            Win32Try(UnsafeNativeMethods.UpdateDriverForPlugAndPlayDevices(OwnerWindow,
                                                                 hwid,
                                                                 InfPath,
                                                                 If(forceReplaceExisting, &H1UI, &H0UI),
@@ -4314,7 +3625,7 @@ Namespace IO
 
             Dim destName As New StringBuilder(260)
 
-            Win32Try(Win32API.SetupCopyOEMInf(InfPath,
+            Win32Try(UnsafeNativeMethods.SetupCopyOEMInf(InfPath,
                                               Nothing,
                                               0,
                                               If(NoOverwrite, &H8UI, &H0UI),
@@ -4337,7 +3648,7 @@ Namespace IO
                 Throw New FileNotFoundException("File not found", InfPath)
             End If
 
-            Dim errcode = Win32API.DriverPackagePreinstall(InfPath, 1)
+            Dim errcode = UnsafeNativeMethods.DriverPackagePreinstall(InfPath, 1)
             If errcode <> 0 Then
                 Throw New Win32Exception(errcode)
             End If
@@ -4354,7 +3665,7 @@ Namespace IO
                 Throw New FileNotFoundException("File not found", InfPath)
             End If
 
-            Dim errcode = Win32API.DriverPackageInstall(InfPath, 1, Nothing, NeedReboot)
+            Dim errcode = UnsafeNativeMethods.DriverPackageInstall(InfPath, 1, Nothing, NeedReboot)
             If errcode <> 0 Then
                 Throw New Win32Exception(errcode)
             End If
@@ -4364,9 +3675,9 @@ Namespace IO
         <Flags>
         Public Enum DriverPackageUninstallFlags As UInteger
             Normal = &H0UI
-            DeleteFiles = Win32API.DRIVER_PACKAGE_DELETE_FILES
-            Force = Win32API.DRIVER_PACKAGE_FORCE
-            Silent = Win32API.DRIVER_PACKAGE_SILENT
+            DeleteFiles = UnsafeNativeMethods.DRIVER_PACKAGE_DELETE_FILES
+            Force = UnsafeNativeMethods.DRIVER_PACKAGE_FORCE
+            Silent = UnsafeNativeMethods.DRIVER_PACKAGE_SILENT
         End Enum
 
         Public Shared Sub DriverPackageUninstall(InfPath As String, Flags As DriverPackageUninstallFlags, ByRef NeedReboot As Boolean)
@@ -4379,7 +3690,7 @@ Namespace IO
                 Throw New FileNotFoundException("File not found", InfPath)
             End If
 
-            Dim errcode = Win32API.DriverPackageUninstall(InfPath, Flags, Nothing, NeedReboot)
+            Dim errcode = UnsafeNativeMethods.DriverPackageUninstall(InfPath, Flags, Nothing, NeedReboot)
             If errcode <> 0 Then
                 Throw New Win32Exception(errcode)
             End If
@@ -4419,12 +3730,12 @@ Namespace IO
         ''' logged to trace log.
         ''' </summary>
         ''' <returns>Returns a value indicating whether operation was successful or not.</returns>
-        Public Shared Function UpdateDiskProperties(ScsiAddress As Win32API.SCSI_ADDRESS) As Boolean
+        Public Shared Function UpdateDiskProperties(ScsiAddress As SCSI_ADDRESS) As Boolean
 
             Try
                 Using devicehandle = OpenDiskByScsiAddress(ScsiAddress, Nothing).Value
 
-                    Dim rc = Win32API.DeviceIoControl(devicehandle, Win32API.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+                    Dim rc = UnsafeNativeMethods.DeviceIoControl(devicehandle, NativeConstants.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
 
                     If Not rc Then
 
@@ -4456,7 +3767,7 @@ Namespace IO
             Try
                 Using devicehandle = OpenFileHandle(DevicePath, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, 0)
 
-                    Dim rc = Win32API.DeviceIoControl(devicehandle, Win32API.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+                    Dim rc = UnsafeNativeMethods.DeviceIoControl(devicehandle, NativeConstants.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
 
                     If Not rc Then
 
@@ -4480,7 +3791,7 @@ Namespace IO
         ''' <summary>
         ''' Opens a disk device with a specified SCSI address and returns both name and an open handle.
         ''' </summary>
-        Public Shared Function OpenDiskByScsiAddress(ScsiAddress As Win32API.SCSI_ADDRESS, AccessMode As FileAccess) As KeyValuePair(Of String, SafeFileHandle)
+        Public Shared Function OpenDiskByScsiAddress(ScsiAddress As SCSI_ADDRESS, AccessMode As FileAccess) As KeyValuePair(Of String, SafeFileHandle)
 
             Dim dosdevs = QueryDosDevice()
 
@@ -4548,7 +3859,7 @@ Namespace IO
         ''' <summary>
         ''' Returns a disk device object name for a specified SCSI address.
         ''' </summary>
-        Public Shared Function GetDeviceNameByScsiAddress(ScsiAddress As Win32API.SCSI_ADDRESS) As String
+        Public Shared Function GetDeviceNameByScsiAddress(ScsiAddress As SCSI_ADDRESS) As String
 
             Dim dosdevs = QueryDosDevice()
 
@@ -4564,7 +3875,7 @@ Namespace IO
                     device.Length = 2 AndAlso device(1).Equals(":"c)
 
             Dim filter =
-                Function(diskdevice As String)
+                Function(diskdevice As String) As Boolean
 
                     Try
                         Dim devicehandle = OpenFileHandle($"\\?\{diskdevice}", 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
@@ -4574,7 +3885,7 @@ Namespace IO
 
                             If Not Address.HasValue OrElse Not Address.Value.Equals(ScsiAddress) Then
 
-                                Return Nothing
+                                Return False
 
                             End If
 
@@ -4605,11 +3916,11 @@ Namespace IO
 
         Public Shared Function TestFileOpen(path As String) As Boolean
 
-            Using handle = Win32API.CreateFile(path,
-                           NativeFileIO.Win32API.FILE_READ_ATTRIBUTES,
+            Using handle = UnsafeNativeMethods.CreateFile(path,
+                           NativeConstants.FILE_READ_ATTRIBUTES,
                            0,
                            IntPtr.Zero,
-                           NativeFileIO.Win32API.OPEN_EXISTING,
+                           NativeConstants.OPEN_EXISTING,
                            0,
                            IntPtr.Zero)
 
@@ -4621,26 +3932,24 @@ Namespace IO
 
         Public Shared Sub CreateHardLink(existing As String, newlink As String)
 
-            Win32Try(Win32API.CreateHardLink(newlink, existing, Nothing))
+            Win32Try(UnsafeNativeMethods.CreateHardLink(newlink, existing, Nothing))
 
         End Sub
 
         Public Shared Sub MoveFile(existing As String, newname As String)
 
-            Win32Try(Win32API.MoveFile(existing, newname))
+            Win32Try(UnsafeNativeMethods.MoveFile(existing, newname))
 
         End Sub
 
         Public Shared Function GetOSVersion() As OperatingSystem
 
-            Dim os_version As New Win32API.OSVERSIONINFOEX With {
-                .OSVersionInfoSize = Marshal.SizeOf(os_version)
-            }
+            Dim os_version = OSVERSIONINFOEX.Initalize()
 
-            Dim status = Win32API.RtlGetVersion(os_version)
+            Dim status = UnsafeNativeMethods.RtlGetVersion(os_version)
 
             If status < 0 Then
-                Throw New Win32Exception(Win32API.RtlNtStatusToDosError(status))
+                Throw New Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(status))
             End If
 
             Return New OperatingSystem(os_version.PlatformId,
@@ -4651,26 +3960,485 @@ Namespace IO
 
         End Function
 
+        <StructLayout(LayoutKind.Sequential, Pack:=1)>
+        Public Structure LUID_AND_ATTRIBUTES
+            Public Property LUID As Long
+            Public Property Attributes As Integer
+
+            Public Overrides Function ToString() As String
+                Return $"LUID = 0x{LUID.ToString("X")}, Attributes = 0x{Attributes.ToString("X")}"
+            End Function
+        End Structure
+
+        Public Enum SystemInfoClass As UInteger
+            SystemBasicInformation  '' 0x002C 
+            SystemProcessorInformation  '' 0x000C 
+            SystemPerformanceInformation    '' 0x0138 
+            SystemTimeInformation   '' 0x0020 
+            SystemPathInformation   '' Not implemented 
+            SystemProcessInformation    '' 0x00C8+ per process 
+            SystemCallInformation   '' 0x0018 + (n * 0x0004) 
+            SystemConfigurationInformation  '' 0x0018 
+            SystemProcessorCounters '' 0x0030 per cpu 
+            SystemGlobalFlag        '' 0x0004 (fails If size != 4) 
+            SystemCallTimeInformation   '' Not implemented 
+            SystemModuleInformation '' 0x0004 + (n * 0x011C) 
+            SystemLockInformation   '' 0x0004 + (n * 0x0024) 
+            SystemStackTraceInformation '' Not implemented 
+            SystemPagedPoolInformation  '' checked build only 
+            SystemNonPagedPoolInformation   '' checked build only 
+            SystemHandleInformation '' 0x0004 + (n * 0x0010) 
+            SystemObjectTypeInformation '' 0x0038+ + (n * 0x0030+) 
+            SystemPageFileInformation   '' 0x0018+ per page file 
+            SystemVdmInstemulInformation    '' 0x0088 
+            SystemVdmBopInformation '' invalid info Class 
+            SystemCacheInformation  '' 0x0024 
+            SystemPoolTagInformation    '' 0x0004 + (n * 0x001C) 
+            SystemInterruptInformation  '' 0x0000 Or 0x0018 per cpu 
+            SystemDpcInformation    '' 0x0014 
+            SystemFullMemoryInformation '' checked build only 
+            SystemLoadDriver        '' 0x0018 Set mode only 
+            SystemUnloadDriver      '' 0x0004 Set mode only 
+            SystemTimeAdjustmentInformation '' 0x000C 0x0008 writeable 
+            SystemSummaryMemoryInformation  '' checked build only 
+            SystemNextEventIdInformation    '' checked build only 
+            SystemEventIdsInformation   '' checked build only 
+            SystemCrashDumpInformation  '' 0x0004 
+            SystemExceptionInformation  '' 0x0010 
+            SystemCrashDumpStateInformation '' 0x0004 
+            SystemDebuggerInformation   '' 0x0002 
+            SystemContextSwitchInformation  '' 0x0030 
+            SystemRegistryQuotaInformation  '' 0x000C 
+            SystemAddDriver     '' 0x0008 Set mode only 
+            SystemPrioritySeparationInformation '' 0x0004 Set mode only 
+            SystemPlugPlayBusInformation    '' Not implemented 
+            SystemDockInformation   '' Not implemented 
+            SystemPowerInfo     '' 0x0060 (XP only!) 
+            SystemProcessorSpeedInformation '' 0x000C (XP only!) 
+            SystemTimeZoneInformation   '' 0x00AC 
+            SystemLookasideInformation  '' n * 0x0020 
+            SystemSetTimeSlipEvent
+            SystemCreateSession '' Set mode only 
+            SystemDeleteSession '' Set mode only 
+            SystemInvalidInfoClass1 '' invalid info Class 
+            SystemRangeStartInformation '' 0x0004 (fails If size != 4) 
+            SystemVerifierInformation
+            SystemAddVerifier
+            SystemSessionProcessesInformation   '' checked build only 
+            MaxSystemInfoClass
+        End Enum
+
+        Public Enum ObjectInfoClass As UInteger
+            ObjectBasicInformation  '' 0 Y N 
+            ObjectNameInformation   '' 1 Y N 
+            ObjectTypeInformation   '' 2 Y N 
+            ObjectAllTypesInformation   '' 3 Y N 
+            ObjectHandleInformation '' 4 Y Y 
+        End Enum
+
+        Public Enum ObType As Byte
+            OB_TYPE_TYPE = 1
+            OB_TYPE_DIRECTORY = 2
+            OB_TYPE_SYMBOLIC_LINK = 3
+            OB_TYPE_TOKEN = 4
+            OB_TYPE_PROCESS = 5
+            OB_TYPE_THREAD = 6
+            OB_TYPE_EVENT = 7
+            OB_TYPE_EVENT_PAIR = 8
+            OB_TYPE_MUTANT = 9
+            OB_TYPE_SEMAPHORE = 10
+            OB_TYPE_TIMER = 11
+            OB_TYPE_PROFILE = 12
+            OB_TYPE_WINDOW_STATION = 13
+            OB_TYPE_DESKTOP = 14
+            OB_TYPE_SECTION = 15
+            OB_TYPE_KEY = 16
+            OB_TYPE_PORT = 17
+            OB_TYPE_ADAPTER = 18
+            OB_TYPE_CONTROLLER = 19
+            OB_TYPE_DEVICE = 20
+            OB_TYPE_DRIVER = 21
+            OB_TYPE_IO_COMPLETION = 22
+            OB_TYPE_FILE = 23
+        End Enum
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure SystemHandleTableEntryInformation
+            Public ReadOnly Property ProcessId As Integer
+            Public ReadOnly Property ObjectType As ObType     '' OB_TYPE_* (OB_TYPE_TYPE, etc.) 
+            Public ReadOnly Property Flags As Byte      '' HANDLE_FLAG_* (HANDLE_FLAG_INHERIT, etc.) 
+            Public ReadOnly Property Handle As UShort
+            Public ReadOnly Property ObjectPtr As IntPtr
+            Public ReadOnly Property GrantedAccess As UInteger
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure ObjectTypeInformation
+            Public ReadOnly Property Name As UNICODE_STRING
+            Public ReadOnly Property ObjectCount As UInteger
+            Public ReadOnly Property HandleCount As UInteger
+            Private ReadOnly Reserved11 As UInteger
+            Private ReadOnly Reserved12 As UInteger
+            Private ReadOnly Reserved13 As UInteger
+            Private ReadOnly Reserved14 As UInteger
+            Public ReadOnly Property PeakObjectCount As UInteger
+            Public ReadOnly Property PeakHandleCount As UInteger
+            Private ReadOnly Reserved21 As UInteger
+            Private ReadOnly Reserved22 As UInteger
+            Private ReadOnly Reserved23 As UInteger
+            Private ReadOnly Reserved24 As UInteger
+            Public ReadOnly Property InvalidAttributes As UInteger
+            Public ReadOnly Property GenericRead As UInteger
+            Public ReadOnly Property GenericWrite As UInteger
+            Public ReadOnly Property GenericExecute As UInteger
+            Public ReadOnly Property GenericAll As UInteger
+            Public ReadOnly Property ValidAccess As UInteger
+            Private ReadOnly Unknown As Byte
+            <MarshalAs(UnmanagedType.I1)> Private ReadOnly MaintainHandleDatabase As Boolean
+            Private ReadOnly Reserved3 As UShort
+            Public ReadOnly Property PoolType As Integer
+            Public ReadOnly Property PagedPoolUsage As UInteger
+            Public ReadOnly Property NonPagedPoolUsage As UInteger
+        End Structure
+
+        Public Enum Win32FileType As Int32
+            Unknown = &H0
+            Disk = &H1
+            Character = &H2
+            Pipe = &H3
+            Remote = &H8000
+        End Enum
+
+        Public Enum StdHandle As Int32
+            Input = -10
+            Output = -11
+            [Error] = -12
+        End Enum
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure COORD
+            Public ReadOnly Property X As Short
+            Public ReadOnly Property Y As Short
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure SMALL_RECT
+            Public ReadOnly Property Left As Short
+            Public ReadOnly Property Top As Short
+            Public ReadOnly Property Right As Short
+            Public ReadOnly Property Bottom As Short
+            Public ReadOnly Property Width As Short
+                Get
+                    Return _Right - _Left + 1S
+                End Get
+            End Property
+            Public ReadOnly Property Height As Short
+                Get
+                    Return _Bottom - _Top + 1S
+                End Get
+            End Property
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure CONSOLE_SCREEN_BUFFER_INFO
+            Public ReadOnly Property dwSize As COORD
+            Public ReadOnly Property dwCursorPosition As COORD
+            Public ReadOnly Property wAttributes As Short
+            Public ReadOnly Property srWindow As SMALL_RECT
+            Public ReadOnly Property dwMaximumWindowSize As COORD
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure SERVICE_STATUS
+            Public ReadOnly Property dwServiceType As Integer
+            Public ReadOnly Property dwCurrentState As Integer
+            Public ReadOnly Property dwControlsAccepted As Integer
+            Public ReadOnly Property dwWin32ExitCode As Integer
+            Public ReadOnly Property dwServiceSpecificExitCode As Integer
+            Public ReadOnly Property dwCheckPoint As Integer
+            Public ReadOnly Property dwWaitHint As Integer
+        End Structure
+
+        <Flags()>
+        Public Enum DEFINE_DOS_DEVICE_FLAGS As UInt32
+            DDD_EXACT_MATCH_ON_REMOVE = &H4
+            DDD_NO_BROADCAST_SYSTEM = &H8
+            DDD_RAW_TARGET_PATH = &H1
+            DDD_REMOVE_DEFINITION = &H2
+        End Enum
+
+        ''' <summary>
+        ''' Encapsulates a Service Control Management object handle that is closed by calling CloseServiceHandle() Win32 API.
+        ''' </summary>
+        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
+        Public NotInheritable Class SafeServiceHandle
+            Inherits SafeHandleZeroOrMinusOneIsInvalid
+
+            Private Declare Auto Function CloseServiceHandle Lib "advapi32.dll" (
+                  hSCObject As IntPtr) As Boolean
+
+            ''' <summary>
+            ''' Initiates a new instance with an existing open handle.
+            ''' </summary>
+            ''' <param name="open_handle">Existing open handle.</param>
+            ''' <param name="owns_handle">Indicates whether handle should be closed when this
+            ''' instance is released.</param>
+            Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
+                MyBase.New(owns_handle)
+
+                SetHandle(open_handle)
+            End Sub
+
+            ''' <summary>
+            ''' Creates a new empty instance. This constructor is used by native to managed
+            ''' handle marshaller.
+            ''' </summary>
+            Protected Sub New()
+                MyBase.New(ownsHandle:=True)
+
+            End Sub
+
+            ''' <summary>
+            ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
+            ''' </summary>
+            ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
+            Protected Overrides Function ReleaseHandle() As Boolean
+                Return CloseServiceHandle(handle)
+            End Function
+        End Class
+
+        ''' <summary>
+        ''' Encapsulates a FindVolume handle that is closed by calling FindVolumeClose() Win32 API.
+        ''' </summary>
+        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
+        Public NotInheritable Class SafeFindVolumeHandle
+            Inherits SafeHandleMinusOneIsInvalid
+
+            Private Declare Auto Function FindVolumeClose Lib "kernel32.dll" (
+                  h As IntPtr) As Boolean
+
+            ''' <summary>
+            ''' Initiates a new instance with an existing open handle.
+            ''' </summary>
+            ''' <param name="open_handle">Existing open handle.</param>
+            ''' <param name="owns_handle">Indicates whether handle should be closed when this
+            ''' instance is released.</param>
+            Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
+                MyBase.New(owns_handle)
+
+                SetHandle(open_handle)
+            End Sub
+
+            ''' <summary>
+            ''' Creates a new empty instance. This constructor is used by native to managed
+            ''' handle marshaller.
+            ''' </summary>
+            Protected Sub New()
+                MyBase.New(ownsHandle:=True)
+
+            End Sub
+
+            ''' <summary>
+            ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
+            ''' </summary>
+            ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
+            Protected Overrides Function ReleaseHandle() As Boolean
+                Return FindVolumeClose(handle)
+            End Function
+        End Class
+
+        ''' <summary>
+        ''' Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
+        ''' </summary>
+        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
+        Public NotInheritable Class SafeFindVolumeMountPointHandle
+            Inherits SafeHandleMinusOneIsInvalid
+
+            Private Declare Auto Function FindVolumeMountPointClose Lib "kernel32.dll" (
+                  h As IntPtr) As Boolean
+
+            ''' <summary>
+            ''' Initiates a new instance with an existing open handle.
+            ''' </summary>
+            ''' <param name="open_handle">Existing open handle.</param>
+            ''' <param name="owns_handle">Indicates whether handle should be closed when this
+            ''' instance is released.</param>
+            Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
+                MyBase.New(owns_handle)
+
+                SetHandle(open_handle)
+            End Sub
+
+            ''' <summary>
+            ''' Creates a new empty instance. This constructor is used by native to managed
+            ''' handle marshaller.
+            ''' </summary>
+            Protected Sub New()
+                MyBase.New(ownsHandle:=True)
+
+            End Sub
+
+            ''' <summary>
+            ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
+            ''' </summary>
+            ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
+            Protected Overrides Function ReleaseHandle() As Boolean
+                Return FindVolumeMountPointClose(handle)
+            End Function
+        End Class
+
+        ''' <summary>
+        ''' Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
+        ''' </summary>
+        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
+        Public NotInheritable Class SafeInfHandle
+            Inherits SafeHandleMinusOneIsInvalid
+
+            Private Declare Auto Sub SetupCloseInfFile Lib "setupapi.dll" (
+                  hInf As IntPtr)
+
+            ''' <summary>
+            ''' Initiates a new instance with an existing open handle.
+            ''' </summary>
+            ''' <param name="open_handle">Existing open handle.</param>
+            ''' <param name="owns_handle">Indicates whether handle should be closed when this
+            ''' instance is released.</param>
+            Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
+                MyBase.New(owns_handle)
+
+                SetHandle(open_handle)
+            End Sub
+
+            ''' <summary>
+            ''' Creates a new empty instance. This constructor is used by native to managed
+            ''' handle marshaller.
+            ''' </summary>
+            Protected Sub New()
+                MyBase.New(ownsHandle:=True)
+
+            End Sub
+
+            ''' <summary>
+            ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
+            ''' </summary>
+            ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
+            Protected Overrides Function ReleaseHandle() As Boolean
+                SetupCloseInfFile(handle)
+                Return True
+            End Function
+        End Class
+
+        ''' <summary>
+        ''' Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
+        ''' </summary>
+        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
+        Public NotInheritable Class SafeDeviceInfoSetHandle
+            Inherits SafeHandleMinusOneIsInvalid
+
+            Private Declare Auto Function SetupDiDestroyDeviceInfoList Lib "setupapi.dll" (
+                  handle As IntPtr) As Boolean
+
+            ''' <summary>
+            ''' Initiates a new instance with an existing open handle.
+            ''' </summary>
+            ''' <param name="open_handle">Existing open handle.</param>
+            ''' <param name="owns_handle">Indicates whether handle should be closed when this
+            ''' instance is released.</param>
+            Public Sub New(open_handle As IntPtr, owns_handle As Boolean)
+                MyBase.New(owns_handle)
+
+                SetHandle(open_handle)
+            End Sub
+
+            ''' <summary>
+            ''' Creates a new empty instance. This constructor is used by native to managed
+            ''' handle marshaller.
+            ''' </summary>
+            Protected Sub New()
+                MyBase.New(ownsHandle:=True)
+
+            End Sub
+
+            ''' <summary>
+            ''' Closes contained handle by calling CloseServiceHandle() Win32 API.
+            ''' </summary>
+            ''' <returns>Return value from CloseServiceHandle() Win32 API.</returns>
+            Protected Overrides Function ReleaseHandle() As Boolean
+                Return SetupDiDestroyDeviceInfoList(handle)
+            End Function
+        End Class
+
+        Public Class HGlobalBuffer
+            Inherits SafeBuffer
+
+            Public Sub New(numBytes As IntPtr)
+                MyBase.New(ownsHandle:=True)
+                Dim ptr = Marshal.AllocHGlobal(numBytes)
+                MyBase.SetHandle(ptr)
+                MyBase.Initialize(CULng(numBytes))
+            End Sub
+
+            Public Sub New(numBytes As Integer)
+                MyBase.New(ownsHandle:=True)
+                Dim ptr = Marshal.AllocHGlobal(numBytes)
+                MyBase.SetHandle(ptr)
+                MyBase.Initialize(CULng(numBytes))
+            End Sub
+
+            Public Sub New(address As IntPtr, numBytes As ULong, ownsHandle As Boolean)
+                MyBase.New(ownsHandle)
+                MyBase.SetHandle(address)
+                MyBase.Initialize(numBytes)
+            End Sub
+
+            Public Sub Resize(newSize As Integer)
+                handle = Marshal.AllocHGlobal(newSize)
+                MyBase.Initialize(CULng(newSize))
+            End Sub
+
+            Public Sub Resize(newSize As IntPtr)
+                handle = Marshal.AllocHGlobal(newSize)
+                MyBase.Initialize(CULng(newSize))
+            End Sub
+
+            Protected Overrides Function ReleaseHandle() As Boolean
+                Try
+                    Marshal.FreeHGlobal(handle)
+                    Return True
+
+                Catch
+                    Return False
+
+                End Try
+            End Function
+
+        End Class
+
         <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
         Public Structure FindStreamData
 
-            Public StreamSize As Int64
+            Public ReadOnly Property StreamSize As Int64
 
             <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=296)>
-            Public StreamName As String
+            Private ReadOnly _streamName As String
 
             Public ReadOnly Property NamePart As String
                 Get
-                    Return StreamName?.Split(":"c).ElementAtOrDefault(1)
+                    Return _streamName?.Split(":"c).ElementAtOrDefault(1)
                 End Get
             End Property
 
             Public ReadOnly Property TypePart As String
                 Get
-                    Return StreamName?.Split(":"c).ElementAtOrDefault(2)
+                    Return _streamName?.Split(":"c).ElementAtOrDefault(2)
                 End Get
             End Property
 
+            Public ReadOnly Property StreamName As String
+                Get
+                    Return _streamName
+                End Get
+            End Property
         End Structure
 
         ''' <summary>
@@ -4679,6 +4447,7 @@ Namespace IO
         <SecurityCritical>
         <SecurityPermission(SecurityAction.Demand, Flags:=SecurityPermissionFlag.AllFlags)>
         <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
+        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class")>
         Public NotInheritable Class SafeFindHandle
             Inherits SafeHandleMinusOneIsInvalid
 
@@ -4777,11 +4546,489 @@ Namespace IO
 
                 Dim obj As New ByHandleFileInformation
 
-                Win32Try(Win32API.GetFileInformationByHandle(handle, obj))
+                Win32Try(UnsafeNativeMethods.GetFileInformationByHandle(handle, obj))
 
                 Return obj
 
             End Function
+
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure STORAGE_DEVICE_NUMBER
+
+            Public ReadOnly Property DeviceType As UInt32
+
+            Public ReadOnly Property DeviceNumber As UInt32
+
+            Public ReadOnly Property PartitionNumber As Int32
+
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure SCSI_ADDRESS
+            Implements IEquatable(Of SCSI_ADDRESS)
+
+            Public ReadOnly Property Length As UInt32
+            Public ReadOnly Property PortNumber As Byte
+            Public ReadOnly Property PathId As Byte
+            Public ReadOnly Property TargetId As Byte
+            Public ReadOnly Property Lun As Byte
+
+            Public Sub New(PortNumber As Byte, DWordDeviceNumber As UInt32)
+                Me.Length = CUInt(Marshal.SizeOf(Me))
+                Me.PortNumber = PortNumber
+                Me.DWordDeviceNumber = DWordDeviceNumber
+            End Sub
+
+            Public Sub New(DWordDeviceNumber As UInt32)
+                Me.Length = CUInt(Marshal.SizeOf(Me))
+                Me.DWordDeviceNumber = DWordDeviceNumber
+            End Sub
+
+            Public Property DWordDeviceNumber As UInt32
+                Get
+                    Return CUInt(_PathId) Or (CUInt(_TargetId) << 8) Or (CUInt(_Lun) << 16)
+                End Get
+                Set
+                    _PathId = CByte(Value And &HFF)
+                    _TargetId = CByte((Value >> 8) And &HFF)
+                    _Lun = CByte((Value >> 16) And &HFF)
+                End Set
+            End Property
+
+            Public Overrides Function ToString() As String
+                Return $"Port = {_PortNumber}, Path = {_PathId}, Target = {_TargetId}, Lun = {_Lun}"
+            End Function
+
+            Public Overloads Function Equals(other As SCSI_ADDRESS) As Boolean Implements IEquatable(Of SCSI_ADDRESS).Equals
+                Return _
+                        _PortNumber.Equals(other._PortNumber) AndAlso
+                        _PathId.Equals(other._PathId) AndAlso
+                        _TargetId.Equals(other._TargetId) AndAlso
+                        _Lun.Equals(other._Lun)
+            End Function
+
+            Public Overrides Function Equals(obj As Object) As Boolean
+                If Not TypeOf obj Is SCSI_ADDRESS Then
+                    Return False
+                End If
+
+                Return Equals(DirectCast(obj, SCSI_ADDRESS))
+            End Function
+
+            Public Overrides Function GetHashCode() As Integer
+                Return CInt(_PathId) Or (CInt(_TargetId) << 8) Or (CInt(_Lun) << 16)
+            End Function
+
+            Public Shared Operator =(first As SCSI_ADDRESS, second As SCSI_ADDRESS) As Boolean
+                Return first.Equals(second)
+            End Operator
+
+            Public Shared Operator <>(first As SCSI_ADDRESS, second As SCSI_ADDRESS) As Boolean
+                Return Not first.Equals(second)
+            End Operator
+
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure UNICODE_STRING
+            Public ReadOnly Property Length As UInt16
+
+            Private ReadOnly MaximumLength As UInt16
+
+            Private ReadOnly Buffer As IntPtr
+
+            ''' <summary>
+            ''' Creates a managed string object from UNICODE_STRING instance.
+            ''' </summary>
+            ''' <returns>Managed string</returns>
+            Public Overrides Function ToString() As String
+                Try
+                    If Length = 0 Then
+                        Return String.Empty
+                    Else
+                        Return Marshal.PtrToStringUni(Buffer, Length >> 1)
+                    End If
+
+                Catch ex As Exception
+                    Return $"{{{ex.Message}}}"
+
+                End Try
+            End Function
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Structure DISK_GEOMETRY
+            Public Enum MEDIA_TYPE As Int32
+                Unknown = &H0
+                F5_1Pt2_512 = &H1
+                F3_1Pt44_512 = &H2
+                F3_2Pt88_512 = &H3
+                F3_20Pt8_512 = &H4
+                F3_720_512 = &H5
+                F5_360_512 = &H6
+                F5_320_512 = &H7
+                F5_320_1024 = &H8
+                F5_180_512 = &H9
+                F5_160_512 = &HA
+                RemovableMedia = &HB
+                FixedMedia = &HC
+                F3_120M_512 = &HD
+                F3_640_512 = &HE
+                F5_640_512 = &HF
+                F5_720_512 = &H10
+                F3_1Pt2_512 = &H11
+                F3_1Pt23_1024 = &H12
+                F5_1Pt23_1024 = &H13
+                F3_128Mb_512 = &H14
+                F3_230Mb_512 = &H15
+                F8_256_128 = &H16
+                F3_200Mb_512 = &H17
+                F3_240M_512 = &H18
+                F3_32M_512 = &H19
+            End Enum
+
+            Public ReadOnly Property Cylinders As Int64
+            Public ReadOnly Property MediaType As MEDIA_TYPE
+            Public ReadOnly Property TracksPerCylinder As Int32
+            Public ReadOnly Property SectorsPerTrack As Int32
+            Public ReadOnly Property BytesPerSector As Int32
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
+        Public Structure OSVERSIONINFO
+            Public ReadOnly Property OSVersionInfoSize As Int32
+            Public ReadOnly Property MajorVersion As Int32
+            Public ReadOnly Property MinorVersion As Int32
+            Public ReadOnly Property BuildNumber As Int32
+            Public ReadOnly Property PlatformId As PlatformID
+
+            Public ReadOnly Property CSDVersion As String
+                Get
+                    Return _cSDVersion
+                End Get
+            End Property
+
+            <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=128)>
+            Private ReadOnly _cSDVersion As String
+
+            Public Shared Function Initalize() As OSVERSIONINFO
+                Return New OSVERSIONINFO() With {
+                    ._OSVersionInfoSize = Marshal.SizeOf(GetType(OSVERSIONINFO))
+                }
+            End Function
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
+        Public Structure OSVERSIONINFOEX
+            Public ReadOnly Property OSVersionInfoSize As Int32
+            Public ReadOnly Property MajorVersion As Int32
+            Public ReadOnly Property MinorVersion As Int32
+            Public ReadOnly Property BuildNumber As Int32
+            Public ReadOnly Property PlatformId As PlatformID
+
+            <MarshalAs(UnmanagedType.ByValTStr, SizeConst:=128)>
+            Private ReadOnly _cSDVersion As String
+
+            Public ReadOnly Property ServicePackMajor As UShort
+
+            Public ReadOnly Property ServicePackMinor As UShort
+
+            Public ReadOnly Property SuiteMask As Short
+
+            Public ReadOnly Property ProductType As Byte
+
+            Public ReadOnly Property Reserved As Byte
+
+            Public ReadOnly Property CSDVersion As String
+                Get
+                    Return _cSDVersion
+                End Get
+            End Property
+
+            Public Shared Function Initalize() As OSVERSIONINFOEX
+                Return New OSVERSIONINFOEX() With {
+                    ._OSVersionInfoSize = Marshal.SizeOf(GetType(OSVERSIONINFOEX))
+                }
+            End Function
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential, Pack:=8)>
+        Public Structure PARTITION_INFORMATION
+            Public Enum PARTITION_TYPE As Byte
+                PARTITION_ENTRY_UNUSED = &H0      ' Entry unused
+                PARTITION_FAT_12 = &H1      ' 12-bit FAT entries
+                PARTITION_XENIX_1 = &H2      ' Xenix
+                PARTITION_XENIX_2 = &H3      ' Xenix
+                PARTITION_FAT_16 = &H4      ' 16-bit FAT entries
+                PARTITION_EXTENDED = &H5      ' Extended partition entry
+                PARTITION_HUGE = &H6      ' Huge partition MS-DOS V4
+                PARTITION_IFS = &H7      ' IFS Partition
+                PARTITION_OS2BOOTMGR = &HA      ' OS/2 Boot Manager/OPUS/Coherent swap
+                PARTITION_FAT32 = &HB      ' FAT32
+                PARTITION_FAT32_XINT13 = &HC      ' FAT32 using extended int13 services
+                PARTITION_XINT13 = &HE      ' Win95 partition using extended int13 services
+                PARTITION_XINT13_EXTENDED = &HF      ' Same as type 5 but uses extended int13 services
+                PARTITION_PREP = &H41      ' PowerPC Reference Platform (PReP) Boot Partition
+                PARTITION_LDM = &H42      ' Logical Disk Manager partition
+                PARTITION_UNIX = &H63      ' Unix
+                PARTITION_NTFT = &H80      ' NTFT partition      
+            End Enum
+
+            Public ReadOnly Property StartingOffset As Int64
+            Public ReadOnly Property PartitionLength As Int64
+            Public ReadOnly Property HiddenSectors As UInt32
+            Public ReadOnly Property PartitionNumber As UInt32
+            Public ReadOnly Property PartitionType As PARTITION_TYPE
+            Public ReadOnly Property BootIndicator As Byte
+            Public ReadOnly Property RecognizedPartition As Byte
+            Public ReadOnly Property RewritePartition As Byte
+
+            ''' <summary>
+            ''' Indicates whether this partition entry represents a Windows NT fault tolerant partition,
+            ''' such as mirror or stripe set.
+            ''' </summary>
+            ''' <value>
+            ''' Indicates whether this partition entry represents a Windows NT fault tolerant partition,
+            ''' such as mirror or stripe set.
+            ''' </value>
+            ''' <returns>True if this partition entry represents a Windows NT fault tolerant partition,
+            ''' such as mirror or stripe set. False otherwise.</returns>
+            Public ReadOnly Property IsFTPartition As Boolean
+                Get
+                    Return _PartitionType.HasFlag(PARTITION_TYPE.PARTITION_NTFT)
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' If this partition entry represents a Windows NT fault tolerant partition, such as mirror or stripe,
+            ''' set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
+            ''' partitions.
+            ''' </summary>
+            ''' <value>
+            ''' If this partition entry represents a Windows NT fault tolerant partition, such as mirror or stripe,
+            ''' set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
+            ''' partitions.
+            ''' </value>
+            ''' <returns>If this partition entry represents a Windows NT fault tolerant partition, such as mirror or
+            ''' stripe, set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
+            ''' partitions.</returns>
+            Public ReadOnly Property FTPartitionSubType As PARTITION_TYPE
+                Get
+                    Return _PartitionType And Not PARTITION_TYPE.PARTITION_NTFT
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' Indicates whether this partition entry represents a container partition, also known as extended
+            ''' partition, where an extended partition table can be found in first sector.
+            ''' </summary>
+            ''' <value>
+            ''' Indicates whether this partition entry represents a container partition.
+            ''' </value>
+            ''' <returns>True if this partition entry represents a container partition. False otherwise.</returns>
+            Public ReadOnly Property IsContainerPartition As Boolean
+                Get
+                    Return (_PartitionType = PARTITION_TYPE.PARTITION_EXTENDED) OrElse (_PartitionType = PARTITION_TYPE.PARTITION_XINT13_EXTENDED)
+                End Get
+            End Property
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure DRIVE_LAYOUT_INFORMATION_EX
+            Public Sub New(PartitionStyle As PARTITION_STYLE, PartitionCount As Integer)
+                _PartitionStyle = PartitionStyle
+                _PartitionCount = PartitionCount
+            End Sub
+
+            Public ReadOnly Property PartitionStyle As PARTITION_STYLE
+            Public ReadOnly Property PartitionCount As Integer
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure DRIVE_LAYOUT_INFORMATION_MBR
+            Public Sub New(DiskSignature As UInteger)
+                _DiskSignature = DiskSignature
+            End Sub
+
+            Public ReadOnly Property DiskSignature As UInteger
+            Public ReadOnly Property Checksum As UInteger
+
+            Public Overrides Function GetHashCode() As Integer
+                Return _DiskSignature.GetHashCode()
+            End Function
+
+            Public Overrides Function ToString() As String
+                Return _DiskSignature.ToString("X8")
+            End Function
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure DRIVE_LAYOUT_INFORMATION_GPT
+            Public ReadOnly Property DiskId As Guid
+            Public ReadOnly Property StartingUsableOffset As Long
+            Public ReadOnly Property UsableLength As Long
+            Public ReadOnly Property MaxPartitionCount As Integer
+
+            Public Overrides Function GetHashCode() As Integer
+                Return _DiskId.GetHashCode()
+            End Function
+
+            Public Overrides Function ToString() As String
+                Return _DiskId.ToString("b")
+            End Function
+        End Structure
+
+        Public Enum PARTITION_STYLE As Byte
+            PARTITION_STYLE_MBR
+            PARTITION_STYLE_GPT
+            PARTITION_STYLE_RAW
+        End Enum
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure CREATE_DISK_MBR
+            <MarshalAs(UnmanagedType.I1)>
+            Private _partitionStyle As PARTITION_STYLE
+
+            Public Property DiskSignature As UInteger
+
+            Public Property PartitionStyle As PARTITION_STYLE
+                Get
+                    Return _partitionStyle
+                End Get
+                Set(value As PARTITION_STYLE)
+                    _partitionStyle = value
+                End Set
+            End Property
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure CREATE_DISK_GPT
+            <MarshalAs(UnmanagedType.I1)>
+            Private _partitionStyle As PARTITION_STYLE
+
+            Public Property DiskId As Guid
+
+            Public Property MaxPartitionCount As Integer
+
+            Public Property PartitionStyle As PARTITION_STYLE
+                Get
+                    Return _partitionStyle
+                End Get
+                Set(value As PARTITION_STYLE)
+                    _partitionStyle = value
+                End Set
+            End Property
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential, Pack:=8)>
+        Public Structure PARTITION_INFORMATION_EX
+
+            <MarshalAs(UnmanagedType.I1)>
+            Private ReadOnly _partitionStyle As PARTITION_STYLE
+            Public ReadOnly Property StartingOffset As Int64
+            Public ReadOnly Property PartitionLength As Int64
+            Public ReadOnly Property PartitionNumber As UInt32
+            <MarshalAs(UnmanagedType.I1)>
+            Private ReadOnly _rewritePartition As Boolean
+
+            Private ReadOnly padding1 As Byte
+            Private ReadOnly padding2 As Byte
+            Private ReadOnly padding3 As Byte
+
+            <MarshalAs(UnmanagedType.ByValArray, SizeConst:=112)>
+            Private fields As Byte()
+
+            Public Property MBR As PARTITION_INFORMATION_MBR
+                Get
+                    Return PinnedBuffer.Deserialize(Of PARTITION_INFORMATION_MBR)(fields)
+                End Get
+                Set
+                    Using buffer As New PinnedBuffer(Of Byte)(112)
+                        buffer.Write(0, Value)
+                        fields = buffer.Target
+                    End Using
+                End Set
+            End Property
+
+            Public Property GPT As PARTITION_INFORMATION_GPT
+                Get
+                    Return PinnedBuffer.Deserialize(Of PARTITION_INFORMATION_GPT)(fields)
+                End Get
+                Set
+                    Using buffer As New PinnedBuffer(Of Byte)(112)
+                        buffer.Write(0, Value)
+                        fields = buffer.Target
+                    End Using
+                End Set
+            End Property
+
+            Public ReadOnly Property RewritePartition As Boolean
+                Get
+                    Return _rewritePartition
+                End Get
+            End Property
+
+            Public ReadOnly Property PartitionStyle As PARTITION_STYLE
+                Get
+                    Return _partitionStyle
+                End Get
+            End Property
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential, Pack:=4)>
+        Public Structure PARTITION_INFORMATION_MBR
+
+            Public ReadOnly Property PartitionType As Byte
+
+            <MarshalAs(UnmanagedType.I1)>
+            Private ReadOnly _bootIndicator As Boolean
+
+            <MarshalAs(UnmanagedType.I1)>
+            Private ReadOnly _ecognizedPartition As Boolean
+
+            Public ReadOnly Property HiddenSectors As Integer
+
+            Public ReadOnly Property EcognizedPartition As Boolean
+                Get
+                    Return _ecognizedPartition
+                End Get
+            End Property
+
+            Public ReadOnly Property BootIndicator As Boolean
+                Get
+                    Return _bootIndicator
+                End Get
+            End Property
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential, Pack:=4)>
+        Public Structure PARTITION_INFORMATION_GPT
+
+            Public ReadOnly Property DiskId As Guid
+
+            Public ReadOnly Property StartingUsableOffset As Long
+
+            Public ReadOnly Property UsableLength As Long
+
+            Public ReadOnly Property MaxPartitionCount As Integer
+
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure DISK_GROW_PARTITION
+            Public Property PartitionNumber As Int32
+            Public Property BytesToGrow As Int64
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure COMMTIMEOUTS
+            Public Property ReadIntervalTimeout As UInt32
+            Public Property ReadTotalTimeoutMultiplier As UInt32
+            Public Property ReadTotalTimeoutConstant As UInt32
+            Public Property WriteTotalTimeoutMultiplier As UInt32
+            Public Property WriteTotalTimeoutConstant As UInt32
         End Structure
 
     End Class

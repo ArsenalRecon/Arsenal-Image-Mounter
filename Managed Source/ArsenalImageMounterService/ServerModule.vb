@@ -11,15 +11,16 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
-Imports System.Reflection
-Imports Arsenal.ImageMounter.Devio.Server.Interaction
-Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
-Imports Arsenal.ImageMounter.Devio.Server.Services
-Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
-Imports Arsenal.ImageMounter.IO
-Imports DiscUtils
+Imports System.Diagnostics.CodeAnalysis
 Imports System.Globalization
+Imports System.Reflection
 Imports System.Runtime.CompilerServices
+Imports System.Runtime.InteropServices
+Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports Arsenal.ImageMounter.Devio.Server.Interaction
+Imports Arsenal.ImageMounter.Devio.Server.Services
+Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
+Imports Arsenal.ImageMounter.IO
 
 Public Module ServerModule
 
@@ -58,7 +59,7 @@ Public Module ServerModule
 
         Dim appPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)
 
-        For i = 0 To assemblyPaths.Count - 1
+        For i = 0 To assemblyPaths.Length - 1
             assemblyPaths(i) = Path.Combine(appPath, assemblyPaths(i))
         Next
 
@@ -118,15 +119,15 @@ Public Module ServerModule
 
                 End If
 
-                With New Process
+                Using process As New Process
 
-                    .StartInfo = pstart
+                    process.StartInfo = pstart
 
-                    .Start()
+                    process.Start()
 
-                End With
+                    Return process.Id
 
-                Return 0
+                End Using
 
             End If
 
@@ -137,14 +138,14 @@ Public Module ServerModule
             Console.ForegroundColor = ConsoleColor.Red
             Console.Error.WriteLine("Unexpected client exit.")
             Console.ResetColor()
-            Return -1
+            Return Marshal.GetHRForException(ex)
 
         Catch ex As Exception
             Trace.WriteLine(ex.ToString())
             Console.ForegroundColor = ConsoleColor.Red
             Console.Error.WriteLine(ex.JoinMessages(Environment.NewLine))
             Console.ResetColor()
-            Return -1
+            Return Marshal.GetHRForException(ex)
 
         Finally
             RaiseEvent RunToEnd(Nothing, EventArgs.Empty)
@@ -160,55 +161,41 @@ Public Module ServerModule
     Public Sub ShowVersionInfo()
 
         Dim asm_file = Assembly.GetExecutingAssembly().Location
-        Dim file_ver = FileVersionInfo.GetVersionInfo(asm_file)
+        Dim file_ver = FileVersionInfo.GetVersionInfo(asm_file).FileVersion
+
+        Dim driver_ver As String
+
+        Try
+            Using adapter As New ScsiAdapter
+                driver_ver = $"Driver version: {adapter.GetDriverSubVersion()}"
+            End Using
+
+        Catch ex As Exception
+            driver_ver = $"Error checking driver version: {ex.JoinMessages()}"
+
+        End Try
 
         Console.WriteLine(
             $"Integrated command line interface to Arsenal Image Mounter virtual
 SCSI miniport driver.
 
-Version {file_ver.FileVersion}
+Application version {file_ver}
+
+{driver_ver}
             
 Copyright (C) 2012-2020 Arsenal Recon.
 
 http://www.ArsenalRecon.com
 
-Arsenal Image Mounter including its kernel driver, API library,
-command line and graphical user applications (""the Software"")
-are provided ""AS Is"" and ""WITH ALL FAULTS,"" without warranty
-of any kind, including without limitation the warranties of
-merchantability, fitness for a particular purpose and
-non - infringement.Arsenal makes no warranty that the Software
-is free of defects or is suitable for any particular purpose.
-In no event shall Arsenal be responsible for loss or damages
-arising from the installation or use of the Software, including
-but not limited to any indirect, punitive, special, incidental
-or consequential damages of any character including, without
-limitation, damages for loss of goodwill, work stoppage,
-computer failure or malfunction, or any and all other
-commercial damages or losses.The entire risk as to the
-quality and performance of the Software is borne by you.Should
-the Software prove defective, you and not Arsenal assume the
-entire cost of any service and repair.
-
-Arsenal Consulting, Inc. (d/b/a Arsenal Recon) retains the copyright to the
-Arsenal Image Mounter source code being made available under terms of the
-Affero General Public License v3.
-(http://www.fsf.org/licensing/licenses/agpl-3.0.html). This source code may
-be used in projects that are licensed so as to be compatible with AGPL v3.
-
-Contributors to Arsenal Image Mounter must sign the Arsenal Contributor
-Agreement(""ACA"").The ACA gives Arsenal and the contributor joint
-copyright interests in the code.
-
-If your project is not licensed under an AGPL v3 compatible license,
-contact us directly regarding alternative licensing.")
-
+Please see EULA.txt for license information.")
 
     End Sub
 
+    <SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification:="<Pending>")>
+    <SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification:="<Pending>")>
     Private Function SafeMain(args As IEnumerable(Of String)) As Integer
 
-        Dim DeviceName As String = Nothing
+        Dim ImagePath As String = Nothing
         Dim WriteOverlayImageFile As String = Nothing
         Dim ObjectName As String = Nothing
         Dim ListenAddress As IPAddress = IPAddress.Any
@@ -244,8 +231,10 @@ contact us directly regarding alternative licensing.")
                 ListenPort = Integer.Parse(arg.Substring("/port=".Length))
             ElseIf arg.StartsWith("/buffersize=", StringComparison.OrdinalIgnoreCase) Then
                 BufferSize = Long.Parse(arg.Substring("/buffersize=".Length))
+            ElseIf arg.StartsWith("/device=", StringComparison.OrdinalIgnoreCase) Then
+                ImagePath = arg.Substring("/device=".Length)
             ElseIf arg.StartsWith("/filename=", StringComparison.OrdinalIgnoreCase) Then
-                DeviceName = arg.Substring("/filename=".Length)
+                ImagePath = arg.Substring("/filename=".Length)
             ElseIf arg.StartsWith("/provider=", StringComparison.OrdinalIgnoreCase) Then
                 ProviderName = arg.Substring("/provider=".Length)
             ElseIf arg.Equals("/readonly", StringComparison.OrdinalIgnoreCase) Then
@@ -264,6 +253,9 @@ contact us directly regarding alternative licensing.")
                 DeviceFlags = DeviceFlags Or DeviceFlags.DeviceTypeCD
             ElseIf arg.StartsWith("/convert=", StringComparison.OrdinalIgnoreCase) Then
                 OutputImage = arg.Substring("/convert=".Length)
+                DiskAccess = FileAccess.Read
+            ElseIf arg.StartsWith("/saveas=", StringComparison.OrdinalIgnoreCase) Then
+                OutputImage = arg.Substring("/saveas=".Length)
                 DiskAccess = FileAccess.Read
             ElseIf arg.StartsWith("/variant=", StringComparison.OrdinalIgnoreCase) Then
                 OutputImageVariant = arg.Substring("/variant=".Length)
@@ -294,50 +286,43 @@ contact us directly regarding alternative licensing.")
 
         If _
             ShowHelp OrElse
-            (String.IsNullOrWhiteSpace(DeviceName) AndAlso String.IsNullOrWhiteSpace(Dismount)) Then
+            (String.IsNullOrWhiteSpace(ImagePath) AndAlso String.IsNullOrWhiteSpace(Dismount)) Then
 
             Dim asmname = Assembly.GetExecutingAssembly().GetName().Name
 
             Dim providers = String.Join("|", DevioServiceFactory.InstalledProvidersByNameAndFileAccess.Keys)
 
-            Console.WriteLine($"{asmname}.
+            Dim msg = "aim_cli.
 
-Integrated command line interface to Arsenal Image Mounter virtual SCSI
-miniport driver.
+Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to the Arsenal 
+Image Mounter virtual SCSI miniport driver.
 
-For version information, license, copyrights and credits, type aim_cli /version
+Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
 
-Syntax to mount an image file as a virtual disk:
-{asmname} /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly]
-    /filename=imagefilename /provider={providers}
-    [/writeoverlay=differencingimagefile] [/background]
+Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01) or AFF4 forensic disk images, you must make the Libewf (libewf.dll) and LibAFF4 (libaff4.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-temporary mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
 
-Syntax, start shared memory service mode, for mounting from other applications:
-{asmname} /name=objectname [/buffersize=bytes] [/readonly]
-    /filename=imagefilename /provider={providers} [/background]
+Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
+aim_cli.exe /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/writeoverlay=differencingimagefile] [/background]
 
-Syntax, start TCP/IP service mode, for mounting from other computers:
-{asmname} [/ipaddress=listenaddress] /port=tcpport [/readonly]
-    /filename=imagefilename /provider={providers} [/background]
+Syntax to start shared memory service mode, for mounting from other applications:
+aim_cli.exe /name=objectname [/buffersize=bytes] [/readonly] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/background]
 
-Syntax, convert image file without mounting as virtual disk:
-{asmname} /filename=imagefilename /provider={providers}
-    /convert=outimagefilename [/variant=fixed|dynamic] [/background]
+Syntax to start TCP/IP service mode, for mounting from other computers:
+aim_cli.exe [/ipaddress=listenaddress] /port=tcpport [/readonly] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/background]
 
-Syntax, dismount a mounted device:
-    /dismount[=devicenumber] [/force]
+Syntax to convert a disk image without mounting:
+aim_cli.exe /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
 
-DiscUtils and MultiPartRaw provider libraries are included embedded in this
-application. Libewf provider needs libewf.dll and LibAFF4 provider needs
-libaff4.dll.
+Syntax to save a new disk image after mounting:
+aim_cli.exe /device=devicenumber /saveas=outputimagefilename [/variant=fixed|dynamic] [/background]
 
-The /background switch re-launches in a new process and detaches from inherited
-console window and continues in background.
+Syntax to dismount a mounted device:
+aim_cli.exe /dismount[=devicenumber] [/force]
 
-When converting, output image type can be DD, IMG or RAW for raw format or VHD,
-VHDX, VDI or VMDK virtual machine disk formats. For virtual machine disk
-formats, the optional /variant switch can be used to specify either fixed or
-dynamically expanding formats. Default is dynamic.")
+"
+            msg = LineFormat(msg, 4)
+
+            Console.WriteLine(msg)
 
             Return 1
 
@@ -365,7 +350,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                     If devicenumber = ScsiAdapter.AutoDeviceNumber Then
 
-                        If Not adapter.EnumerateDevices().Any() Then
+                        If adapter.GetDeviceList().Length = 0 Then
 
                             Console.ForegroundColor = ConsoleColor.Red
                             Console.Error.WriteLine("No mounted devices.")
@@ -388,7 +373,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                     Else
 
-                        If Not adapter.EnumerateDevices().Any(AddressOf devicenumber.Equals) Then
+                        If Not adapter.GetDeviceList().Contains(devicenumber) Then
 
                             Console.ForegroundColor = ConsoleColor.Red
                             Console.Error.WriteLine($"No device mounted with device number {devicenumber:X6}.")
@@ -425,19 +410,19 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         End If
 
-        If String.IsNullOrWhiteSpace(DeviceName) Then
+        If String.IsNullOrWhiteSpace(ImagePath) Then
 
             Return 0
 
         End If
 
-        Console.WriteLine($"Opening image file '{DeviceName}'...")
+        Console.WriteLine($"Opening image file '{ImagePath}'...")
 
         If StringComparer.OrdinalIgnoreCase.Equals(ProviderName, "libewf") Then
 
-            DevioProviderLibEwf.NotificationFile = libewfDebugOutput
+            DevioProviderLibEwf.SetNotificationFile(libewfDebugOutput)
 
-            AddHandler RunToEnd, Sub() DevioProviderLibEwf.NotificationFile = Nothing
+            AddHandler RunToEnd, Sub() DevioProviderLibEwf.SetNotificationFile(Nothing)
 
             If Verbose Then
                 DevioProviderLibEwf.NotificationVerbose = True
@@ -445,7 +430,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         End If
 
-        Dim Provider = DevioServiceFactory.GetProvider(DeviceName, DiskAccess, ProviderName)
+        Dim Provider = DevioServiceFactory.GetProvider(ImagePath, DiskAccess, ProviderName)
 
         If Not String.IsNullOrWhiteSpace(DebugCompare) Then
 
@@ -524,7 +509,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             End If
 
-            NativeFileIO.Win32API.FreeConsole()
+            NativeFileIO.SafeNativeMethods.FreeConsole()
 
         Else
 
@@ -569,10 +554,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
     End Function
 
-    Public Property ImageIoBufferSize As Integer = 2 << 20
-
     <Extension>
-    Public Sub ConvertToImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, background As Boolean)
+    Private Sub ConvertToImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, background As Boolean)
 
         Using provider
 
@@ -582,7 +565,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                 If background Then
 
-                    NativeFileIO.Win32API.FreeConsole()
+                    NativeFileIO.SafeNativeMethods.FreeConsole()
 
                 Else
 
@@ -607,58 +590,17 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                 Select Case image_type
 
-                    Case "VHD", "VHDX", "VDI", "VMDK"
-                        provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, cancel.Token)
-
-                    Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN"
+                    Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN", "001"
                         provider.ConvertToRawImage(outputImage, OutputImageVariant, cancel.Token)
 
                     Case Else
-                        Console.WriteLine($"Image format '{image_type}' not supported.")
-
-                        Return
+                        provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, cancel.Token)
 
                 End Select
 
                 Console.WriteLine($"Image converted successfully.")
 
             End Using
-
-        End Using
-
-    End Sub
-
-    <Extension>
-    Public Sub ConvertToDiscUtilsImage(provider As IDevioProvider, outputImage As String, type As String, OutputImageVariant As String, cancel As CancellationToken)
-
-        Using builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize)), Nothing)
-
-            Dim target = builder.Content
-
-            provider.WriteToSkipEmptyBlocks(target, ImageIoBufferSize, cancel)
-
-        End Using
-
-    End Sub
-
-    <Extension>
-    Public Sub ConvertToRawImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, cancel As CancellationToken)
-
-        Using target As New FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageIoBufferSize)
-
-            If "fixed".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase) Then
-
-            ElseIf "dynamic".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase) Then
-
-                NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, True)
-
-            Else
-
-                Throw New ArgumentException($"Value {OutputImageVariant} not supported as output image variant. Valid values are fixed or dynamic.")
-
-            End If
-
-            provider.WriteToSkipEmptyBlocks(target, ImageIoBufferSize, cancel)
 
         End Using
 

@@ -1,9 +1,12 @@
-﻿Namespace IO
+﻿Imports System.Diagnostics.CodeAnalysis
+
+Namespace IO
 
     ''' <summary>
     ''' Class that caches a text INI file
     ''' </summary>
     <ComVisible(False)>
+    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification:="<Pending>")>
     Public Class CachedIniFile
         Inherits NullSafeDictionary(Of String, NullSafeDictionary(Of String, String))
 
@@ -18,7 +21,7 @@
         ''' is thrown.
         ''' </summary>
         Public Shared Sub Flush()
-            NativeFileIO.Win32API.WritePrivateProfileString(Nothing, Nothing, Nothing, Nothing)
+            NativeFileIO.UnsafeNativeMethods.WritePrivateProfileString(Nothing, Nothing, Nothing, Nothing)
         End Sub
 
         ''' <summary>
@@ -30,7 +33,7 @@
         ''' <param name="SettingName">Name of value to save</param>
         ''' <param name="Value">Value to save</param>
         Public Shared Sub SaveValue(FileName As String, SectionName As String, SettingName As String, Value As String)
-            NativeFileIO.Win32Try(NativeFileIO.Win32API.WritePrivateProfileString(SectionName, SettingName, Value, FileName))
+            NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileString(SectionName, SettingName, Value, FileName))
         End Sub
 
         ''' <summary>
@@ -82,13 +85,16 @@
         End Sub
 
         Public Overrides Function ToString() As String
-            Dim Writer As New StringWriter
-            WriteTo(Writer)
-            Return Writer.ToString()
+            Using Writer As New StringWriter
+                WriteTo(Writer)
+                Return Writer.ToString()
+            End Using
         End Function
 
         Public Sub WriteTo(Stream As Stream)
+#Disable Warning CA2000 ' Dispose objects before losing scope
             WriteTo(New StreamWriter(Stream, _Encoding) With {.AutoFlush = True})
+#Enable Warning CA2000 ' Dispose objects before losing scope
         End Sub
 
         Public Sub WriteTo(Writer As TextWriter)
@@ -232,9 +238,11 @@
         ''' <param name="Encoding">Text encoding for INI stream</param>
         Public Sub Load(Stream As Stream, Encoding As Encoding)
             Try
-                Dim sr As New StreamReader(Stream, Encoding, False, 1048576)
+                Using sr As New StreamReader(Stream, Encoding, False, 1048576)
 
-                Load(sr)
+                    Load(sr)
+
+                End Using
 
                 _Encoding = Encoding
 

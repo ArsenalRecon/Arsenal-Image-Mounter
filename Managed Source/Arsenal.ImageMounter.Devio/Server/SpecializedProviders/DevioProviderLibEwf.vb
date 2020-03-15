@@ -11,10 +11,12 @@
 '''''
 
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports System.Diagnostics.CodeAnalysis
 Imports System.IO.Pipes
 
 Namespace Server.SpecializedProviders
 
+    <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class")>
     Public Class DevioProviderLibEwf
         Inherits DevioProviderUnmanagedBase
 
@@ -24,6 +26,7 @@ Namespace Server.SpecializedProviders
         Public Shared ReadOnly AccessFlagsWriteResume As Byte = libewf_get_access_flags_write_resume()
 
 #Region "SafeHandles"
+        <SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification:="<Pending>")>
         Public NotInheritable Class SafeLibEwfFileHandle
             Inherits SafeHandleZeroOrMinusOneIsInvalid
 
@@ -58,6 +61,7 @@ Namespace Server.SpecializedProviders
 
         End Class
 
+        <SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification:="<Pending>")>
         Public NotInheritable Class SafeLibEwfErrorObjectHandle
             Inherits SafeHandleZeroOrMinusOneIsInvalid
 
@@ -226,21 +230,19 @@ Namespace Server.SpecializedProviders
         Private Shared Function libewf_error_free(ByRef errobj As IntPtr) As Integer
         End Function
 
-        Public Shared WriteOnly Property NotificationFile As String
-            Set
-                If String.IsNullOrEmpty(Value) Then
-                    Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
-                    If libewf_notify_stream_close(errobj) < 0 Then
-                        ThrowError(errobj, "Error closing notification stream.")
-                    End If
-                Else
-                    Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
-                    If libewf_notify_stream_open(Value, errobj) < 0 Then
-                        ThrowError(errobj, $"Error opening {Value}.")
-                    End If
+        Public Shared Sub SetNotificationFile(path As String)
+            If String.IsNullOrEmpty(path) Then
+                Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
+                If libewf_notify_stream_close(errobj) < 0 Then
+                    ThrowError(errobj, "Error closing notification stream.")
                 End If
-            End Set
-        End Property
+            Else
+                Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
+                If libewf_notify_stream_open(path, errobj) < 0 Then
+                    ThrowError(errobj, $"Error opening {path}.")
+                End If
+            End If
+        End Sub
 
         Public Shared Function OpenNotificationStream() As NamedPipeServerStream
             Dim pipename = $"DevioProviderLibEwf-{Guid.NewGuid()}"
@@ -254,6 +256,7 @@ Namespace Server.SpecializedProviders
             Return pipe
         End Function
 
+        <SuppressMessage("Design", "CA1044:Properties should not be write only")>
         Public Shared WriteOnly Property NotificationVerbose As Boolean
             Set
                 libewf_notify_set_verbose(If(Value, 1, 0))

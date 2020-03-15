@@ -1,4 +1,5 @@
-﻿Imports Arsenal.ImageMounter.PSDisk
+﻿Imports System.Diagnostics.CodeAnalysis
+Imports Arsenal.ImageMounter.PSDisk
 
 Namespace PSDisk
 
@@ -33,7 +34,7 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public NativePropertyDiskOffline As Boolean?
+        Public Property NativePropertyDiskOffline As Boolean?
 
         Public ReadOnly Property IsOffline As Boolean?
             Get
@@ -54,18 +55,18 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public Property NativePartitionLayout As IO.NativeFileIO.Win32API.PARTITION_STYLE?
+        Public Property NativePartitionLayout As IO.NativeFileIO.PARTITION_STYLE?
 
         Public ReadOnly Property PartitionLayout As String
             Get
                 If _NativePartitionLayout.HasValue Then
 
                     Select Case _NativePartitionLayout.Value
-                        Case IO.NativeFileIO.Win32API.PARTITION_STYLE.PARTITION_STYLE_GPT
+                        Case IO.NativeFileIO.PARTITION_STYLE.PARTITION_STYLE_GPT
                             Return "GPT"
-                        Case IO.NativeFileIO.Win32API.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        Case IO.NativeFileIO.PARTITION_STYLE.PARTITION_STYLE_MBR
                             Return "MBR"
-                        Case IO.NativeFileIO.Win32API.PARTITION_STYLE.PARTITION_STYLE_RAW
+                        Case IO.NativeFileIO.PARTITION_STYLE.PARTITION_STYLE_RAW
                             Return "RAW"
                         Case Else
                             Return "Unknown"
@@ -117,6 +118,7 @@ Namespace PSDisk
 
         Public Property FakeMBR As Boolean
 
+        <SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification:="<Pending>")>
         Public Property Volumes As String()
 
         Public ReadOnly Property VolumesString As String
@@ -128,6 +130,7 @@ Namespace PSDisk
             End Get
         End Property
 
+        <SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification:="<Pending>")>
         Public Property MountPoints As String()
 
         Public ReadOnly Property MountPointsString As String

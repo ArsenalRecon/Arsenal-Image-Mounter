@@ -30,17 +30,17 @@ Namespace Client
         ''' <summary>
         ''' Virtual disk size of server object.
         ''' </summary>
-        Protected Size As Long
+        Protected Property Size As Long
 
         ''' <summary>
         ''' Alignment requirement for I/O at server.
         ''' </summary>
-        Protected Alignment As Long
+        Protected Property Alignment As Long
 
         ''' <summary>
         ''' Proxy flags specified for proxy connection.
         ''' </summary>
-        Protected Flags As IMDPROXY_FLAGS
+        Protected Property Flags As IMDPROXY_FLAGS
 
         ''' <summary>
         ''' Initiates a new instance with supplied object name and read-only flag.

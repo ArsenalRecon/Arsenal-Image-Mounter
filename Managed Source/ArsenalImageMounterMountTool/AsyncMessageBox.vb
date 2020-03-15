@@ -2,7 +2,7 @@
 
 Public Class AsyncMessageBox
 
-    Private Shared MaxFont As New Font("Tahoma", 96)
+    Private Shared ReadOnly MaxFont As New Font("Tahoma", 96)
     Private m_ForegroundBrush As Brush
     Private m_BackgroundBrush As Brush
 
@@ -42,9 +42,6 @@ Public Class AsyncMessageBox
             Location = New Point((Screen.FromControl(Me).Bounds.Size.Width - Width) \ 2, (Screen.FromControl(Me).Bounds.Size.Height - Height) \ 2)
             m_Sized = True
         End If
-
-        ForeColor = ForeColor
-        BackColor = BackColor
 
         OnResize(EventArgs.Empty)
 
@@ -106,7 +103,7 @@ Public Class AsyncMessageBox
         End Try
     End Sub
 
-    Public ReadOnly sftCentered As New StringFormat With {.LineAlignment = StringAlignment.Center, .Alignment = StringAlignment.Center}
+    Public Shared ReadOnly Property sftCentered As New StringFormat With {.LineAlignment = StringAlignment.Center, .Alignment = StringAlignment.Center}
 
     Private Shared Function FindLargestFont(Graphics As Graphics, _
                                            FontFamily As FontFamily, _

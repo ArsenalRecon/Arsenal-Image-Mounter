@@ -10,10 +10,13 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Diagnostics.CodeAnalysis
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 
 Namespace Server.SpecializedProviders
 
+    <SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")>
+    <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class")>
     Public Class DevioProviderLibAFF4
         Inherits DevioProviderDLLWrapperBase
 
@@ -43,7 +46,7 @@ Namespace Server.SpecializedProviders
         End Function
 
         Public Sub New(filename As String)
-            MyBase.New(AddressOf dllopen, filename, [readOnly]:=True)
+            MyBase.New(AddressOf dllopen, filename, [readOnly]:=True, Function() New IOException(geterrormessage(getlasterrorcode())))
 
         End Sub
 
@@ -55,12 +58,6 @@ Namespace Server.SpecializedProviders
                 End If
             End Get
         End Property
-
-        Protected Overrides Function GetLastErrorAsException() As Exception
-
-            Return New IOException(geterrormessage(getlasterrorcode()))
-
-        End Function
 
     End Class
 

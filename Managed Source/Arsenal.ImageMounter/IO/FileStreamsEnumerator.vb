@@ -1,5 +1,7 @@
 ﻿Imports Arsenal.ImageMounter.IO.NativeFileIO
-Imports Arsenal.ImageMounter.IO.NativeFileIO.Win32API
+Imports Arsenal.ImageMounter.IO.NativeFileIO.NativeConstants
+Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
+Imports System.Diagnostics.CodeAnalysis
 Imports System.Security
 Imports System.Security.Permissions
 
@@ -7,6 +9,7 @@ Namespace IO
 
     <SecurityCritical>
     <SecurityPermission(SecurityAction.Demand, Flags:=SecurityPermissionFlag.AllFlags)>
+    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix")>
     Public Class FileStreamsEnumerator
         Implements IEnumerable(Of FindStreamData)
 
@@ -29,12 +32,14 @@ Namespace IO
         Public NotInheritable Class Enumerator
             Implements IEnumerator(Of FindStreamData)
 
-            Private _filePath As String
-            Private _handle As SafeFindHandle
+            Public ReadOnly Property FilePath As String
+
+            Public ReadOnly Property SafeHandle As SafeFindHandle
+
             Private _current As FindStreamData
 
             Public Sub New(FilePath As String)
-                _filePath = FilePath
+                _FilePath = FilePath
             End Sub
 
             Public ReadOnly Property Current As FindStreamData Implements IEnumerator(Of FindStreamData).Current
@@ -62,9 +67,9 @@ Namespace IO
                     Throw New ObjectDisposedException("FileStreamsEnumerator.Enumerator")
                 End If
 
-                If _handle Is Nothing Then
-                    _handle = FindFirstStream(_filePath, 0, _current, 0)
-                    If Not _handle.IsInvalid Then
+                If _SafeHandle Is Nothing Then
+                    _SafeHandle = FindFirstStream(_FilePath, 0, _current, 0)
+                    If Not _SafeHandle.IsInvalid Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_HANDLE_EOF Then
                         Return False
@@ -72,7 +77,7 @@ Namespace IO
                         Throw New Win32Exception
                     End If
                 Else
-                    If FindNextStream(_handle, _current) Then
+                    If FindNextStream(_SafeHandle, _current) Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_HANDLE_EOF Then
                         Return False
@@ -97,11 +102,11 @@ Namespace IO
                     If disposing Then
                         ' TODO: dispose managed state (managed objects).
 
-                        _handle?.Dispose()
+                        _SafeHandle?.Dispose()
                     End If
 
                     ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-                    _handle = Nothing
+                    _SafeHandle = Nothing
 
                     ' TODO: set large fields to null.
                     _current = Nothing

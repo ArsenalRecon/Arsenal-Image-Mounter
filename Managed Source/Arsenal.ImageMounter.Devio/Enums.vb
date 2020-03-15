@@ -11,6 +11,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Diagnostics.CodeAnalysis
+
 Public Enum IMDPROXY_REQ As ULong
     IMDPROXY_REQ_NULL
     IMDPROXY_REQ_INFO
@@ -57,107 +59,117 @@ End Class
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_CONNECT_REQ
-    Public request_code As IMDPROXY_REQ
-    Public flags As ULong
-    Public length As ULong
+    Public Property request_code As IMDPROXY_REQ
+    Public Property flags As ULong
+    Public Property length As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_CONNECT_RESP
-    Public error_code As ULong
-    Public object_ptr As ULong
+    Public Property error_code As ULong
+    Public Property object_ptr As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_INFO_RESP
-    Public file_size As ULong
-    Public req_alignment As ULong
-    Public flags As IMDPROXY_FLAGS
+    Public Property file_size As ULong
+    Public Property req_alignment As ULong
+    Public Property flags As IMDPROXY_FLAGS
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_READ_REQ
-    Public request_code As IMDPROXY_REQ
-    Public offset As ULong
-    Public length As ULong
+    Public Property request_code As IMDPROXY_REQ
+    Public Property offset As ULong
+    Public Property length As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_READ_RESP
-    Public errorno As ULong
-    Public length As ULong
+    Public Property errorno As ULong
+    Public Property length As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_WRITE_REQ
-    Public request_code As IMDPROXY_REQ
-    Public offset As ULong
-    Public length As ULong
+    Public Property request_code As IMDPROXY_REQ
+    Public Property offset As ULong
+    Public Property length As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_WRITE_RESP
-    Public errorno As ULong
-    Public length As ULong
+    Public Property errorno As ULong
+    Public Property length As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_UNMAP_REQ
-    Public request_code As IMDPROXY_REQ
-    Public length As ULong
+    Public Property request_code As IMDPROXY_REQ
+    Public Property length As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_UNMAP_RESP
-    Public errorno As ULong
+    Public Property errorno As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_ZERO_REQ
-    Public request_code As IMDPROXY_REQ
-    Public length As ULong
+    Public Property request_code As IMDPROXY_REQ
+    Public Property length As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_ZERO_RESP
-    Public errorno As ULong
+    Public Property errorno As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_SCSI_REQ
-    Public request_code As IMDPROXY_REQ
+    Public Property request_code As IMDPROXY_REQ
     <MarshalAs(UnmanagedType.ByValArray, SizeConst:=16)>
-    Public cdb As Byte() 'byte[16]
-    Public length As ULong
+    Private _cdb As Byte() 'byte[16]
+    Public Property length As ULong
+
+    <SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification:="<Pending>")>
+    Public Property Cdb As Byte()
+        Get
+            Return _cdb
+        End Get
+        Set(value As Byte())
+            _cdb = value
+        End Set
+    End Property
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_SCSI_RESP
-    Public errorno As ULong
-    Public length As ULong
+    Public Property errorno As ULong
+    Public Property length As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_SHARED_REQ
-    Public request_code As IMDPROXY_REQ
-    Public operation_code As IMDPROXY_SHARED_OP_CODE
-    Public reserve_scope As ULong
-    Public reserve_type As ULong
-    Public existing_reservation_key As ULong
-    Public current_channel_key As ULong
-    Public operation_channel_key As ULong
+    Public Property request_code As IMDPROXY_REQ
+    Public Property operation_code As IMDPROXY_SHARED_OP_CODE
+    Public Property reserve_scope As ULong
+    Public Property reserve_type As ULong
+    Public Property existing_reservation_key As ULong
+    Public Property current_channel_key As ULong
+    Public Property operation_channel_key As ULong
 End Structure
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_SHARED_RESP
-    Public errorno As IMDPROXY_SHARED_RESP_CODE
-    Public unique_id As Guid
-    Public channel_key As ULong
-    Public generation As ULong
-    Public reservation_key As ULong
-    Public reservation_scope As ULong
-    Public reservation_type As ULong
-    Public length As ULong
+    Public Property errorno As IMDPROXY_SHARED_RESP_CODE
+    Public Property unique_id As Guid
+    Public Property channel_key As ULong
+    Public Property generation As ULong
+    Public Property reservation_key As ULong
+    Public Property reservation_scope As ULong
+    Public Property reservation_type As ULong
+    Public Property length As ULong
 End Structure
 
 Public Enum IMDPROXY_SHARED_OP_CODE As ULong

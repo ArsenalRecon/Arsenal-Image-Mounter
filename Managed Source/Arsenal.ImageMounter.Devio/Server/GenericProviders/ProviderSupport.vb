@@ -11,10 +11,13 @@
 '''''
 
 Imports System.Runtime.CompilerServices
+Imports Arsenal.ImageMounter.IO
 
 Namespace Server.GenericProviders
 
     Public Module ProviderSupport
+
+        Public Property ImageConversionIoBufferSize As Integer = 2 << 20
 
         Public Function GetMultiSegmentFiles(FirstFile As String) As String()
 
@@ -23,7 +26,8 @@ Namespace Server.GenericProviders
             Dim extension = Path.GetExtension(FirstFile)
             Dim foundfiles As String() = Nothing
 
-            If extension.EndsWith("01") OrElse extension.EndsWith("00") Then
+            If extension.EndsWith("01", StringComparison.Ordinal) OrElse
+                extension.EndsWith("00", StringComparison.Ordinal) Then
 
                 Dim start = extension.Length - 3
 
@@ -69,6 +73,42 @@ Namespace Server.GenericProviders
             Return foundfiles
 
         End Function
+
+        <Extension>
+        Public Sub ConvertToDiscUtilsImage(provider As IDevioProvider, outputImage As String, type As String, OutputImageVariant As String, cancel As CancellationToken)
+
+            Using builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize)), Nothing)
+
+                Dim target = builder.Content
+
+                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, cancel)
+
+            End Using
+
+        End Sub
+
+        <Extension>
+        Public Sub ConvertToRawImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, cancel As CancellationToken)
+
+            Using target As New FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageConversionIoBufferSize)
+
+                If "fixed".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase) Then
+
+                ElseIf "dynamic".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase) Then
+
+                    NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, True)
+
+                Else
+
+                    Throw New ArgumentException($"Value {OutputImageVariant} not supported as output image variant. Valid values are fixed or dynamic.")
+
+                End If
+
+                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, cancel)
+
+            End Using
+
+        End Sub
 
         <Extension>
         Public Sub WriteToSkipEmptyBlocks(source As IDevioProvider, target As Stream, buffersize As Integer, cancel As CancellationToken)

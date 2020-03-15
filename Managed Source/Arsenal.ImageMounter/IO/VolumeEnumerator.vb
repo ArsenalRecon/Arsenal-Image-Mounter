@@ -1,7 +1,11 @@
-﻿Imports Arsenal.ImageMounter.IO.NativeFileIO.Win32API
+﻿Imports Arsenal.ImageMounter.IO.NativeFileIO.NativeConstants
+Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
+Imports Arsenal.ImageMounter.IO.NativeFileIO
+Imports System.Diagnostics.CodeAnalysis
 
 Namespace IO
 
+    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix")>
     Public Class VolumeEnumerator
         Implements IEnumerable(Of String)
 
@@ -16,7 +20,8 @@ Namespace IO
         Private Class Enumerator
             Implements IEnumerator(Of String)
 
-            Private _handle As SafeFindVolumeHandle
+            Public ReadOnly Property SafeHandle As SafeFindVolumeHandle
+
             Private _sb As New StringBuilder(50)
 
             Public ReadOnly Property Current As String Implements IEnumerator(Of String).Current
@@ -41,9 +46,9 @@ Namespace IO
                     Throw New ObjectDisposedException("VolumeEnumerator.Enumerator")
                 End If
 
-                If _handle Is Nothing Then
-                    _handle = FindFirstVolume(_sb, _sb.Capacity)
-                    If Not _handle.IsInvalid Then
+                If _SafeHandle Is Nothing Then
+                    _SafeHandle = FindFirstVolume(_sb, _sb.Capacity)
+                    If Not _SafeHandle.IsInvalid Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_NO_MORE_FILES Then
                         Return False
@@ -51,7 +56,7 @@ Namespace IO
                         Throw New Win32Exception
                     End If
                 Else
-                    If FindNextVolume(_handle, _sb, _sb.Capacity) Then
+                    If FindNextVolume(_SafeHandle, _sb, _sb.Capacity) Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_NO_MORE_FILES Then
                         Return False
@@ -74,11 +79,11 @@ Namespace IO
                 If Not Me.disposedValue Then
                     If disposing Then
                         ' TODO: dispose managed state (managed objects).
-                        _handle?.Dispose()
+                        _SafeHandle?.Dispose()
                     End If
 
                     ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-                    _handle = Nothing
+                    _SafeHandle = Nothing
 
                     ' TODO: set large fields to null.
                     _sb.Clear()

@@ -16,6 +16,7 @@ Imports System.Net
 Imports System.IO
 Imports System.Reflection
 Imports Arsenal.ImageMounter.IO
+Imports System.Diagnostics.CodeAnalysis
 
 Enum OpMode
     None
@@ -44,6 +45,7 @@ Module MainModule
 
     End Sub
 
+    <SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification:="<Pending>")>
     Sub SafeMain(args As String())
 
         Dim FileName As String = Nothing
@@ -173,7 +175,7 @@ Module MainModule
                     If DeviceNumber.HasValue Then
                         DeviceList = {DeviceNumber.Value}
                     Else
-                        DeviceList = adapter.EnumerateDevices()
+                        DeviceList = adapter.GetDeviceList()
                     End If
 
                     For Each Device In DeviceList.Select(AddressOf adapter.QueryDevice)
@@ -208,8 +210,8 @@ Module MainModule
 
             Case OpMode.ListDevices
                 Using adapter As New ScsiAdapter
-                    Dim DeviceList = adapter.EnumerateDevices()
-                    If DeviceList.Count = 0 Then
+                    Dim DeviceList = adapter.GetDeviceList()
+                    If DeviceList.Length = 0 Then
                         Console.WriteLine("No virtual disks defined.")
                         Return
                     End If

@@ -1,4 +1,6 @@
-﻿Namespace IO
+﻿Imports System.Diagnostics.CodeAnalysis
+
+Namespace IO
 
     ''' <summary>
     ''' Buffered version of the BinaryWriter class. Writes to a MemoryStream internally and flushes
@@ -11,6 +13,7 @@
         ''' Creates a new instance of BufferedBinaryWriter.
         ''' </summary>
         ''' <param name="encoding">Specifies which text encoding to use.</param>
+        <SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")>
         Public Sub New(encoding As Encoding)
             MyBase.New(New MemoryStream, encoding)
         End Sub
@@ -18,6 +21,7 @@
         ''' <summary>
         ''' Creates a new instance of BufferedBinaryWriter using System.Text.Encoding.Unicode text encoding.
         ''' </summary>
+        <SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")>
         Public Sub New()
             MyBase.New(New MemoryStream, Encoding.Unicode)
         End Sub
@@ -54,7 +58,7 @@
         ''' Clears contents of internal MemoryStream.
         ''' </summary>
         Public Sub Clear()
-            If m_Disposed = True Then
+            If _IsDisposed = True Then
                 Return
             End If
 
@@ -64,10 +68,10 @@
             End With
         End Sub
 
-        Protected m_Disposed As Boolean
+        Public ReadOnly Property IsDisposed As Boolean
 
         Protected Overrides Sub Dispose(disposing As Boolean)
-            m_Disposed = True
+            _IsDisposed = True
 
             MyBase.Dispose(disposing)
         End Sub

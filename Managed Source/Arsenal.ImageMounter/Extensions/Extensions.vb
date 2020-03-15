@@ -4,7 +4,7 @@ Imports Microsoft.Win32
 
 Namespace Extensions
 
-    Public Module Extensions
+    Public Module ExtensionMethods
 
         <Extension>
         Public Iterator Function GetMessages(ex As Exception) As IEnumerable(Of String)
@@ -42,14 +42,14 @@ Namespace Extensions
         <Extension>
         Public Function JoinMessages(ex As Exception) As String
 
-            Return ex.JoinMessages(" -> ")
+            Return ex?.JoinMessages(" -> ")
 
         End Function
 
         <Extension>
         Public Function JoinMessages(ex As Exception, separator As String) As String
 
-            Return String.Join(separator, ex.GetMessages())
+            Return String.Join(separator, ex?.GetMessages())
 
         End Function
 
@@ -102,9 +102,9 @@ Namespace Extensions
         End Function
 
         <Extension>
-        Public Sub QueueDispose(obj As IDisposable)
+        Public Sub QueueDispose(instance As IDisposable)
 
-            ThreadPool.QueueUserWorkItem(Sub() obj.Dispose())
+            ThreadPool.QueueUserWorkItem(Sub() instance.Dispose())
 
         End Sub
 
@@ -113,11 +113,11 @@ Namespace Extensions
 
             If value Is Nothing Then
 
-                RegKey.DeleteValue(name, throwOnMissingValue:=False)
+                RegKey?.DeleteValue(name, throwOnMissingValue:=False)
 
             Else
 
-                RegKey.SetValue(name, value)
+                RegKey?.SetValue(name, value)
 
             End If
 
@@ -128,11 +128,11 @@ Namespace Extensions
 
             If value Is Nothing Then
 
-                RegKey.DeleteValue(name, throwOnMissingValue:=False)
+                RegKey?.DeleteValue(name, throwOnMissingValue:=False)
 
             Else
 
-                RegKey.SetValue(name, value)
+                RegKey?.SetValue(name, value)
 
             End If
 
@@ -143,11 +143,11 @@ Namespace Extensions
 
             If value Is Nothing Then
 
-                RegKey.DeleteValue(name, throwOnMissingValue:=False)
+                RegKey?.DeleteValue(name, throwOnMissingValue:=False)
 
             Else
 
-                RegKey.SetValue(name, value, valueKind)
+                RegKey?.SetValue(name, value, valueKind)
 
             End If
 
@@ -158,19 +158,30 @@ Namespace Extensions
 
             If value Is Nothing Then
 
-                RegKey.DeleteValue(name, throwOnMissingValue:=False)
+                RegKey?.DeleteValue(name, throwOnMissingValue:=False)
 
             Else
 
-                RegKey.SetValue(name, value, valueKind)
+                RegKey?.SetValue(name, value, valueKind)
 
             End If
 
         End Sub
 
         <Extension>
-        Public Function GetSynchronizationContext(owner As ISynchronizeInvoke) As SynchronizationContext
-            Return DirectCast(owner.Invoke(New Func(Of SynchronizationContext)(Function() SynchronizationContext.Current), Nothing), SynchronizationContext)
+        Public Function GetSynchronizationContext(syncobj As ISynchronizeInvoke) As SynchronizationContext
+            Return DirectCast(syncobj.NullCheck(NameOf(syncobj)).Invoke(New Func(Of SynchronizationContext)(Function() SynchronizationContext.Current), Nothing), SynchronizationContext)
+        End Function
+
+        <Extension>
+        Public Function NullCheck(Of T As Class)(instance As T, param As String) As T
+
+            If instance Is Nothing Then
+                Throw New ArgumentNullException(param)
+            End If
+
+            Return instance
+
         End Function
 
     End Module

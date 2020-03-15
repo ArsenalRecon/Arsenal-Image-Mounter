@@ -20,6 +20,7 @@ Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.PSDisk
 Imports Arsenal.ImageMounter.IO
 Imports Arsenal.ImageMounter.Devio
+Imports System.Diagnostics.CodeAnalysis
 
 Public Class MainForm
 
@@ -37,8 +38,9 @@ Public Class MainForm
     Private IsClosing As Boolean
     Private LastCreatedDevice As UInteger?
 
-    Public ReadOnly DeviceListRefreshEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset)
+    Private ReadOnly DeviceListRefreshEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset)
 
+    <SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification:="<Pending>")>
     Protected Overrides Sub OnLoad(e As EventArgs)
 
         Dim SetupRun As Boolean
@@ -70,7 +72,7 @@ Public Class MainForm
 
                     If rc = DialogResult.Yes Then
 
-                        Adapter.Close()
+                        Adapter.Dispose()
                         Adapter = Nothing
 
                         If InstallDriver() Then
@@ -177,6 +179,7 @@ Public Class MainForm
 
     End Sub
 
+    <SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification:="<Pending>")>
     Protected Overrides Sub OnClosing(e As CancelEventArgs)
 
         IsClosing = True
@@ -366,11 +369,9 @@ Public Class MainForm
     Private Sub DeviceListRefreshThread()
         Try
 
-            Dim parser As New DiskStateParser()
+            Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.EnumerateDevicesProperties, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
 
-            Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.EnumerateDevicesProperties)
-
-            Dim simpleviewtask = Task.Factory.StartNew(Function() parser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result.ToList()))
+            Dim simpleviewtask = Task.Factory.StartNew(Function() DiskStateParser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result.ToList()), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
 
             'Dim fullviewtask = Task.Factory.StartNew(Function() parser.GetFullView(Adapter.ScsiPortNumber, devicelist.Result))
 
@@ -407,7 +408,7 @@ Public Class MainForm
             'Catch ex As Exception
             '    Trace.WriteLine("Full disk state view not supported on this platform: " & ex.ToString())
 
-            listFunction = AddressOf parser.GetSimpleView
+            listFunction = AddressOf DiskStateParser.GetSimpleView
 
             Invoke(Sub() SetDiskView(simpleview, finished:=True))
 
@@ -618,8 +619,8 @@ Public Class MainForm
 
                 With FormMountOptions
 
-                    .SupportedAccessModes = DevioServiceFactory.GetSupportedVirtualDiskAccess(ProxyType, Imagefile)
-
+                    .SetSupportedAccessModes(DevioServiceFactory.GetSupportedVirtualDiskAccess(ProxyType, Imagefile)
+)
                     If Flags.HasFlag(DeviceFlags.ReadOnly) Then
                         .SelectedReadOnly = True
                     Else
@@ -715,14 +716,14 @@ Public Class MainForm
         Try
 
             If cbNotifyLibEwf.Checked Then
-                NativeFileIO.Win32API.AllocConsole()
+                NativeFileIO.SafeNativeMethods.AllocConsole()
                 If Not UsingDebugConsole Then
                     Trace.Listeners.Add(New ConsoleTraceListener With {.Name = "AIMConsoleTraceListener"})
                 End If
             Else
                 If Not UsingDebugConsole Then
                     Trace.Listeners.Remove("AIMConsoleTraceListener")
-                    NativeFileIO.Win32API.FreeConsole()
+                    NativeFileIO.SafeNativeMethods.FreeConsole()
                 End If
             End If
 
@@ -738,11 +739,11 @@ Public Class MainForm
         Try
 
             If cbNotifyLibEwf.Checked Then
-                Devio.Server.SpecializedProviders.DevioProviderLibEwf.NotificationFile = "CONOUT$"
-                Devio.Server.SpecializedProviders.DevioProviderLibEwf.NotificationVerbose = True
+                Server.SpecializedProviders.DevioProviderLibEwf.SetNotificationFile("CONOUT$")
+                Server.SpecializedProviders.DevioProviderLibEwf.NotificationVerbose = True
             Else
-                Devio.Server.SpecializedProviders.DevioProviderLibEwf.NotificationVerbose = False
-                Devio.Server.SpecializedProviders.DevioProviderLibEwf.NotificationFile = Nothing
+                Server.SpecializedProviders.DevioProviderLibEwf.NotificationVerbose = False
+                Server.SpecializedProviders.DevioProviderLibEwf.SetNotificationFile(Nothing)
             End If
 
         Catch ex As Exception

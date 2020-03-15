@@ -14,10 +14,10 @@ Public Module MainModule
 
     End Sub
 
-    Public Sub Main(args As String())
+    Public Sub Main()
 
         If ConfigurationManager.AppSettings!DebugConsole = Boolean.TrueString Then
-            NativeFileIO.Win32API.AllocConsole()
+            NativeFileIO.SafeNativeMethods.AllocConsole()
             Trace.Listeners.Add(New ConsoleTraceListener With {.Name = "AIMConsoleTraceListener"})
             UsingDebugConsole = True
         End If
@@ -25,12 +25,12 @@ Public Module MainModule
         My.Settings.Reload()
 
         Dim privileges_enabled = NativeFileIO.EnablePrivileges(
-            NativeFileIO.Win32API.SE_BACKUP_NAME,
-            NativeFileIO.Win32API.SE_RESTORE_NAME,
-            NativeFileIO.Win32API.SE_DEBUG_NAME,
-            NativeFileIO.Win32API.SE_MANAGE_VOLUME_NAME,
-            NativeFileIO.Win32API.SE_SECURITY_NAME,
-            NativeFileIO.Win32API.SE_TCB_NAME)
+            NativeFileIO.UnsafeNativeMethods.SE_BACKUP_NAME,
+            NativeFileIO.UnsafeNativeMethods.SE_RESTORE_NAME,
+            NativeFileIO.UnsafeNativeMethods.SE_DEBUG_NAME,
+            NativeFileIO.UnsafeNativeMethods.SE_MANAGE_VOLUME_NAME,
+            NativeFileIO.UnsafeNativeMethods.SE_SECURITY_NAME,
+            NativeFileIO.UnsafeNativeMethods.SE_TCB_NAME)
 
         If privileges_enabled IsNot Nothing Then
             Trace.WriteLine($"Enabled privileges: {String.Join(", ", privileges_enabled)}")

@@ -11,6 +11,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Diagnostics.CodeAnalysis
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32
 
@@ -18,7 +20,7 @@ Imports Microsoft.Win32
 ''' API for manipulating flag values, issuing SCSI bus rescans and similar tasks.
 ''' </summary>
 <ComVisible(False)>
-Public Class API
+Public NotInheritable Class API
 
     Private Sub New()
 
@@ -45,10 +47,10 @@ Public Class API
 
         For Each devinstname In devinstances
 
-            Using DevInfoSet = NativeFileIO.Win32API.SetupDiGetClassDevs(NativeFileIO.Win32API.SerenumBusEnumeratorGuid,
+            Using DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevs(NativeFileIO.NativeConstants.SerenumBusEnumeratorGuid,
                                                                          devinstname,
                                                                          hwndParent,
-                                                                         NativeFileIO.Win32API.DIGCF_DEVICEINTERFACE Or NativeFileIO.Win32API.DIGCF_PRESENT)
+                                                                         NativeFileIO.UnsafeNativeMethods.DIGCF_DEVICEINTERFACE Or NativeFileIO.UnsafeNativeMethods.DIGCF_PRESENT)
 
                 If DevInfoSet.IsInvalid Then
                     Throw New Win32Exception
@@ -56,15 +58,15 @@ Public Class API
 
                 Dim i = 0UI
                 Do
-                    Dim DeviceInterfaceData As New NativeFileIO.Win32API.SP_DEVICE_INTERFACE_DATA
+                    Dim DeviceInterfaceData As New NativeFileIO.UnsafeNativeMethods.SP_DEVICE_INTERFACE_DATA
                     DeviceInterfaceData.Initialize()
-                    If NativeFileIO.Win32API.SetupDiEnumDeviceInterfaces(DevInfoSet, IntPtr.Zero, NativeFileIO.Win32API.SerenumBusEnumeratorGuid, i, DeviceInterfaceData) = False Then
+                    If NativeFileIO.UnsafeNativeMethods.SetupDiEnumDeviceInterfaces(DevInfoSet, IntPtr.Zero, NativeFileIO.NativeConstants.SerenumBusEnumeratorGuid, i, DeviceInterfaceData) = False Then
                         Exit Do
                     End If
 
-                    Dim DeviceInterfaceDetailData As New NativeFileIO.Win32API.SP_DEVICE_INTERFACE_DETAIL_DATA
+                    Dim DeviceInterfaceDetailData As New NativeFileIO.UnsafeNativeMethods.SP_DEVICE_INTERFACE_DETAIL_DATA
                     DeviceInterfaceDetailData.Initialize()
-                    If NativeFileIO.Win32API.SetupDiGetDeviceInterfaceDetail(DevInfoSet, DeviceInterfaceData, DeviceInterfaceDetailData, CUInt(Marshal.SizeOf(DeviceInterfaceData)), 0, IntPtr.Zero) = True Then
+                    If NativeFileIO.UnsafeNativeMethods.SetupDiGetDeviceInterfaceDetail(DevInfoSet, DeviceInterfaceData, DeviceInterfaceDetailData, CUInt(Marshal.SizeOf(DeviceInterfaceData)), 0, IntPtr.Zero) = True Then
                         devInstList.Add(DeviceInterfaceDetailData.DevicePath)
                     End If
 
@@ -115,7 +117,7 @@ Public Class API
             Trace.WriteLine($"Found adapter instance '{devinstname}'")
 
             Dim devInst As UInt32
-            status = NativeFileIO.Win32API.CM_Locate_DevNode(devInst, devinstname, 0)
+            status = NativeFileIO.UnsafeNativeMethods.CM_Locate_DevNode(devInst, devinstname, 0)
             If status <> 0 Then
                 Trace.WriteLine($"Device '{devinstname}' error 0x{status:X}")
                 Continue For
@@ -143,7 +145,7 @@ Public Class API
 
         Dim rc As Boolean
         For Each devInst In devInsts
-            Dim status = NativeFileIO.Win32API.CM_Reenumerate_DevNode(devInst, 0)
+            Dim status = NativeFileIO.UnsafeNativeMethods.CM_Reenumerate_DevNode(devInst, 0)
             If status <> 0 Then
                 Trace.WriteLine($"Re-enumeration of '{devInst}' failed: 0x{status:X}")
             Else
@@ -184,6 +186,9 @@ Public Class API
     ''' </summary>
     ''' <param name="ImageFile">Name of disk image file.</param>
     Public Shared Function GetSectorSizeFromFileName(imagefile As String) As UInteger
+
+        imagefile.NullCheck(NameOf(imagefile))
+
         If imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) OrElse
                     imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) OrElse
                     imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) Then
@@ -192,6 +197,7 @@ Public Class API
         Else
             Return 512
         End If
+
     End Function
 
     Private Shared ReadOnly multipliers As New Dictionary(Of ULong, String) From
@@ -345,7 +351,7 @@ Public Class API
 
         For r = 1 To 2
 
-            NativeFileIO.RestartDevice(NativeFileIO.Win32API.DiskClassGuid, devInst)
+            NativeFileIO.RestartDevice(NativeFileIO.NativeConstants.DiskClassGuid, devInst)
 
             If nativepath Is Nothing Then
                 Return
@@ -355,7 +361,7 @@ Public Class API
 
             If Not GetWriteOverlayStatus(win32_path, statistics) Then
                 last_error = Marshal.GetLastWin32Error()
-                If last_error = NativeFileIO.Win32API.ERROR_INVALID_FUNCTION Then
+                If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
                     Trace.WriteLine("Filter driver not yet loaded, retrying...")
                     Thread.Sleep(200)
                     Continue For
@@ -417,7 +423,7 @@ Public Class API
             If operation = RegisterWriteFilterOperation.Unregister Then
 
                 If NativeFileIO.RemoveFilter(dev.devinstChild, "aimwrfltr") Then
-                    NativeFileIO.RestartDevice(NativeFileIO.Win32API.DiskClassGuid, dev.devinstChild)
+                    NativeFileIO.RestartDevice(NativeFileIO.NativeConstants.DiskClassGuid, dev.devinstChild)
                 End If
 
                 Return
@@ -429,14 +435,14 @@ Public Class API
             For r = 1 To 2
 
                 If NativeFileIO.AddFilter(dev.devinstChild, "aimwrfltr") Then
-                    NativeFileIO.RestartDevice(NativeFileIO.Win32API.DiskClassGuid, dev.devinstChild)
+                    NativeFileIO.RestartDevice(NativeFileIO.NativeConstants.DiskClassGuid, dev.devinstChild)
                 End If
 
                 Dim statistics As New WriteFilterStatistics
 
                 If Not GetWriteOverlayStatus(dev.win32path, statistics) Then
                     last_error = Marshal.GetLastWin32Error()
-                    If last_error = NativeFileIO.Win32API.ERROR_INVALID_FUNCTION Then
+                    If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
                         Trace.WriteLine("Filter driver not loaded, retrying...")
                         Thread.Sleep(200)
                         Continue For
@@ -493,13 +499,19 @@ Public Class API
 
         Static WriteFilterStatisticsSize As UInteger = CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics)))
 
-        Return DeviceIoControl(hDevice, IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, WriteFilterStatisticsSize, Nothing, Nothing)
+        Return UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, WriteFilterStatisticsSize, Nothing, Nothing)
 
     End Function
 
-    Private Const IOCTL_AIMWRFLTR_GET_DEVICE_DATA = &H88443404UI
+    <SuppressMessage("Style", "CA1812:Naming Styles")>
+    Private NotInheritable Class UnsafeNativeMethods
 
-    Private Declare Function DeviceIoControl Lib "kernel32" (
+        Private Sub New()
+        End Sub
+
+        Public Const IOCTL_AIMWRFLTR_GET_DEVICE_DATA = &H88443404UI
+
+        Public Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
@@ -508,6 +520,8 @@ Public Class API
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
+
+    End Class
 
 End Class
 

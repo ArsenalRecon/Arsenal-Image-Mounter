@@ -19,7 +19,7 @@ Public Class MainForm
     Shared Sub New()
 
         If ConfigurationManager.AppSettings!DebugConsole = Boolean.TrueString Then
-            NativeFileIO.Win32API.AllocConsole()
+            NativeFileIO.SafeNativeMethods.AllocConsole()
             Trace.Listeners.Add(New ConsoleTraceListener)
             UsingDebugConsole = True
         End If

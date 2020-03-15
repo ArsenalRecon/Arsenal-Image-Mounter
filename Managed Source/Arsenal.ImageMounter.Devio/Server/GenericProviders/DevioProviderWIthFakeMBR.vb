@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 Imports DiscUtils.Partitions
 Imports Buffer = System.Buffer
@@ -23,15 +24,15 @@ Namespace Server.GenericProviders
 
         Public ReadOnly Property BaseProvider As IDevioProvider
 
-        Public ReadOnly Property PrefixBuffer As Byte() = New Byte(0 To PrefixLength - 1) {}
+        Friend ReadOnly Property PrefixBuffer As Byte() = New Byte(0 To PrefixLength - 1) {}
 
-        Public ReadOnly Property SuffixBuffer As Byte()
+        Friend ReadOnly Property SuffixBuffer As Byte()
 
         Private Shared ReadOnly _default_boot_code As Byte() = {&HF4, &HEB, &HFD}   ' HLT ; JMP -3
 
         Public Shared Function GetVBRPartitionLength(baseProvider As IDevioProvider) As Long
 
-            Dim vbr(0 To CInt(baseProvider.SectorSize - 1UI)) As Byte
+            Dim vbr(0 To CInt(baseProvider.NullCheck(NameOf(baseProvider)).SectorSize - 1UI)) As Byte
 
             If baseProvider.Read(vbr, 0, vbr.Length, 0) < vbr.Length Then
                 Return 0
@@ -76,7 +77,7 @@ Namespace Server.GenericProviders
 
         Public Sub New(BaseProvider As IDevioProvider, PartitionLength As Long)
 
-            _BaseProvider = BaseProvider
+            _BaseProvider = BaseProvider.NullCheck(NameOf(BaseProvider))
 
             PartitionLength = Math.Max(BaseProvider.Length, PartitionLength)
 
@@ -357,18 +358,18 @@ Namespace Server.GenericProviders
         End Sub
 
         ' TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.
-        'Protected Overrides Sub Finalize()
-        '    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-        '    Dispose(False)
-        '    MyBase.Finalize()
-        'End Sub
+        Protected Overrides Sub Finalize()
+            ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
+            Dispose(False)
+            MyBase.Finalize()
+        End Sub
 
         ' This code added by Visual Basic to correctly implement the disposable pattern.
         Public Sub Dispose() Implements IDisposable.Dispose
             ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
             Dispose(True)
             ' TODO: uncomment the following line if Finalize() is overridden above.
-            ' GC.SuppressFinalize(Me)
+            GC.SuppressFinalize(Me)
         End Sub
 
         Private Const DiskSignatureOffset As Integer = &H1B8
@@ -377,9 +378,7 @@ Namespace Server.GenericProviders
 
         Private Shared Function GenerateDiskSignature() As Integer
 
-            Dim value As Integer = 0
-
-            NativeFileIO.Win32API.RtlGenRandom(value, 4)
+            Dim value = NativeFileIO.GenRandomInt32()
 
             Return value Or &H80808081 And &HFEFEFEFF
 

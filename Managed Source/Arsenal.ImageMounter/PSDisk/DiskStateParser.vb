@@ -6,26 +6,26 @@ Imports Arsenal.ImageMounter.IO
 
 Namespace PSDisk
 
-    Public Class DiskStateParser
+    Public NotInheritable Class DiskStateParser
 
-        Public Sub New()
+        Private Sub New()
 
         End Sub
 
-        Public Function GetSimpleView(portnumber As Byte, deviceProperties As List(Of DeviceProperties)) As List(Of DiskStateView)
+        Public Shared Function GetSimpleView(portnumber As Byte, deviceProperties As List(Of DeviceProperties)) As List(Of DiskStateView)
 
             Return GetSimpleViewSpecial(Of DiskStateView)(portnumber, deviceProperties)
 
         End Function
 
-        Public Function GetSimpleViewSpecial(Of T As {New, DiskStateView})(portnumber As Byte, deviceProperties As List(Of DeviceProperties)) As List(Of T)
+        Public Shared Function GetSimpleViewSpecial(Of T As {New, DiskStateView})(portnumber As Byte, deviceProperties As List(Of DeviceProperties)) As List(Of T)
 
             Try
                 Dim ids = NativeFileIO.GetDevicesScsiAddresses(portnumber)
 
                 Dim getid =
                     Function(dev As DeviceProperties) As String
-                        Dim scsiaddress As New NativeFileIO.ScsiAddressAndLength(New NativeFileIO.Win32API.SCSI_ADDRESS(portnumber, dev.DeviceNumber), dev.DiskSize)
+                        Dim scsiaddress As New NativeFileIO.ScsiAddressAndLength(New NativeFileIO.SCSI_ADDRESS(portnumber, dev.DeviceNumber), dev.DiskSize)
                         Dim result As String = Nothing
                         If ids.TryGetValue(scsiaddress, result) Then
                             Return result
@@ -81,14 +81,11 @@ Namespace PSDisk
 
                         End Function)
 
-            Catch ex As Exception When _
-                Function()
-                    Trace.WriteLine($"Exception in GetSimpleView: {ex.ToString()}")
+            Catch ex As Exception
+                Trace.WriteLine($"Exception in GetSimpleView: {ex.ToString()}")
 
-                    Return False
-                End Function()
+                Throw New Exception("Exception in GetSimpleView", ex)
 
-                Return Nothing
             End Try
 
         End Function

@@ -12,6 +12,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Diagnostics.CodeAnalysis
+
 Namespace Server.GenericProviders
 
     ''' <summary>
@@ -23,6 +25,7 @@ Namespace Server.GenericProviders
         Inherits DevioProviderUnmanagedBase
 
 #Region "SafeHandle"
+        <SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification:="<Pending>")>
         Public Class SafeDevioProviderDLLHandle
             Inherits SafeHandleZeroOrMinusOneIsInvalid
 
@@ -49,16 +52,25 @@ Namespace Server.GenericProviders
 #End Region
 
         Protected Sub New(open As DLLOpenMethod, filename As String, [readOnly] As Boolean)
+            Me.New(open, filename, [readOnly], Nothing)
 
-            Dim DLLClose As DLLCloseMethod = Nothing
+        End Sub
 
-            _SafeHandle = open(filename, [readOnly], _DLLRead, _DLLWrite, DLLClose, _Length)
+        Protected Sub New(open As DLLOpenMethod, filename As String, [readOnly] As Boolean, get_last_error As Func(Of Exception))
 
-            If _SafeHandle.IsInvalid OrElse _SafeHandle.IsClosed Then
-                Throw New IOException($"Error opening '{filename}'", GetLastErrorAsException())
+            If open Is Nothing Then
+                Throw New ArgumentNullException(NameOf(open))
             End If
 
-            _SafeHandle.DLLClose = DLLClose
+            Dim dll_close As DLLCloseMethod = Nothing
+
+            _SafeHandle = open(filename, [readOnly], _DLLRead, _DLLWrite, dll_close, _Length)
+
+            If _SafeHandle.IsInvalid OrElse _SafeHandle.IsClosed Then
+                Throw New IOException($"Error opening '{filename}'", If(get_last_error?.Invoke(), New Win32Exception()))
+            End If
+
+            _SafeHandle.DLLClose = dll_close
 
             _CanWrite = Not [readOnly]
 
@@ -87,12 +99,6 @@ Namespace Server.GenericProviders
                                                     offset As Long) As Integer
 
         Public Delegate Function DLLCloseMethod(handle As IntPtr) As Integer
-
-        Protected Overridable Function GetLastErrorAsException() As Exception
-
-            Return New Win32Exception()
-
-        End Function
 
         Public Overrides Function Read(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 

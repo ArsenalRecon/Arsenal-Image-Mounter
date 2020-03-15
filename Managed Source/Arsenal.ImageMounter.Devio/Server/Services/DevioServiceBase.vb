@@ -10,6 +10,7 @@
 '''''
 
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 
 Namespace Server.Services
@@ -43,7 +44,7 @@ Namespace Server.Services
         ''' Indicates whether DevioProvider will be automatically closed when this instance
         ''' is disposed.
         ''' </summary>
-        Public ReadOnly OwnsProvider As Boolean
+        Public ReadOnly Property OwnsProvider As Boolean
 
         ''' <summary>
         ''' Size of virtual disk device.
@@ -148,7 +149,7 @@ Namespace Server.Services
 
             Me.OwnsProvider = OwnsProvider
 
-            _DevioProvider = DevioProvider
+            _DevioProvider = DevioProvider.NullCheck(NameOf(DevioProvider))
 
             DiskSize = DevioProvider.Length
 
@@ -271,7 +272,7 @@ Namespace Server.Services
         Public Overridable Sub StartServiceThreadAndMount(ScsiAdapter As ScsiAdapter,
                                                           Flags As DeviceFlags)
 
-            _ScsiAdapter = ScsiAdapter
+            _ScsiAdapter = ScsiAdapter.NullCheck(NameOf(ScsiAdapter))
 
             If Not StartServiceThread() Then
                 If _Exception Is Nothing Then
@@ -360,7 +361,7 @@ Namespace Server.Services
 
                 Catch ex As Win32Exception When (
                   i < 40 AndAlso
-                  ex.NativeErrorCode = NativeFileIO.Win32API.ERROR_ACCESS_DENIED)
+                  ex.NativeErrorCode = NativeFileIO.NativeConstants.ERROR_ACCESS_DENIED)
 
                     Trace.WriteLine($"Access denied attempting to remove device {_DiskDeviceNumber:X6}, retrying...")
 
@@ -369,7 +370,7 @@ Namespace Server.Services
                     Continue Do
 
                 Catch ex As Win32Exception When _
-                    ex.NativeErrorCode = NativeFileIO.Win32API.ERROR_FILE_NOT_FOUND
+                    ex.NativeErrorCode = NativeFileIO.NativeConstants.ERROR_FILE_NOT_FOUND
 
                     Trace.WriteLine($"Attempt to remove non-existent device {_DiskDeviceNumber:X6}")
 
@@ -435,7 +436,7 @@ Namespace Server.Services
         Public ReadOnly Property DiskDeviceNumber As UInteger
             Get
                 If _DiskDeviceNumber = UInteger.MaxValue Then
-                    Throw New IOException("No Arsenal Image Mounter Disk Device currently associated with this instance.")
+                    Throw New InvalidOperationException("No Arsenal Image Mounter Disk Device currently associated with this instance.")
                 End If
                 Return _DiskDeviceNumber
             End Get

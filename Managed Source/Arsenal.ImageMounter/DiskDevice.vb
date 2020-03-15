@@ -21,7 +21,7 @@ Public Class DiskDevice
 
     Private _RawDiskStream As DiskStream
 
-    Private _CachedAddress As NativeFileIO.Win32API.SCSI_ADDRESS?
+    Private _CachedAddress As NativeFileIO.SCSI_ADDRESS?
     '
     ''' <summary>
     ''' Returns the device path used to open this device object, if opened by name.
@@ -31,7 +31,7 @@ Public Class DiskDevice
     Public ReadOnly Property DevicePath As String
 
     Private Sub AllowExtendedDasdIo()
-        NativeFileIO.Win32API.DeviceIoControl(SafeFileHandle, NativeFileIO.Win32API.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+        NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeFileIO.NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
     End Sub
 
     Protected Friend Sub New(DeviceNameAndHandle As KeyValuePair(Of String, SafeFileHandle), AccessMode As FileAccess)
@@ -74,7 +74,7 @@ Public Class DiskDevice
     ''' </summary>
     ''' <param name="ScsiAddress"></param>
     ''' <param name="AccessMode"></param>
-    Public Sub New(ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS, AccessMode As FileAccess)
+    Public Sub New(ScsiAddress As NativeFileIO.SCSI_ADDRESS, AccessMode As FileAccess)
         Me.New(NativeFileIO.OpenDiskByScsiAddress(ScsiAddress, AccessMode), AccessMode)
 
     End Sub
@@ -101,7 +101,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves SCSI address for this disk.
     ''' </summary>
-    Public ReadOnly Property ScsiAddress As NativeFileIO.Win32API.SCSI_ADDRESS?
+    Public ReadOnly Property ScsiAddress As NativeFileIO.SCSI_ADDRESS?
         Get
             Return NativeFileIO.GetScsiAddress(SafeFileHandle)
         End Get
@@ -110,7 +110,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves storage device type and physical disk number information.
     ''' </summary>
-    Public ReadOnly Property StorageDeviceNumber As NativeFileIO.Win32API.STORAGE_DEVICE_NUMBER?
+    Public ReadOnly Property StorageDeviceNumber As NativeFileIO.STORAGE_DEVICE_NUMBER?
         Get
             Return NativeFileIO.GetStorageDeviceNumber(SafeFileHandle)
         End Get
@@ -155,18 +155,18 @@ Public Class DiskDevice
     ''' Retrieves the physical location of a specified volume on one or more disks. 
     ''' </summary>
     ''' <returns></returns>
-    Public ReadOnly Property VolumeDiskExtents As NativeFileIO.DiskExtent()
-        Get
-            Return NativeFileIO.GetVolumeDiskExtents(SafeFileHandle)
-        End Get
-    End Property
+    Public Function GetVolumeDiskExtents() As NativeFileIO.DiskExtent()
+
+        Return NativeFileIO.GetVolumeDiskExtents(SafeFileHandle)
+
+    End Function
 
     ''' <summary>
     ''' Gets or sets disk signature stored in boot record.
     ''' </summary>
     Public Property DiskSignature As UInt32?
         Get
-            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
+            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
             With GetRawDiskStream()
                 .Position = 0
                 .Read(rawsig, 0, rawsig.Length)
@@ -188,7 +188,7 @@ Public Class DiskDevice
                 Return
             End If
             Dim newvalue = BitConverter.GetBytes(Value.Value)
-            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
+            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
             With GetRawDiskStream()
                 .Position = 0
                 .Read(rawsig, 0, rawsig.Length)
@@ -204,7 +204,7 @@ Public Class DiskDevice
     ''' </summary>
     Public Property VBRHiddenSectorsCount As UInt32?
         Get
-            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
+            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
 
             With GetRawDiskStream()
                 .Position = 0
@@ -222,7 +222,7 @@ Public Class DiskDevice
                 Return
             End If
             Dim newvalue = BitConverter.GetBytes(Value.Value)
-            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
+            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
             With GetRawDiskStream()
                 .Position = 0
                 .Read(rawsig, 0, rawsig.Length)
@@ -240,7 +240,7 @@ Public Class DiskDevice
     Public ReadOnly Property HasValidPartitionTable As Boolean
         Get
 
-            Dim rawsig(0 To Geometry.BytesPerSector - 1) As Byte
+            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
 
             With GetRawDiskStream()
                 .Position = 0
@@ -301,18 +301,18 @@ Public Class DiskDevice
     ''' Sets disk volume offline attribute. Only valid for logical
     ''' disk volumes, not physical disk drives.
     ''' </summary>
-    Public WriteOnly Property VolumeOffline As Boolean
-        Set
-            NativeFileIO.SetVolumeOffline(SafeFileHandle, Value)
-        End Set
-    End Property
+    Public Sub SetVolumeOffline(value As Boolean)
+
+        NativeFileIO.SetVolumeOffline(SafeFileHandle, value)
+
+    End Sub
 
     ''' <summary>
     ''' Gets information about a partition stored on a disk with MBR
     ''' partition layout. This property is not available for physical
     ''' disks, only disk partitions are supported.
     ''' </summary>
-    Public ReadOnly Property PartitionInformation As NativeFileIO.Win32API.PARTITION_INFORMATION?
+    Public ReadOnly Property PartitionInformation As NativeFileIO.PARTITION_INFORMATION?
         Get
             Return NativeFileIO.GetPartitionInformation(SafeFileHandle)
         End Get
@@ -322,7 +322,7 @@ Public Class DiskDevice
     ''' Gets information about a disk partition. This property is not
     ''' available for physical disks, only disk partitions are supported.
     ''' </summary>
-    Public ReadOnly Property PartitionInformationEx As NativeFileIO.Win32API.PARTITION_INFORMATION_EX?
+    Public ReadOnly Property PartitionInformationEx As NativeFileIO.PARTITION_INFORMATION_EX?
         Get
             Return NativeFileIO.GetPartitionInformationEx(SafeFileHandle)
         End Get
@@ -345,7 +345,7 @@ Public Class DiskDevice
     ''' Initialize a raw disk device for use with Windows. This method is available
     ''' for physical disks, not disk partitions.
     ''' </summary>
-    Public Sub InitializeDisk(PartitionStyle As NativeFileIO.Win32API.PARTITION_STYLE)
+    Public Sub InitializeDisk(PartitionStyle As NativeFileIO.PARTITION_STYLE)
         NativeFileIO.InitializeDisk(SafeFileHandle, PartitionStyle)
     End Sub
 
@@ -482,7 +482,7 @@ Public Class DiskDevice
     ''' Returns logical disk geometry. Normally, only the BytesPerSector member
     ''' contains data of interest.
     ''' </summary>
-    Public ReadOnly Property Geometry As NativeFileIO.Win32API.DISK_GEOMETRY
+    Public ReadOnly Property Geometry As NativeFileIO.DISK_GEOMETRY?
         Get
             Return NativeFileIO.GetDiskGeometry(SafeFileHandle)
         End Get

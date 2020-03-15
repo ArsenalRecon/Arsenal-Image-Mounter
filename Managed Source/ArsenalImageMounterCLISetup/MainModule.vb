@@ -17,7 +17,7 @@ Imports Arsenal.ImageMounter.IO
 
 Module MainModule
 
-    Private ReadOnly ownerWindow As IntPtr = NativeFileIO.Win32API.GetConsoleWindow()
+    Private ReadOnly ownerWindow As IntPtr = NativeFileIO.SafeNativeMethods.GetConsoleWindow()
 
     Sub New()
 

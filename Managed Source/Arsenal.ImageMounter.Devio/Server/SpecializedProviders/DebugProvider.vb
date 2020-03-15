@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Diagnostics.CodeAnalysis
 Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 
@@ -19,6 +20,7 @@ Namespace Server.SpecializedProviders
     ''' A class to support test cases to verify that correct data is received through providers
     ''' compared to raw image files.
     ''' </summary>
+    <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class")>
     Public Class DebugProvider
         Inherits DevioProviderManagedBase
 
@@ -62,10 +64,10 @@ Namespace Server.SpecializedProviders
             End Get
         End Property
 
-        Public Declare Function memcmp Lib "msvcrt.dll" (<[In]> buf1 As Byte(), <[In]> buf2 As Byte(), count As IntPtr) As Integer
-        Public Declare Function memcmp Lib "msvcrt.dll" (<[In]> buf1 As Byte(), buf2 As IntPtr, count As IntPtr) As Integer
-        Public Declare Function memcmp Lib "msvcrt.dll" (buf1 As IntPtr, <[In]> buf2 As Byte(), count As IntPtr) As Integer
-        Public Declare Function memcmp Lib "msvcrt.dll" (buf1 As IntPtr, buf2 As IntPtr, count As IntPtr) As Integer
+        Private Declare Function memcmp Lib "msvcrt.dll" (<[In]> buf1 As Byte(), <[In]> buf2 As Byte(), count As IntPtr) As Integer
+        Private Declare Function memcmp Lib "msvcrt.dll" (<[In]> buf1 As Byte(), buf2 As IntPtr, count As IntPtr) As Integer
+        Private Declare Function memcmp Lib "msvcrt.dll" (buf1 As IntPtr, <[In]> buf2 As Byte(), count As IntPtr) As Integer
+        Private Declare Function memcmp Lib "msvcrt.dll" (buf1 As IntPtr, buf2 As IntPtr, count As IntPtr) As Integer
 
         Public Overrides Function Read(buf1 As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
@@ -78,7 +80,7 @@ Namespace Server.SpecializedProviders
                     End If
                     DebugCompareStream.Position = fileoffset
                     Return DebugCompareStream.Read(buf2, 0, count)
-                End Function)
+                End Function, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
 
             Dim rc1 = BaseProvider.Read(buf1, bufferoffset, count, fileoffset)
             Dim rc2 = compareTask.Result

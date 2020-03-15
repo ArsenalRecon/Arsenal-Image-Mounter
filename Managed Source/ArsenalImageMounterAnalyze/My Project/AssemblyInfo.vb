@@ -8,30 +8,12 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("Arsenal Image Mounter Debug-Analyze Tool")> 
-<Assembly: AssemblyDescription("")> 
-<Assembly: AssemblyCompany("Arsenal Recon")> 
-<Assembly: AssemblyProduct("PDMAnalyze")> 
-<Assembly: AssemblyCopyright("Copyright © Arsenal Recon")> 
-<Assembly: AssemblyTrademark("")>
+<Assembly: AssemblyTitle("Arsenal Image Mounter Debug-Analyze Tool")>
 
 <Assembly: ObfuscateAssembly(False)>
 
 <Assembly: ComVisible(False)>
 
 'The following GUID is for the ID of the typelib if this project is exposed to COM
-<Assembly: Guid("9657b977-18c1-42ff-a419-2de035668e72")> 
+<Assembly: Guid("9657b977-18c1-42ff-a419-2de035668e72")>
 
-' Version information for an assembly consists of the following four values:
-'
-'      Major Version
-'      Minor Version 
-'      Build Number
-'      Revision
-'
-' You can specify all the values or you can default the Build and Revision Numbers 
-' by using the '*' as shown below:
-' <Assembly: AssemblyVersion("1.0.*")> 
-
-<Assembly: AssemblyVersion("1.0.017.0")> 
-<Assembly: AssemblyFileVersion("1.0.017.0")> 

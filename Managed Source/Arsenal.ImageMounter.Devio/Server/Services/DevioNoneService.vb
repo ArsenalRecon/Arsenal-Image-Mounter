@@ -26,12 +26,12 @@ Namespace Server.Services
         ''' <summary>
         ''' Name and path of image file mounted by Arsenal Image Mounter.
         ''' </summary>
-        Public ReadOnly Imagefile As String
+        Public ReadOnly Property Imagefile As String
 
         ''' <summary>
         ''' FileAccess flags specifying whether to mount read-only or read-write.
         ''' </summary>
-        Public ReadOnly DiskAccess As FileAccess
+        Public ReadOnly Property DiskAccess As FileAccess
 
         ''' <summary>
         ''' Creates a DevioServiceBase compatible object, but without providing a proxy service.

@@ -1,4 +1,6 @@
+Imports System.Diagnostics.CodeAnalysis
 Imports System.Runtime.InteropServices.Marshal
+Imports Arsenal.ImageMounter.Extensions
 
 Namespace IO
 
@@ -9,7 +11,7 @@ Namespace IO
     Public Class PinnedBuffer
         Inherits SafeBuffer
 
-        Protected _gchandle As GCHandle
+        Protected ReadOnly Property GCHandle As GCHandle
 
         Protected Sub New()
             MyBase.New(ownsHandle:=True)
@@ -19,9 +21,9 @@ Namespace IO
         Public ReadOnly Property Offset As Integer
             Get
                 If IntPtr.Size > 4 Then
-                    Return CInt(DangerousGetHandle().ToInt64() - _gchandle.AddrOfPinnedObject().ToInt64())
+                    Return CInt(DangerousGetHandle().ToInt64() - _GCHandle.AddrOfPinnedObject().ToInt64())
                 Else
-                    Return DangerousGetHandle().ToInt32() - _gchandle.AddrOfPinnedObject().ToInt32()
+                    Return DangerousGetHandle().ToInt32() - _GCHandle.AddrOfPinnedObject().ToInt32()
                 End If
             End Get
         End Property
@@ -30,31 +32,31 @@ Namespace IO
         ''' Initializes a new instance with an existing type T object and pins memory
         ''' position.
         ''' </summary>
-        ''' <param name="obj">Existing object to marshal to unmanaged memory.</param>
-        Public Shared Function Create(obj As String) As PinnedString
-            Return New PinnedString(obj)
+        ''' <param name="instance">Existing object to marshal to unmanaged memory.</param>
+        Public Shared Function Create(instance As String) As PinnedString
+            Return New PinnedString(instance)
         End Function
 
         ''' <summary>
         ''' Initializes a new instance with an existing type T array and pins memory
         ''' position.
         ''' </summary>
-        ''' <param name="obj">Existing object to marshal to unmanaged memory.</param>
-        Public Shared Function Create(Of T As Structure)(obj As T()) As PinnedBuffer(Of T)
-            Return New PinnedBuffer(Of T)(obj)
+        ''' <param name="instance">Existing object to marshal to unmanaged memory.</param>
+        Public Shared Function Create(Of T As Structure)(instance As T()) As PinnedBuffer(Of T)
+            Return New PinnedBuffer(Of T)(instance)
         End Function
 
-        Public Shared Function PtrToStructure(Of T)(ptr As IntPtr) As T
-            Return DirectCast(Marshal.PtrToStructure(ptr, GetType(T)), T)
+        Public Shared Function PtrToStructure(Of T)(address As IntPtr) As T
+            Return DirectCast(Marshal.PtrToStructure(address, GetType(T)), T)
         End Function
 
-        Public Shared Sub DestroyStructure(Of T)(ptr As IntPtr)
-            Marshal.DestroyStructure(ptr, GetType(T))
+        Public Shared Sub DestroyStructure(Of T)(address As IntPtr)
+            Marshal.DestroyStructure(address, GetType(T))
         End Sub
 
-        Public Shared Function Serialize(Of T As Structure)(obj As T) As Byte()
+        Public Shared Function Serialize(Of T As Structure)(instance As T) As Byte()
             Using pinned As New PinnedBuffer(Of Byte)(SizeOf(GetType(T)))
-                pinned.Write(0, obj)
+                pinned.Write(0, instance)
                 Return pinned.Target
             End Using
         End Function
@@ -73,11 +75,11 @@ Namespace IO
         Public Sub New(existing As PinnedBuffer, offset As Integer)
             MyBase.New(ownsHandle:=True)
 
-            Initialize(existing.ByteLength)
+            Initialize(existing.NullCheck(NameOf(existing)).ByteLength)
 
-            _gchandle = GCHandle.Alloc(existing._gchandle.Target, GCHandleType.Pinned)
+            _GCHandle = GCHandle.Alloc(existing._GCHandle.Target, GCHandleType.Pinned)
 
-            SetHandle(_gchandle.AddrOfPinnedObject() + existing.Offset + offset)
+            SetHandle(_GCHandle.AddrOfPinnedObject() + existing.Offset + offset)
 
         End Sub
 
@@ -85,21 +87,21 @@ Namespace IO
         ''' Initializes a new instance with an existing object and pins memory
         ''' position.
         ''' </summary>
-        ''' <param name="obj">Existing object to pin in memory.</param>
+        ''' <param name="instance">Existing object to pin in memory.</param>
         ''' <param name="toalObjectSize">Total number of bytes used by obj in unmanaged memory</param>
         ''' <param name="byteOffset">Byte offset into unmanaged memory where this instance should start</param>
-        Public Sub New(obj As Object, toalObjectSize As Integer, byteOffset As Integer)
+        Public Sub New(instance As Object, toalObjectSize As Integer, byteOffset As Integer)
             MyClass.New()
 
             If byteOffset > toalObjectSize Then
-                Throw New ArgumentOutOfRangeException("Argument offset must be within total object size", "offset")
+                Throw New ArgumentOutOfRangeException(NameOf(byteOffset), "Argument byteOffset must be within total object size")
             End If
 
             Initialize(CULng(toalObjectSize - byteOffset))
 
-            _gchandle = GCHandle.Alloc(obj, GCHandleType.Pinned)
+            _GCHandle = GCHandle.Alloc(instance, GCHandleType.Pinned)
 
-            SetHandle(_gchandle.AddrOfPinnedObject() + byteOffset)
+            SetHandle(_GCHandle.AddrOfPinnedObject() + byteOffset)
 
         End Sub
 
@@ -107,27 +109,27 @@ Namespace IO
         ''' Initializes a new instance with an existing object and pins memory
         ''' position.
         ''' </summary>
-        ''' <param name="obj">Existing object to pin in memory.</param>
+        ''' <param name="instance">Existing object to pin in memory.</param>
         ''' <param name="size">Number of bytes in unmanaged memory</param>
-        Public Sub New(obj As Object, size As Integer)
+        Public Sub New(instance As Object, size As Integer)
             MyClass.New()
 
             Initialize(CULng(size))
 
-            _gchandle = GCHandle.Alloc(obj, GCHandleType.Pinned)
+            _GCHandle = GCHandle.Alloc(instance, GCHandleType.Pinned)
 
-            SetHandle(_gchandle.AddrOfPinnedObject())
+            SetHandle(_GCHandle.AddrOfPinnedObject())
 
         End Sub
 
         Protected Overrides Function ReleaseHandle() As Boolean
-            _gchandle.Free()
+            _GCHandle.Free()
             Return True
         End Function
 
         Public ReadOnly Property Target As Object
             Get
-                Return _gchandle.Target
+                Return _GCHandle.Target
             End Get
         End Property
 
@@ -145,8 +147,8 @@ Namespace IO
 
         Public Overrides Function ToString() As String
 
-            If _gchandle.IsAllocated Then
-                Return _gchandle.Target.ToString()
+            If _GCHandle.IsAllocated Then
+                Return _GCHandle.Target.ToString()
             Else
                 Return "{Unallocated}"
             End If
@@ -187,7 +189,7 @@ Namespace IO
         ''' </summary>
         Public Overloads ReadOnly Property Target As String
             Get
-                Return DirectCast(_gchandle.Target, String)
+                Return DirectCast(GCHandle.Target, String)
             End Get
         End Property
 
@@ -215,9 +217,9 @@ Namespace IO
         ''' Initializes a new instance with an existing type T array and pins memory
         ''' position.
         ''' </summary>
-        ''' <param name="obj">Existing object to marshal to unmanaged memory.</param>
-        Public Sub New(obj As T())
-            MyBase.New(obj, Buffer.ByteLength(obj))
+        ''' <param name="instance">Existing object to marshal to unmanaged memory.</param>
+        Public Sub New(instance As T())
+            MyBase.New(instance, Buffer.ByteLength(instance))
 
         End Sub
 
@@ -225,9 +227,9 @@ Namespace IO
         ''' Initializes a new instance with an existing type T array and pins memory
         ''' position.
         ''' </summary>
-        ''' <param name="obj">Existing object to marshal to unmanaged memory.</param>
-        Public Sub New(obj As T(), arrayOffset As Integer, arrayItems As Integer)
-            MyBase.New(obj, MakeTotalByteSize(obj, arrayOffset, arrayItems), (Buffer.ByteLength(obj) \ obj.Length) * arrayOffset)
+        ''' <param name="instance">Existing object to marshal to unmanaged memory.</param>
+        Public Sub New(instance As T(), arrayOffset As Integer, arrayItems As Integer)
+            MyBase.New(instance, MakeTotalByteSize(instance, arrayOffset, arrayItems), (Buffer.ByteLength(instance) \ instance.Length) * arrayOffset)
 
         End Sub
 
@@ -253,9 +255,10 @@ Namespace IO
         ''' <summary>
         ''' Returns associated object of this instance.
         ''' </summary>
+        <SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification:="<Pending>")>
         Public Overloads ReadOnly Property Target As T()
             Get
-                Return DirectCast(_gchandle.Target, T())
+                Return DirectCast(GCHandle.Target, T())
             End Get
         End Property
 

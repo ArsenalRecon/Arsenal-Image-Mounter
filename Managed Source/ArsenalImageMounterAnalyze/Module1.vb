@@ -18,7 +18,7 @@ Module Module1
     Sub Main()
 
         Dim devices = Aggregate dev In NativeFileIO.QueryDosDevice()
-                      Where dev.StartsWith("SCSI", StringComparison.OrdinalIgnoreCase) AndAlso dev.EndsWith(":")
+                      Where dev.StartsWith("SCSI", StringComparison.OrdinalIgnoreCase) AndAlso dev.EndsWith(":", StringComparison.Ordinal)
                       Order By dev
                       Into ToList()
 

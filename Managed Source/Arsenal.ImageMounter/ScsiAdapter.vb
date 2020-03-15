@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Diagnostics.CodeAnalysis
 Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
@@ -29,6 +30,7 @@ Public Class ScsiAdapter
     ''' Object storing properties for a virtual disk device. Returned by
     ''' QueryDevice() method.
     ''' </summary>
+    <SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification:="<Pending>")>
     Public NotInheritable Class DeviceProperties
 
         Friend Sub New()
@@ -36,32 +38,32 @@ Public Class ScsiAdapter
         End Sub
 
         ''' <summary>Device number of virtual disk.</summary>
-        Public DeviceNumber As UInt32
+        Public Property DeviceNumber As UInt32
 
         ''' <summary>Size of virtual disk.</summary>
-        Public DiskSize As Int64
+        Public Property DiskSize As Int64
 
         ''' <summary>Number of bytes per sector for virtual disk geometry.</summary>
-        Public BytesPerSector As UInt32
+        Public Property BytesPerSector As UInt32
 
         ''' <summary>A skip offset if virtual disk data does not begin immediately at start of disk image file.
         ''' Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter
         ''' or Windows filesystem drivers.</summary>
-        Public ImageOffset As Int64
+        Public Property ImageOffset As Int64
 
         ''' <summary>Flags specifying properties for virtual disk. See comments for each flag value.</summary>
-        Public Flags As DeviceFlags
+        Public Property Flags As DeviceFlags
 
         ''' <summary>Name of disk image file holding storage for file type virtual disk or used to create a
         ''' virtual memory type virtual disk.</summary>
-        Public Filename As String
+        Public Property Filename As String
 
         ''' <summary>Path to differencing file used in write-temporary mode.</summary>
-        Public WriteOverlayImageFile As String
+        Public Property WriteOverlayImageFile As String
 
     End Class
 
-    Public ReadOnly ScsiPortNumber As Byte
+    Public ReadOnly Property ScsiPortNumber As Byte
 
     Private Shared Function OpenAdapterHandle(device As String, target As String) As SafeFileHandle
 
@@ -92,8 +94,8 @@ Public Class ScsiAdapter
                 End If
 
             Catch ex As Win32Exception When _
-                (ex.NativeErrorCode = NativeFileIO.Win32API.ERROR_INVALID_FUNCTION) OrElse
-                (ex.NativeErrorCode = NativeFileIO.Win32API.ERROR_IO_DEVICE)
+                (ex.NativeErrorCode = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION) OrElse
+                (ex.NativeErrorCode = NativeFileIO.NativeConstants.ERROR_IO_DEVICE)
 
                 '' In case of SCSIPORT (Win XP) miniport, there is always a risk
                 '' that we lose contact with IOCTL_SCSI_MINIPORT after device adds
@@ -143,7 +145,7 @@ Public Class ScsiAdapter
           Aggregate dosdevice In NativeFileIO.QueryDosDevice()
             Where
               dosdevice.StartsWith("Scsi", StringComparison.OrdinalIgnoreCase) AndAlso
-              dosdevice.EndsWith(":")
+              dosdevice.EndsWith(":", StringComparison.Ordinal)
             Let
               target = NativeFileIO.QueryDosDevice(dosdevice).FirstOrDefault()
             Where
@@ -200,26 +202,32 @@ Public Class ScsiAdapter
     ''' Retrieves a list of virtual disks on this adapter. Each element in returned list holds device number of an existing
     ''' virtual disk.
     ''' </summary>
-    Public Iterator Function EnumerateDevices() As IEnumerable(Of UInt32)
+    Public Function GetDeviceList() As UInteger()
 
         Dim ReturnCode As Int32
 
         Dim Response =
-          NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+            NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
                                                       NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_ADAPTER,
                                                       0,
-                                                      Sub(data) data.Write(New Byte(0 To 65535) {}),
+                                                      New Byte(0 To 65535) {},
                                                       ReturnCode)
 
         If ReturnCode <> 0 Then
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
         End If
 
-        Dim NumberOfDevices = Response.ReadInt32()
+        Using Buffer = PinnedBuffer.Create(Response)
 
-        For i = 1 To NumberOfDevices
-            Yield Response.ReadUInt32()
-        Next
+            Dim NumberOfDevices = Buffer.Read(Of Integer)(0)
+
+            Dim array(0 To NumberOfDevices - 1) As UInteger
+
+            Buffer.ReadArray(4, array, 0, NumberOfDevices)
+
+            Return array
+
+        End Using
 
     End Function
 
@@ -228,7 +236,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function EnumerateDevicesProperties() As IEnumerable(Of DeviceProperties)
 
-        Return EnumerateDevices().Select(AddressOf QueryDevice)
+        Return GetDeviceList().Select(AddressOf QueryDevice)
 
     End Function
 
@@ -360,7 +368,7 @@ Public Class ScsiAdapter
 
                 write_filter_added = New GlobalCriticalMutex()
 
-                NativeFileIO.AddFilter(NativeFileIO.Win32API.DiskDriveGuid, "aimwrfltr", addfirst:=True)
+                NativeFileIO.AddFilter(NativeFileIO.NativeConstants.DiskDriveGuid, "aimwrfltr", addfirst:=True)
 
             End If
 
@@ -374,53 +382,55 @@ Public Class ScsiAdapter
                 Buffer.BlockCopy(bytes, 0, ReservedField, 0, bytes.Length)
             End If
 
-            Dim FillRequestData =
-                Sub(Request As BinaryWriter)
-                    Request.Write(devnr)
-                    Request.Write(DiskSize)
-                    Request.Write(BytesPerSector)
-                    Request.Write(ReservedField)
-                    Request.Write(ImageOffset)
-                    Request.Write(CUInt(Flags))
-                    If String.IsNullOrEmpty(Filename) Then
-                        Request.Write(0US)
-                    Else
-                        Dim bytes = Encoding.Unicode.GetBytes(Filename)
-                        Request.Write(CUShort(bytes.Length))
-                        Request.Write(bytes)
-                    End If
-                    If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
-                        Dim bytes = Encoding.Unicode.GetBytes(WriteOverlayFilename)
-                        Request.Write(bytes)
-                    End If
-                End Sub
+            Dim Request As New BufferedBinaryWriter
+            Request.Write(devnr)
+            Request.Write(DiskSize)
+            Request.Write(BytesPerSector)
+            Request.Write(ReservedField)
+            Request.Write(ImageOffset)
+            Request.Write(CUInt(Flags))
+            If String.IsNullOrEmpty(Filename) Then
+                Request.Write(0US)
+            Else
+                Dim bytes = Encoding.Unicode.GetBytes(Filename)
+                Request.Write(CUShort(bytes.Length))
+                Request.Write(bytes)
+            End If
+            If Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
+                Dim bytes = Encoding.Unicode.GetBytes(WriteOverlayFilename)
+                Request.Write(bytes)
+            End If
 
             Dim ReturnCode As Int32
 
-            Dim Response =
+            Dim outbuffer =
                 NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
                                                            NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
                                                            0,
-                                                           FillRequestData,
+                                                           Request.ToArray(),
                                                            ReturnCode)
 
             If ReturnCode <> 0 Then
                 Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
             End If
 
-            DeviceNumber = Response.ReadUInt32()
-            DiskSize = Response.ReadInt64()
-            BytesPerSector = Response.ReadUInt32()
-            ReservedField = Response.ReadBytes(4)
-            ImageOffset = Response.ReadInt64()
-            Flags = CType(Response.ReadUInt32(), DeviceFlags)
+            Using Response As New BinaryReader(New MemoryStream(outbuffer))
 
-            While Not EnumerateDevices().Contains(DeviceNumber)
+                DeviceNumber = Response.ReadUInt32()
+                DiskSize = Response.ReadInt64()
+                BytesPerSector = Response.ReadUInt32()
+                ReservedField = Response.ReadBytes(4)
+                ImageOffset = Response.ReadInt64()
+                Flags = CType(Response.ReadUInt32(), DeviceFlags)
+
+            End Using
+
+            While Not GetDeviceList().Contains(DeviceNumber)
                 Trace.WriteLine($"Waiting for new device {DeviceNumber:X6} to be registered by driver...")
                 Thread.Sleep(2500)
             End While
 
-            Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+            Dim ScsiAddress As New NativeFileIO.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
             Dim DiskDevice As DiskDevice
 
             Dim waittime = TimeSpan.FromMilliseconds(500)
@@ -501,7 +511,7 @@ Public Class ScsiAdapter
 
             If write_filter_added IsNot Nothing Then
 
-                NativeFileIO.RemoveFilter(NativeFileIO.Win32API.DiskDriveGuid, "aimwrfltr")
+                NativeFileIO.RemoveFilter(NativeFileIO.NativeConstants.DiskDriveGuid, "aimwrfltr")
 
                 Trace.WriteLine($"ScsiAdapter.CreateDevice: Thread {Thread.CurrentThread.ManagedThreadId} leaving global critical section")
 
@@ -570,7 +580,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Sub RemoveAllDevicesSafe()
 
-        Parallel.ForEach(EnumerateDevices(), AddressOf RemoveDeviceSafe)
+        Parallel.ForEach(GetDeviceList(), AddressOf RemoveDeviceSafe)
 
     End Sub
 
@@ -581,21 +591,15 @@ Public Class ScsiAdapter
     ''' in this parameter causes all present virtual disks to be removed from this adapter.</param>
     Public Sub RemoveDevice(DeviceNumber As UInt32)
 
-        Dim FillRequestData =
-          Sub(Request As BinaryWriter)
-              Request.Write(DeviceNumber)
-          End Sub
-
         Dim ReturnCode As Int32
 
-        Dim Response =
-          NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+        NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
                                                       NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_REMOVE_DEVICE,
                                                       0,
-                                                      FillRequestData,
+                                                      BitConverter.GetBytes(DeviceNumber),
                                                       ReturnCode)
 
-        If ReturnCode = NativeFileIO.Win32API.STATUS_OBJECT_NAME_NOT_FOUND Then ' Device already removed
+        If ReturnCode = NativeFileIO.UnsafeNativeMethods.STATUS_OBJECT_NAME_NOT_FOUND Then ' Device already removed
             Return
         ElseIf ReturnCode <> 0 Then
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
@@ -656,23 +660,21 @@ Public Class ScsiAdapter
                            ByRef Filename As String,
                            ByRef WriteOverlayImagefile As String)
 
-        Dim FillRequestData =
-          Sub(Request As BinaryWriter)
-              Request.Write(DeviceNumber)
-              Request.Write(0L)
-              Request.Write(0UI)
-              Request.Write(0L)
-              Request.Write(0UI)
-              Request.Write(65535US)
-              Request.Write(New Byte(0 To 65534) {})
-          End Sub
+        Dim Request As New BufferedBinaryWriter
+        Request.Write(DeviceNumber)
+        Request.Write(0L)
+        Request.Write(0UI)
+        Request.Write(0L)
+        Request.Write(0UI)
+        Request.Write(65535US)
+        Request.Write(New Byte(0 To 65534) {})
 
         Dim ReturnCode As Int32
 
-        Dim Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+        Dim buffer = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
                                                                    NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_DEVICE,
                                                                    0,
-                                                                   FillRequestData,
+                                                                   Request.ToArray(),
                                                                    ReturnCode)
 
         '' STATUS_OBJECT_NAME_NOT_FOUND. Possible "zombie" device, just return empty data.
@@ -682,22 +684,26 @@ Public Class ScsiAdapter
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
         End If
 
-        DeviceNumber = Response.ReadUInt32()
-        DiskSize = Response.ReadInt64()
-        BytesPerSector = Response.ReadUInt32
-        Dim ReservedField = Response.ReadBytes(4)
-        ImageOffset = Response.ReadInt64()
-        Flags = CType(Response.ReadUInt32(), DeviceFlags)
-        Dim FilenameLength = Response.ReadUInt16()
-        If FilenameLength = 0 Then
-            Filename = Nothing
-        Else
-            Filename = Encoding.Unicode.GetString(Response.ReadBytes(FilenameLength))
-        End If
-        If Flags.HasFlag(DeviceFlags.WriteOverlay) Then
-            Dim WriteOverlayImagefileLength = BitConverter.ToUInt16(ReservedField, 0)
-            WriteOverlayImagefile = Encoding.Unicode.GetString(Response.ReadBytes(WriteOverlayImagefileLength))
-        End If
+        Using Response As New BinaryReader(New MemoryStream(buffer))
+
+            DeviceNumber = Response.ReadUInt32()
+            DiskSize = Response.ReadInt64()
+            BytesPerSector = Response.ReadUInt32
+            Dim ReservedField = Response.ReadBytes(4)
+            ImageOffset = Response.ReadInt64()
+            Flags = CType(Response.ReadUInt32(), DeviceFlags)
+            Dim FilenameLength = Response.ReadUInt16()
+            If FilenameLength = 0 Then
+                Filename = Nothing
+            Else
+                Filename = Encoding.Unicode.GetString(Response.ReadBytes(FilenameLength))
+            End If
+            If Flags.HasFlag(DeviceFlags.WriteOverlay) Then
+                Dim WriteOverlayImagefileLength = BitConverter.ToUInt16(ReservedField, 0)
+                WriteOverlayImagefile = Encoding.Unicode.GetString(Response.ReadBytes(WriteOverlayImagefileLength))
+            End If
+
+        End Using
 
     End Sub
 
@@ -733,20 +739,18 @@ Public Class ScsiAdapter
                            FlagsToChange As DeviceFlags,
                            FlagValues As DeviceFlags)
 
-        Dim FillRequestData =
-          Sub(Request As BinaryWriter)
-              Request.Write(DeviceNumber)
-              Request.Write(CUInt(FlagsToChange))
-              Request.Write(CUInt(FlagValues))
-          End Sub
+        Dim Request As New BufferedBinaryWriter
+        Request.Write(DeviceNumber)
+        Request.Write(CUInt(FlagsToChange))
+        Request.Write(CUInt(FlagValues))
 
         Dim ReturnCode As Int32
 
-        Dim Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
-                                                                   NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_SET_DEVICE_FLAGS,
-                                                                   0,
-                                                                   FillRequestData,
-                                                                   ReturnCode)
+        NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                   NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_SET_DEVICE_FLAGS,
+                                                   0,
+                                                   Request.ToArray(),
+                                                   ReturnCode)
 
         If ReturnCode <> 0 Then
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
@@ -762,19 +766,17 @@ Public Class ScsiAdapter
     Public Sub ChangeFlags(DeviceNumber As UInt32,
                            ExtendSize As Int64)
 
-        Dim FillRequestData =
-          Sub(Request As BinaryWriter)
-              Request.Write(DeviceNumber)
-              Request.Write(ExtendSize)
-          End Sub
+        Dim Request As New BufferedBinaryWriter
+        Request.Write(DeviceNumber)
+        Request.Write(ExtendSize)
 
         Dim ReturnCode As Int32
 
-        Dim Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
-                                                                   NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_EXTEND_DEVICE,
-                                                                   0,
-                                                                   FillRequestData,
-                                                                   ReturnCode)
+        NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                    NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_EXTEND_DEVICE,
+                                                    0,
+                                                    Request.ToArray(),
+                                                    ReturnCode)
 
         If ReturnCode <> 0 Then
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
@@ -799,11 +801,11 @@ Public Class ScsiAdapter
     Public Shared Function CheckDriverVersion(SafeFileHandle As SafeFileHandle) As Boolean
 
         Dim ReturnCode As Int32
-        Dim Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
-                                                                  NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION,
-                                                                  0,
-                                                                  Nothing,
-                                                                  ReturnCode)
+        NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                    NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION,
+                                                    0,
+                                                    Nothing,
+                                                    ReturnCode)
 
         If ReturnCode = CompatibleDriverVersion Then
             Return True
@@ -828,7 +830,7 @@ Public Class ScsiAdapter
         Dim Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
                                                                   NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION,
                                                                   0,
-                                                                  Sub(writer) writer.Write(New Byte(0 To 3) {}),
+                                                                  New Byte(0 To 3) {},
                                                                   ReturnCode)
 
         Trace.WriteLine($"Library version: {CompatibleDriverVersion:X4}")
@@ -839,10 +841,10 @@ Public Class ScsiAdapter
         End If
 
         Try
-            Dim build = Response.ReadByte()
-            Dim low = Response.ReadByte()
-            Dim minor = Response.ReadByte()
-            Dim major = Response.ReadByte()
+            Dim build = Response(0)
+            Dim low = Response(1)
+            Dim minor = Response(2)
+            Dim major = Response(3)
 
             Return New Version(major, minor, low, build)
 
@@ -859,7 +861,7 @@ Public Class ScsiAdapter
     Public Sub RescanBus()
 
         Try
-            NativeFileIO.DeviceIoControl(SafeFileHandle, NativeFileIO.Win32API.IOCTL_SCSI_RESCAN_BUS, Nothing, 0)
+            NativeFileIO.DeviceIoControl(SafeFileHandle, NativeFileIO.NativeConstants.IOCTL_SCSI_RESCAN_BUS, Nothing, 0)
 
         Catch ex As Exception
             Trace.WriteLine($"IOCTL_SCSI_RESCAN_BUS failed: {ex.ToString()}")
@@ -876,7 +878,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Sub UpdateDiskProperties()
 
-        For Each device In EnumerateDevices()
+        For Each device In GetDeviceList()
 
             UpdateDiskProperties(device)
 
@@ -891,7 +893,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function UpdateDiskProperties(DeviceNumber As UInteger) As Boolean
 
-        Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+        Dim ScsiAddress As New NativeFileIO.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
 
         Return NativeFileIO.UpdateDiskProperties(ScsiAddress)
 
@@ -904,7 +906,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function OpenDevice(DeviceNumber As UInteger, AccessMode As FileAccess) As DiskDevice
 
-        Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+        Dim ScsiAddress As New NativeFileIO.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
 
         Return New DiskDevice(ScsiAddress, AccessMode)
 
@@ -917,7 +919,7 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function GetDeviceName(DeviceNumber As UInteger) As String
 
-        Dim ScsiAddress As New NativeFileIO.Win32API.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+        Dim ScsiAddress As New NativeFileIO.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
 
         Return NativeFileIO.GetDeviceNameByScsiAddress(ScsiAddress)
 

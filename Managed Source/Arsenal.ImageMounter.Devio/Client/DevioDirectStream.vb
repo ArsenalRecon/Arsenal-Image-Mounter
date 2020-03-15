@@ -15,6 +15,7 @@
 '''''
 
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports Arsenal.ImageMounter.Extensions
 
 Namespace Client
 
@@ -26,16 +27,16 @@ Namespace Client
 
         Public ReadOnly Property Provider As IDevioProvider
 
-        Protected ownsProvider As Boolean
+        Public ReadOnly Property OwnsProvider As Boolean
 
         ''' <summary>
         ''' Initiates a new instance with supplied provider object.
         ''' </summary>
         Public Sub New(provider As IDevioProvider, ownsProvider As Boolean)
-            MyBase.New(provider.ToString(), Not provider.CanWrite)
+            MyBase.New(provider.NullCheck(NameOf(provider)).ToString(), Not provider.CanWrite)
 
             Me._Provider = provider
-            Me.ownsProvider = ownsProvider
+            Me.OwnsProvider = ownsProvider
             MyBase.Size = provider.Length
         End Sub
 
@@ -63,7 +64,7 @@ Namespace Client
 
         Public Overrides Sub Close()
 
-            If ownsProvider Then
+            If OwnsProvider Then
                 _Provider?.Dispose()
             End If
 

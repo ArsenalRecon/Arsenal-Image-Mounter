@@ -70,20 +70,18 @@ Public Class FormMountOptions
         End Set
     End Property
 
-    Public WriteOnly Property SupportedAccessModes As IEnumerable(Of DevioServiceFactory.VirtualDiskAccess)
-        Set(values As IEnumerable(Of DevioServiceFactory.VirtualDiskAccess))
-            For Each value In values
-                Select Case value
-                    Case DevioServiceFactory.VirtualDiskAccess.ReadOnly
-                        rbReadOnly.Enabled = True
-                    Case DevioServiceFactory.VirtualDiskAccess.ReadWriteOriginal
-                        rbReadWrite.Enabled = True
-                    Case DevioServiceFactory.VirtualDiskAccess.ReadWriteOverlay
-                        rbWriteOverlay.Enabled = True
-                End Select
-            Next
-        End Set
-    End Property
+    Public Sub SetSupportedAccessModes(values As IEnumerable(Of DevioServiceFactory.VirtualDiskAccess))
+        For Each value In values
+            Select Case value
+                Case DevioServiceFactory.VirtualDiskAccess.ReadOnly
+                    rbReadOnly.Enabled = True
+                Case DevioServiceFactory.VirtualDiskAccess.ReadWriteOriginal
+                    rbReadWrite.Enabled = True
+                Case DevioServiceFactory.VirtualDiskAccess.ReadWriteOverlay
+                    rbWriteOverlay.Enabled = True
+            End Select
+        Next
+    End Sub
 
     Private Sub btnOK_Click(sender As Object, e As EventArgs) Handles btnOK.Click
 

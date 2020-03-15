@@ -53,11 +53,8 @@ Namespace Server.Services
         ''' </summary>
         Public Const DefaultBufferSize As Long = (8 << 20) + IMDPROXY_HEADER_SIZE
 
-        Private Shared _random As New Random
         Private Shared Function GetNextRandomValue() As Integer
-            SyncLock _random
-                Return _random.Next()
-            End SyncLock
+            Return NativeFileIO.GenRandomInt32()
         End Function
 
         ''' <summary>

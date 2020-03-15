@@ -8,7 +8,10 @@ Imports Ionic.Crc
 ''' Routines for installing or uninstalling Arsenal Image Mounter kernel level
 ''' modules.
 ''' </summary>
-Public Class DriverSetup
+Public NotInheritable Class DriverSetup
+
+    Private Sub New()
+    End Sub
 
     Public Shared ReadOnly kernel As String
     Public Shared ReadOnly hasStorPort As Boolean
@@ -42,9 +45,9 @@ Public Class DriverSetup
             kernel = "Win2K"
             hasStorPort = False
         Else
-            Throw New NotSupportedException(
-                "Unsupported Windows version ('" &
-                os_version.ToString() & "')")
+#Disable Warning CA1065 ' Do not raise exceptions in unexpected locations
+            Throw New NotSupportedException($"Unsupported Windows version ('{os_version}')")
+#Enable Warning CA1065 ' Do not raise exceptions in unexpected locations
         End If
 
     End Sub
@@ -319,7 +322,7 @@ Public Class DriverSetup
 
         Directory.SetCurrentDirectory(setupsource)
 
-        NativeFileIO.Win32API.SetupSetNonInteractiveMode(False)
+        NativeFileIO.UnsafeNativeMethods.SetupSetNonInteractiveMode(False)
 
         Dim infPath = Path.Combine(".", kernel, "phdskmnt.inf")
 
@@ -343,19 +346,19 @@ Public Class DriverSetup
     ''' </summary>
     Protected Shared Sub RemoveDriver()
 
-        Using scm = NativeFileIO.Win32API.OpenSCManager(Nothing, Nothing, NativeFileIO.Win32API.SC_MANAGER_ALL_ACCESS)
+        Using scm = NativeFileIO.UnsafeNativeMethods.OpenSCManager(Nothing, Nothing, NativeFileIO.NativeConstants.SC_MANAGER_ALL_ACCESS)
 
             If scm.IsInvalid Then
                 Throw New Win32Exception("OpenSCManager")
             End If
 
-            Using svc = NativeFileIO.Win32API.OpenService(scm, "phdskmnt", NativeFileIO.Win32API.SC_MANAGER_ALL_ACCESS)
+            Using svc = NativeFileIO.UnsafeNativeMethods.OpenService(scm, "phdskmnt", NativeFileIO.NativeConstants.SC_MANAGER_ALL_ACCESS)
 
                 If svc.IsInvalid Then
                     Throw New Win32Exception("OpenService")
                 End If
 
-                NativeFileIO.Win32API.DeleteService(svc)
+                NativeFileIO.UnsafeNativeMethods.DeleteService(svc)
 
             End Using
 

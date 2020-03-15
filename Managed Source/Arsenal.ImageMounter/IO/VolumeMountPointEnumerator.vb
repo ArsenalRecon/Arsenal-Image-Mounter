@@ -1,7 +1,11 @@
-﻿Imports Arsenal.ImageMounter.IO.NativeFileIO.Win32API
+﻿Imports System.Diagnostics.CodeAnalysis
+Imports Arsenal.ImageMounter.IO.NativeFileIO
+Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
+Imports Arsenal.ImageMounter.IO.NativeFileIO.NativeConstants
 
 Namespace IO
 
+    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix")>
     Public Class VolumeMountPointEnumerator
         Implements IEnumerable(Of String)
 
@@ -22,8 +26,10 @@ Namespace IO
         Private Class Enumerator
             Implements IEnumerator(Of String)
 
-            Private _volumePath As String
-            Private _handle As SafeFindVolumeMountPointHandle
+            Private ReadOnly _volumePath As String
+
+            Public ReadOnly Property SafeHandle As SafeFindVolumeMountPointHandle
+
             Private _sb As New StringBuilder(32767)
 
             Public Sub New(VolumePath As String)
@@ -52,9 +58,9 @@ Namespace IO
                     Throw New ObjectDisposedException("VolumeMountPointEnumerator.Enumerator")
                 End If
 
-                If _handle Is Nothing Then
-                    _handle = FindFirstVolumeMountPoint(_volumePath, _sb, _sb.Capacity)
-                    If Not _handle.IsInvalid Then
+                If _SafeHandle Is Nothing Then
+                    _SafeHandle = FindFirstVolumeMountPoint(_volumePath, _sb, _sb.Capacity)
+                    If Not _SafeHandle.IsInvalid Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_NO_MORE_FILES Then
                         Return False
@@ -62,7 +68,7 @@ Namespace IO
                         Throw New Win32Exception
                     End If
                 Else
-                    If FindNextVolumeMountPoint(_handle, _sb, _sb.Capacity) Then
+                    If FindNextVolumeMountPoint(_SafeHandle, _sb, _sb.Capacity) Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_NO_MORE_FILES Then
                         Return False
@@ -85,11 +91,11 @@ Namespace IO
                 If Not Me.disposedValue Then
                     If disposing Then
                         ' TODO: dispose managed state (managed objects).
-                        _handle?.Dispose()
+                        _SafeHandle?.Dispose()
                     End If
 
                     ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-                    _handle = Nothing
+                    _SafeHandle = Nothing
 
                     ' TODO: set large fields to null.
                     _sb.Clear()

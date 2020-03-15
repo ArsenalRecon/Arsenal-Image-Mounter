@@ -11,6 +11,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Globalization
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
@@ -22,7 +23,7 @@ Namespace Server.Interaction
     ''' <summary>
     ''' Support routines for creating provider and service instances given a known proxy provider.
     ''' </summary>
-    Public Class DevioServiceFactory
+    Public NotInheritable Class DevioServiceFactory
 
         ''' <summary>
         ''' Supported proxy types.
@@ -31,6 +32,7 @@ Namespace Server.Interaction
             None
 
             LibEwf
+
             DiscUtils
 
             MultiPartRaw
@@ -42,7 +44,6 @@ Namespace Server.Interaction
         ''' Virtual disk access modes. A list of supported modes for a particular ProxyType
         ''' is obtained by calling GetSupportedVirtualDiskAccess().
         ''' </summary>
-        <Flags>
         Public Enum VirtualDiskAccess
 
             [ReadOnly] = 1
@@ -276,6 +277,20 @@ Namespace Server.Interaction
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
         Public Shared Function GetProvider(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType) As IDevioProvider
 
+            Dim device_number As UInteger
+
+            If UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
+
+                Return GetProviderPhysical(device_number, DiskAccess)
+
+            ElseIf (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
+                Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
+                Imagefile.IndexOf("\"c, 4) < 0 Then
+
+                Return GetProviderPhysical(Imagefile, DiskAccess)
+
+            End If
+
             Dim GetProviderFunc As Func(Of String, VirtualDiskAccess, IDevioProvider) = Nothing
 
             If _InstalledProvidersByProxyValueAndVirtualDiskAccess.TryGetValue(Proxy, GetProviderFunc) Then
@@ -288,13 +303,27 @@ Namespace Server.Interaction
 
         End Function
 
-        Public Shared Function GetProvider(DeviceName As String, DiskAccess As FileAccess, ProviderName As String) As IDevioProvider
+        Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, ProviderName As String) As IDevioProvider
+
+            Dim device_number As UInteger
+
+            If UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
+
+                Return GetProviderPhysical(device_number, DiskAccess)
+
+            ElseIf (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
+                Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
+                Imagefile.IndexOf("\"c, 4) < 0 Then
+
+                Return GetProviderPhysical(Imagefile, DiskAccess)
+
+            End If
 
             Dim GetProviderFunc As Func(Of String, FileAccess, IDevioProvider) = Nothing
 
             If _InstalledProvidersByNameAndFileAccess.TryGetValue(ProviderName, GetProviderFunc) Then
 
-                Return GetProviderFunc(DeviceName, DiskAccess)
+                Return GetProviderFunc(Imagefile, DiskAccess)
 
             End If
 
@@ -302,15 +331,53 @@ Namespace Server.Interaction
 
         End Function
 
+        Private Shared Function GetProviderPhysical(DeviceNumber As UInteger, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
+
+            Return GetProviderPhysical(DeviceNumber, GetDirectFileAccessFlags(DiskAccess))
+
+        End Function
+
+        Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
+
+            Return GetProviderPhysical(DevicePath, GetDirectFileAccessFlags(DiskAccess))
+
+        End Function
+
+        Private Shared Function GetProviderPhysical(DeviceNumber As UInteger, DiskAccess As FileAccess) As DevioProviderFromStream
+
+            Using adapter As New ScsiAdapter
+
+                Dim disk = adapter.OpenDevice(DeviceNumber, DiskAccess)
+
+                Return New DevioProviderFromStream(disk.GetRawDiskStream(), ownsStream:=True) With {
+                    .CustomSectorSize = CUInt(If(disk.Geometry?.BytesPerSector, 512))
+                }
+
+            End Using
+
+        End Function
+
+        Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As FileAccess) As DevioProviderFromStream
+
+            Dim disk As New DiskDevice(DevicePath, DiskAccess)
+
+            Return New DevioProviderFromStream(disk.GetRawDiskStream(), ownsStream:=True) With {
+                .CustomSectorSize = CUInt(If(disk.Geometry?.BytesPerSector, 512))
+            }
+
+        End Function
+
         Private Shared Function GetProviderRaw(Imagefile As String, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
 
-            Return New DevioProviderFromStream(NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, GetDirectFileAccessFlags(DiskAccess), FileShare.Read Or FileShare.Delete), ownsStream:=True) With {.CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)}
+            Return GetProviderRaw(Imagefile, GetDirectFileAccessFlags(DiskAccess))
 
         End Function
 
         Private Shared Function GetProviderRaw(Imagefile As String, DiskAccess As FileAccess) As DevioProviderFromStream
 
-            Return New DevioProviderFromStream(NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete), ownsStream:=True) With {.CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)}
+            Return New DevioProviderFromStream(NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete), ownsStream:=True) With {
+                .CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)
+            }
 
         End Function
 
