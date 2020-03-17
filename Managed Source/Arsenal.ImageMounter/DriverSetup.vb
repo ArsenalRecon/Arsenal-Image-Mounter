@@ -289,9 +289,9 @@ Public NotInheritable Class DriverSetup
     ''' console window.</param>
     Protected Shared Sub RemoveDevices(ownerWindow As IWin32Window)
 
-        Dim hwinstances As String() = Nothing
+        Dim hwinstances As IEnumerable(Of String) = Nothing
 
-        NativeFileIO.GetDeviceInstancesForService("phdskmnt", hwinstances)
+        NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", hwinstances)
 
         For Each hwinstance In hwinstances
             NativeFileIO.RemovePnPDevice(ownerWindow.Handle, hwinstance)

@@ -194,7 +194,7 @@ Module MainModule
                                     Dim disknumber = UInteger.Parse(disk.DevicePath.Substring("\\?\PhysicalDrive".Length))
                                     For Each volume In NativeFileIO.EnumerateDiskVolumes(disknumber)
                                         Console.WriteLine($"Contains volume {volume}")
-                                        For Each mount_point In NativeFileIO.GetVolumeMountPoints(volume)
+                                        For Each mount_point In NativeFileIO.EnumerateVolumeMountPoints(volume)
                                             Console.WriteLine($"  Mounted at {mount_point}")
                                         Next
                                     Next

@@ -121,6 +121,7 @@ Namespace IO
             Public Const CR_SUCCESS As UInt32 = &H0
             Public Const CR_FAILURE As UInt32 = &H13
             Public Const CR_NO_SUCH_VALUE As UInt32 = &H25
+            Public Const CR_NO_SUCH_REGISTRY_KEY As UInt32 = &H2E
 
             Public Shared ReadOnly SerenumBusEnumeratorGuid As New Guid("{4D36E97B-E325-11CE-BFC1-08002BE10318}")
             Public Shared ReadOnly DiskDriveGuid As New Guid("{4D36E967-E325-11CE-BFC1-08002BE10318}")
@@ -305,13 +306,13 @@ Namespace IO
             Friend Declare Auto Function QueryDosDevice Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpDeviceName As String,
               <Out, MarshalAs(UnmanagedType.LPArray)> lpTargetPath As Char(),
-              ucchMax As UInt32) As UInt32
+              ucchMax As Int32) As Int32
 
             Friend Declare Auto Function GetVolumePathNamesForVolumeName Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
               <Out, MarshalAs(UnmanagedType.LPArray)> lpszVolumePathNames As Char(),
-              cchBufferLength As UInt32,
-              <Out> ByRef lpcchReturnLength As UInt32) As UInt32
+              cchBufferLength As Int32,
+              <Out> ByRef lpcchReturnLength As Int32) As UInt32
 
             Friend Declare Auto Function GetVolumeNameForVolumeMountPoint Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
@@ -613,7 +614,7 @@ Namespace IO
             Public Const CM_GETIDLIST_FILTER_SERVICE As UInt32 = &H2UI
 
             Friend Declare Auto Function CM_Get_Device_ID_List_Size Lib "setupapi.dll" (
-              ByRef Length As UInt32,
+              ByRef Length As Int32,
               <MarshalAs(UnmanagedType.LPTStr), [In]()> filter As String,
               Flags As UInt32) As UInt32
 
@@ -825,18 +826,6 @@ Namespace IO
               CreationFlags As UInt32,
               <Out> ByRef DeviceInfoData As SP_DEVINFO_DATA) As Boolean
 
-            <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
-            Public Structure SP_DEVINFO_DATA
-                Public ReadOnly Property cbSize As UInt32
-                Public ReadOnly Property ClassGuid As Guid
-                Public ReadOnly Property DevInst As UInt32
-                Public ReadOnly Property Reserved As UIntPtr
-
-                Public Sub Initialize()
-                    _cbSize = CUInt(Marshal.SizeOf(Me))
-                End Sub
-            End Structure
-
             Friend Declare Auto Function SetupDiSetDeviceRegistryProperty Lib "setupapi.dll" (
               hDevInfo As SafeDeviceInfoSetHandle,
               ByRef DeviceInfoData As SP_DEVINFO_DATA,
@@ -855,32 +844,6 @@ Namespace IO
               <MarshalAs(UnmanagedType.LPTStr), [In]()> InfPath As String,
               InstallFlags As UInt32,
               RebootRequired As IntPtr) As Boolean
-
-            Public Enum CmClassRegistryProperty As UInt32
-                CM_CRP_UPPERFILTERS = &H12
-            End Enum
-
-            Public Enum CmDevNodeRegistryProperty As UInt32
-                CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME = &HF
-                CM_DRP_UPPERFILTERS = &H12
-            End Enum
-
-            <Flags>
-            Public Enum ShutdownFlags As UInt32
-                HybridShutdown = &H400000UI
-                Logoff = &H0UI
-                PowerOff = &H8UI
-                Reboot = &H2UI
-                RestartApps = &H40UI
-                Shutdown = &H1UI
-                Force = &H4UI
-                ForceIfHung = &H10UI
-            End Enum
-
-            <Flags>
-            Public Enum ShutdownReasons As UInt32
-                ReasonFlagPlanned = &H80000000UI
-            End Enum
 
             Friend Declare Auto Function ExitWindowsEx Lib "kernel32.dll" (
               flags As ShutdownFlags,
@@ -2226,25 +2189,23 @@ Namespace IO
 
         End Function
 
-        Public Shared Function QueryDosDevice() As String()
+        Public Shared Function QueryDosDevice() As IEnumerable(Of String)
 
             Return QueryDosDevice(Nothing)
 
         End Function
 
-        Public Shared Function QueryDosDevice(DosDevice As String) As String()
+        Public Shared Function QueryDosDevice(DosDevice As String) As IEnumerable(Of String)
 
             Dim TargetPath(0 To 65536) As Char
 
-            Dim length = UnsafeNativeMethods.QueryDosDevice(DosDevice, TargetPath, CUInt(TargetPath.Length))
+            Dim length = UnsafeNativeMethods.QueryDosDevice(DosDevice, TargetPath, TargetPath.Length)
 
             If length < 2 Then
                 Return Nothing
             End If
 
-            Dim Target As New String(TargetPath, 0, CInt(length - 2))
-
-            Return Target.Split({New Char}, StringSplitOptions.RemoveEmptyEntries)
+            Return ParseDoubleTerminatedString(TargetPath, length)
 
         End Function
 
@@ -2936,13 +2897,13 @@ Namespace IO
 
         Public Shared Function EnumerateDiskVolumesMountPoints(DiskDevice As String) As IEnumerable(Of String)
 
-            Return EnumerateDiskVolumes(DiskDevice).SelectMany(AddressOf GetVolumeMountPoints)
+            Return EnumerateDiskVolumes(DiskDevice).SelectMany(AddressOf EnumerateVolumeMountPoints)
 
         End Function
 
         Public Shared Function EnumerateDiskVolumesMountPoints(DiskNumber As UInteger) As IEnumerable(Of String)
 
-            Return EnumerateDiskVolumes(DiskNumber).SelectMany(AddressOf GetVolumeMountPoints)
+            Return EnumerateDiskVolumes(DiskNumber).SelectMany(AddressOf EnumerateVolumeMountPoints)
 
         End Function
 
@@ -3058,21 +3019,19 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetVolumeMountPoints(VolumeName As String) As String()
+        Public Shared Function EnumerateVolumeMountPoints(VolumeName As String) As IEnumerable(Of String)
 
             Dim TargetPath(0 To 65536) As Char
 
-            Dim length As UInt32
+            Dim length As Int32
 
-            Win32Try(UnsafeNativeMethods.GetVolumePathNamesForVolumeName(VolumeName, TargetPath, CUInt(TargetPath.Length), length))
+            Win32Try(UnsafeNativeMethods.GetVolumePathNamesForVolumeName(VolumeName, TargetPath, TargetPath.Length, length))
 
             If length <= 2 Then
                 Return {}
             End If
 
-            Dim Target As New String(TargetPath, 0, CInt(length - 2))
-
-            Return Target.Split({New Char}, StringSplitOptions.RemoveEmptyEntries)
+            Return ParseDoubleTerminatedString(TargetPath, length)
 
         End Function
 
@@ -3181,15 +3140,15 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetDeviceInstancesForService(service As String, <Out> ByRef instances As String()) As UInt32
+        Public Shared Function EnumerateDeviceInstancesForService(service As String, <Out> ByRef instances As IEnumerable(Of String)) As UInt32
 
-            Dim length As UInt32
+            Dim length As Int32
             Dim status = UnsafeNativeMethods.CM_Get_Device_ID_List_Size(length, service, UnsafeNativeMethods.CM_GETIDLIST_FILTER_SERVICE)
             If status <> 0 Then
                 Return status
             End If
 
-            Dim Buffer(0 To CInt(length) - 1) As Char
+            Dim Buffer(0 To length - 1) As Char
             status = UnsafeNativeMethods.CM_Get_Device_ID_List(service,
                                                     Buffer,
                                                     CUInt(Buffer.Length),
@@ -3198,7 +3157,7 @@ Namespace IO
                 Return status
             End If
 
-            instances = New String(Buffer).Split({New Char}, StringSplitOptions.RemoveEmptyEntries)
+            instances = ParseDoubleTerminatedString(Buffer, length)
 
             Return status
 
@@ -3218,7 +3177,7 @@ Namespace IO
                     Throw New Exception("Device not found")
                 End If
 
-                Dim devInfoData As UnsafeNativeMethods.SP_DEVINFO_DATA
+                Dim devInfoData As SP_DEVINFO_DATA
                 '' as per DDK docs on SetupDiEnumDeviceInfo
                 devInfoData.Initialize()
 
@@ -3356,7 +3315,7 @@ Namespace IO
                 '' Now create the element.
                 '' Use the Class GUID and Name from the INF file.
                 ''
-                Dim DeviceInfoData As UnsafeNativeMethods.SP_DEVINFO_DATA
+                Dim DeviceInfoData As SP_DEVINFO_DATA
                 DeviceInfoData.Initialize()
                 Win32Try(UnsafeNativeMethods.SetupDiCreateDeviceInfo(DeviceInfoSet,
                                                           ClassName,
@@ -3420,7 +3379,7 @@ Namespace IO
             Dim buffer(0 To 518) As Byte
             Dim buffersize = buffer.Length
 
-            Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, UnsafeNativeMethods.CmDevNodeRegistryProperty.CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, regtype, buffer, buffersize, 0)
+            Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, CmDevNodeRegistryProperty.CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, regtype, buffer, buffersize, 0)
 
             If rc <> 0 Then
                 Trace.WriteLine($"Error getting registry property for device {devInst}. Status=0x{rc:X}")
@@ -3444,23 +3403,23 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetRegisteredFilters(devInst As UInt32) As String()
+        Public Shared Function EnumerateRegisteredFilters(devInst As UInt32) As IEnumerable(Of String)
 
             Dim regtype As RegistryValueKind = Nothing
 
             Dim buffer(0 To 65535) As Byte
             Dim buffersize = buffer.Length
 
-            Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, UnsafeNativeMethods.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
+            Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
 
             If rc = NativeConstants.CR_NO_SUCH_VALUE Then
-                Return Nothing
+                Return {}
             ElseIf rc <> 0 Then
                 Dim msg = $"Error getting registry property for device. Status=0x{rc:X}"
                 Throw New IOException(msg)
             End If
 
-            Return Encoding.Unicode.GetString(buffer, 0, buffersize - 2).Split({New Char}, StringSplitOptions.RemoveEmptyEntries)
+            Return ParseDoubleTerminatedString(buffer, buffersize)
 
         End Function
 
@@ -3483,7 +3442,7 @@ Namespace IO
                 Throw New IOException(msg)
             End If
 
-            Return Encoding.Unicode.GetString(buffer, 0, buffersize - 2).Split({New Char}, StringSplitOptions.RemoveEmptyEntries)
+            Return ParseDoubleTerminatedString(Buffer)
 
         End Function
 
@@ -3507,7 +3466,7 @@ Namespace IO
             Dim buffer = Encoding.Unicode.GetBytes(str)
             Dim buffersize = buffer.Length
 
-            Dim rc = UnsafeNativeMethods.CM_Set_DevNode_Registry_Property(devInst, UnsafeNativeMethods.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, buffer, buffersize, 0)
+            Dim rc = UnsafeNativeMethods.CM_Set_DevNode_Registry_Property(devInst, CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, buffer, buffersize, 0)
 
             If rc <> 0 Then
                 Throw New Exception($"Error setting registry property for device. Status=0x{rc:X}")
@@ -3521,17 +3480,17 @@ Namespace IO
             Dim buffer = Encoding.Unicode.GetBytes(str)
             Dim buffersize = buffer.Length
 
-            Dim rc = UnsafeNativeMethods.CM_Set_Class_Registry_Property(devClass, UnsafeNativeMethods.CmClassRegistryProperty.CM_CRP_UPPERFILTERS, buffer, buffersize, 0)
+            Dim rc = UnsafeNativeMethods.CM_Set_Class_Registry_Property(devClass, CmClassRegistryProperty.CM_CRP_UPPERFILTERS, buffer, buffersize, 0)
 
             If rc <> 0 Then
-                Throw New Exception($"Error setting registry property for class. Status=0x{rc:X}")
+                Throw New Exception($"Error setting registry property for class {devClass}. Status=0x{rc:X}")
             End If
 
         End Sub
 
         Public Shared Function AddFilter(devInst As UInt32, driver As String) As Boolean
 
-            Dim filters = If(GetRegisteredFilters(devInst), {})
+            Dim filters = EnumerateRegisteredFilters(devInst).ToArray()
 
             If filters.Any(Function(f) f.Equals(driver, StringComparison.OrdinalIgnoreCase)) Then
 
@@ -3603,7 +3562,7 @@ Namespace IO
 
         Public Shared Function RemoveFilter(devInst As UInt32, driver As String) As Boolean
 
-            Dim filters = GetRegisteredFilters(devInst)
+            Dim filters = EnumerateRegisteredFilters(devInst).ToArray()
 
             If filters Is Nothing OrElse filters.Length = 0 Then
                 Trace.WriteLine($"No filters registered for devinst {devInst}")
@@ -3674,7 +3633,7 @@ Namespace IO
                     Return 0
                 End If
 
-                Dim DeviceInfoData As UnsafeNativeMethods.SP_DEVINFO_DATA
+                Dim DeviceInfoData As SP_DEVINFO_DATA
                 DeviceInfoData.Initialize()
 
                 Dim i As UInteger
@@ -4097,6 +4056,100 @@ Namespace IO
                                                    CInt(os_version.ServicePackMajor) << 16 Or CInt(os_version.ServicePackMinor)))
 
         End Function
+
+        Public Shared Function ParseDoubleTerminatedString(bbuffer As Array, byte_count As Integer) As IEnumerable(Of String)
+
+            If bbuffer Is Nothing Then
+                Return {}
+            End If
+
+            byte_count = Math.Min(Buffer.ByteLength(bbuffer), byte_count)
+
+            Dim cbuffer = TryCast(bbuffer, Char())
+
+            If cbuffer Is Nothing Then
+
+                cbuffer = New Char(0 To (byte_count >> 1) - 1) {}
+
+                Buffer.BlockCopy(bbuffer, 0, cbuffer, 0, byte_count)
+
+            End If
+
+            Return ParseDoubleTerminatedString(cbuffer, byte_count >> 1)
+
+        End Function
+
+        Public Shared Iterator Function ParseDoubleTerminatedString(buffer As Char(), length As Integer) As IEnumerable(Of String)
+
+            If buffer Is Nothing Then
+                Return
+            End If
+
+            length = Math.Min(length, buffer.Length)
+
+            Dim i = 0
+
+            While i < length
+
+                Dim pos = Array.IndexOf(buffer, New Char, i, length - i)
+
+                If pos < 0 Then
+
+                    Yield New String(buffer, i, length - i)
+                    Return
+
+                ElseIf pos = i Then
+
+                    Return
+
+                ElseIf pos > i Then
+
+                    Yield New String(buffer, i, pos - i)
+                    i = pos + 1
+
+                End If
+
+            End While
+
+        End Function
+
+        <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
+        Public Structure SP_DEVINFO_DATA
+            Public ReadOnly Property cbSize As UInt32
+            Public ReadOnly Property ClassGuid As Guid
+            Public ReadOnly Property DevInst As UInt32
+            Public ReadOnly Property Reserved As UIntPtr
+
+            Public Sub Initialize()
+                _cbSize = CUInt(Marshal.SizeOf(Me))
+            End Sub
+        End Structure
+
+        Public Enum CmClassRegistryProperty As UInt32
+            CM_CRP_UPPERFILTERS = &H12
+        End Enum
+
+        Public Enum CmDevNodeRegistryProperty As UInt32
+            CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME = &HF
+            CM_DRP_UPPERFILTERS = &H12
+        End Enum
+
+        <Flags>
+        Public Enum ShutdownFlags As UInt32
+            HybridShutdown = &H400000UI
+            Logoff = &H0UI
+            PowerOff = &H8UI
+            Reboot = &H2UI
+            RestartApps = &H40UI
+            Shutdown = &H1UI
+            Force = &H4UI
+            ForceIfHung = &H10UI
+        End Enum
+
+        <Flags>
+        Public Enum ShutdownReasons As UInt32
+            ReasonFlagPlanned = &H80000000UI
+        End Enum
 
         <StructLayout(LayoutKind.Sequential, Pack:=1)>
         Public Structure LUID_AND_ATTRIBUTES
@@ -4996,8 +5049,30 @@ Namespace IO
 
         End Enum
 
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure MOUNTMGR_MOUNT_POINT
+
+            Public ReadOnly Property SymbolicLinkNameOffset As Integer
+            Public ReadOnly Property SymbolicLinkNameLength As UShort
+            Public ReadOnly Property Reserved1 As UShort
+            Public ReadOnly Property UniqueIdOffset As Integer
+            Public ReadOnly Property UniqueIdLength As UShort
+            Public ReadOnly Property Reserved2 As UShort
+            Public ReadOnly Property DeviceNameOffset As Integer
+            Public ReadOnly Property DeviceNameLength As UShort
+            Public ReadOnly Property Reserved3 As UShort
+
+            Public Sub New(device_name As String)
+                _DeviceNameOffset = Marshal.SizeOf(Me)
+                _DeviceNameLength = CUShort(device_name.Length << 1)
+
+            End Sub
+
+        End Structure
+
         <StructLayout(LayoutKind.Sequential, Pack:=8)>
         Public Structure PARTITION_INFORMATION
+
             Public Enum PARTITION_TYPE As Byte
                 PARTITION_ENTRY_UNUSED = &H0      ' Entry unused
                 PARTITION_FAT_12 = &H1      ' 12-bit FAT entries

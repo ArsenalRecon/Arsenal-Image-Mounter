@@ -30,20 +30,16 @@ Public NotInheritable Class API
     ''' Builds a list of device paths for active Arsenal Image Mounter
     ''' objects.
     ''' </summary>
-    Public Shared Function GetAdapterDevicePaths(hwndParent As IntPtr) As List(Of String)
+    Public Shared Iterator Function EnumerateAdapterDevicePaths(hwndParent As IntPtr) As IEnumerable(Of String)
 
-        Dim devinstances As String() = Nothing
-        Dim status = NativeFileIO.GetDeviceInstancesForService("phdskmnt", devinstances)
-        If status <> 0 OrElse
-          devinstances Is Nothing OrElse
-          devinstances.Length = 0 OrElse
-          Array.TrueForAll(devinstances, AddressOf String.IsNullOrWhiteSpace) Then
+        Dim devinstances As IEnumerable(Of String) = Nothing
+        Dim status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", devinstances)
+
+        If status <> 0 OrElse devinstances Is Nothing Then
 
             Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}")
-            Return Nothing
+            Return
         End If
-
-        Dim devInstList As New List(Of String)
 
         For Each devinstname In devinstances
 
@@ -67,7 +63,7 @@ Public NotInheritable Class API
                     Dim DeviceInterfaceDetailData As New NativeFileIO.UnsafeNativeMethods.SP_DEVICE_INTERFACE_DETAIL_DATA
                     DeviceInterfaceDetailData.Initialize()
                     If NativeFileIO.UnsafeNativeMethods.SetupDiGetDeviceInterfaceDetail(DevInfoSet, DeviceInterfaceData, DeviceInterfaceDetailData, CUInt(Marshal.SizeOf(DeviceInterfaceData)), 0, IntPtr.Zero) = True Then
-                        devInstList.Add(DeviceInterfaceDetailData.DevicePath)
+                        Yield DeviceInterfaceDetailData.DevicePath
                     End If
 
                     i += 1UI
@@ -75,8 +71,6 @@ Public NotInheritable Class API
 
             End Using
         Next
-
-        Return devInstList
 
     End Function
 
@@ -125,14 +119,13 @@ Public NotInheritable Class API
     ''' Builds a list of setup device ids for active Arsenal Image Mounter
     ''' objects. Device ids are used in calls to plug-and-play setup functions.
     ''' </summary>
-    Public Shared Function GetAdapterDeviceInstanceNames() As String()
+    Public Shared Function GetAdapterDeviceInstanceNames() As IEnumerable(Of String)
 
-        Dim devinstances As String() = Nothing
-        Dim status = NativeFileIO.GetDeviceInstancesForService("phdskmnt", devinstances)
-        If status <> 0 OrElse
-          devinstances Is Nothing OrElse
-          devinstances.Length = 0 OrElse
-          Array.TrueForAll(devinstances, AddressOf String.IsNullOrWhiteSpace) Then
+        Dim devinstances As IEnumerable(Of String) = Nothing
+
+        Dim status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", devinstances)
+
+        If status <> 0 OrElse devinstances Is Nothing Then
 
             Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}")
             Return Nothing

@@ -101,9 +101,9 @@ Namespace Server.Interaction
 
                     Loop
 
-                    Dim mountPoints = NativeFileIO.GetVolumeMountPoints(_Volume)
+                    Dim mountPoint = NativeFileIO.EnumerateVolumeMountPoints(_Volume).FirstOrDefault()
 
-                    If mountPoints.Length = 0 Then
+                    If mountPoint Is Nothing Then
 
                         Dim driveletter = NativeFileIO.FindFirstFreeDriveLetter()
 
@@ -113,13 +113,13 @@ Namespace Server.Interaction
 
                             NativeFileIO.SetVolumeMountPoint(newMountPoint, _Volume)
 
-                            mountPoints = {newMountPoint}
+                            mountPoint = newMountPoint
 
                         End If
 
                     End If
 
-                    _MountPoint = mountPoints.FirstOrDefault()
+                    _MountPoint = mountPoint
 
                     Return
 
