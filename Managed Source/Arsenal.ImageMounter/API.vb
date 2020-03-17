@@ -86,8 +86,8 @@ Public NotInheritable Class API
     ''' </summary>
     Public Shared ReadOnly Property AdapterDevicePresent As Boolean
         Get
-            Dim devInsts = GetAdapterDeviceInstances()
-            If devInsts Is Nothing OrElse devInsts.Count = 0 Then
+            Dim devInsts = GetAdapterDeviceInstanceNames()
+            If devInsts Is Nothing Then
                 Return False
             Else
                 Return True
@@ -99,7 +99,33 @@ Public NotInheritable Class API
     ''' Builds a list of setup device ids for active Arsenal Image Mounter
     ''' objects. Device ids are used in calls to plug-and-play setup functions.
     ''' </summary>
-    Public Shared Function GetAdapterDeviceInstances() As List(Of UInt32)
+    Public Shared Iterator Function EnumerateAdapterDeviceInstances() As IEnumerable(Of UInt32)
+
+        Dim devinstances = GetAdapterDeviceInstanceNames()
+
+        If devinstances Is Nothing Then
+            Return
+        End If
+
+        For Each devinstname In devinstances
+            Trace.WriteLine($"Found adapter instance '{devinstname}'")
+
+            Dim devInst = NativeFileIO.GetDevInst(devinstname)
+
+            If Not devInst.HasValue Then
+                Continue For
+            End If
+
+            Yield devInst.Value
+        Next
+
+    End Function
+
+    ''' <summary>
+    ''' Builds a list of setup device ids for active Arsenal Image Mounter
+    ''' objects. Device ids are used in calls to plug-and-play setup functions.
+    ''' </summary>
+    Public Shared Function GetAdapterDeviceInstanceNames() As String()
 
         Dim devinstances As String() = Nothing
         Dim status = NativeFileIO.GetDeviceInstancesForService("phdskmnt", devinstances)
@@ -112,23 +138,7 @@ Public NotInheritable Class API
             Return Nothing
         End If
 
-        Dim devInstList As New List(Of UInt32)(devinstances.Length)
-        For Each devinstname In devinstances
-            Trace.WriteLine($"Found adapter instance '{devinstname}'")
-
-            Dim devInst As UInt32
-            status = NativeFileIO.UnsafeNativeMethods.CM_Locate_DevNode(devInst, devinstname, 0)
-            If status <> 0 Then
-                Trace.WriteLine($"Device '{devinstname}' error 0x{status:X}")
-                Continue For
-            End If
-
-            Trace.WriteLine($"Found adapter devinst '{devInst}'")
-
-            devInstList.Add(devInst)
-        Next
-
-        Return devInstList
+        Return devinstances
 
     End Function
 
@@ -136,23 +146,17 @@ Public NotInheritable Class API
     ''' Issues a SCSI bus rescan on found Arsenal Image Mounter adapters. This causes Disk Management
     ''' in Windows to find newly created virtual disks and remove newly deleted ones.
     ''' </summary>
-    Public Shared Function RescanScsiAdapter() As Boolean
-
-        Dim devInsts = GetAdapterDeviceInstances()
-        If devInsts Is Nothing OrElse devInsts.Count = 0 Then
-            Return False
-        End If
+    Public Shared Function RescanScsiAdapter(devInst As UInteger) As Boolean
 
         Dim rc As Boolean
-        For Each devInst In devInsts
-            Dim status = NativeFileIO.UnsafeNativeMethods.CM_Reenumerate_DevNode(devInst, 0)
-            If status <> 0 Then
-                Trace.WriteLine($"Re-enumeration of '{devInst}' failed: 0x{status:X}")
-            Else
-                Trace.WriteLine($"Re-enumeration of '{devInst}' successful.")
-                rc = True
-            End If
-        Next
+
+        Dim status = NativeFileIO.UnsafeNativeMethods.CM_Reenumerate_DevNode(devInst, 0)
+        If status <> 0 Then
+            Trace.WriteLine($"Re-enumeration of '{devInst}' failed: 0x{status:X}")
+        Else
+            Trace.WriteLine($"Re-enumeration of '{devInst}' successful.")
+            rc = True
+        End If
 
         Return rc
 
@@ -293,24 +297,13 @@ Public NotInheritable Class API
 
     End Function
 
-    Public Shared Function GetPhysicalDeviceObjectPath(DeviceNumber As UInt32) As IEnumerable(Of String)
-
-        Dim adapters = GetAdapterDeviceInstances()
-
-        If adapters Is Nothing OrElse
-            adapters.Count = 0 Then
-
-            Throw New IOException("SCSI adapter not installed")
-
-        End If
+    Public Shared Function EnumeratePhysicalDeviceObjectPaths(devinstAdapter As UInt32, DeviceNumber As UInt32) As IEnumerable(Of String)
 
         Return _
-            From devinstAdapter In adapters
-            From devinstChild In NativeFileIO.EnumerateDevices(devinstAdapter)
+            From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
             Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
             Where Not String.IsNullOrWhiteSpace(path)
-            Let win32path = $"\\?\GLOBALROOT{path}"
-            Let address = NativeFileIO.GetScsiAddress(win32path)
+            Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
             Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)
             Select path
 
@@ -329,7 +322,6 @@ Public NotInheritable Class API
         End If
 
         Dim dev_path = NativeFileIO.GetPhysicalDeviceObjectName(devInst)
-        Dim win32_path = $"\\?\GLOBALROOT{dev_path}"
 
         Trace.WriteLine($"Device {dev_path} devinst {devInst}. Registering write overlay '{nativepath}'")
 
@@ -359,7 +351,7 @@ Public NotInheritable Class API
 
             Dim statistics As New WriteFilterStatistics
 
-            If Not GetWriteOverlayStatus(win32_path, statistics) Then
+            If Not GetWriteOverlayStatus(dev_path, statistics) Then
                 last_error = Marshal.GetLastWin32Error()
                 If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
                     Trace.WriteLine("Filter driver not yet loaded, retrying...")
@@ -398,24 +390,13 @@ Public NotInheritable Class API
         Unregister
     End Enum
 
-    Public Shared Sub RegisterWriteFilter(DeviceNumber As UInt32, operation As RegisterWriteFilterOperation)
-
-        Dim adapters = GetAdapterDeviceInstances()
-
-        If adapters Is Nothing OrElse
-            adapters.Count = 0 Then
-
-            Throw New IOException("SCSI adapter not installed")
-
-        End If
+    Public Shared Sub RegisterWriteFilter(devinstAdapter As UInt32, DeviceNumber As UInt32, operation As RegisterWriteFilterOperation)
 
         For Each dev In
-            From devinstAdapter In adapters
-            From devinstChild In NativeFileIO.EnumerateDevices(devinstAdapter)
+            From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
             Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
             Where Not String.IsNullOrWhiteSpace(path)
-            Let win32path = $"\\?\GLOBALROOT{path}"
-            Let address = NativeFileIO.GetScsiAddress(win32path)
+            Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
             Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)
 
             Trace.WriteLine($"Device number {DeviceNumber:X6}  found at {dev.path} devinst {dev.devinstChild}. Registering write filter driver.")
@@ -440,7 +421,7 @@ Public NotInheritable Class API
 
                 Dim statistics As New WriteFilterStatistics
 
-                If Not GetWriteOverlayStatus(dev.win32path, statistics) Then
+                If Not GetWriteOverlayStatus(dev.path, statistics) Then
                     last_error = Marshal.GetLastWin32Error()
                     If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
                         Trace.WriteLine("Filter driver not loaded, retrying...")
@@ -478,10 +459,10 @@ Public NotInheritable Class API
     ''' <summary>
     ''' Retrieves status of write overlay for mounted device.
     ''' </summary>
-    ''' <param name="Device">Path to device.</param>
-    Public Shared Function GetWriteOverlayStatus(Device As String, <Out> ByRef Statistics As WriteFilterStatistics) As Boolean
+    ''' <param name="NtDevicePath">Path to device.</param>
+    Public Shared Function GetWriteOverlayStatus(NtDevicePath As String, <Out> ByRef Statistics As WriteFilterStatistics) As Boolean
 
-        Using hDevice = NativeFileIO.OpenFileHandle(Device, 0, FileShare.ReadWrite, FileMode.Open, False)
+        Using hDevice = NativeFileIO.NtCreateFile(NtDevicePath, 0, 0, FileShare.ReadWrite, NativeFileIO.NtCreateDisposition.Open, NativeFileIO.NtCreateOptions.NonDirectoryFile, 0, Nothing, Nothing)
 
             Return GetWriteOverlayStatus(hDevice, Statistics)
 

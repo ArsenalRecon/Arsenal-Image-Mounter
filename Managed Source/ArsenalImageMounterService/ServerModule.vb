@@ -277,6 +277,9 @@ Please see EULA.txt for license information.")
             ElseIf arg.Equals("/version", StringComparison.OrdinalIgnoreCase) Then
                 ShowVersionInfo()
                 Return 0
+            ElseIf arg.Equals("/list", StringComparison.OrdinalIgnoreCase) Then
+                ListDevices()
+                Return 0
             Else
                 Console.WriteLine($"Unsupported switch: {arg}")
                 ShowHelp = True
@@ -603,6 +606,43 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
             End Using
 
         End Using
+
+    End Sub
+
+    Public Sub ListDevices()
+
+        Dim adapters = API.GetAdapterDeviceInstanceNames()
+
+        If adapters Is Nothing Then
+
+            Console.WriteLine("Driver not installed.")
+
+            Return
+
+        End If
+
+        For Each devinstNameAdapter In adapters
+
+            Dim devinstAdapter = NativeFileIO.GetDevInst(devinstNameAdapter)
+
+            If Not devinstAdapter.HasValue Then
+                Continue For
+            End If
+
+            Console.WriteLine($"Adapter {devinstNameAdapter}")
+
+            For Each dev In
+                From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter.Value)
+                Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
+                Where Not String.IsNullOrWhiteSpace(path)
+                Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
+                Let physical_drive_path = NativeFileIO.GetPhysicalDrivePathForNtDevice(path)
+
+                Console.WriteLine($"SCSI address {dev.address} found at {dev.path} devinst {dev.devinstChild} ({dev.physical_drive_path}).")
+
+            Next
+
+        Next
 
     End Sub
 

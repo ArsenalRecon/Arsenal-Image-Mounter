@@ -26,6 +26,10 @@ Public Class ScsiAdapter
 
     Public Const AutoDeviceNumber As UInt32 = &HFFFFFF
 
+    Public ReadOnly Property DeviceInstanceName As String
+
+    Public ReadOnly Property DeviceInstance As UInteger
+
     ''' <summary>
     ''' Object storing properties for a virtual disk device. Returned by
     ''' QueryDevice() method.
@@ -63,20 +67,18 @@ Public Class ScsiAdapter
 
     End Class
 
-    Public ReadOnly Property ScsiPortNumber As Byte
-
-    Private Shared Function OpenAdapterHandle(device As String, target As String) As SafeFileHandle
+    Private Shared Function OpenAdapterHandle(ntdevice As String, devInst As UInteger) As SafeFileHandle
 
         Dim handle As SafeFileHandle
         Try
-            handle = NativeFileIO.OpenFileHandle($"\\?\{device}",
+            handle = NativeFileIO.NtCreateFile(ntdevice, 0,
                                                  FileAccess.ReadWrite,
                                                  FileShare.ReadWrite,
-                                                 FileMode.Open,
-                                                 FileOptions.None)
+                                                 NativeFileIO.NtCreateDisposition.Open,
+                                                 0, 0, Nothing, Nothing)
 
         Catch ex As Exception
-            Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error opening device '{device}' ('{target}'): {ex.ToString()}")
+            Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error opening device '{ntdevice}': {ex.JoinMessages()}")
 
             Return Nothing
 
@@ -103,10 +105,10 @@ Public Class ScsiAdapter
                 '' the SCSI adapter and it fails IOCTL_SCSI_MINIPORT requests, just
                 '' issue a bus re-enumeration to find the dummy IOCTL device, which
                 '' will make SCSIPORT let control requests through again.
-                If target.IndexOf("phdskmnt", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                If Not DriverSetup.hasStorPort Then
                     Trace.WriteLine("PhDskMnt::OpenAdapterHandle: Lost contact with miniport, rescanning...")
                     Try
-                        API.RescanScsiAdapter()
+                        API.RescanScsiAdapter(devInst)
                         Thread.Sleep(100)
                         Continue For
 
@@ -122,7 +124,7 @@ Public Class ScsiAdapter
                 If TypeOf ex Is Win32Exception Then
                     Trace.WriteLine($"Error code 0x{DirectCast(ex, Win32Exception).NativeErrorCode:X8}")
                 End If
-                Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error checking driver version: {ex.ToString()}")
+                Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error checking driver version: {ex.JoinMessages()}")
                 handle.Dispose()
                 Return Nothing
 
@@ -139,29 +141,31 @@ Public Class ScsiAdapter
     ''' <remarks>Arsenal Image Mounter does not currently support more than one adapter.</remarks>
     ''' <returns>A structure containing SCSI port number and an open handle to first found
     ''' compatible adapter.</returns>
-    Private Shared Function OpenAdapter() As KeyValuePair(Of Byte, SafeFileHandle)
+    Private Shared Function OpenAdapter() As Tuple(Of String, UInteger, SafeFileHandle)
 
-        Dim firstfound =
-          Aggregate dosdevice In NativeFileIO.QueryDosDevice()
-            Where
-              dosdevice.StartsWith("Scsi", StringComparison.OrdinalIgnoreCase) AndAlso
-              dosdevice.EndsWith(":", StringComparison.Ordinal)
-            Let
-              target = NativeFileIO.QueryDosDevice(dosdevice).FirstOrDefault()
-            Where
-              target IsNot Nothing AndAlso
-              (target.StartsWith("\Device\Scsi\phdskmnt", StringComparison.OrdinalIgnoreCase) OrElse
-               target.StartsWith("\Device\RaidPort", StringComparison.OrdinalIgnoreCase))
-            Let
-              handle = OpenAdapterHandle(dosdevice, target)
-            Into
-              FirstOrDefault(handle IsNot Nothing)
+        Dim devinstNames = API.GetAdapterDeviceInstanceNames()
 
-        If firstfound Is Nothing Then
-            Throw New FileNotFoundException("No Arsenal Image Mounter adapter found")
+        If devinstNames Is Nothing Then
+
+            Throw New FileNotFoundException("No Arsenal Image Mounter adapter found.")
+
         End If
 
-        Return New KeyValuePair(Of Byte, SafeFileHandle)(Byte.Parse(firstfound.dosdevice.Substring(4, firstfound.dosdevice.Length - 5)), firstfound.handle)
+        Dim found = Aggregate devInstName In devinstNames
+                    Let devinst = NativeFileIO.GetDevInst(devInstName)
+                    Where devinst.HasValue
+                    Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinst.Value)
+                    Where path IsNot Nothing
+                    Let handle = OpenAdapterHandle(path, devinst.Value)
+                    Into FirstOrDefault()
+
+        If found Is Nothing Then
+
+            Throw New FileNotFoundException("No Arsenal Image Mounter adapter found.")
+
+        End If
+
+        Return Tuple.Create(found.devInstName, found.devinst.Value, found.handle)
 
     End Function
 
@@ -173,22 +177,21 @@ Public Class ScsiAdapter
 
     End Sub
 
-    Private Sub New(OpenAdapterHandle As KeyValuePair(Of Byte, SafeFileHandle))
-        MyBase.New(OpenAdapterHandle.Value, FileAccess.ReadWrite)
+    Private Sub New(OpenAdapterHandle As Tuple(Of String, UInteger, SafeFileHandle))
+        MyBase.New(OpenAdapterHandle.Item3, FileAccess.ReadWrite)
 
-        Me.ScsiPortNumber = OpenAdapterHandle.Key
+        _DeviceInstance = OpenAdapterHandle.Item2
+        _DeviceInstanceName = OpenAdapterHandle.Item1
 
-        Trace.WriteLine($"Successfully opened adapter with SCSI portnumber = {ScsiPortNumber}.")
+        Trace.WriteLine($"Successfully opened SCSI adapter '{OpenAdapterHandle.Item1}'.")
     End Sub
 
     ''' <summary>
-    ''' Opens a specific Arsenal Image Mounter.
+    ''' Opens a specific Arsenal Image Mounter adapter specified by SCSI port number.
     ''' </summary>
     ''' <param name="ScsiPortNumber">Scsi adapter port number as assigned by SCSI class driver.</param>
     Public Sub New(ScsiPortNumber As Byte)
         MyBase.New($"\\?\Scsi{ScsiPortNumber}:", FileAccess.ReadWrite)
-
-        Me.ScsiPortNumber = ScsiPortNumber
 
         Trace.WriteLine($"Successfully opened adapter with SCSI portnumber = {ScsiPortNumber}.")
 
@@ -430,7 +433,6 @@ Public Class ScsiAdapter
                 Thread.Sleep(2500)
             End While
 
-            Dim ScsiAddress As New NativeFileIO.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
             Dim DiskDevice As DiskDevice
 
             Dim waittime = TimeSpan.FromMilliseconds(500)
@@ -439,7 +441,7 @@ Public Class ScsiAdapter
                 Thread.Sleep(waittime)
 
                 Try
-                    DiskDevice = New DiskDevice(ScsiAddress, FileAccess.Read)
+                    DiskDevice = OpenDevice(DeviceNumber, FileAccess.Read)
 
                 Catch ex As DriveNotFoundException
                     Trace.WriteLine($"Error opening device: {ex.JoinMessages()}")
@@ -474,7 +476,7 @@ Public Class ScsiAdapter
                     End If
 
                     If Flags.HasFlag(DeviceFlags.WriteOverlay) AndAlso
-                    Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
+                        Not String.IsNullOrWhiteSpace(WriteOverlayFilename) Then
 
                         Dim status = DiskDevice.WriteOverlayStatus
 
@@ -497,7 +499,7 @@ Public Class ScsiAdapter
                 End Using
 
                 Try
-                    API.RegisterWriteFilter(DeviceNumber, API.RegisterWriteFilterOperation.Register)
+                    API.RegisterWriteFilter(DeviceInstance, DeviceNumber, API.RegisterWriteFilterOperation.Register)
 
                 Catch ex As Exception
                     RemoveDevice(DeviceNumber)
@@ -561,8 +563,17 @@ Public Class ScsiAdapter
 
                 Using vol = NativeFileIO.OpenFileHandle(volname, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, FileOptions.None)
                     If NativeFileIO.IsDiskWritable(vol) Then
-                        NativeFileIO.FlushBuffers(vol)
+
+                        Try
+                            NativeFileIO.FlushBuffers(vol)
+
+                        Catch ex As Exception
+                            Trace.WriteLine($"Failed flushing buffers for volume {volname}: {ex.JoinMessages()}")
+
+                        End Try
+
                         'NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(vol, Force:=False))
+
                         NativeFileIO.SetVolumeOffline(vol, offline:=True)
                     End If
                 End Using
@@ -855,6 +866,12 @@ Public Class ScsiAdapter
 
     End Function
 
+    Public Function RescanScsiAdapter() As Boolean
+
+        Return API.RescanScsiAdapter(DeviceInstance)
+
+    End Function
+
     ''' <summary>
     ''' Issues a SCSI bus rescan to find newly attached devices and remove missing ones.
     ''' </summary>
@@ -864,8 +881,8 @@ Public Class ScsiAdapter
             NativeFileIO.DeviceIoControl(SafeFileHandle, NativeFileIO.NativeConstants.IOCTL_SCSI_RESCAN_BUS, Nothing, 0)
 
         Catch ex As Exception
-            Trace.WriteLine($"IOCTL_SCSI_RESCAN_BUS failed: {ex.ToString()}")
-            API.RescanScsiAdapter()
+            Trace.WriteLine($"IOCTL_SCSI_RESCAN_BUS failed: {ex.JoinMessages()}")
+            API.RescanScsiAdapter(DeviceInstance)
 
         End Try
 
@@ -893,9 +910,27 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function UpdateDiskProperties(DeviceNumber As UInteger) As Boolean
 
-        Dim ScsiAddress As New NativeFileIO.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+        Try
+            Using disk = OpenDevice(DeviceNumber, 0)
 
-        Return NativeFileIO.UpdateDiskProperties(ScsiAddress)
+                If Not NativeFileIO.UpdateDiskProperties(disk.SafeFileHandle, throwOnFailure:=False) Then
+
+                    Trace.WriteLine($"Error updating disk properties for device {DeviceNumber:X6}: {New Win32Exception().Message}")
+
+                    Return False
+
+                End If
+
+            End Using
+
+            Return True
+
+        Catch ex As Exception
+            Trace.WriteLine($"Error updating disk properties for device {DeviceNumber:X6}: {ex.JoinMessages()}")
+
+            Return False
+
+        End Try
 
     End Function
 
@@ -906,9 +941,19 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function OpenDevice(DeviceNumber As UInteger, AccessMode As FileAccess) As DiskDevice
 
-        Dim ScsiAddress As New NativeFileIO.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+        Try
+            Dim device_name = GetDeviceName(DeviceNumber)
 
-        Return New DiskDevice(ScsiAddress, AccessMode)
+            If device_name Is Nothing Then
+                Throw New DriveNotFoundException($"No drive found for device number {DeviceNumber:X6}")
+            End If
+
+            Return New DiskDevice($"\\?\{device_name}", AccessMode)
+
+        Catch ex As Exception
+            Throw New DriveNotFoundException($"Device {DeviceNumber:X6} is not ready", ex)
+
+        End Try
 
     End Function
 
@@ -919,9 +964,23 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function GetDeviceName(DeviceNumber As UInteger) As String
 
-        Dim ScsiAddress As New NativeFileIO.SCSI_ADDRESS(ScsiPortNumber, DeviceNumber)
+        Dim raw_device = GetRawDeviceName(DeviceNumber)
 
-        Return NativeFileIO.GetDeviceNameByScsiAddress(ScsiAddress)
+        If raw_device Is Nothing Then
+            Return Nothing
+        End If
+
+        Return NativeFileIO.GetPhysicalDrivePathForNtDevice(raw_device)
+
+    End Function
+
+    ''' <summary>
+    ''' Returns an NT device path to the physical device object that SCSI port driver has created for a mounted device.
+    ''' This device path can be used even if there is no functional driver attached to the device stack.
+    ''' </summary>
+    Public Function GetRawDeviceName(DeviceNumber As UInteger) As String
+
+        Return API.EnumeratePhysicalDeviceObjectPaths(DeviceInstance, DeviceNumber).FirstOrDefault()
 
     End Function
 

@@ -371,7 +371,7 @@ Public Class MainForm
 
             Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.EnumerateDevicesProperties, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
 
-            Dim simpleviewtask = Task.Factory.StartNew(Function() DiskStateParser.GetSimpleView(Adapter.ScsiPortNumber, devicelist.Result.ToList()), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
+            Dim simpleviewtask = Task.Factory.StartNew(Function() DiskStateParser.GetSimpleView(Adapter, devicelist.Result.ToList()), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
 
             'Dim fullviewtask = Task.Factory.StartNew(Function() parser.GetFullView(Adapter.ScsiPortNumber, devicelist.Result))
 
@@ -392,7 +392,7 @@ Public Class MainForm
 
             Invoke(Sub() SetDiskView(simpleview, finished:=False))
 
-            Dim listFunction As Func(Of Byte, List(Of ScsiAdapter.DeviceProperties), List(Of DiskStateView))
+            Dim listFunction As Func(Of ScsiAdapter, List(Of ScsiAdapter.DeviceProperties), List(Of DiskStateView))
 
             'Try
             '    Dim fullview = fullviewtask.Result
@@ -424,7 +424,7 @@ Public Class MainForm
 
                 Invoke(New Action(AddressOf SetLabelBusy))
 
-                Dim view = listFunction(Adapter.ScsiPortNumber, Adapter.EnumerateDevicesProperties().ToList())
+                Dim view = listFunction(Adapter, Adapter.EnumerateDevicesProperties().ToList())
 
                 If IsClosing OrElse Disposing OrElse IsDisposed Then
                     Return
@@ -490,17 +490,28 @@ Public Class MainForm
               Select(Function(row) row.DataBoundItem).
               OfType(Of DiskStateView)()
 
-                Dim paths = API.GetPhysicalDeviceObjectPath(DeviceItem.DeviceProperties.DeviceNumber).ToArray()
+                Task.Factory.StartNew(
+                    Function()
 
-                Dim processes = NativeFileIO.EnumerateProcessesHoldingFileHandle(paths)
+                        Dim paths = API.EnumeratePhysicalDeviceObjectPaths(Adapter.DeviceInstance, DeviceItem.DeviceProperties.DeviceNumber).ToArray()
 
-                Dim processlist = String.Join(Environment.NewLine, From proc In processes Select $"Id = {proc.HandleTableEntry.ProcessId} Name = {proc.ProcessName}")
+                        Dim processes = NativeFileIO.EnumerateProcessesHoldingFileHandle(paths)
 
-                MessageBox.Show(Me,
-                            processlist,
+                        Dim processlist = String.Join(Environment.NewLine, From proc In processes Select $"Id = {proc.HandleTableEntry.ProcessId} Name = {proc.ProcessName}")
+
+                        Return processlist
+
+                    End Function, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default).
+                    ContinueWith(
+                    Sub(t)
+
+                        MessageBox.Show(Me,
+                            t.Result,
                             "Process list",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Information)
+
+                    End Sub, TaskScheduler.FromCurrentSynchronizationContext())
 
             Next
 
@@ -695,7 +706,8 @@ Public Class MainForm
     Private Sub btnRescanBus_Click(sender As Object, e As EventArgs) Handles btnRescanBus.Click
 
         Try
-            API.RescanScsiAdapter()
+            Adapter.RescanScsiAdapter()
+            Adapter.RescanBus()
 
         Catch ex As Exception
             Trace.WriteLine(ex.ToString())
@@ -774,7 +786,7 @@ Public Class MainForm
 
                 Using zipStream = GetType(MainForm).Assembly.GetManifestResourceStream(GetType(MainForm), "DriverFiles.zip")
 
-                    DriverSetup.InstallFromZipFile(msgbox.Handle, zipStream)
+                    DriverSetup.InstallFromZipFile(msgbox, zipStream)
 
                 End Using
 

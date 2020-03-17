@@ -1,5 +1,4 @@
 ﻿Imports System.Security
-Imports Microsoft.VisualBasic
 Imports Arsenal.ImageMounter.Extensions
 Imports System.Security.Permissions
 Imports System.Diagnostics.CodeAnalysis
@@ -34,11 +33,9 @@ Namespace IO
             Public Const GENERIC_READ As UInt32 = &H80000000UI
             Public Const GENERIC_WRITE As UInt32 = &H40000000UI
             Public Const GENERIC_ALL As UInt32 = &H10000000
-
-            Public Const FILE_SHARE_READ As UInt32 = &H1UI
-            Public Const FILE_SHARE_WRITE As UInt32 = &H2UI
-            Public Const FILE_SHARE_DELETE As UInt32 = &H4UI
             Public Const FILE_READ_ATTRIBUTES As UInt32 = &H80UI
+            Public Const SYNCHRONIZE As UInt32 = &H100000UI
+
             Public Const FILE_ATTRIBUTE_NORMAL As UInt32 = &H80UI
             Public Const FILE_FLAG_OVERLAPPED As UInt32 = &H40000000UI
             Public Const FILE_FLAG_BACKUP_SEMANTICS As UInt32 = &H2000000UI
@@ -48,7 +45,6 @@ Namespace IO
             Public Const CREATE_ALWAYS As UInt32 = 2UI
             Public Const CREATE_NEW As UInt32 = 1UI
             Public Const TRUNCATE_EXISTING As UInt32 = 5UI
-            Public Const SYNCHRONIZE As UInt32 = &H100000UI
 
             Public Const NO_ERROR As UInt32 = 0UI
             Public Const ERROR_INVALID_FUNCTION As UInt32 = 1UI
@@ -61,6 +57,7 @@ Namespace IO
             Public Const ERROR_MORE_DATA As UInt32 = &H234UI
             Public Const ERROR_NOT_ALL_ASSIGNED As UInt32 = 1300UI
             Public Const ERROR_INSUFFICIENT_BUFFER As UInt32 = 122UI
+            Public Const ERROR_IN_WOW64 As Int32 = &HE0000235I
 
             Public Const FSCTL_GET_COMPRESSION As UInt32 = &H9003C
             Public Const FSCTL_SET_COMPRESSION As UInt32 = &H9C040
@@ -121,6 +118,10 @@ Namespace IO
             Public Const ERROR_SERVICE_DOES_NOT_EXIST As UInt32 = 1060
             Public Const ERROR_SERVICE_ALREADY_RUNNING As UInt32 = 1056
 
+            Public Const CR_SUCCESS As UInt32 = &H0
+            Public Const CR_FAILURE As UInt32 = &H13
+            Public Const CR_NO_SUCH_VALUE As UInt32 = &H25
+
             Public Shared ReadOnly SerenumBusEnumeratorGuid As New Guid("{4D36E97B-E325-11CE-BFC1-08002BE10318}")
             Public Shared ReadOnly DiskDriveGuid As New Guid("{4D36E967-E325-11CE-BFC1-08002BE10318}")
 
@@ -160,6 +161,19 @@ Namespace IO
         End Class
 
         Public NotInheritable Class UnsafeNativeMethods
+
+            Friend Declare Unicode Function NtCreateFile Lib "ntdll.dll" (
+                <Out> ByRef hFile As IntPtr,
+                AccessMask As UInt32,
+                <[In]> ByRef ObjectAttributes As ObjectAttributes,
+                <Out> ByRef IoStatusBlock As IoStatusBlock,
+                <[In]> ByRef AllocationSize As Long,
+                FileAttributes As FileAttributes,
+                ShareAccess As FileShare,
+                CreateDisposition As NtCreateDisposition,
+                CreateOptions As NtCreateOptions,
+                EaBuffer As IntPtr,
+                EaLength As UInt32) As Int32
 
             Friend Declare Auto Function GetFileInformationByHandle Lib "kernel32.dll" (
                 hFile As SafeFileHandle,
@@ -315,16 +329,7 @@ Namespace IO
             Friend Declare Auto Function CreateFile Lib "kernel32" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
               dwDesiredAccess As UInt32,
-              dwShareMode As UInt32,
-              lpSecurityAttributes As IntPtr,
-              dwCreationDisposition As UInt32,
-              dwFlagsAndAttributes As UInt32,
-              hTemplateFile As IntPtr) As SafeFileHandle
-
-            Friend Declare Auto Function CreateFile Lib "kernel32" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
-              dwDesiredAccess As UInt32,
-              dwShareMode As UInt32,
+              dwShareMode As FileShare,
               lpSecurityAttributes As IntPtr,
               dwCreationDisposition As UInt32,
               dwFlagsAndAttributes As Int32,
@@ -1439,7 +1444,10 @@ Namespace IO
                             object_type_info = buffer.Read(Of ObjectTypeInformation)(0)
 
                             If handle.GrantedAccess <> &H12019F AndAlso
-                                handle.GrantedAccess <> &H120189 Then
+                                handle.GrantedAccess <> &H120189 AndAlso
+                                handle.GrantedAccess <> &H16019F AndAlso
+                                handle.GrantedAccess <> &H1A0089 AndAlso
+                                handle.GrantedAccess <> &H1A019F Then
 
                                 Do
                                     status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInfoClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
@@ -1523,6 +1531,7 @@ Namespace IO
         Public Shared Function ConvertManagedFileAccess(DesiredAccess As FileAccess) As UInt32
 
             Dim NativeDesiredAccess As UInt32 = NativeConstants.FILE_READ_ATTRIBUTES
+
             If DesiredAccess.HasFlag(FileAccess.Read) Then
                 NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_READ
             End If
@@ -1555,17 +1564,6 @@ Namespace IO
 
             Dim NativeDesiredAccess = ConvertManagedFileAccess(DesiredAccess)
 
-            Dim NativeShareMode As UInt32 = 0
-            If ShareMode.HasFlag(FileShare.Read) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_READ
-            End If
-            If ShareMode.HasFlag(FileShare.Write) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_WRITE
-            End If
-            If ShareMode.HasFlag(FileShare.Delete) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_DELETE
-            End If
-
             Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
@@ -1582,14 +1580,14 @@ Namespace IO
                     Throw New NotImplementedException
             End Select
 
-            Dim NativeFlagsAndAttributes As UInt32 = NativeConstants.FILE_ATTRIBUTE_NORMAL
+            Dim NativeFlagsAndAttributes = FileAttributes.Normal
             If Overlapped Then
-                NativeFlagsAndAttributes += NativeConstants.FILE_FLAG_OVERLAPPED
+                NativeFlagsAndAttributes = NativeFlagsAndAttributes Or CType(NativeConstants.FILE_FLAG_OVERLAPPED, FileAttributes)
             End If
 
             Dim Handle = UnsafeNativeMethods.CreateFile(FileName,
                                              NativeDesiredAccess,
-                                             NativeShareMode,
+                                             ShareMode,
                                              IntPtr.Zero,
                                              NativeCreationDisposition,
                                              NativeFlagsAndAttributes,
@@ -1643,17 +1641,6 @@ Namespace IO
 
             Dim NativeDesiredAccess = ConvertManagedFileAccess(DesiredAccess)
 
-            Dim NativeShareMode As UInt32 = 0
-            If ShareMode.HasFlag(FileShare.Read) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_READ
-            End If
-            If ShareMode.HasFlag(FileShare.Write) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_WRITE
-            End If
-            If ShareMode.HasFlag(FileShare.Delete) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_DELETE
-            End If
-
             Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
@@ -1670,13 +1657,13 @@ Namespace IO
                     Throw New NotImplementedException
             End Select
 
-            Dim NativeFlagsAndAttributes As UInt32 = NativeConstants.FILE_ATTRIBUTE_NORMAL
+            Dim NativeFlagsAndAttributes = FileAttributes.Normal
 
-            NativeFlagsAndAttributes += Options
+            NativeFlagsAndAttributes = NativeFlagsAndAttributes Or CType(Options, FileAttributes)
 
             Dim Handle = UnsafeNativeMethods.CreateFile(FileName,
                                              NativeDesiredAccess,
-                                             NativeShareMode,
+                                             ShareMode,
                                              IntPtr.Zero,
                                              NativeCreationDisposition,
                                              NativeFlagsAndAttributes,
@@ -1687,6 +1674,78 @@ Namespace IO
 
             Return Handle
         End Function
+
+        ''' <summary>
+        ''' Calls NT API NtCreateFile() function and encapsulates returned handle in a SafeFileHandle object.
+        ''' </summary>
+        ''' <param name="FileName">Name of file to open.</param>
+        ''' <param name="DesiredAccess">File access to request.</param>
+        ''' <param name="ShareMode">Share mode to request.</param>
+        ''' <param name="CreationOption">Specifies whether to request overlapped I/O.</param>
+        ''' <param name="CreationDisposition">Open/creation mode.</param>
+        ''' <param name="FileAttributes">Attributes for created file.</param>
+        ''' <param name="ObjectAttributes">Object attributes.</param>
+        ''' <param name="RootDirectory">Root directory to start path parsing from, or null for rooted path.</param>
+        ''' <param name="WasCreated">Return information about whether a file was created, existing file opened etc.</param>
+        ''' <returns>NTSTATUS value indicating result of the operation.</returns>
+        Public Shared Function NtCreateFile(FileName As String,
+                                            ObjectAttributes As NtObjectAttributes,
+                                            DesiredAccess As FileAccess,
+                                            ShareMode As FileShare,
+                                            CreationDisposition As NtCreateDisposition,
+                                            CreationOption As NtCreateOptions,
+                                            FileAttributes As FileAttributes,
+                                            RootDirectory As SafeFileHandle,
+                                            <Out> ByRef WasCreated As NtFileCreated) As SafeFileHandle
+
+            If String.IsNullOrEmpty(FileName) Then
+                Throw New ArgumentNullException(NameOf(FileName))
+            End If
+
+            Dim native_desired_access = ConvertManagedFileAccess(DesiredAccess) Or NativeConstants.SYNCHRONIZE
+
+            Dim handle_value = IntPtr.Zero
+
+            Using pinned_name_string As New PinnedString(FileName), unicode_string_name = PinnedBuffer.Serialize(pinned_name_string.UnicodeString)
+
+                Dim object_attributes As New ObjectAttributes(If(RootDirectory?.DangerousGetHandle(), IntPtr.Zero), unicode_string_name.DangerousGetHandle(), ObjectAttributes, Nothing, Nothing)
+
+                Dim io_status_block As IoStatusBlock
+
+                Dim status = UnsafeNativeMethods.NtCreateFile(handle_value,
+                                                              native_desired_access,
+                                                              object_attributes,
+                                                              io_status_block,
+                                                              0,
+                                                              FileAttributes,
+                                                              ShareMode,
+                                                              CreationDisposition,
+                                                              CreationOption,
+                                                              Nothing,
+                                                              0)
+
+                WasCreated = CType(io_status_block.Information, NtFileCreated)
+
+                If status < 0 Then
+                    Throw GetExceptionForNtStatus(status)
+                End If
+
+            End Using
+
+            Return New SafeFileHandle(handle_value, ownsHandle:=True)
+
+        End Function
+
+        Public Enum NtFileCreated
+
+            Superseded
+            Opened
+            Created
+            Overwritten
+            Exists
+            DoesNotExist
+
+        End Enum
 
         ''' <summary>
         ''' Calls Win32 API CreateFile() function to create a backup handle for a file or
@@ -1715,17 +1774,6 @@ Namespace IO
                 NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_WRITE
             End If
 
-            Dim NativeShareMode As UInt32 = 0
-            If ShareMode.HasFlag(FileShare.Read) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_READ
-            End If
-            If ShareMode.HasFlag(FileShare.Write) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_WRITE
-            End If
-            If ShareMode.HasFlag(FileShare.Delete) Then
-                NativeShareMode = NativeShareMode Or NativeConstants.FILE_SHARE_DELETE
-            End If
-
             Dim NativeCreationDisposition As UInt32
             Select Case CreationDisposition
                 Case FileMode.Create
@@ -1742,11 +1790,11 @@ Namespace IO
                     Throw New NotImplementedException
             End Select
 
-            Dim NativeFlagsAndAttributes As UInt32 = NativeConstants.FILE_FLAG_BACKUP_SEMANTICS
+            Dim NativeFlagsAndAttributes = CType(NativeConstants.FILE_FLAG_BACKUP_SEMANTICS, FileAttributes)
 
             Dim Handle = UnsafeNativeMethods.CreateFile(FilePath,
                                              NativeDesiredAccess,
-                                             NativeShareMode,
+                                             ShareMode,
                                              IntPtr.Zero,
                                              NativeCreationDisposition,
                                              NativeFlagsAndAttributes,
@@ -1903,12 +1951,6 @@ Namespace IO
 
         End Function
 
-        Public Shared Sub UpdateDiskProperties(SafeFileHandle As SafeFileHandle)
-
-            Win32Try(UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
-
-        End Sub
-
         Public Shared Sub GrowPartition(DiskHandle As SafeFileHandle, PartitionNumber As Integer, BytesToGrow As Int64)
 
             Dim DiskGrowPartition As DISK_GROW_PARTITION
@@ -2060,6 +2102,20 @@ Namespace IO
         End Function
 
         ''' <summary>
+        ''' Retrieves status of write overlay for mounted device.
+        ''' </summary>
+        ''' <param name="NtDevicePath">Path to device.</param>
+        Public Shared Function GetScsiAddressForNtDevice(NtDevicePath As String) As SCSI_ADDRESS?
+
+            Using hDevice = NtCreateFile(NtDevicePath, 0, 0, FileShare.ReadWrite, NtCreateDisposition.Open, NtCreateOptions.NonDirectoryFile, 0, Nothing, Nothing)
+
+                Return GetScsiAddress(hDevice)
+
+            End Using
+
+        End Function
+
+        ''' <summary>
         ''' Retrieves storage device number.
         ''' </summary>
         ''' <param name="hDevice">Handle to device.</param>
@@ -2072,6 +2128,35 @@ Namespace IO
             Else
                 Return Nothing
             End If
+
+        End Function
+
+        ''' <summary>
+        ''' Retrieves PhysicalDrive or CdRom path for NT raw device path
+        ''' </summary>
+        ''' <param name="ntdevice">NT device path, such as \Device\00000001.</param>
+        Public Shared Function GetPhysicalDrivePathForNtDevice(ntdevice As String) As String
+
+            Using hDevice = NtCreateFile(ntdevice, 0, 0, FileShare.ReadWrite, NtCreateDisposition.Open, 0, 0, Nothing, Nothing)
+
+                Dim devnr = GetStorageDeviceNumber(hDevice)
+
+                If Not devnr.HasValue Then
+
+                    Throw New InvalidOperationException($"Device '{ntdevice}' is not a physical disk device object")
+
+                End If
+
+                Select Case devnr.Value.DeviceType
+                    Case DeviceType.CdRom
+                        Return $"CdRom{devnr.Value.DeviceNumber}"
+                    Case DeviceType.Disk
+                        Return $"PhysicalDrive{devnr.Value.DeviceNumber}"
+                    Case Else
+                        Throw New InvalidOperationException($"Device '{ntdevice}' has unknown device type 0x{CInt(devnr.Value.DeviceType):X}")
+                End Select
+
+            End Using
 
         End Function
 
@@ -2912,17 +2997,15 @@ Namespace IO
             End Operator
         End Structure
 
-        Public Shared Function GetDevicesScsiAddresses(portnumber As Byte) As Dictionary(Of ScsiAddressAndLength, String)
+        Public Shared Function GetScsiAddressAndLength(drv As String) As ScsiAddressAndLength?
 
             Static SizeOfLong As UInt32 = CUInt(Marshal.SizeOf(GetType(Long)))
             Static SizeOfScsiAddress As UInt32 = CUInt(Marshal.SizeOf(GetType(SCSI_ADDRESS)))
 
-            Dim GetScsiAddressAndLength =
-                Function(drv As String) As ScsiAddressAndLength?
-                    Try
-                        Using disk As New DiskDevice(drv, FileAccess.Read)
-                            Dim ScsiAddress As SCSI_ADDRESS
-                            Dim rc = UnsafeNativeMethods.
+            Try
+                Using disk As New DiskDevice(drv, FileAccess.Read)
+                    Dim ScsiAddress As SCSI_ADDRESS
+                    Dim rc = UnsafeNativeMethods.
                                 DeviceIoControl(disk.SafeFileHandle,
                                                 NativeConstants.IOCTL_SCSI_GET_ADDRESS,
                                                 IntPtr.Zero,
@@ -2932,13 +3015,13 @@ Namespace IO
                                                 Nothing,
                                                 Nothing)
 
-                            If Not rc Then
-                                Trace.WriteLine($"IOCTL_SCSI_GET_ADDRESS failed for device {drv}: Error 0x{Marshal.GetLastWin32Error().ToString("X")}")
-                                Return Nothing
-                            End If
+                    If Not rc Then
+                        Trace.WriteLine($"IOCTL_SCSI_GET_ADDRESS failed for device {drv}: Error 0x{Marshal.GetLastWin32Error().ToString("X")}")
+                        Return Nothing
+                    End If
 
-                            Dim Length As Long
-                            rc = UnsafeNativeMethods.
+                    Dim Length As Long
+                    rc = UnsafeNativeMethods.
                                 DeviceIoControl(disk.SafeFileHandle,
                                                 NativeConstants.IOCTL_DISK_GET_LENGTH_INFO,
                                                 IntPtr.Zero,
@@ -2948,31 +3031,29 @@ Namespace IO
                                                 Nothing,
                                                 Nothing)
 
-                            If Not rc Then
-                                Trace.WriteLine($"IOCTL_DISK_GET_LENGTH_INFO failed for device {drv}: Error 0x{Marshal.GetLastWin32Error().ToString("X")}")
-                                Return Nothing
-                            End If
-
-                            Return New ScsiAddressAndLength(ScsiAddress, Length)
-                        End Using
-
-                    Catch ex As Exception
-                        Trace.WriteLine($"Exception attempting to find SCSI address for device {drv}: {ex.ToString()}")
+                    If Not rc Then
+                        Trace.WriteLine($"IOCTL_DISK_GET_LENGTH_INFO failed for device {drv}: Error 0x{Marshal.GetLastWin32Error().ToString("X")}")
                         Return Nothing
+                    End If
 
-                    End Try
-                End Function
+                    Return New ScsiAddressAndLength(ScsiAddress, Length)
+                End Using
+
+            Catch ex As Exception
+                Trace.WriteLine($"Exception attempting to find SCSI address for device {drv}: {ex.JoinMessages()}")
+                Return Nothing
+
+            End Try
+        End Function
+
+        Public Shared Function GetDevicesScsiAddresses(adapter As ScsiAdapter) As Dictionary(Of UInteger, String)
 
             Dim q =
-                From drv In QueryDosDevice()
-                Where
-                    drv.StartsWith("PhysicalDrive", StringComparison.Ordinal) OrElse
-                    drv.StartsWith("CdRom", StringComparison.Ordinal)
-                Let address = GetScsiAddressAndLength(String.Concat("\\?\", drv))
-                Where address.HasValue
-                Where address.Value.ScsiAddress.PortNumber = portnumber
+                From device_number In adapter.GetDeviceList()
+                Let drv = adapter.GetDeviceName(device_number)
+                Where drv IsNot Nothing
 
-            Return q.ToDictionary(Function(o) o.address.Value,
+            Return q.ToDictionary(Function(o) o.device_number,
                                   Function(o) o.drv)
 
         End Function
@@ -3080,6 +3161,23 @@ Namespace IO
             End If
 
             Return UnsafeNativeMethods.CM_Reenumerate_DevNode(devInst, 0)
+
+        End Function
+
+        Public Shared Function GetDevInst(devinstName As String) As UInt32?
+
+            Dim devInst As UInt32
+
+            Dim status = UnsafeNativeMethods.CM_Locate_DevNode(devInst, devinstName, 0)
+
+            If status <> 0 Then
+                Trace.WriteLine($"Device '{devinstName}' error 0x{status:X}")
+                Return Nothing
+            End If
+
+            Trace.WriteLine($"{devinstName} = devInst {devInst}")
+
+            Return devInst
 
         End Function
 
@@ -3297,7 +3395,7 @@ Namespace IO
 
         End Sub
 
-        Public Shared Iterator Function EnumerateDevices(devInst As UInt32) As IEnumerable(Of UInt32)
+        Public Shared Iterator Function EnumerateChildDevices(devInst As UInt32) As IEnumerable(Of UInt32)
 
             Dim child As UInteger
 
@@ -3331,9 +3429,18 @@ Namespace IO
 
             Dim name = Encoding.Unicode.GetString(buffer, 0, buffersize - 2)
 
-            Trace.WriteLine($"Found child physical device object name: '{name}'")
+            Trace.WriteLine($"Found physical device object name: '{name}'")
 
             Return name
+
+        End Function
+
+        Public Shared Function EnumerateWin32DevicePaths(nt_device_path As String) As IEnumerable(Of String)
+
+            Return _
+                From dosdevice In QueryDosDevice()
+                Where QueryDosDevice(dosdevice).Contains(nt_device_path, StringComparer.OrdinalIgnoreCase)
+                Select $"\\?\{dosdevice}"
 
         End Function
 
@@ -3346,7 +3453,9 @@ Namespace IO
 
             Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, UnsafeNativeMethods.CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
 
-            If rc <> 0 Then
+            If rc = NativeConstants.CR_NO_SUCH_VALUE Then
+                Return Nothing
+            ElseIf rc <> 0 Then
                 Dim msg = $"Error getting registry property for device. Status=0x{rc:X}"
                 Throw New IOException(msg)
             End If
@@ -3496,7 +3605,7 @@ Namespace IO
 
             Dim filters = GetRegisteredFilters(devInst)
 
-            If filters Is Nothing Then
+            If filters Is Nothing OrElse filters.Length = 0 Then
                 Trace.WriteLine($"No filters registered for devinst {devInst}")
                 Return False
             End If
@@ -3711,12 +3820,14 @@ Namespace IO
                 Try
                     Using device = OpenFileHandle($"\\?\{diskdevice}", 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
 
-                        UpdateDiskProperties(device)
+                        If Not UpdateDiskProperties(device, throwOnFailure:=False) Then
+                            Trace.WriteLine($"Error updating disk properties for {diskdevice}: {New Win32Exception().Message}")
+                        End If
 
                     End Using
 
                 Catch ex As Exception
-                    Trace.WriteLine($"Error updating disk properties for {diskdevice}: {ex.ToString()}")
+                    Trace.WriteLine($"Error updating disk properties for {diskdevice}: {ex.JoinMessages()}")
 
                 End Try
 
@@ -3735,7 +3846,7 @@ Namespace IO
             Try
                 Using devicehandle = OpenDiskByScsiAddress(ScsiAddress, Nothing).Value
 
-                    Dim rc = UnsafeNativeMethods.DeviceIoControl(devicehandle, NativeConstants.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+                    Dim rc = UpdateDiskProperties(devicehandle, throwOnFailure:=False)
 
                     If Not rc Then
 
@@ -3748,11 +3859,23 @@ Namespace IO
                 End Using
 
             Catch ex As Exception
-                Trace.WriteLine($"Error updating disk properties for {ScsiAddress}: {ex.ToString()}")
+                Trace.WriteLine($"Error updating disk properties for {ScsiAddress}: {ex.JoinMessages()}")
 
             End Try
 
             Return False
+
+        End Function
+
+        Public Shared Function UpdateDiskProperties(devicehandle As SafeFileHandle, throwOnFailure As Boolean) As Boolean
+
+            Dim rc = UnsafeNativeMethods.DeviceIoControl(devicehandle, NativeConstants.IOCTL_DISK_UPDATE_PROPERTIES, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+
+            If Not rc AndAlso throwOnFailure Then
+                Throw New Win32Exception
+            End If
+
+            Return rc
 
         End Function
 
@@ -3780,7 +3903,7 @@ Namespace IO
                 End Using
 
             Catch ex As Exception
-                Trace.WriteLine($"Error updating disk properties for {DevicePath}: {ex.ToString()}")
+                Trace.WriteLine($"Error updating disk properties for {DevicePath}: {ex.JoinMessages()}")
 
             End Try
 
@@ -3828,14 +3951,14 @@ Namespace IO
                             Return New KeyValuePair(Of String, SafeFileHandle)(diskdevice, devicehandle)
 
                         Catch ex As Exception
-                            Trace.WriteLine($"Exception while querying SCSI address for {diskdevice}: {ex.ToString()}")
+                            Trace.WriteLine($"Exception while querying SCSI address for {diskdevice}: {ex.JoinMessages()}")
 
                             devicehandle.Dispose()
 
                         End Try
 
                     Catch ex As Exception
-                        Trace.WriteLine($"Exception while opening {diskdevice}: {ex.ToString()}")
+                        Trace.WriteLine($"Exception while opening {diskdevice}: {ex.JoinMessages()}")
 
                     End Try
 
@@ -3859,7 +3982,8 @@ Namespace IO
         ''' <summary>
         ''' Returns a disk device object name for a specified SCSI address.
         ''' </summary>
-        Public Shared Function GetDeviceNameByScsiAddress(ScsiAddress As SCSI_ADDRESS) As String
+        <Obsolete("Use PnP features instead to find device names. This method is not guaranteed to return the correct intended device.")>
+        Public Shared Function GetDeviceNameByScsiAddressAndSize(scsi_address As SCSI_ADDRESS, disk_size As Long) As String
 
             Dim dosdevs = QueryDosDevice()
 
@@ -3881,28 +4005,42 @@ Namespace IO
                         Dim devicehandle = OpenFileHandle($"\\?\{diskdevice}", 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
 
                         Try
-                            Dim Address = GetScsiAddress(devicehandle)
+                            Dim got_address = GetScsiAddress(devicehandle)
 
-                            If Not Address.HasValue OrElse Not Address.Value.Equals(ScsiAddress) Then
+                            If Not got_address.HasValue OrElse Not got_address.Value.Equals(scsi_address) Then
 
                                 Return False
 
                             End If
 
-                            Trace.WriteLine($"Found {diskdevice} with SCSI address {Address.ToString()}")
+                            Trace.WriteLine($"Found {diskdevice} with SCSI address {got_address}")
 
-                            Return True
+                            devicehandle.Close()
+
+                            devicehandle = Nothing
+
+                            devicehandle = OpenFileHandle($"\\?\{diskdevice}", FileAccess.Read, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
+
+                            Dim got_size = GetDiskSize(devicehandle)
+
+                            If disk_size = got_size Then
+                                Return True
+                            End If
+
+                            Trace.WriteLine($"Found {diskdevice} has wrong size. Expected: {disk_size}, got: {got_size}")
+
+                            Return False
 
                         Catch ex As Exception
-                            Trace.WriteLine($"Exception while querying SCSI address for {diskdevice}: {ex.ToString()}")
+                            Trace.WriteLine($"Exception while querying SCSI address for {diskdevice}: {ex.JoinMessages()}")
 
                         Finally
-                            devicehandle.Dispose()
+                            devicehandle?.Dispose()
 
                         End Try
 
                     Catch ex As Exception
-                        Trace.WriteLine($"Exception while opening {diskdevice}: {ex.ToString()}")
+                        Trace.WriteLine($"Exception while opening {diskdevice}: {ex.JoinMessages()}")
 
                     End Try
 
@@ -4554,10 +4692,18 @@ Namespace IO
 
         End Structure
 
+        Public Enum DeviceType
+
+            CdRom = &H2
+
+            Disk = &H7
+
+        End Enum
+
         <StructLayout(LayoutKind.Sequential)>
         Public Structure STORAGE_DEVICE_NUMBER
 
-            Public ReadOnly Property DeviceType As UInt32
+            Public ReadOnly Property DeviceType As DeviceType
 
             Public ReadOnly Property DeviceNumber As UInt32
 
@@ -4638,6 +4784,14 @@ Namespace IO
             Private ReadOnly MaximumLength As UInt16
 
             Private ReadOnly Buffer As IntPtr
+
+            Public Sub New(str As IntPtr, byte_count As UInt16)
+
+                _Length = byte_count
+                MaximumLength = byte_count
+                Buffer = str
+
+            End Sub
 
             ''' <summary>
             ''' Creates a managed string object from UNICODE_STRING instance.
@@ -4753,6 +4907,94 @@ Namespace IO
                 }
             End Function
         End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure ObjectAttributes
+
+            Private ReadOnly uLength As Int32
+
+            Public ReadOnly Property RootDirectory As IntPtr
+
+            Public ReadOnly Property ObjectName As IntPtr
+
+            Public ReadOnly Property Attributes As NtObjectAttributes
+
+            Public ReadOnly Property SecurityDescriptor As IntPtr
+
+            Public ReadOnly Property SecurityQualityOfService As IntPtr
+
+            Public Sub New(root_directory As IntPtr, object_name As IntPtr, object_attributes As NtObjectAttributes, security_descriptor As IntPtr, security_quality_of_service As IntPtr)
+                uLength = Marshal.SizeOf(Me)
+                RootDirectory = root_directory
+                ObjectName = object_name
+                Attributes = object_attributes
+                SecurityDescriptor = security_descriptor
+                SecurityQualityOfService = security_quality_of_service
+
+            End Sub
+
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure IoStatusBlock
+
+            Public ReadOnly Property Status As IntPtr
+
+            Public ReadOnly Property Information As IntPtr
+
+        End Structure
+
+        <Flags>
+        Public Enum NtObjectAttributes
+
+            Inherit = &H2
+            Permanent = &H10
+            Exclusive = &H20
+            CaseInsensitive = &H40
+            OpenIf = &H80
+            OpenLink = &H100
+
+        End Enum
+
+        Public Enum NtCreateDisposition
+
+            Supersede = &H0
+            Open = &H1
+            Create = &H2
+            OpenIf = &H3
+            Overwrite = &H4
+            OverwriteIf = &H5
+
+        End Enum
+
+        <Flags>
+        Public Enum NtCreateOptions
+
+            DirectoryFile = &H1
+            WriteThrough = &H2
+            SequentialOnly = &H4
+            NoIntermediateBuffering = &H8
+
+            SynchronousIoAlert = &H10
+            SynchronousIoNonAlert = &H20
+            NonDirectoryFile = &H40
+            CreateTreeConnection = &H80
+
+            CompleteIfOpLocked = &H100
+            NoEAKnowledge = &H200
+            OpenForRecovery = &H400
+            RandomAccess = &H800
+
+            DeleteOnClose = &H1000
+            OpenByFileId = &H200
+            OpenForBackupIntent = &H400
+            NoCompression = &H8000
+
+            ReserverNoOpFilter = &H100000
+            OpenReparsePoint = &H200000
+            OpenNoRecall = &H400000
+
+        End Enum
 
         <StructLayout(LayoutKind.Sequential, Pack:=8)>
         Public Structure PARTITION_INFORMATION

@@ -54,11 +54,10 @@ Namespace IO
             Marshal.DestroyStructure(address, GetType(T))
         End Sub
 
-        Public Shared Function Serialize(Of T As Structure)(instance As T) As Byte()
-            Using pinned As New PinnedBuffer(Of Byte)(SizeOf(GetType(T)))
-                pinned.Write(0, instance)
-                Return pinned.Target
-            End Using
+        Public Shared Function Serialize(Of T As Structure)(instance As T) As PinnedBuffer(Of Byte)
+            Dim pinned As New PinnedBuffer(Of Byte)(SizeOf(GetType(T)))
+            pinned.Write(0, instance)
+            Return pinned
         End Function
 
         Public Shared Function Deserialize(Of T As Structure)(buffer As Byte()) As T
@@ -190,6 +189,12 @@ Namespace IO
         Public Overloads ReadOnly Property Target As String
             Get
                 Return DirectCast(GCHandle.Target, String)
+            End Get
+        End Property
+
+        Public ReadOnly Property UnicodeString As NativeFileIO.UNICODE_STRING
+            Get
+                Return New NativeFileIO.UNICODE_STRING(handle, CUShort(ByteLength))
             End Get
         End Property
 

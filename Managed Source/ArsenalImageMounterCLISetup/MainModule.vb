@@ -14,10 +14,11 @@
 Imports Arsenal.ImageMounter.DriverSetup
 Imports Arsenal.ImageMounter.API
 Imports Arsenal.ImageMounter.IO
+Imports System.Windows.Forms
 
 Module MainModule
 
-    Private ReadOnly ownerWindow As IntPtr = NativeFileIO.SafeNativeMethods.GetConsoleWindow()
+    Private ReadOnly ownerWindow As NativeWindow = NativeWindow.FromHandle(NativeFileIO.SafeNativeMethods.GetConsoleWindow())
 
     Sub New()
 
@@ -27,7 +28,7 @@ Module MainModule
 
     Function Main(args As String()) As Integer
 
-        Dim opMode As OpMode = opMode.Status
+        Dim opMode As OpMode = OpMode.Status
 
         If args?.Length > 0 Then
             If args(0).Equals("/install", StringComparison.OrdinalIgnoreCase) Then
@@ -62,7 +63,7 @@ Module MainModule
 
         Select Case opMode
 
-            Case opMode.Install
+            Case OpMode.Install
                 Using zipStream = GetType(MainModule).Assembly.GetManifestResourceStream(
                         GetType(MainModule), "DriverFiles.zip")
 
@@ -83,7 +84,7 @@ Module MainModule
 
                 End Try
 
-            Case opMode.Uninstall
+            Case OpMode.Uninstall
                 If AdapterDevicePresent Then
                     Uninstall(ownerWindow)
                     Trace.WriteLine("Driver successfully uninstalled.")
@@ -104,7 +105,7 @@ Module MainModule
                     Return 1
                 End If
 
-            Case opMode.Status
+            Case OpMode.Status
                 If AdapterDevicePresent Then
                     Trace.WriteLine("Virtual SCSI adapter installed.")
                     Return 0

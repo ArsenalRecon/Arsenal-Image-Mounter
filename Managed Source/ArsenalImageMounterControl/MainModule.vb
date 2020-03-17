@@ -222,8 +222,12 @@ Module MainModule
                 End Using
 
             Case OpMode.Rescan
-                Dim result = API.RescanScsiAdapter()
-                Console.WriteLine($"Result: {result}")
+                Using adapter As New ScsiAdapter
+                    Dim result = adapter.RescanScsiAdapter()
+                    adapter.RescanBus()
+
+                    Console.WriteLine($"Result: {result}")
+                End Using
 
             Case Else
                 Console.WriteLine("Nothing to do.")

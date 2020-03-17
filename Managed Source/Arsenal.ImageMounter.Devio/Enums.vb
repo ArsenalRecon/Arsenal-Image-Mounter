@@ -13,6 +13,8 @@
 
 Imports System.Diagnostics.CodeAnalysis
 
+#Disable Warning CA1712
+
 Public Enum IMDPROXY_REQ As ULong
     IMDPROXY_REQ_NULL
     IMDPROXY_REQ_INFO

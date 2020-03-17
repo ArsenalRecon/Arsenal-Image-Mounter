@@ -3,6 +3,7 @@ Imports Arsenal.ImageMounter.ScsiAdapter
 Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.PSDisk
 Imports Arsenal.ImageMounter.IO
+Imports Arsenal.ImageMounter.Extensions
 
 Namespace PSDisk
 
@@ -12,25 +13,24 @@ Namespace PSDisk
 
         End Sub
 
-        Public Shared Function GetSimpleView(portnumber As Byte, deviceProperties As List(Of DeviceProperties)) As List(Of DiskStateView)
+        Public Shared Function GetSimpleView(portnumber As ScsiAdapter, deviceProperties As List(Of DeviceProperties)) As List(Of DiskStateView)
 
             Return GetSimpleViewSpecial(Of DiskStateView)(portnumber, deviceProperties)
 
         End Function
 
-        Public Shared Function GetSimpleViewSpecial(Of T As {New, DiskStateView})(portnumber As Byte, deviceProperties As List(Of DeviceProperties)) As List(Of T)
+        Public Shared Function GetSimpleViewSpecial(Of T As {New, DiskStateView})(portnumber As ScsiAdapter, deviceProperties As List(Of DeviceProperties)) As List(Of T)
 
             Try
                 Dim ids = NativeFileIO.GetDevicesScsiAddresses(portnumber)
 
                 Dim getid =
                     Function(dev As DeviceProperties) As String
-                        Dim scsiaddress As New NativeFileIO.ScsiAddressAndLength(New NativeFileIO.SCSI_ADDRESS(portnumber, dev.DeviceNumber), dev.DiskSize)
                         Dim result As String = Nothing
-                        If ids.TryGetValue(scsiaddress, result) Then
+                        If ids.TryGetValue(dev.DeviceNumber, result) Then
                             Return result
                         Else
-                            Trace.WriteLine($"No PhysicalDrive object found for {scsiaddress.ToString()}")
+                            Trace.WriteLine($"No PhysicalDrive object found for device number {dev.DeviceNumber:X6}")
                             Return Nothing
                         End If
                     End Function
@@ -63,7 +63,7 @@ Namespace PSDisk
                                     End Using
 
                                 Catch ex As Exception
-                                    Trace.WriteLine($"Error reading signature from MBR for drive {view.DevicePath}: {ex.ToString()}")
+                                    Trace.WriteLine($"Error reading signature from MBR for drive {view.DevicePath}: {ex.JoinMessages()}")
 
                                 End Try
 
@@ -72,7 +72,7 @@ Namespace PSDisk
                                     view.MountPoints = view.Volumes.SelectMany(AddressOf NativeFileIO.GetVolumeMountPoints).ToArray()
 
                                 Catch ex As Exception
-                                    Trace.WriteLine($"Error enumerating volumes for drive {view.DevicePath}: {ex.ToString()}")
+                                    Trace.WriteLine($"Error enumerating volumes for drive {view.DevicePath}: {ex.JoinMessages()}")
 
                                 End Try
                             End If

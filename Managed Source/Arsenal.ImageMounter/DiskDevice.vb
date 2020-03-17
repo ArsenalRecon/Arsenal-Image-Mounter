@@ -147,7 +147,7 @@ Public Class DiskDevice
     ''' </summary>
     Public Sub UpdateProperties()
 
-        NativeFileIO.UpdateDiskProperties(SafeFileHandle)
+        NativeFileIO.UpdateDiskProperties(SafeFileHandle, throwOnFailure:=True)
 
     End Sub
 

@@ -131,7 +131,7 @@ Public Class MainForm
                 Using zipStream = GetType(MainForm).Assembly.GetManifestResourceStream(
                     GetType(MainForm), "DriverFiles.zip")
 
-                    DriverSetup.InstallFromZipFile(Handle, zipStream)
+                    DriverSetup.InstallFromZipFile(Me, zipStream)
 
                     Try
                         Using New ScsiAdapter
@@ -148,7 +148,7 @@ Public Class MainForm
                     End Try
                 End Using
             ElseIf sender Is btnUninstall Then
-                DriverSetup.Uninstall(Handle)
+                DriverSetup.Uninstall(Me)
 
                 Try
                     Using New ScsiAdapter

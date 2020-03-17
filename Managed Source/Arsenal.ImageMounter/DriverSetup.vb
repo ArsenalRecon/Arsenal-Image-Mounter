@@ -3,6 +3,7 @@ Imports Ionic.Zip
 Imports Arsenal.ImageMounter.IO
 Imports System.Windows.Forms
 Imports Ionic.Crc
+Imports Arsenal.ImageMounter.Extensions
 
 ''' <summary>
 ''' Routines for installing or uninstalling Arsenal Image Mounter kernel level
@@ -120,13 +121,13 @@ Public NotInheritable Class DriverSetup
     ''' like in DriverSetup.zip found in DriverSetup directory in repository,
     ''' that is, one subdirectory for each kernel version followed by one
     ''' subdirectory for each architecture.</param>
-    Public Shared Sub InstallFromZipFile(ownerWindow As IntPtr, zipFile As ZipFile)
+    Public Shared Sub InstallFromZipFile(ownerWindow As IWin32Window, zipFile As ZipFile)
 
         Dim origdir = Environment.CurrentDirectory
 
         Dim temppath = Path.Combine(Path.GetTempPath(), "ArsenalImageMounter-DriverSetup")
 
-        Trace.WriteLine("Using temp path: " & temppath)
+        Trace.WriteLine($"Using temp path: {temppath}")
 
         Directory.CreateDirectory(temppath)
 
@@ -141,24 +142,26 @@ Public NotInheritable Class DriverSetup
             Dim directoryRemover =
                 Sub()
 
-                    Dim start = Stopwatch.StartNew()
+                    Try
+                        Dim start = Stopwatch.StartNew()
 
-                    While Directory.Exists(temppath)
+                        While Directory.Exists(temppath)
 
-                        Try
-                            Directory.Delete(temppath, recursive:=True)
+                            Try
+                                Directory.Delete(temppath, recursive:=True)
 
-                        Catch ex As IOException When start.Elapsed.TotalMinutes < 15
-                            Trace.WriteLine($"I/O Error removing temporary directory: {ex.ToString()}")
-                            Thread.Sleep(TimeSpan.FromSeconds(10))
-                            Continue While
+                            Catch ex As IOException When start.Elapsed.TotalMinutes < 15
+                                Trace.WriteLine($"I/O Error removing temporary directory: {ex.JoinMessages()}")
+                                Thread.Sleep(TimeSpan.FromSeconds(10))
 
-                        Catch ex As Exception
-                            Trace.WriteLine($"Error removing temporary directory: {ex.ToString()}")
+                            End Try
 
-                        End Try
+                        End While
 
-                    End While
+                    Catch ex As Exception
+                        Trace.WriteLine($"Error removing temporary directory: {ex.JoinMessages()}")
+
+                    End Try
 
                 End Sub
 
@@ -195,7 +198,7 @@ Public NotInheritable Class DriverSetup
     ''' like in DriverSetup.zip found in DriverSetup directory in repository,
     ''' that is, one subdirectory for each kernel version followed by one
     ''' subdirectory for each architecture.</param>
-    Public Shared Sub InstallFromZipFile(ownerWindow As IntPtr, zipStream As Stream)
+    Public Shared Sub InstallFromZipFile(ownerWindow As IWin32Window, zipStream As Stream)
 
         InstallFromZipFile(ownerWindow, ZipFile.Read(zipStream))
 
@@ -215,7 +218,7 @@ Public NotInheritable Class DriverSetup
     ''' at this path needs to be like in DriverSetup.7z found in DriverSetup
     ''' directory in repository, that is, one subdirectory for each kernel
     ''' version followed by one subdirectory for each architecture.</param>
-    Public Shared Sub Install(ownerWindow As IntPtr, setupsource As String)
+    Public Shared Sub Install(ownerWindow As IWin32Window, setupsource As String)
 
         CheckCompatibility(ownerWindow)
 
@@ -234,7 +237,7 @@ Public NotInheritable Class DriverSetup
     ''' <summary>
     ''' Removes Arsenal Image Mounter device objects and driver components.
     ''' </summary>
-    Public Shared Sub Uninstall(ownerWindow As IntPtr)
+    Public Shared Sub Uninstall(ownerWindow As IWin32Window)
 
         CheckCompatibility(ownerWindow)
 
@@ -258,20 +261,20 @@ Public NotInheritable Class DriverSetup
     ''' at this path needs to be like in DriverSetup.7z found in DriverSetup
     ''' directory in repository, that is, one subdirectory for each kernel
     ''' version followed by one subdirectory for each architecture.</param>
-    Protected Shared Sub InstallStorPortDriver(ownerWindow As IntPtr, setupsource As String)
+    Protected Shared Sub InstallStorPortDriver(ownerWindow As IWin32Window, setupsource As String)
 
         '' First, check if device nodes already exist.
         Try
             RemoveDevices(ownerWindow)
 
         Catch ex As Exception
-            Trace.WriteLine($"Error removing existing device nodes. This will be ignored and driver update operation will continue anyway. Exception: {ex.ToString()}")
+            Trace.WriteLine($"Error removing existing device nodes. This will be ignored and driver update operation will continue anyway. Exception: {ex.JoinMessages()}")
 
         End Try
 
         '' Create device node and install driver
         Dim infPath = Path.Combine(setupsource, kernel, "phdskmnt.inf")
-        NativeFileIO.CreateRootPnPDevice(ownerWindow, infPath, "root\phdskmnt")
+        NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, "root\phdskmnt")
 
     End Sub
 
@@ -284,14 +287,14 @@ Public NotInheritable Class DriverSetup
     ''' console Applications, you could call
     ''' NativeFileIO.Win32API.GetConsoleWindow() to get a window handle to the
     ''' console window.</param>
-    Protected Shared Sub RemoveDevices(ownerWindow As IntPtr)
+    Protected Shared Sub RemoveDevices(ownerWindow As IWin32Window)
 
         Dim hwinstances As String() = Nothing
 
         NativeFileIO.GetDeviceInstancesForService("phdskmnt", hwinstances)
 
         For Each hwinstance In hwinstances
-            NativeFileIO.RemovePnPDevice(ownerWindow, hwinstance)
+            NativeFileIO.RemovePnPDevice(ownerWindow.Handle, hwinstance)
         Next
 
     End Sub
@@ -310,7 +313,7 @@ Public NotInheritable Class DriverSetup
     ''' at this path needs to be like in DriverSetup.7z found in DriverSetup
     ''' directory in repository, that is, one subdirectory for each kernel
     ''' version followed by one subdirectory for each architecture.</param>
-    Protected Shared Sub InstallScsiPortDriver(ownerWindow As IntPtr, setupsource As String)
+    Protected Shared Sub InstallScsiPortDriver(ownerWindow As IWin32Window, setupsource As String)
 
         ''
         '' Install null device .inf for control unit
@@ -326,7 +329,7 @@ Public NotInheritable Class DriverSetup
 
         Dim infPath = Path.Combine(".", kernel, "phdskmnt.inf")
 
-        NativeFileIO.RunDLLInstallHinfSection(ownerWindow, infPath, "DefaultInstall")
+        NativeFileIO.RunDLLInstallHinfSection(ownerWindow.Handle, infPath, "DefaultInstall")
 
         Using scm As New ServiceController("phdskmnt")
             While scm.Status <> ServiceControllerStatus.Running
@@ -372,16 +375,20 @@ Public NotInheritable Class DriverSetup
 
     End Sub
 
-    Private Shared Sub CheckCompatibility(ownerWindow As IntPtr)
+    Private Shared Sub CheckCompatibility(ownerWindow As IWin32Window)
 
-        If Environment.Is64BitOperatingSystem AndAlso
-            Not Environment.Is64BitProcess Then
+        Dim native_arch = NativeFileIO.SystemArchitecture
+        Dim process_arch = NativeFileIO.ProcessArchitecture
 
-            Trace.WriteLine("WARNING: Driver setup is starting in a 32 bit process on 64 bit OS. Setup may fail!")
+        If Not ReferenceEquals(native_arch, process_arch) Then
 
-            If ownerWindow <> IntPtr.Zero Then
+            Dim msg = $"WARNING: Driver setup is starting in a {process_arch} process on {native_arch} OS. Setup may fail!"
 
-                MessageBox.Show(NativeWindow.FromHandle(ownerWindow),
+            Trace.WriteLine(msg)
+
+            If ownerWindow IsNot Nothing Then
+
+                MessageBox.Show(ownerWindow,
                                 "This is a 32 bit process running on a 64 bit version of Windows. " &
                                 "There are known problems with installing drivers in this case. If " &
                                 "driver setup fails, please retry from a 64 bit application!",
