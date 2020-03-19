@@ -2104,7 +2104,7 @@ Namespace IO
 
                 Dim devnr = GetStorageDeviceNumber(hDevice)
 
-                If Not devnr.HasValue Then
+                If Not devnr.HasValue OrElse devnr.Value.PartitionNumber > 0 Then
 
                     Throw New InvalidOperationException($"Device '{ntdevice}' is not a physical disk device object")
 
