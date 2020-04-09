@@ -5,3 +5,4 @@
 
 Imports System.Diagnostics.CodeAnalysis
 
+<Assembly: SuppressMessage("Microsoft.Interoperability", "CA1414:MarkBooleanPInvokeArgumentsWithMarshalAs", Scope:="member", Target:="Arsenal.ImageMounter.ServerModule+UnsafeNativeMethods.#SetEvent(System.IntPtr)")>

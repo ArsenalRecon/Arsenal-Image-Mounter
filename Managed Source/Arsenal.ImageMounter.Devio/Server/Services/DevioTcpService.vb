@@ -71,7 +71,7 @@ Namespace Server.Services
         Public Overrides Sub RunService()
 
             Try
-                Trace.WriteLine("Setting up listener at " & ListenEndPoint.ToString())
+                Trace.WriteLine($"Setting up listener at {ListenEndPoint}")
 
                 Dim Listener As New TcpListener(ListenEndPoint)
 
@@ -80,22 +80,22 @@ Namespace Server.Services
                     Listener.Start()
 
                 Catch ex As Exception
-                    Trace.WriteLine($"Listen failed: {ex.ToString()}")
+                    Trace.WriteLine($"Listen failed: {ex}")
                     Exception = New Exception("Listen failed on tcp port", ex)
-                    OnServiceInitFailed()
+                    OnServiceInitFailed(EventArgs.Empty)
                     Return
 
                 End Try
 
                 Trace.WriteLine("Raising service ready event.")
-                OnServiceReady()
+                OnServiceReady(EventArgs.Empty)
 
-                Dim StopServiceThreadHandler As New Action(AddressOf Listener.Stop)
+                Dim StopServiceThreadHandler As New EventHandler(Sub() Listener.Stop())
                 AddHandler StopServiceThread, StopServiceThreadHandler
                 Dim TcpSocket = Listener.AcceptSocket()
                 RemoveHandler StopServiceThread, StopServiceThreadHandler
                 Listener.Stop()
-                Trace.WriteLine("Connection from " & TcpSocket.RemoteEndPoint.ToString())
+                Trace.WriteLine($"Connection from {TcpSocket.RemoteEndPoint}")
 
                 Using _
                     TcpStream As New NetworkStream(TcpSocket, ownsSocket:=True),
@@ -144,7 +144,7 @@ Namespace Server.Services
                                 Return
 
                             Case Else
-                                Trace.WriteLine("Unsupported request code: " & RequestCode.ToString())
+                                Trace.WriteLine($"Unsupported request code: {RequestCode}")
                                 Return
 
                         End Select
@@ -164,11 +164,11 @@ Namespace Server.Services
                 Trace.WriteLine("Client disconnected.")
 
             Catch ex As Exception
-                Trace.WriteLine($"Unhandled exception in service thread: {ex.ToString()}")
+                Trace.WriteLine($"Unhandled exception in service thread: {ex}")
                 OnServiceUnhandledException(New UnhandledExceptionEventArgs(ex, True))
 
             Finally
-                OnServiceShutdown()
+                OnServiceShutdown(EventArgs.Empty)
 
             End Try
 

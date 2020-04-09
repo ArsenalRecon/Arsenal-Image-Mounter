@@ -77,25 +77,25 @@ Namespace Server.Services
         ''' <summary>
         ''' Event raised when service thread is ready to start accepting connection from a client.
         ''' </summary>
-        Public Event ServiceReady As Action
-        Protected Overridable Sub OnServiceReady()
-            RaiseEvent ServiceReady()
+        Public Event ServiceReady As EventHandler
+        Protected Overridable Sub OnServiceReady(e As EventArgs)
+            RaiseEvent ServiceReady(Me, e)
         End Sub
 
         ''' <summary>
         ''' Event raised when service initialization fails.
         ''' </summary>
-        Public Event ServiceInitFailed As Action
-        Protected Overridable Sub OnServiceInitFailed()
-            RaiseEvent ServiceInitFailed()
+        Public Event ServiceInitFailed As EventHandler
+        Protected Overridable Sub OnServiceInitFailed(e As EventArgs)
+            RaiseEvent ServiceInitFailed(Me, e)
         End Sub
 
         ''' <summary>
         ''' Event raised when an Arsenal Image Mounter Disk Device is created by with this instance.
         ''' </summary>
-        Public Event DiskDeviceCreated As Action
-        Protected Overridable Sub OnDiskDeviceCreated()
-            RaiseEvent DiskDeviceCreated()
+        Public Event DiskDeviceCreated As EventHandler
+        Protected Overridable Sub OnDiskDeviceCreated(e As EventArgs)
+            RaiseEvent DiskDeviceCreated(Me, e)
         End Sub
 
         ''' <summary>
@@ -103,17 +103,17 @@ Namespace Server.Services
         ''' disk device object is removed. Note that this event is not raised if device is directly
         ''' removed by some other method.
         ''' </summary>
-        Public Event ServiceStopping As Action
-        Protected Overridable Sub OnServiceStopping()
-            RaiseEvent ServiceStopping()
+        Public Event ServiceStopping As EventHandler
+        Protected Overridable Sub OnServiceStopping(e As EventArgs)
+            RaiseEvent ServiceStopping(Me, e)
         End Sub
 
         ''' <summary>
         ''' Event raised when service thread exits.
         ''' </summary>
-        Public Event ServiceShutdown As Action
-        Protected Overridable Sub OnServiceShutdown()
-            RaiseEvent ServiceShutdown()
+        Public Event ServiceShutdown As EventHandler
+        Protected Overridable Sub OnServiceShutdown(e As EventArgs)
+            RaiseEvent ServiceShutdown(Me, e)
         End Sub
 
         ''' <summary>
@@ -133,9 +133,9 @@ Namespace Server.Services
         ''' Event raised to stop service thread. Service thread handle this event by preparing communication for
         ''' disconnection.
         ''' </summary>
-        Protected Event StopServiceThread As Action
-        Protected Overridable Sub OnStopServiceThread()
-            RaiseEvent StopServiceThread()
+        Protected Event StopServiceThread As EventHandler
+        Protected Overridable Sub OnStopServiceThread(e As EventArgs)
+            RaiseEvent StopServiceThread(Me, e)
         End Sub
 
         ''' <summary>
@@ -182,9 +182,9 @@ Namespace Server.Services
                 ServiceReadyEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset),
                 ServiceInitFailedEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset)
 
-                Dim ServiceReadyHandler As New Action(AddressOf ServiceReadyEvent.Set)
+                Dim ServiceReadyHandler As New EventHandler(Sub() ServiceReadyEvent.Set())
                 AddHandler ServiceReady, ServiceReadyHandler
-                Dim ServiceInitFailedHandler As New Action(AddressOf ServiceInitFailedEvent.Set)
+                Dim ServiceInitFailedHandler As New EventHandler(Sub() ServiceInitFailedEvent.Set())
                 AddHandler ServiceInitFailed, ServiceInitFailedHandler
 
                 _ServiceThread = New Thread(AddressOf ServiceThreadProcedure)
@@ -293,11 +293,11 @@ Namespace Server.Services
                                          False,
                                          _DiskDeviceNumber)
 
-                OnDiskDeviceCreated()
+                OnDiskDeviceCreated(EventArgs.Empty)
 
             Catch ex As Exception
 
-                OnStopServiceThread()
+                OnStopServiceThread(EventArgs.Empty)
 
                 Throw New Exception($"Error when starting service thread or mounting {ProxyObjectName}", ex)
 
@@ -346,7 +346,7 @@ Namespace Server.Services
 
             Trace.WriteLine($"Notifying service stopping for device {_DiskDeviceNumber:X6}...")
 
-            OnServiceStopping()
+            OnServiceStopping(EventArgs.Empty)
 
             Trace.WriteLine($"Removing device {_DiskDeviceNumber:X6}...")
 
@@ -498,7 +498,7 @@ Namespace Server.Services
                         End Try
                     Else
                         Try
-                            OnStopServiceThread()
+                            OnStopServiceThread(EventArgs.Empty)
 
                         Catch
 

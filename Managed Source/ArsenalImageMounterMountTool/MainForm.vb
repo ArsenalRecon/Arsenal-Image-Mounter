@@ -55,7 +55,7 @@ Public Class MainForm
                     loadedVersion = Adapter.GetDriverSubVersion()
 
                 Catch ex As Exception
-                    Trace.WriteLine($"Error checking driver version: {ex.ToString()}")
+                    Trace.WriteLine($"Error checking driver version: {ex}")
 
                 End Try
 
@@ -435,8 +435,8 @@ Public Class MainForm
             Loop
 
         Catch ex As Exception
-            Trace.WriteLine($"Device list view thread caught exception: {ex.ToString()}")
-            LogMessage($"Device list view thread caught exception: {ex.ToString()}")
+            Trace.WriteLine($"Device list view thread caught exception: {ex}")
+            LogMessage($"Device list view thread caught exception: {ex}")
 
             Dim action =
                 Sub()

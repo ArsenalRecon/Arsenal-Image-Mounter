@@ -85,7 +85,7 @@ Namespace Client
 
                 Dispose()
 
-                Throw New Exception("Error initializing DevioShmStream", ex)
+                Throw New Exception("Error initializing stream based shared memory proxy", ex)
 
             End Try
 

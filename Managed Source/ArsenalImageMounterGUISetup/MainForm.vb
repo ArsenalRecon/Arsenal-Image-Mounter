@@ -66,10 +66,10 @@ Public Class MainForm
         My.Settings.Save()
 
         Try
-            tbOSType.Text = DriverSetup.kernel & " (" & If(DriverSetup.hasStorPort, "storport", "scsiport") & ")"
+            tbOSType.Text = $"{DriverSetup.Kernel} ({If(DriverSetup.HasStorPort, "storport", "scsiport")})"
 
         Catch ex As Exception
-            tbOSType.Text = "Exception: " & ex.JoinMessages()
+            tbOSType.Text = $"Exception: {ex.JoinMessages()}"
 
         End Try
 

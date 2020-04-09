@@ -7,7 +7,7 @@ Namespace Extensions
     Public Module ExtensionMethods
 
         <Extension>
-        Public Iterator Function GetMessages(ex As Exception) As IEnumerable(Of String)
+        Public Iterator Function EnumerateMessages(ex As Exception) As IEnumerable(Of String)
 
             While ex IsNot Nothing
                 If TypeOf ex Is TargetInvocationException Then
@@ -15,7 +15,7 @@ Namespace Extensions
                 ElseIf TypeOf ex Is AggregateException Then
 
                     Dim agex = DirectCast(ex, AggregateException)
-                    For Each msg In agex.InnerExceptions.SelectMany(AddressOf GetMessages)
+                    For Each msg In agex.InnerExceptions.SelectMany(AddressOf EnumerateMessages)
                         Yield msg
                     Next
                     Return
@@ -24,7 +24,7 @@ Namespace Extensions
 
                     Dim ldex = DirectCast(ex, ReflectionTypeLoadException)
                     Yield ex.Message
-                    For Each msg In ldex.LoaderExceptions.SelectMany(AddressOf GetMessages)
+                    For Each msg In ldex.LoaderExceptions.SelectMany(AddressOf EnumerateMessages)
                         Yield msg
                     Next
 
@@ -49,7 +49,7 @@ Namespace Extensions
         <Extension>
         Public Function JoinMessages(ex As Exception, separator As String) As String
 
-            Return String.Join(separator, ex?.GetMessages())
+            Return String.Join(separator, ex?.EnumerateMessages())
 
         End Function
 

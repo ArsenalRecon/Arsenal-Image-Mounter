@@ -10,6 +10,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Diagnostics.CodeAnalysis
+
 Namespace Server.GenericProviders
 
     ''' <summary>
@@ -27,6 +29,7 @@ Namespace Server.GenericProviders
     ''' and writing data from unmanaged memory provided a pointer to unmanaged block of
     ''' memory.</para>
     ''' </summary>
+    <SuppressMessage("Microsoft.Interoperability", "CA1402:AvoidOverloadsInComVisibleInterfaces")>
     Public Interface IDevioProvider
         Inherits IDisposable
 

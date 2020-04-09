@@ -132,6 +132,7 @@ Namespace Server.SpecializedProviders
         End Sub
 
         <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Unicode, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")>
         Private Shared Function libewf_open_wide(<[In](), MarshalAs(UnmanagedType.LPArray)> filenames As String(), numberOfFiles As Integer, AccessFlags As Byte) As SafeLibEwfFileHandle
         End Function
 
@@ -144,6 +145,7 @@ Namespace Server.SpecializedProviders
         End Function
 
         <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")>
         Private Shared Function libewf_get_media_size(handle As SafeLibEwfFileHandle, <Out> ByRef media_size As Long) As Integer
         End Function
 
@@ -162,6 +164,7 @@ Namespace Server.SpecializedProviders
         End Function
 
         <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")>
         Private Shared Function libewf_read_random(handle As SafeLibEwfFileHandle, buffer As IntPtr, buffer_size As IntPtr, offset As Long) As IntPtr
         End Function
 
@@ -170,6 +173,7 @@ Namespace Server.SpecializedProviders
         End Function
 
         <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")>
         Private Shared Function libewf_write_random(handle As SafeLibEwfFileHandle, buffer As IntPtr, buffer_size As IntPtr, offset As Long) As IntPtr
         End Function
 
@@ -178,6 +182,7 @@ Namespace Server.SpecializedProviders
         End Function
 
         <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")>
         Private Shared Function libewf_write_finalize(handle As SafeLibEwfFileHandle) As IntPtr
         End Function
 
@@ -186,6 +191,7 @@ Namespace Server.SpecializedProviders
         End Function
 
         <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")>
         Private Shared Function libewf_close(handle As IntPtr) As Integer
         End Function
 
@@ -202,6 +208,7 @@ Namespace Server.SpecializedProviders
         End Function
 
         <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")>
         Private Shared Function libewf_get_bytes_per_sector(safeLibEwfHandle As SafeLibEwfFileHandle, <Out> ByRef SectorSize As UInteger) As Integer
         End Function
 

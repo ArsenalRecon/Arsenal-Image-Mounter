@@ -80,7 +80,7 @@ Public NotInheritable Class API
     ''' </summary>
     Public Shared ReadOnly Property AdapterDevicePresent As Boolean
         Get
-            Dim devInsts = GetAdapterDeviceInstanceNames()
+            Dim devInsts = EnumerateAdapterDeviceInstanceNames()
             If devInsts Is Nothing Then
                 Return False
             Else
@@ -95,7 +95,7 @@ Public NotInheritable Class API
     ''' </summary>
     Public Shared Iterator Function EnumerateAdapterDeviceInstances() As IEnumerable(Of UInt32)
 
-        Dim devinstances = GetAdapterDeviceInstanceNames()
+        Dim devinstances = EnumerateAdapterDeviceInstanceNames()
 
         If devinstances Is Nothing Then
             Return
@@ -119,7 +119,7 @@ Public NotInheritable Class API
     ''' Builds a list of setup device ids for active Arsenal Image Mounter
     ''' objects. Device ids are used in calls to plug-and-play setup functions.
     ''' </summary>
-    Public Shared Function GetAdapterDeviceInstanceNames() As IEnumerable(Of String)
+    Public Shared Function EnumerateAdapterDeviceInstanceNames() As IEnumerable(Of String)
 
         Dim devinstances As IEnumerable(Of String) = Nothing
 
@@ -344,15 +344,15 @@ Public NotInheritable Class API
 
             Dim statistics As New WriteFilterStatistics
 
-            If Not GetWriteOverlayStatus(dev_path, statistics) Then
-                last_error = Marshal.GetLastWin32Error()
-                If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
-                    Trace.WriteLine("Filter driver not yet loaded, retrying...")
-                    Thread.Sleep(200)
-                    Continue For
-                Else
-                    Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
-                End If
+            last_error = GetWriteOverlayStatus(dev_path, statistics)
+
+
+            If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
+                Trace.WriteLine("Filter driver not yet loaded, retrying...")
+                Thread.Sleep(200)
+                Continue For
+            ElseIf last_error <> NativeFileIO.NativeConstants.NO_ERROR Then
+                Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
             End If
 
             If statistics.Initialized = 1 Then
@@ -414,15 +414,14 @@ Public NotInheritable Class API
 
                 Dim statistics As New WriteFilterStatistics
 
-                If Not GetWriteOverlayStatus(dev.path, statistics) Then
-                    last_error = Marshal.GetLastWin32Error()
-                    If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
-                        Trace.WriteLine("Filter driver not loaded, retrying...")
-                        Thread.Sleep(200)
-                        Continue For
-                    Else
-                        Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
-                    End If
+                last_error = GetWriteOverlayStatus(dev.path, statistics)
+
+                If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
+                    Trace.WriteLine("Filter driver not loaded, retrying...")
+                    Thread.Sleep(200)
+                    Continue For
+                ElseIf last_error <> NativeFileIO.NativeConstants.NO_ERROR Then
+                    Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
                 End If
 
                 If statistics.Initialized = 1 Then
@@ -453,7 +452,7 @@ Public NotInheritable Class API
     ''' Retrieves status of write overlay for mounted device.
     ''' </summary>
     ''' <param name="NtDevicePath">Path to device.</param>
-    Public Shared Function GetWriteOverlayStatus(NtDevicePath As String, <Out> ByRef Statistics As WriteFilterStatistics) As Boolean
+    Public Shared Function GetWriteOverlayStatus(NtDevicePath As String, <Out> ByRef Statistics As WriteFilterStatistics) As Integer
 
         Using hDevice = NativeFileIO.NtCreateFile(NtDevicePath, 0, 0, FileShare.ReadWrite, NativeFileIO.NtCreateDisposition.Open, NativeFileIO.NtCreateOptions.NonDirectoryFile, 0, Nothing, Nothing)
 
@@ -467,13 +466,17 @@ Public NotInheritable Class API
     ''' Retrieves status of write overlay for mounted device.
     ''' </summary>
     ''' <param name="hDevice">Handle to device.</param>
-    Public Shared Function GetWriteOverlayStatus(hDevice As SafeFileHandle, <Out> ByRef Statistics As WriteFilterStatistics) As Boolean
+    Public Shared Function GetWriteOverlayStatus(hDevice As SafeFileHandle, <Out> ByRef Statistics As WriteFilterStatistics) As Integer
 
         Statistics.Initialize()
 
         Static WriteFilterStatisticsSize As UInteger = CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics)))
 
-        Return UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, WriteFilterStatisticsSize, Nothing, Nothing)
+        If UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, WriteFilterStatisticsSize, Nothing, Nothing) Then
+            Return NativeFileIO.NativeConstants.NO_ERROR
+        Else
+            Return Marshal.GetLastWin32Error()
+        End If
 
     End Function
 

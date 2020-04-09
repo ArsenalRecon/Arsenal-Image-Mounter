@@ -104,17 +104,17 @@ Namespace Server.Services
         ''' Dummy implementation that just raises ServiceReady event.
         ''' </summary>
         Public Overrides Sub RunService()
-            OnServiceReady()
+            OnServiceReady(EventArgs.Empty)
         End Sub
 
         Public Overrides Sub DismountAndStopServiceThread()
             MyBase.DismountAndStopServiceThread()
-            OnServiceShutdown()
+            OnServiceShutdown(EventArgs.Empty)
         End Sub
 
         Public Overrides Function DismountAndStopServiceThread(timeout As TimeSpan) As Boolean
             Dim rc = MyBase.DismountAndStopServiceThread(timeout)
-            OnServiceShutdown()
+            OnServiceShutdown(EventArgs.Empty)
             Return rc
         End Function
 

@@ -67,6 +67,7 @@ Public Class ScsiAdapter
 
     End Class
 
+    <SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times")>
     Private Shared Function OpenAdapterHandle(ntdevice As String, devInst As UInteger) As SafeFileHandle
 
         Dim handle As SafeFileHandle
@@ -105,7 +106,7 @@ Public Class ScsiAdapter
                 '' the SCSI adapter and it fails IOCTL_SCSI_MINIPORT requests, just
                 '' issue a bus re-enumeration to find the dummy IOCTL device, which
                 '' will make SCSIPORT let control requests through again.
-                If Not DriverSetup.hasStorPort Then
+                If Not DriverSetup.HasStorPort Then
                     Trace.WriteLine("PhDskMnt::OpenAdapterHandle: Lost contact with miniport, rescanning...")
                     Try
                         API.RescanScsiAdapter(devInst)
@@ -113,7 +114,7 @@ Public Class ScsiAdapter
                         Continue For
 
                     Catch ex2 As Exception
-                        Trace.WriteLine($"PhDskMnt::RescanScsiAdapter: {ex2.ToString()}")
+                        Trace.WriteLine($"PhDskMnt::RescanScsiAdapter: {ex2}")
 
                     End Try
                 End If
@@ -143,7 +144,7 @@ Public Class ScsiAdapter
     ''' compatible adapter.</returns>
     Private Shared Function OpenAdapter() As Tuple(Of String, UInteger, SafeFileHandle)
 
-        Dim devinstNames = API.GetAdapterDeviceInstanceNames()
+        Dim devinstNames = API.EnumerateAdapterDeviceInstanceNames()
 
         If devinstNames Is Nothing Then
 
@@ -220,17 +221,13 @@ Public Class ScsiAdapter
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
         End If
 
-        Using Buffer = PinnedBuffer.Create(Response)
+        Dim NumberOfDevices = BitConverter.ToInt32(Response, 0)
 
-            Dim NumberOfDevices = Buffer.Read(Of Integer)(0)
+        Dim array(0 To NumberOfDevices - 1) As UInteger
 
-            Dim array(0 To NumberOfDevices - 1) As UInteger
+        Buffer.BlockCopy(Response, 4, array, 0, NumberOfDevices * 4)
 
-            Buffer.ReadArray(4, array, 0, NumberOfDevices)
-
-            Return array
-
-        End Using
+        Return array
 
     End Function
 

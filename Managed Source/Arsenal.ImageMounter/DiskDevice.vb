@@ -509,7 +509,7 @@ Public Class DiskDevice
         Get
             Dim statistics As WriteFilterStatistics = Nothing
 
-            If Not API.GetWriteOverlayStatus(SafeFileHandle, statistics) Then
+            If API.GetWriteOverlayStatus(SafeFileHandle, statistics) <> NativeFileIO.NativeConstants.NO_ERROR Then
                 Return Nothing
             End If
 

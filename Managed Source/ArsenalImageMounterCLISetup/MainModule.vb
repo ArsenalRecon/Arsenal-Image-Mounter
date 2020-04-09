@@ -47,7 +47,7 @@ Module MainModule
 
         Catch ex As Exception
             If TypeOf ex Is Win32Exception Then
-                Trace.WriteLine("Win32 error: " & DirectCast(ex, Win32Exception).NativeErrorCode)
+                Trace.WriteLine($"Win32 error: {DirectCast(ex, Win32Exception).NativeErrorCode}")
             End If
             Trace.WriteLine(ex.ToString())
             Return -1
@@ -58,8 +58,8 @@ Module MainModule
 
     Function SetupOperation(opMode As OpMode) As Integer
 
-        Trace.WriteLine("Kernel type: " & kernel)
-        Trace.WriteLine("Kernel supports StorPort: " & hasStorPort)
+        Trace.WriteLine($"Kernel type: {Kernel}")
+        Trace.WriteLine($"Kernel supports StorPort: {HasStorPort}")
 
         Select Case opMode
 

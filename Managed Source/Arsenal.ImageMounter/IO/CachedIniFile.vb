@@ -92,9 +92,7 @@ Namespace IO
         End Function
 
         Public Sub WriteTo(Stream As Stream)
-#Disable Warning CA2000 ' Dispose objects before losing scope
             WriteTo(New StreamWriter(Stream, _Encoding) With {.AutoFlush = True})
-#Enable Warning CA2000 ' Dispose objects before losing scope
         End Sub
 
         Public Sub WriteTo(Writer As TextWriter)
@@ -238,11 +236,9 @@ Namespace IO
         ''' <param name="Encoding">Text encoding for INI stream</param>
         Public Sub Load(Stream As Stream, Encoding As Encoding)
             Try
-                Using sr As New StreamReader(Stream, Encoding, False, 1048576)
+                Dim sr As New StreamReader(Stream, Encoding, False, 1048576)
 
-                    Load(sr)
-
-                End Using
+                Load(sr)
 
                 _Encoding = Encoding
 

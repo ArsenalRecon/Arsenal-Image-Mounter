@@ -5,3 +5,5 @@
 
 Imports System.Diagnostics.CodeAnalysis
 
+<Assembly: SuppressMessage("Design", "CA1008:Enums should have zero value")>
+<Assembly: SuppressMessage("Microsoft.Interoperability", "CA1414:MarkBooleanPInvokeArgumentsWithMarshalAs")>

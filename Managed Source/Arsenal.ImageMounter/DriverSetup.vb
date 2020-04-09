@@ -4,6 +4,7 @@ Imports Arsenal.ImageMounter.IO
 Imports System.Windows.Forms
 Imports Ionic.Crc
 Imports Arsenal.ImageMounter.Extensions
+Imports System.Diagnostics.CodeAnalysis
 
 ''' <summary>
 ''' Routines for installing or uninstalling Arsenal Image Mounter kernel level
@@ -14,40 +15,43 @@ Public NotInheritable Class DriverSetup
     Private Sub New()
     End Sub
 
-    Public Shared ReadOnly kernel As String
-    Public Shared ReadOnly hasStorPort As Boolean
+    Public Shared ReadOnly Property Kernel As String
+
+    Public Shared ReadOnly Property HasStorPort As Boolean
+
+    Public Shared ReadOnly Property OSVersion As Version
 
     Shared Sub New()
 
-        Dim os_version = NativeFileIO.GetOSVersion().Version
+        _OSVersion = NativeFileIO.GetOSVersion().Version
 
-        If os_version >= New Version(10, 0) Then
-            kernel = "Win10"
-            hasStorPort = True
-        ElseIf os_version >= New Version(6, 3) Then
-            kernel = "Win8.1"
-            hasStorPort = True
-        ElseIf os_version >= New Version(6, 2) Then
-            kernel = "Win8"
-            hasStorPort = True
-        ElseIf os_version >= New Version(6, 1) Then
-            kernel = "Win7"
-            hasStorPort = True
-        ElseIf os_version >= New Version(6, 0) Then
-            kernel = "WinLH"
-            hasStorPort = True
-        ElseIf os_version >= New Version(5, 2) Then
-            kernel = "WinNET"
-            hasStorPort = True
-        ElseIf os_version >= New Version(5, 1) Then
-            kernel = "WinXP"
-            hasStorPort = False
-        ElseIf os_version >= New Version(5, 0) Then
-            kernel = "Win2K"
-            hasStorPort = False
+        If _OSVersion >= New Version(10, 0) Then
+            _Kernel = "Win10"
+            _HasStorPort = True
+        ElseIf _OSVersion >= New Version(6, 3) Then
+            _Kernel = "Win8.1"
+            _HasStorPort = True
+        ElseIf _OSVersion >= New Version(6, 2) Then
+            _Kernel = "Win8"
+            _HasStorPort = True
+        ElseIf _OSVersion >= New Version(6, 1) Then
+            _Kernel = "Win7"
+            _HasStorPort = True
+        ElseIf _OSVersion >= New Version(6, 0) Then
+            _Kernel = "WinLH"
+            _HasStorPort = True
+        ElseIf _OSVersion >= New Version(5, 2) Then
+            _Kernel = "WinNET"
+            _HasStorPort = True
+        ElseIf _OSVersion >= New Version(5, 1) Then
+            _Kernel = "WinXP"
+            _HasStorPort = False
+        ElseIf _OSVersion >= New Version(5, 0) Then
+            _Kernel = "Win2K"
+            _HasStorPort = False
         Else
 #Disable Warning CA1065 ' Do not raise exceptions in unexpected locations
-            Throw New NotSupportedException($"Unsupported Windows version ('{os_version}')")
+            Throw New NotSupportedException($"Unsupported Windows version ('{_OSVersion}')")
 #Enable Warning CA1065 ' Do not raise exceptions in unexpected locations
         End If
 
@@ -57,10 +61,11 @@ Public NotInheritable Class DriverSetup
     ''' Returns version of driver located inside a setup zip archive.
     ''' </summary>
     ''' <param name="zipFile">ZipFile object with setup files</param>
+    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="phdskmnt")>
     Public Shared Function GetArchiveDriverVersion(zipFile As ZipFile) As Version
 
-        Dim infpath1 = $"{kernel}\x86\phdskmnt.sys"
-        Dim infpath2 = $"{kernel}/x86/phdskmnt.sys"
+        Dim infpath1 = $"{_Kernel}\x86\phdskmnt.sys"
+        Dim infpath2 = $"{_Kernel}/x86/phdskmnt.sys"
 
         Dim entry =
             Aggregate e In zipFile
@@ -72,7 +77,7 @@ Public NotInheritable Class DriverSetup
 
         If entry Is Nothing Then
 
-            Throw New KeyNotFoundException($"Driver file phdskmnt.sys for {kernel} missing in zip archive.")
+            Throw New KeyNotFoundException($"Driver file phdskmnt.sys for {_Kernel} missing in zip archive.")
 
         End If
 
@@ -90,7 +95,7 @@ Public NotInheritable Class DriverSetup
     ''' <param name="setupRoot">Root directory of setup files.</param>
     Public Shared Function GetSetupFileDriverVersion(setupRoot As String) As Version
 
-        Dim versionFile = Path.Combine(setupRoot, kernel, "phdskmnt.inf")
+        Dim versionFile = Path.Combine(setupRoot, _Kernel, "phdskmnt.inf")
 
         Return GetSetupFileDriverVersion(New CachedIniFile(versionFile, Encoding.ASCII))
 
@@ -137,7 +142,7 @@ Public NotInheritable Class DriverSetup
 
         Environment.CurrentDirectory = origdir
 
-        If hasStorPort Then
+        If _HasStorPort Then
 
             Dim directoryRemover =
                 Sub()
@@ -222,7 +227,7 @@ Public NotInheritable Class DriverSetup
 
         CheckCompatibility(ownerWindow)
 
-        If hasStorPort Then
+        If _HasStorPort Then
 
             InstallStorPortDriver(ownerWindow, setupsource)
 
@@ -273,7 +278,7 @@ Public NotInheritable Class DriverSetup
         End Try
 
         '' Create device node and install driver
-        Dim infPath = Path.Combine(setupsource, kernel, "phdskmnt.inf")
+        Dim infPath = Path.Combine(setupsource, _Kernel, "phdskmnt.inf")
         NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, "root\phdskmnt")
 
     End Sub
@@ -327,7 +332,7 @@ Public NotInheritable Class DriverSetup
 
         NativeFileIO.UnsafeNativeMethods.SetupSetNonInteractiveMode(False)
 
-        Dim infPath = Path.Combine(".", kernel, "phdskmnt.inf")
+        Dim infPath = Path.Combine(".", _Kernel, "phdskmnt.inf")
 
         NativeFileIO.RunDLLInstallHinfSection(ownerWindow.Handle, infPath, "DefaultInstall")
 
@@ -347,6 +352,7 @@ Public NotInheritable Class DriverSetup
     ''' <summary>
     ''' Removes Arsenal Image Mounter driver components.
     ''' </summary>
+    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly")>
     Protected Shared Sub RemoveDriver()
 
         Using scm = NativeFileIO.UnsafeNativeMethods.OpenSCManager(Nothing, Nothing, NativeFileIO.NativeConstants.SC_MANAGER_ALL_ACCESS)

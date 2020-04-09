@@ -238,12 +238,13 @@ Namespace IO
 
         End Sub
 
+        <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly")>
         Private Shared Function MakeTotalByteSize(obj() As T, arrayOffset As Integer, arrayItems As Integer) As Integer
 
             If arrayOffset >= obj.Length OrElse
                 arrayOffset + arrayItems > obj.Length Then
 
-                Throw New IndexOutOfRangeException("arrayOffset and arrayItems must resolve to positions within the array")
+                Throw New IndexOutOfRangeException($"{NameOf(arrayOffset)} and {NameOf(arrayItems)} must resolve to positions within the array")
 
             ElseIf arrayOffset + arrayItems < obj.Length Then
 

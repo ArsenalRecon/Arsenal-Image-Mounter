@@ -163,8 +163,29 @@ Namespace IO
 
         Public NotInheritable Class UnsafeNativeMethods
 
+            Friend Declare Auto Function DuplicateHandle Lib "kernel32.dll" (
+                hSourceProcessHandle As IntPtr,
+                hSourceHandle As IntPtr,
+                hTargetProcessHandle As IntPtr,
+                <Out> ByRef lpTargetHandle As SafeWaitHandle,
+                dwDesiredAccess As UInteger,
+                bInheritHandle As Boolean,
+                dwOptions As UInteger) As Boolean
+
+            Friend Declare Auto Function SetEvent Lib "kernel32.dll" (
+                hEvent As SafeWaitHandle) As Boolean
+
+            Friend Declare Auto Function SetHandleInformation Lib "kernel32.dll" (
+                h As SafeHandle,
+                mask As UInteger,
+                flags As UInteger) As Boolean
+
+            Friend Declare Auto Function GetHandleInformation Lib "kernel32.dll" (
+                h As SafeHandle,
+                <Out> ByRef flags As UInteger) As Boolean
+
             Friend Declare Unicode Function NtCreateFile Lib "ntdll.dll" (
-                <Out> ByRef hFile As IntPtr,
+                <Out> ByRef hFile As SafeFileHandle,
                 AccessMask As UInt32,
                 <[In]> ByRef ObjectAttributes As ObjectAttributes,
                 <Out> ByRef IoStatusBlock As IoStatusBlock,
@@ -993,7 +1014,7 @@ Namespace IO
             ''' Signature to set in SRB_IO_CONTROL header. This identifies that sender and receiver of
             ''' IOCTL_SCSI_MINIPORT requests talk to intended components only.
             ''' </summary>
-            Public Shared ReadOnly SrbIoCtlSignature As Byte() = Encoding.ASCII.GetBytes("PhDskMnt".PadRight(8, New Char))
+            Private Shared ReadOnly SrbIoCtlSignature As Byte() = Encoding.ASCII.GetBytes("PhDskMnt".PadRight(8, New Char))
 
             ''' <summary>
             ''' SRB_IO_CONTROL header, as defined in NTDDDISK.
@@ -1170,7 +1191,7 @@ Namespace IO
             If privileges_enabled IsNot Nothing Then
                 Trace.WriteLine($"Enabled privileges: {String.Join(", ", privileges_enabled)}")
             Else
-                Trace.WriteLine($"Error enabling privileges: {Marshal.GetLastWin32Error()}")
+                Trace.WriteLine("Error enabling privileges.")
             End If
 
         End Sub
@@ -1207,15 +1228,21 @@ Namespace IO
 
                 End If
 
-                Using buffer As New HGlobalBuffer(New IntPtr(intsize + privileges.LongLength * structsize))
+                Using buffer As New PinnedBuffer(Of Byte)(CInt(intsize + privileges.LongLength * structsize))
 
                     buffer.Write(0, luid_and_attribs_list.Count)
 
                     buffer.WriteArray(CULng(intsize), luid_and_attribs_list.Values.ToArray(), 0, luid_and_attribs_list.Count)
 
-                    Win32Try(UnsafeNativeMethods.AdjustTokenPrivileges(token, False, buffer, CInt(buffer.ByteLength), buffer, Nothing))
+                    Dim rc = UnsafeNativeMethods.AdjustTokenPrivileges(token, False, buffer, CInt(buffer.ByteLength), buffer, Nothing)
 
-                    If Marshal.GetLastWin32Error() = NativeConstants.ERROR_NOT_ALL_ASSIGNED Then
+                    Dim err = Marshal.GetLastWin32Error()
+
+                    If Not rc Then
+                        Throw New Win32Exception
+                    End If
+
+                    If err = NativeConstants.ERROR_NOT_ALL_ASSIGNED Then
                         Dim count = buffer.Read(Of Integer)(0)
                         Dim enabled_luids(0 To count - 1) As LUID_AND_ATTRIBUTES
                         buffer.ReadArray(CULng(intsize), enabled_luids, 0, count)
@@ -1235,6 +1262,47 @@ Namespace IO
             End Using
 
         End Function
+
+        Private NotInheritable Class NativeWaitHandle
+            Inherits WaitHandle
+
+            Public Sub New(handle As SafeWaitHandle)
+                SafeWaitHandle = handle
+            End Sub
+
+        End Class
+
+        Public Shared Function CreateWaitHandle(Handle As IntPtr, inheritable As Boolean) As WaitHandle
+
+            Dim new_handle As SafeWaitHandle = Nothing
+
+            Dim current_process = UnsafeNativeMethods.GetCurrentProcess()
+
+            If Not UnsafeNativeMethods.DuplicateHandle(current_process, Handle, current_process, new_handle, 0, inheritable, &H2) Then
+                Throw New Win32Exception
+            End If
+
+            Return New NativeWaitHandle(new_handle)
+
+        End Function
+
+        Public Shared Sub SetEvent(handle As SafeWaitHandle)
+
+            Win32Try(UnsafeNativeMethods.SetEvent(handle))
+
+        End Sub
+
+        Public Shared Sub SetInheritable(handle As SafeHandle, inheritable As Boolean)
+
+            Win32Try(UnsafeNativeMethods.SetHandleInformation(handle, 1UI, If(inheritable, 1UI, 0UI)))
+
+        End Sub
+
+        Public Shared Sub SetProtectFromClose(handle As SafeHandle, protect_from_close As Boolean)
+
+            Win32Try(UnsafeNativeMethods.SetHandleInformation(handle, 2UI, If(protect_from_close, 2UI, 0UI)))
+
+        End Sub
 
         Public Shared Function GenRandomInt32() As Integer
 
@@ -1651,6 +1719,7 @@ Namespace IO
         ''' <param name="RootDirectory">Root directory to start path parsing from, or null for rooted path.</param>
         ''' <param name="WasCreated">Return information about whether a file was created, existing file opened etc.</param>
         ''' <returns>NTSTATUS value indicating result of the operation.</returns>
+        <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Public Shared Function NtCreateFile(FileName As String,
                                             ObjectAttributes As NtObjectAttributes,
                                             DesiredAccess As FileAccess,
@@ -1667,7 +1736,7 @@ Namespace IO
 
             Dim native_desired_access = ConvertManagedFileAccess(DesiredAccess) Or NativeConstants.SYNCHRONIZE
 
-            Dim handle_value = IntPtr.Zero
+            Dim handle_value As SafeFileHandle = Nothing
 
             Using pinned_name_string As New PinnedString(FileName), unicode_string_name = PinnedBuffer.Serialize(pinned_name_string.UnicodeString)
 
@@ -1695,7 +1764,7 @@ Namespace IO
 
             End Using
 
-            Return New SafeFileHandle(handle_value, ownsHandle:=True)
+            Return handle_value
 
         End Function
 
@@ -2643,6 +2712,7 @@ Namespace IO
 
         End Class
 
+        <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Public Shared Function GetDriveLayoutEx(disk As SafeFileHandle) As DriveLayoutInformation
 
             Static partition_struct_size As Integer = Marshal.SizeOf(GetType(PARTITION_INFORMATION_EX))
@@ -2655,7 +2725,7 @@ Namespace IO
                     Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_GPT)) +
                     max_partitions * partition_struct_size
 
-                Using buffer As New HGlobalBuffer(size_needed)
+                Using buffer As New PinnedBuffer(Of Byte)(size_needed)
 
                     If Not UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_DRIVE_LAYOUT_EX,
                                                   IntPtr.Zero, 0, buffer, CUInt(buffer.ByteLength),
@@ -2700,6 +2770,7 @@ Namespace IO
 
         End Function
 
+        <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Public Shared Sub SetDriveLayoutEx(disk As SafeFileHandle, layout As DriveLayoutInformation)
 
             Static partition_struct_size As Integer = Marshal.SizeOf(GetType(PARTITION_INFORMATION_EX))
@@ -2718,7 +2789,7 @@ Namespace IO
 
             Dim pos = 0
 
-            Using buffer As New HGlobalBuffer(size_needed)
+            Using buffer As New PinnedBuffer(Of Byte)(size_needed)
 
                 buffer.Write(CULng(pos), layout.DriveLayoutInformation)
 
@@ -2759,7 +2830,7 @@ Namespace IO
 
         Public Shared Sub InitializeDisk(disk As SafeFileHandle, PartitionStyle As PARTITION_STYLE)
 
-            Using buffer As New HGlobalBuffer(Marshal.SizeOf(GetType(CREATE_DISK_GPT)))
+            Using buffer As New PinnedBuffer(Of Byte)(Marshal.SizeOf(GetType(CREATE_DISK_GPT)))
 
                 Select Case PartitionStyle
 
@@ -2977,7 +3048,7 @@ Namespace IO
                                                 Nothing)
 
                     If Not rc Then
-                        Trace.WriteLine($"IOCTL_SCSI_GET_ADDRESS failed for device {drv}: Error 0x{Marshal.GetLastWin32Error().ToString("X")}")
+                        Trace.WriteLine($"IOCTL_SCSI_GET_ADDRESS failed for device {drv}: Error 0x{Marshal.GetLastWin32Error():X}")
                         Return Nothing
                     End If
 
@@ -2993,7 +3064,7 @@ Namespace IO
                                                 Nothing)
 
                     If Not rc Then
-                        Trace.WriteLine($"IOCTL_DISK_GET_LENGTH_INFO failed for device {drv}: Error 0x{Marshal.GetLastWin32Error().ToString("X")}")
+                        Trace.WriteLine($"IOCTL_DISK_GET_LENGTH_INFO failed for device {drv}: Error 0x{Marshal.GetLastWin32Error():X}")
                         Return Nothing
                     End If
 
@@ -3614,6 +3685,8 @@ Namespace IO
 
         End Function
 
+        <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="SetupDiEnumDeviceInfo")>
+        <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="SetupDiCreateDeviceInfoList")>
         Public Shared Function RemovePnPDevice(OwnerWindow As IntPtr, hwid As String) As Integer
 
             Trace.WriteLine($"RemovePnPDevice: hwid='{hwid}'")
@@ -3905,7 +3978,7 @@ Namespace IO
 
                             End If
 
-                            Trace.WriteLine($"Found {diskdevice} with SCSI address {Address.ToString()}")
+                            Trace.WriteLine($"Found {diskdevice} with SCSI address {Address}")
 
                             Return New KeyValuePair(Of String, SafeFileHandle)(diskdevice, devicehandle)
 
@@ -3931,7 +4004,7 @@ Namespace IO
                         Into FirstOrDefault(seldevice.Key IsNot Nothing)
 
             If dev.Key Is Nothing Then
-                Throw New DriveNotFoundException($"No physical drive found with SCSI address: {ScsiAddress.ToString()}")
+                Throw New DriveNotFoundException($"No physical drive found with SCSI address: {ScsiAddress}")
             End If
 
             Return dev
@@ -4125,10 +4198,12 @@ Namespace IO
             End Sub
         End Structure
 
+        <SuppressMessage("Design", "CA1008:Enums should have zero value", Justification:="<Pending>")>
         Public Enum CmClassRegistryProperty As UInt32
             CM_CRP_UPPERFILTERS = &H12
         End Enum
 
+        <SuppressMessage("Design", "CA1008:Enums should have zero value", Justification:="<Pending>")>
         Public Enum CmDevNodeRegistryProperty As UInt32
             CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME = &HF
             CM_DRP_UPPERFILTERS = &H12
@@ -4157,7 +4232,7 @@ Namespace IO
             Public Property Attributes As Integer
 
             Public Overrides Function ToString() As String
-                Return $"LUID = 0x{LUID.ToString("X")}, Attributes = 0x{Attributes.ToString("X")}"
+                Return $"LUID = 0x{LUID:X}, Attributes = 0x{Attributes:X}"
             End Function
         End Structure
 
@@ -4227,6 +4302,7 @@ Namespace IO
             ObjectHandleInformation '' 4 Y Y 
         End Enum
 
+        <SuppressMessage("Design", "CA1008:Enums should have zero value", Justification:="<Pending>")>
         Public Enum ObType As Byte
             OB_TYPE_TYPE = 1
             OB_TYPE_DIRECTORY = 2
@@ -4361,6 +4437,7 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a Service Control Management object handle that is closed by calling CloseServiceHandle() Win32 API.
         ''' </summary>
+        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
         <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeServiceHandle
             Inherits SafeHandleZeroOrMinusOneIsInvalid
@@ -4401,6 +4478,7 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a FindVolume handle that is closed by calling FindVolumeClose() Win32 API.
         ''' </summary>
+        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
         <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeFindVolumeHandle
             Inherits SafeHandleMinusOneIsInvalid
@@ -4441,6 +4519,7 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
         ''' </summary>
+        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
         <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeFindVolumeMountPointHandle
             Inherits SafeHandleMinusOneIsInvalid
@@ -4481,6 +4560,7 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
         ''' </summary>
+        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
         <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeInfHandle
             Inherits SafeHandleMinusOneIsInvalid
@@ -4522,6 +4602,7 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
         ''' </summary>
+        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
         <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeDeviceInfoSetHandle
             Inherits SafeHandleMinusOneIsInvalid
@@ -4559,6 +4640,7 @@ Namespace IO
             End Function
         End Class
 
+        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
         Public Class HGlobalBuffer
             Inherits SafeBuffer
 
@@ -4583,11 +4665,17 @@ Namespace IO
             End Sub
 
             Public Sub Resize(newSize As Integer)
+                If handle <> IntPtr.Zero Then
+                    Marshal.FreeHGlobal(handle)
+                End If
                 handle = Marshal.AllocHGlobal(newSize)
                 MyBase.Initialize(CULng(newSize))
             End Sub
 
             Public Sub Resize(newSize As IntPtr)
+                If handle <> IntPtr.Zero Then
+                    Marshal.FreeHGlobal(handle)
+                End If
                 handle = Marshal.AllocHGlobal(newSize)
                 MyBase.Initialize(CULng(newSize))
             End Sub

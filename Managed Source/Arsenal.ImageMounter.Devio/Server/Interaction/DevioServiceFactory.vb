@@ -584,7 +584,8 @@ Namespace Server.Interaction
                                   "Error")
                 Return Nothing
             End If
-            Trace.WriteLine($"Image type class: {Disk.GetType().ToString()}")
+
+            Trace.WriteLine($"Image type class: {Disk.DiskTypeInfo?.Name} ({Disk.DiskTypeInfo?.Variant})")
 
             Dim DisposableObjects As New List(Of IDisposable) From {
                 Disk
@@ -593,7 +594,7 @@ Namespace Server.Interaction
             Try
 
                 If Disk.IsPartitioned Then
-                    Trace.WriteLine($"Partition table class: {Disk.Partitions.GetType().ToString()}")
+                    Trace.WriteLine($"Partition table class: {Disk.Partitions.GetType()}")
                 End If
 
                 Trace.WriteLine($"Image virtual size is {Disk.Capacity} bytes")
@@ -609,6 +610,7 @@ Namespace Server.Interaction
                 End If
 
                 If DiskAccess = VirtualDiskAccess.ReadWriteOverlay Then
+
                     Dim DifferencingPath =
                         Path.Combine(Path.GetDirectoryName(Imagefile),
                                      $"{Path.GetFileNameWithoutExtension(Imagefile)}_aimdiff{Path.GetExtension(Imagefile)}")

@@ -60,11 +60,11 @@ Namespace Server.SpecializedProviders
         End Function
 
         Public Sub New(FirstImagefile As String, DiskAccess As FileAccess)
-            Me.New(ProviderSupport.GetMultiSegmentFiles(FirstImagefile), DiskAccess)
+            Me.New(GetMultiSegmentFiles(FirstImagefile), DiskAccess)
         End Sub
 
         Public Sub New(FirstImagefile As String, DiskAccess As FileAccess, ShareMode As FileShare)
-            Me.New(ProviderSupport.GetMultiSegmentFiles(FirstImagefile), DiskAccess, ShareMode)
+            Me.New(GetMultiSegmentFiles(FirstImagefile), DiskAccess, ShareMode)
         End Sub
 
     End Class

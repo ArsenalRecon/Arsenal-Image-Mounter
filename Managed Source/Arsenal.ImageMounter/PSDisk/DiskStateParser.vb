@@ -82,9 +82,9 @@ Namespace PSDisk
                         End Function)
 
             Catch ex As Exception
-                Trace.WriteLine($"Exception in GetSimpleView: {ex.ToString()}")
+                Trace.WriteLine($"Exception in GetSimpleView: {ex}")
 
-                Throw New Exception("Exception in GetSimpleView", ex)
+                Throw New Exception("Exception generating view", ex)
 
             End Try
 

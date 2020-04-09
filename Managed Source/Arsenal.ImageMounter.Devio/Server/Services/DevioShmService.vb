@@ -149,9 +149,9 @@ Namespace Server.Services
                     Else
                         Exception = ex
                     End If
-                    Dim message As String = $"Service thread initialization failed: {Exception.ToString()}."
+                    Dim message As String = $"Service thread initialization failed: {Exception}."
                     Trace.WriteLine(message)
-                    OnServiceInitFailed()
+                    OnServiceInitFailed(EventArgs.Empty)
                     Return
 
                 End Try
@@ -175,7 +175,7 @@ Namespace Server.Services
                     Trace.WriteLine($"Created shared memory object, {_MaxTransferSize} bytes.")
 
                     Trace.WriteLine("Raising service ready event.")
-                    OnServiceReady()
+                    OnServiceReady(EventArgs.Empty)
 
                 Catch ex As Exception
                     If TypeOf ex Is UnauthorizedAccessException Then
@@ -183,9 +183,9 @@ Namespace Server.Services
                     Else
                         Exception = ex
                     End If
-                    Dim message As String = $"Service thread initialization failed: {Exception.ToString()}."
+                    Dim message As String = $"Service thread initialization failed: {Exception}."
                     Trace.WriteLine(message)
-                    OnServiceInitFailed()
+                    OnServiceInitFailed(EventArgs.Empty)
                     Return
 
                 End Try
@@ -194,7 +194,7 @@ Namespace Server.Services
                     Trace.WriteLine("Waiting for client to connect.")
 
                     Using StopServiceThreadEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset)
-                        Dim StopServiceThreadHandler As New Action(AddressOf StopServiceThreadEvent.Set)
+                        Dim StopServiceThreadHandler As New EventHandler(Sub() StopServiceThreadEvent.Set())
                         AddHandler StopServiceThread, StopServiceThreadHandler
                         Dim WaitEvents = {RequestEvent, StopServiceThreadEvent}
                         Dim EventIndex = WaitHandle.WaitAny(WaitEvents)
@@ -264,11 +264,11 @@ Namespace Server.Services
                     Trace.WriteLine("Client disconnected.")
 
                 Catch ex As Exception
-                    Trace.WriteLine($"Unhandled exception in service thread: {ex.ToString()}")
+                    Trace.WriteLine($"Unhandled exception in service thread: {ex}")
                     OnServiceUnhandledException(New UnhandledExceptionEventArgs(ex, True))
 
                 Finally
-                    OnServiceShutdown()
+                    OnServiceShutdown(EventArgs.Empty)
 
                 End Try
 
@@ -290,6 +290,7 @@ Namespace Server.Services
 
         End Sub
 
+        <CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Private Sub ReadData(MapView As SafeBuffer)
 
             Dim Request = MapView.Read(Of IMDPROXY_READ_REQ)(&H0)
@@ -327,6 +328,7 @@ Namespace Server.Services
 
         End Sub
 
+        <CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Private Sub WriteData(MapView As SafeBuffer)
 
             Dim Request = MapView.Read(Of IMDPROXY_WRITE_REQ)(&H0)

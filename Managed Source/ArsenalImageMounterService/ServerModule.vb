@@ -21,6 +21,7 @@ Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.IO
+Imports Microsoft.Win32.SafeHandles
 
 Public Module ServerModule
 
@@ -69,6 +70,7 @@ Public Module ServerModule
 
     End Sub
 
+    <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
     <MTAThread>
     Public Function Main(ParamArray args As String()) As Integer
 
@@ -79,53 +81,69 @@ Public Module ServerModule
 
             If pos >= 0 Then
 
-                cmdline = $"{cmdline.Substring(0, pos)} /detach {cmdline.Substring(pos + " /background ".Length)}"
+                Using ready_wait As New ManualResetEvent(initialState:=False)
 
-                Dim pstart As New ProcessStartInfo With {
-                    .UseShellExecute = False
-                }
+                    NativeFileIO.SetInheritable(ready_wait.SafeWaitHandle, inheritable:=True)
 
-                Dim arguments_pos = 0
+                    cmdline = $"{cmdline.Substring(0, pos)} /detach={ready_wait.SafeWaitHandle.DangerousGetHandle()} {cmdline.Substring(pos + " /background ".Length)}"
 
-                While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = " "c
-                    arguments_pos += 1
-                End While
+                    Dim pstart As New ProcessStartInfo With {
+                        .UseShellExecute = False
+                    }
 
-                If arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = """"c Then
-
-                    Do
-                        arguments_pos += 1
-                    Loop While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) <> """"c
-
-                    arguments_pos += 1
-
-                Else
-
-                    While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) <> " "c
-                        arguments_pos += 1
-                    End While
-
-                End If
-
-                If arguments_pos < cmdline.Length Then
-
-                    pstart.FileName = cmdline.Substring(0, arguments_pos)
+                    Dim arguments_pos = 0
 
                     While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = " "c
                         arguments_pos += 1
                     End While
 
-                    pstart.Arguments = cmdline.Substring(arguments_pos)
+                    If arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = """"c Then
 
-                End If
+                        Do
+                            arguments_pos += 1
+                        Loop While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) <> """"c
 
-                Using process As New Process
+                        arguments_pos += 1
 
-                    process.StartInfo = pstart
+                    Else
 
-                    process.Start()
+                        While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) <> " "c
+                            arguments_pos += 1
+                        End While
 
-                    Return process.Id
+                    End If
+
+                    If arguments_pos < cmdline.Length Then
+
+                        pstart.FileName = cmdline.Substring(0, arguments_pos)
+
+                        While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = " "c
+                            arguments_pos += 1
+                        End While
+
+                        pstart.Arguments = cmdline.Substring(arguments_pos)
+
+                    End If
+
+                    Using process As New Process
+
+                        process.StartInfo = pstart
+
+                        process.Start()
+
+                        Using process_wait = NativeFileIO.CreateWaitHandle(process.Handle, inheritable:=False)
+
+                            WaitHandle.WaitAny({process_wait, ready_wait})
+
+                        End Using
+
+                        If process.HasExited Then
+                            Return 0
+                        Else
+                            Return process.Id
+                        End If
+
+                    End Using
 
                 End Using
 
@@ -158,6 +176,7 @@ Public Module ServerModule
 
     End Function
 
+    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="ArsenalRecon")>
     Public Sub ShowVersionInfo()
 
         Dim asm_file = Assembly.GetExecutingAssembly().Location
@@ -191,88 +210,94 @@ Please see EULA.txt for license information.")
 
     End Sub
 
+    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly")>
     <SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification:="<Pending>")>
     <SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification:="<Pending>")>
     Private Function SafeMain(args As IEnumerable(Of String)) As Integer
 
-        Dim ImagePath As String = Nothing
-        Dim WriteOverlayImageFile As String = Nothing
+        Dim image_path As String = Nothing
+        Dim write_overlay_image_file As String = Nothing
         Dim ObjectName As String = Nothing
-        Dim ListenAddress As IPAddress = IPAddress.Any
-        Dim ListenPort As Integer
-        Dim BufferSize As Long = DevioShmService.DefaultBufferSize
-        Dim DiskAccess As FileAccess = FileAccess.ReadWrite
-        Dim Mount As Boolean = False
-        Dim ProviderName As String = "DiscUtils"
-        Dim ShowHelp As Boolean = False
-        Dim Verbose As Boolean
-        Dim DeviceFlags As DeviceFlags
-        Dim DebugCompare As String = Nothing
-        Dim libewfDebugOutput As String = "CONOUT$"
-        Dim OutputImage As String = Nothing
-        Dim OutputImageVariant As String = "dynamic"
-        Dim Dismount As String = Nothing
-        Dim ForceDismount As Boolean
-        Dim BackgroundMode As Boolean
+        Dim listen_address As IPAddress = IPAddress.Any
+        Dim listen_port As Integer
+        Dim buffer_size As Long = DevioShmService.DefaultBufferSize
+        Dim disk_access As FileAccess = FileAccess.ReadWrite
+        Dim mount As Boolean = False
+        Dim provider_name As String = "DiscUtils"
+        Dim show_help As Boolean = False
+        Dim verbose As Boolean
+        Dim device_flags As DeviceFlags
+        Dim debug_compare As String = Nothing
+        Dim libewf_debug_output As String = "CONOUT$"
+        Dim output_image As String = Nothing
+        Dim output_image_variant As String = "dynamic"
+        Dim dismount As String = Nothing
+        Dim force_dismount As Boolean
+        Dim detach_event As SafeWaitHandle = Nothing
+        Dim fake_mbr As Boolean
 
         For Each arg In args
             If arg.Equals("/trace", StringComparison.OrdinalIgnoreCase) Then
                 Trace.Listeners.Add(New ConsoleTraceListener(True))
-                Verbose = True
+                verbose = True
             ElseIf arg.StartsWith("/trace=", StringComparison.OrdinalIgnoreCase) Then
                 Dim tracefile = New StreamWriter(arg.Substring("/trace=".Length), append:=True) With {.AutoFlush = True}
                 Trace.Listeners.Add(New TextWriterTraceListener(tracefile))
-                Verbose = True
+                verbose = True
             ElseIf arg.StartsWith("/name=", StringComparison.OrdinalIgnoreCase) Then
                 ObjectName = arg.Substring("/name=".Length)
             ElseIf arg.StartsWith("/ipaddress=", StringComparison.OrdinalIgnoreCase) Then
-                ListenAddress = IPAddress.Parse(arg.Substring("/ipaddress=".Length))
+                listen_address = IPAddress.Parse(arg.Substring("/ipaddress=".Length))
             ElseIf arg.StartsWith("/port=", StringComparison.OrdinalIgnoreCase) Then
-                ListenPort = Integer.Parse(arg.Substring("/port=".Length))
+                listen_port = Integer.Parse(arg.Substring("/port=".Length))
             ElseIf arg.StartsWith("/buffersize=", StringComparison.OrdinalIgnoreCase) Then
-                BufferSize = Long.Parse(arg.Substring("/buffersize=".Length))
+                buffer_size = Long.Parse(arg.Substring("/buffersize=".Length))
             ElseIf arg.StartsWith("/device=", StringComparison.OrdinalIgnoreCase) Then
-                ImagePath = arg.Substring("/device=".Length)
+                image_path = arg.Substring("/device=".Length)
             ElseIf arg.StartsWith("/filename=", StringComparison.OrdinalIgnoreCase) Then
-                ImagePath = arg.Substring("/filename=".Length)
+                image_path = arg.Substring("/filename=".Length)
             ElseIf arg.StartsWith("/provider=", StringComparison.OrdinalIgnoreCase) Then
-                ProviderName = arg.Substring("/provider=".Length)
+                provider_name = arg.Substring("/provider=".Length)
             ElseIf arg.Equals("/readonly", StringComparison.OrdinalIgnoreCase) Then
-                DiskAccess = FileAccess.Read
+                disk_access = FileAccess.Read
+            ElseIf arg.Equals("/fakesig", StringComparison.OrdinalIgnoreCase) Then
+                device_flags = device_flags Or DeviceFlags.FakeDiskSignatureIfZero
+            ElseIf arg.Equals("/fakembr", StringComparison.OrdinalIgnoreCase) Then
+                fake_mbr = True
             ElseIf arg.StartsWith("/writeoverlay=", StringComparison.OrdinalIgnoreCase) Then
-                WriteOverlayImageFile = arg.Substring("/writeoverlay=".Length)
-                DiskAccess = FileAccess.Read
-                DeviceFlags = DeviceFlags Or DeviceFlags.ReadOnly Or DeviceFlags.WriteOverlay
+                write_overlay_image_file = arg.Substring("/writeoverlay=".Length)
+                disk_access = FileAccess.Read
+                device_flags = device_flags Or DeviceFlags.ReadOnly Or DeviceFlags.WriteOverlay
             ElseIf arg.Equals("/mount", StringComparison.OrdinalIgnoreCase) Then
-                Mount = True
+                mount = True
             ElseIf arg.Equals("/mount:removable", StringComparison.OrdinalIgnoreCase) Then
-                Mount = True
-                DeviceFlags = DeviceFlags Or DeviceFlags.Removable
+                mount = True
+                device_flags = device_flags Or DeviceFlags.Removable
             ElseIf arg.Equals("/mount:cdrom", StringComparison.OrdinalIgnoreCase) Then
-                Mount = True
-                DeviceFlags = DeviceFlags Or DeviceFlags.DeviceTypeCD
+                mount = True
+                device_flags = device_flags Or DeviceFlags.DeviceTypeCD
             ElseIf arg.StartsWith("/convert=", StringComparison.OrdinalIgnoreCase) Then
-                OutputImage = arg.Substring("/convert=".Length)
-                DiskAccess = FileAccess.Read
+                output_image = arg.Substring("/convert=".Length)
+                disk_access = FileAccess.Read
             ElseIf arg.StartsWith("/saveas=", StringComparison.OrdinalIgnoreCase) Then
-                OutputImage = arg.Substring("/saveas=".Length)
-                DiskAccess = FileAccess.Read
+                output_image = arg.Substring("/saveas=".Length)
+                disk_access = FileAccess.Read
             ElseIf arg.StartsWith("/variant=", StringComparison.OrdinalIgnoreCase) Then
-                OutputImageVariant = arg.Substring("/variant=".Length)
+                output_image_variant = arg.Substring("/variant=".Length)
             ElseIf arg.StartsWith("/libewfoutput=", StringComparison.OrdinalIgnoreCase) Then
-                libewfDebugOutput = arg.Substring("/libewfoutput=".Length)
+                libewf_debug_output = arg.Substring("/libewfoutput=".Length)
             ElseIf arg.StartsWith("/debugcompare=", StringComparison.OrdinalIgnoreCase) Then
-                DebugCompare = arg.Substring("/debugcompare=".Length)
+                debug_compare = arg.Substring("/debugcompare=".Length)
             ElseIf arg.Equals("/dismount", StringComparison.OrdinalIgnoreCase) Then
-                Dismount = "*"
+                dismount = "*"
             ElseIf arg.StartsWith("/dismount=", StringComparison.OrdinalIgnoreCase) Then
-                Dismount = arg.Substring("/dismount=".Length)
+                dismount = arg.Substring("/dismount=".Length)
             ElseIf arg.Equals("/force", StringComparison.OrdinalIgnoreCase) Then
-                ForceDismount = True
-            ElseIf arg.Equals("/detach", StringComparison.OrdinalIgnoreCase) Then
-                BackgroundMode = True
+                force_dismount = True
+            ElseIf arg.StartsWith("/detach=", StringComparison.OrdinalIgnoreCase) Then
+                detach_event = New SafeWaitHandle(New IntPtr(Integer.Parse(arg.Substring("/detach=".Length), NumberFormatInfo.InvariantInfo)), ownsHandle:=True)
             ElseIf arg = "/?" OrElse arg.Equals("/help", StringComparison.OrdinalIgnoreCase) Then
-                ShowHelp = True
+                show_help = True
                 Exit For
             ElseIf arg.Equals("/version", StringComparison.OrdinalIgnoreCase) Then
                 ShowVersionInfo()
@@ -282,14 +307,14 @@ Please see EULA.txt for license information.")
                 Return 0
             Else
                 Console.WriteLine($"Unsupported switch: {arg}")
-                ShowHelp = True
+                show_help = True
                 Exit For
             End If
         Next
 
         If _
-            ShowHelp OrElse
-            (String.IsNullOrWhiteSpace(ImagePath) AndAlso String.IsNullOrWhiteSpace(Dismount)) Then
+            show_help OrElse
+            (String.IsNullOrWhiteSpace(image_path) AndAlso String.IsNullOrWhiteSpace(dismount)) Then
 
             Dim asmname = Assembly.GetExecutingAssembly().GetName().Name
 
@@ -302,19 +327,19 @@ Image Mounter virtual SCSI miniport driver.
 
 Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
 
-Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01) or AFF4 forensic disk images, you must make the Libewf (libewf.dll) and LibAFF4 (libaff4.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-temporary mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
+Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01) or AFF4 forensic disk images, you must make the Libewf (libewf.dll) and LibAFF4 (libaff4.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-original mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
-aim_cli.exe /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/writeoverlay=differencingimagefile] [/background]
+aim_cli.exe /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly] [/fakesig] [/fakembr] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/writeoverlay=differencingimagefile] [/background]
 
 Syntax to start shared memory service mode, for mounting from other applications:
-aim_cli.exe /name=objectname [/buffersize=bytes] [/readonly] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/background]
+aim_cli.exe /name=objectname [/buffersize=bytes] [/readonly] [/fakembr] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/background]
 
 Syntax to start TCP/IP service mode, for mounting from other computers:
-aim_cli.exe [/ipaddress=listenaddress] /port=tcpport [/readonly] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/background]
+aim_cli.exe [/ipaddress=listenaddress] /port=tcpport [/readonly] [/fakembr] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/background]
 
 Syntax to convert a disk image without mounting:
-aim_cli.exe /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
+aim_cli.exe /filename=imagefilename [/fakembr] /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
 
 Syntax to save a new disk image after mounting:
 aim_cli.exe /device=devicenumber /saveas=outputimagefilename [/variant=fixed|dynamic] [/background]
@@ -323,6 +348,7 @@ Syntax to dismount a mounted device:
 aim_cli.exe /dismount[=devicenumber] [/force]
 
 "
+
             msg = LineFormat(msg, 4)
 
             Console.WriteLine(msg)
@@ -331,17 +357,17 @@ aim_cli.exe /dismount[=devicenumber] [/force]
 
         End If
 
-        If Not String.IsNullOrWhiteSpace(Dismount) Then
+        If Not String.IsNullOrWhiteSpace(dismount) Then
 
             Dim devicenumber As UInteger
 
-            If Dismount.Equals("*", StringComparison.Ordinal) Then
+            If dismount.Equals("*", StringComparison.Ordinal) Then
 
                 devicenumber = ScsiAdapter.AutoDeviceNumber
 
-            ElseIf Not UInteger.TryParse(Dismount, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, devicenumber) Then
+            ElseIf Not UInteger.TryParse(dismount, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, devicenumber) Then
 
-                Console.WriteLine($"Invalid device number: {Dismount}
+                Console.WriteLine($"Invalid device number: {dismount}
 
 Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
@@ -362,7 +388,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                         End If
 
-                        If ForceDismount Then
+                        If force_dismount Then
 
                             adapter.RemoveAllDevices()
 
@@ -385,7 +411,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                         End If
 
-                        If ForceDismount Then
+                        If force_dismount Then
 
                             adapter.RemoveDevice(devicenumber)
 
@@ -413,59 +439,65 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         End If
 
-        If String.IsNullOrWhiteSpace(ImagePath) Then
+        If String.IsNullOrWhiteSpace(image_path) Then
 
             Return 0
 
         End If
 
-        Console.WriteLine($"Opening image file '{ImagePath}'...")
+        Console.WriteLine($"Opening image file '{image_path}'...")
 
-        If StringComparer.OrdinalIgnoreCase.Equals(ProviderName, "libewf") Then
+        If StringComparer.OrdinalIgnoreCase.Equals(provider_name, "libewf") Then
 
-            DevioProviderLibEwf.SetNotificationFile(libewfDebugOutput)
+            DevioProviderLibEwf.SetNotificationFile(libewf_debug_output)
 
             AddHandler RunToEnd, Sub() DevioProviderLibEwf.SetNotificationFile(Nothing)
 
-            If Verbose Then
+            If verbose Then
                 DevioProviderLibEwf.NotificationVerbose = True
             End If
 
         End If
 
-        Dim Provider = DevioServiceFactory.GetProvider(ImagePath, DiskAccess, ProviderName)
+        Dim provider = DevioServiceFactory.GetProvider(image_path, disk_access, provider_name)
 
-        If Not String.IsNullOrWhiteSpace(DebugCompare) Then
+        If Not String.IsNullOrWhiteSpace(debug_compare) Then
 
-            Dim DebugCompareStream = File.OpenRead(DebugCompare)
+            Dim DebugCompareStream = File.OpenRead(debug_compare)
 
-            Provider = New DebugProvider(Provider, DebugCompareStream)
+            provider = New DebugProvider(provider, DebugCompareStream)
 
         End If
 
-        Dim Service As DevioServiceBase
+        If fake_mbr Then
+
+            provider = New DevioProviderWithFakeMBR(provider)
+
+        End If
+
+        Dim service As DevioServiceBase
 
         If Not String.IsNullOrWhiteSpace(ObjectName) Then
 
-            Service = New DevioShmService(ObjectName, Provider, OwnsProvider:=True, BufferSize:=BufferSize)
+            service = New DevioShmService(ObjectName, provider, OwnsProvider:=True, BufferSize:=buffer_size)
 
-        ElseIf ListenPort <> 0 Then
+        ElseIf listen_port <> 0 Then
 
-            Service = New DevioTcpService(ListenAddress, ListenPort, Provider, OwnsProvider:=True)
+            service = New DevioTcpService(listen_address, listen_port, provider, OwnsProvider:=True)
 
-        ElseIf Mount Then
+        ElseIf mount Then
 
-            Service = New DevioShmService(Provider, OwnsProvider:=True, BufferSize:=BufferSize)
+            service = New DevioShmService(provider, OwnsProvider:=True, BufferSize:=buffer_size)
 
-        ElseIf OutputImage IsNot Nothing Then
+        ElseIf output_image IsNot Nothing Then
 
-            Provider.ConvertToImage(OutputImage, OutputImageVariant, BackgroundMode)
+            provider.ConvertToImage(output_image, output_image_variant, detach_event)
 
             Return 0
 
         Else
 
-            Provider.Dispose()
+            provider.Dispose()
 
             Console.WriteLine("None of /name, /port, /mount or /convert switches specified, nothing to do.")
 
@@ -473,10 +505,10 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         End If
 
-        If Mount Then
+        If mount Then
             Console.WriteLine("Mounting as virtual disk...")
 
-            Service.WriteOverlayImageName = WriteOverlayImageFile
+            service.WriteOverlayImageName = write_overlay_image_file
 
             Dim adapter As ScsiAdapter
 
@@ -488,23 +520,23 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             End Try
 
-            Service.StartServiceThreadAndMount(adapter, DeviceFlags)
+            service.StartServiceThreadAndMount(adapter, device_flags)
 
-            Using device = Service.OpenDiskDevice(0)
+            Using device = service.OpenDiskDevice(0)
                 Console.WriteLine($"Virtual disk is {device.DevicePath} with SCSI address {device.ScsiAddress}")
             End Using
 
         Else
 
-            Service.StartServiceThread()
+            service.StartServiceThread()
 
         End If
 
-        If BackgroundMode Then
+        If detach_event IsNot Nothing Then
 
-            If Mount Then
+            If mount Then
 
-                Console.WriteLine($"Virtual disk created. To dismount, type aim_cli /dismount={Service.DiskDeviceNumber:X6}")
+                Console.WriteLine($"Virtual disk created. To dismount, type aim_cli /dismount={service.DiskDeviceNumber:X6}")
 
             Else
 
@@ -512,11 +544,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             End If
 
-            NativeFileIO.SafeNativeMethods.FreeConsole()
+            CloseConsole(detach_event)
 
         Else
 
-            If Mount Then
+            If mount Then
 
                 Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.")
 
@@ -530,7 +562,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
                 Sub(sender, e)
                     Try
                         Console.WriteLine("Stopping service...")
-                        Service.Dispose()
+                        service.Dispose()
 
                         e.Cancel = True
 
@@ -545,12 +577,12 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         End If
 
-        Service.WaitForServiceThreadExit()
+        service.WaitForServiceThreadExit()
 
         Console.WriteLine("Service stopped.")
 
-        If Service.Exception IsNot Nothing Then
-            Throw New Exception("Service failed.", Service.Exception)
+        If service.Exception IsNot Nothing Then
+            Throw New Exception("Service failed.", service.Exception)
         End If
 
         Return 0
@@ -558,7 +590,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
     End Function
 
     <Extension>
-    Private Sub ConvertToImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, background As Boolean)
+    Private Sub ConvertToImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, detachEvent As SafeWaitHandle)
 
         Using provider
 
@@ -566,9 +598,9 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                 Console.WriteLine($"Converting to new image file '{outputImage}'...")
 
-                If background Then
+                If detachEvent IsNot Nothing Then
 
-                    NativeFileIO.SafeNativeMethods.FreeConsole()
+                    CloseConsole(detachEvent)
 
                 Else
 
@@ -609,9 +641,10 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
     End Sub
 
+    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="devinst")>
     Public Sub ListDevices()
 
-        Dim adapters = API.GetAdapterDeviceInstanceNames()
+        Dim adapters = API.EnumerateAdapterDeviceInstanceNames()
 
         If adapters Is Nothing Then
 
@@ -643,6 +676,20 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
             Next
 
         Next
+
+    End Sub
+
+    Private Sub CloseConsole(DetachEvent As SafeWaitHandle)
+
+        Using DetachEvent
+            NativeFileIO.SetEvent(DetachEvent)
+        End Using
+
+        Console.SetIn(TextReader.Null)
+        Console.SetOut(TextWriter.Null)
+        Console.SetError(TextWriter.Null)
+
+        NativeFileIO.SafeNativeMethods.FreeConsole()
 
     End Sub
 

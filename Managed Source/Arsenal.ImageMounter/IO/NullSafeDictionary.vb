@@ -133,6 +133,7 @@ Namespace IO
         End Function
     End Class
 
+    <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
     Public Class NullSafeStringDictionary
         Inherits NullSafeDictionary(Of String, String)
 
