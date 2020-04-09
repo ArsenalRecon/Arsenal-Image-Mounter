@@ -2,7 +2,7 @@
 /// aimapi.cpp
 /// Implementation of public API routines.
 /// 
-/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -28,10 +28,13 @@
 
 #include <shlobj.h>
 #include <dbt.h>
+#include <cfgmgr32.h>
 
 #pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "imdisk.lib")
 #pragma comment(lib, "ntdll.lib")
+
+const int max_extent_count = 8;
 
 // Known file format offsets
 typedef struct _KNOWN_FORMAT
@@ -151,95 +154,96 @@ AIMAPI_API HANDLE
 WINAPI
 ImScsiOpenScsiAdapter(OUT LPBYTE PortNumber)
 {
-    WHeapMem<WCHAR> dosdevs(
-        UNICODE_STRING_MAX_BYTES, HEAP_GENERATE_EXCEPTIONS);
+    LPWSTR hwinstances = NULL;
+    DWORD length = ImScsiAllocateDeviceInstanceListForService(L"phdskmnt",
+        &hwinstances);
 
-    WHeapMem<WCHAR> target(
-        UNICODE_STRING_MAX_BYTES, HEAP_GENERATE_EXCEPTIONS);
-
-    if (!QueryDosDevice(NULL, dosdevs, UNICODE_STRING_MAX_CHARS))
+    if (length == 0)
     {
-        return INVALID_HANDLE_VALUE;
+        SetLastError(ERROR_FILE_NOT_FOUND);
+        return NULL;
     }
 
-    const WCHAR scsi_prefix[] = L"Scsi";
-    const WCHAR scsiport_prefix[] = L"\\Device\\Scsi\\phdskmnt";
-    const WCHAR storport_prefix[] = L"\\Device\\RaidPort";
+    WMem<WCHAR> allocated(hwinstances);
 
-    DWORD last_error = ERROR_FILE_NOT_FOUND;
+    ULONG name_buffer_size = 519;
+    WHeapMem<WCHAR> name_buffer(name_buffer_size,
+        HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY);
 
-    size_t length = 0;
-    for (LPWSTR ptr = dosdevs;
-        (length = wcslen(ptr)) != 0;
-        ptr = ptr + length + 1)
+    for (size_t i = 0;
+        i < length;
+        i += wcslen(hwinstances) + 1)
     {
-        if ((length < 6) ||
-            (_wcsnicmp(ptr, scsi_prefix, _countof(scsi_prefix) - 1) != 0) ||
-            (ptr[length - 1] != L':'))
+        if (hwinstances[i] == 0)
+            continue;
+
+        DEVINST devInst;
+
+        auto status = CM_Locate_DevNode(&devInst, hwinstances + i, 0);
+
+        if (status != CR_SUCCESS)
         {
+            if (status != CR_NO_SUCH_DEVNODE)
+            {
+                ImScsiDebugMessage(L"Device '%1!ws!' CM_Locate_DevNode error 0x%2!X!", hwinstances + i,
+                    status);
+            }
+
             continue;
         }
 
-        LPWSTR end_ptr = NULL;
-        DWORD port_number = wcstoul(ptr + _countof(scsi_prefix) - 1, &end_ptr,
-            10);
+        status = CM_Get_DevNode_Registry_Property(devInst,
+            CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, NULL, name_buffer,
+            &name_buffer_size, 0);
 
-        if ((*end_ptr != L':') || (port_number > MAXBYTE))
+        if (status != CR_SUCCESS || name_buffer_size <= 2)
         {
-            continue;
-        }
+            ImScsiDebugMessage(L"Device '%1!ws!' CM_Get_DevNode_Registry_Property error 0x%2!X!", hwinstances + i,
+                status);
 
-        if (!QueryDosDevice(ptr, target, UNICODE_STRING_MAX_CHARS))
-        {
-            last_error = GetLastError();
-            continue;
-        }
-
-        if ((_wcsnicmp(target, scsiport_prefix,
-            _countof(scsiport_prefix) - 1) != 0) &&
-            (_wcsnicmp(target, storport_prefix,
-            _countof(storport_prefix) - 1) != 0))
-        {
             continue;
         }
 
         UNICODE_STRING name;
-        RtlInitUnicodeString(&name, target);
+
+        RtlInitUnicodeString(&name, name_buffer);
 
         HANDLE handle = ImDiskOpenDeviceByName(&name,
             GENERIC_READ | GENERIC_WRITE);
 
         if (handle == INVALID_HANDLE_VALUE)
         {
-            last_error = GetLastError();
-            continue;
+            return INVALID_HANDLE_VALUE;
         }
 
         if (!ImScsiCheckDriverVersion(handle))
         {
-            last_error = GetLastError();
             NtClose(handle);
-            continue;
+            SetLastError(ERROR_REVISION_MISMATCH);
+            return INVALID_HANDLE_VALUE;
         }
 
         if (PortNumber != NULL)
         {
-            *PortNumber = (BYTE)port_number;
+            SCSI_ADDRESS scsi_address;
+
+            DWORD dw;
+
+            if (DeviceIoControl(handle, IOCTL_SCSI_GET_ADDRESS, NULL, 0,
+                &scsi_address, sizeof scsi_address, &dw, NULL))
+            {
+                *PortNumber = scsi_address.PortNumber;
+            }
+            else
+            {
+                *PortNumber = IMSCSI_ANY_PORT_NUMBER;
+            }
         }
 
         return handle;
     }
 
-    switch (GetLastError())
-    {
-    case ERROR_INVALID_PARAMETER:
-    case ERROR_INVALID_FUNCTION:
-    case ERROR_IO_DEVICE:
-    case ERROR_NOT_SUPPORTED:
-        SetLastError(ERROR_FILE_NOT_FOUND);
-    }
-
-    SetLastError(last_error);
+    SetLastError(ERROR_FILE_NOT_FOUND);
 
     return INVALID_HANDLE_VALUE;
 }
@@ -332,10 +336,65 @@ AIMAPI_API
 BOOL
 WINAPI
 ImScsiGetDeviceNumbersForVolume(IN HANDLE Volume,
-IN DWORD PortNumber,
-OUT PDEVICE_NUMBER DeviceNumbers,
-IN DWORD NumberOfItems,
-OUT LPDWORD NeededNumberOfItems)
+    IN DWORD PortNumber,
+    OUT PDEVICE_NUMBER DeviceNumbers,
+    IN DWORD NumberOfItems,
+    OUT LPDWORD NeededNumberOfItems)
+{
+    if (PortNumber > MAXBYTE)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    WHeapMem<BYTE> port_numbers(NumberOfItems, HEAP_GENERATE_EXCEPTIONS);
+
+    if (!ImScsiGetDeviceNumbersForVolumeEx(Volume, DeviceNumbers,
+        port_numbers, NumberOfItems, NeededNumberOfItems))
+    {
+        return FALSE;
+    }
+
+    if (NumberOfItems > * NeededNumberOfItems)
+    {
+        NumberOfItems = *NeededNumberOfItems;
+    }
+
+    if (PortNumber == IMSCSI_ANY_PORT_NUMBER)
+    {
+        return TRUE;
+    }
+
+    for (DWORD i = 0; i < NumberOfItems; )
+    {
+        if (port_numbers[i] == PortNumber)
+        {
+            i++;
+        }
+        else
+        {
+            --NumberOfItems;
+            --* NeededNumberOfItems;
+
+            if (NumberOfItems > 0)
+            {
+                DeviceNumbers[i] = DeviceNumbers[NumberOfItems];
+                port_numbers[i] = port_numbers[NumberOfItems];
+            }
+        }
+    }
+
+    return TRUE;
+}
+
+AIMAPI_API
+BOOL
+WINAPI
+ImScsiGetDeviceNumbersForVolumeEx(IN HANDLE Volume,
+    OUT PDEVICE_NUMBER DeviceNumbers,
+    OUT LPBYTE PortNumbers,
+    IN DWORD NumberOfItems,
+    OUT LPDWORD NeededNumberOfItems)
 {
     WHeapMem<VOLUME_DISK_EXTENTS> disk_extents(
         FIELD_OFFSET(VOLUME_DISK_EXTENTS, Extents) +
@@ -343,6 +402,8 @@ OUT LPDWORD NeededNumberOfItems)
         HEAP_GENERATE_EXCEPTIONS);
 
     DWORD dw;
+
+    *NeededNumberOfItems = 0;
 
     if (!DeviceIoControl(Volume,
         IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
@@ -352,8 +413,6 @@ OUT LPDWORD NeededNumberOfItems)
     {
         return FALSE;
     }
-
-    *NeededNumberOfItems = 0;
 
     for (int i = 0;
         (i < (int)disk_extents->NumberOfDiskExtents) &&
@@ -373,29 +432,38 @@ OUT LPDWORD NeededNumberOfItems)
 
         if (disk == INVALID_HANDLE_VALUE)
         {
-            return FALSE;
+            WPreserveLastError le;
+
+            WErrMsg errmsg;
+
+            ImScsiDebugMessage(
+                L"Error opening %1!ws!: %2!ws!%%n", disk_path, (LPCWSTR)errmsg);
+
+            continue;
         }
 
-        SCSI_ADDRESS address;
-        if (!ImScsiGetScsiAddressForDisk(disk, &address))
+        DEVICE_NUMBER device_number;
+        BYTE port_number;
+
+        if (!ImScsiGetDeviceNumberForDiskEx(disk, &device_number, &port_number))
         {
             CloseHandle(disk);
-            return FALSE;
+
+            SetLastError(ERROR_INVALID_FUNCTION);
+
+            ImScsiDebugMessage(
+                L"Device %1!ws! is not an Arsenal Image Mounter device.",
+                disk_path);
+
+            continue;
         }
 
         CloseHandle(disk);
 
-        if (address.PortNumber != PortNumber)
-        {
-            SetLastError(ERROR_INVALID_FUNCTION);
-            return FALSE;
-        }
-
         if (*NeededNumberOfItems < NumberOfItems)
         {
-            DeviceNumbers[*NeededNumberOfItems].PathId = address.PathId;
-            DeviceNumbers[*NeededNumberOfItems].TargetId = address.TargetId;
-            DeviceNumbers[*NeededNumberOfItems].Lun = address.Lun;
+            DeviceNumbers[*NeededNumberOfItems] = device_number;
+            PortNumbers[*NeededNumberOfItems] = port_number;
         }
 
         ++*NeededNumberOfItems;
@@ -407,6 +475,12 @@ OUT LPDWORD NeededNumberOfItems)
         return FALSE;
     }
 
+    if (*NeededNumberOfItems == 0)
+    {
+        SetLastError(ERROR_INVALID_FUNCTION);
+        return FALSE;
+    }
+
     return TRUE;
 }
 
@@ -414,7 +488,23 @@ AIMAPI_API
 BOOL
 WINAPI
 ImScsiGetScsiAddressesForVolume(IN HANDLE Volume,
+    OUT PSCSI_ADDRESS ScsiAddresses,
+    IN DWORD NumberOfItems,
+    OUT LPDWORD NeededNumberOfItems)
+{
+    WHeapMem<DWORD> disk_numbers(NumberOfItems * sizeof(DWORD),
+        HEAP_GENERATE_EXCEPTIONS);
+
+    return ImScsiGetScsiAddressesForVolumeEx(Volume, ScsiAddresses,
+        disk_numbers, NumberOfItems, NeededNumberOfItems);
+}
+
+AIMAPI_API
+BOOL
+WINAPI
+ImScsiGetScsiAddressesForVolumeEx(IN HANDLE Volume,
 OUT PSCSI_ADDRESS ScsiAddresses,
+OUT LPDWORD DiskNumbers,
 IN DWORD NumberOfItems,
 OUT LPDWORD NeededNumberOfItems)
 {
@@ -422,6 +512,8 @@ OUT LPDWORD NeededNumberOfItems)
         FIELD_OFFSET(VOLUME_DISK_EXTENTS, Extents) +
         NumberOfItems * sizeof(DISK_EXTENT),
         HEAP_GENERATE_EXCEPTIONS);
+
+    *NeededNumberOfItems = 0;
 
     DWORD dw;
 
@@ -433,8 +525,6 @@ OUT LPDWORD NeededNumberOfItems)
     {
         return FALSE;
     }
-
-    *NeededNumberOfItems = 0;
 
     for (int i = 0;
         (i < (int)disk_extents->NumberOfDiskExtents) &&
@@ -458,7 +548,9 @@ OUT LPDWORD NeededNumberOfItems)
         }
 
         SCSI_ADDRESS address;
-        if (!ImScsiGetScsiAddressForDisk(disk, &address))
+        STORAGE_DEVICE_NUMBER device_number;
+
+        if (!ImScsiGetScsiAddressForDiskEx(disk, &address, &device_number))
         {
             CloseHandle(disk);
             return FALSE;
@@ -468,6 +560,9 @@ OUT LPDWORD NeededNumberOfItems)
 
         if (*NeededNumberOfItems < NumberOfItems)
         {
+            DiskNumbers[*NeededNumberOfItems] =
+                disk_extents->Extents[i].DiskNumber;
+
             ScsiAddresses[*NeededNumberOfItems] = address;
         }
 
@@ -487,208 +582,224 @@ AIMAPI_API
 HANDLE
 WINAPI
 ImScsiOpenDiskByDeviceNumber(IN DEVICE_NUMBER DeviceNumber,
-IN DWORD PortNumber,
-OUT LPDWORD DiskNumber OPTIONAL)
+    IN DWORD PortNumber,
+    OUT LPDWORD DiskNumber OPTIONAL)
 {
-    WHeapMem<WCHAR> dosdevs(UNICODE_STRING_MAX_BYTES,
-        HEAP_GENERATE_EXCEPTIONS);
-
-    const WCHAR disk_prefix[] = L"PhysicalDrive";
-
-    HANDLE disk = INVALID_HANDLE_VALUE;
-    DWORD disk_number = ULONG_MAX;
-    DWORD dw;
-    WMem<WCHAR> dev_path;
-
-    if (!QueryDosDevice(NULL, dosdevs, UNICODE_STRING_MAX_CHARS))
+    if (PortNumber > MAXBYTE)
     {
-        WPreserveLastError lasterror;
-
-        WErrMsg errmsg;
-
-        ImScsiDebugMessage(L"Error opening SCSI port %1!i!: %2!ws!",
-            PortNumber & 0xFF, (LPCWSTR)errmsg);
-
+        SetLastError(ERROR_INVALID_PARAMETER);
         return INVALID_HANDLE_VALUE;
     }
 
-    HANDLE adapter = ImScsiOpenScsiAdapterByScsiPortNumber((BYTE)PortNumber);
+    STORAGE_DEVICE_NUMBER device_number;
 
-    if (adapter == INVALID_HANDLE_VALUE)
+    HANDLE device = ImScsiOpenDiskByDeviceNumberEx(DeviceNumber,
+        (LPBYTE)&PortNumber, &device_number);
+
+    if (device == INVALID_HANDLE_VALUE)
     {
         return INVALID_HANDLE_VALUE;
     }
 
-    WHeapMem<IMSCSI_DEVICE_CONFIGURATION> config(
-        UNICODE_STRING_MAX_BYTES,
+    if (DiskNumber != NULL)
+    {
+        *DiskNumber = device_number.DeviceNumber;
+    }
+
+    return device;
+}
+
+AIMAPI_API
+HANDLE
+WINAPI
+ImScsiOpenDiskByDeviceNumberEx(IN DEVICE_NUMBER DeviceNumber,
+    IN OUT LPBYTE PortNumber,
+    OUT PSTORAGE_DEVICE_NUMBER DiskNumber OPTIONAL)
+{
+    LPWSTR hwinstances = NULL;
+    DWORD length = ImScsiAllocateDeviceInstanceListForService(L"phdskmnt",
+        &hwinstances);
+
+    if (length == 0)
+    {
+        return 0;
+    }
+
+    WMem<WCHAR> allocated(hwinstances);
+
+    ULONG name_buffer_size = 519;
+    WHeapMem<WCHAR> dev_path(name_buffer_size,
         HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY);
 
-    config->DeviceNumber = DeviceNumber;
-
-    if (!ImScsiQueryDevice(adapter, config, (ULONG)config.GetSize()))
+    for (size_t i = 0;
+        i < length;
+        i += wcslen(hwinstances) + 1)
     {
-        CloseHandle(adapter);
-        return INVALID_HANDLE_VALUE;
-    }
-
-    CloseHandle(adapter);
-
-    size_t length = 0;
-    for (LPWSTR ptr = dosdevs;
-        (length = wcslen(ptr)) != 0;
-        ptr = ptr + length + 1)
-    {
-        if (_wcsnicmp(ptr, disk_prefix, _countof(disk_prefix) - 1) != 0)
-        {
+        if (hwinstances[i] == 0)
             continue;
-        }
 
-        LPWSTR end_ptr = NULL;
-        disk_number = wcstoul(ptr + _countof(disk_prefix) - 1, &end_ptr, 10);
-        if (*end_ptr != 0)
+        DEVINST devInst;
+
+        auto status = CM_Locate_DevNode(&devInst, hwinstances + i, 0);
+
+        if (status != CR_SUCCESS)
         {
-            continue;
-        }
-
-        dev_path = ImDiskAllocPrintF(L"\\\\?\\%1!ws!", ptr);
-
-        disk = CreateFile(dev_path, GENERIC_READ,
-            FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-
-        if (disk == INVALID_HANDLE_VALUE)
-        {
-            WErrMsg errmsg;
-
-            ImScsiDebugMessage(L"Error opening '%1!ws!': %2!ws!",
-                dev_path, (LPCWSTR)errmsg);
-
-            continue;
-        }
-
-        SCSI_ADDRESS address;
-
-        if (!DeviceIoControl(disk, IOCTL_SCSI_GET_ADDRESS, NULL, 0,
-            &address, sizeof(address), &dw, NULL))
-        {
-#ifndef _DEBUG
-            switch (GetLastError())
+            if (status != CR_NO_SUCH_DEVNODE)
             {
-            case ERROR_INVALID_PARAMETER:
-            case ERROR_INVALID_FUNCTION:
-            case ERROR_NOT_SUPPORTED:
-            case ERROR_IO_DEVICE:
-                break;
-
-            default:
-#endif
-            {
-                WErrMsg errmsg;
-
-                ImScsiDebugMessage(L"Cannot get SCSI address of '%1!ws!': %2!ws!",
-                    (LPCWSTR)dev_path, (LPCWSTR)errmsg);
+                ImScsiDebugMessage(L"Device '%1!ws!' CM_Locate_DevNode error 0x%2!X!", hwinstances + i,
+                    status);
             }
-#ifndef _DEBUG
-            }
-#endif
-
-            CloseHandle(disk);
-            disk = INVALID_HANDLE_VALUE;
-            continue;
-        }
-
-        if ((address.PortNumber != PortNumber) ||
-            (address.PathId != DeviceNumber.PathId) ||
-            (address.TargetId != DeviceNumber.TargetId) ||
-            (address.Lun != DeviceNumber.Lun))
-        {
-#ifdef _DEBUG
-            ImScsiDebugMessage(
-                L"Disk %1!ws! has port:path:target:lun %2!i!:%3!i!:%4!i!:%5!i!, looking for %6!i!:%7!i!:%8!i!:%9!i!.",
-                (LPCWSTR)dev_path,
-                (int)address.PortNumber, (int)address.PathId, (int)address.TargetId, (int)address.Lun,
-                (int)PortNumber, (int)DeviceNumber.PathId, (int)DeviceNumber.TargetId, (int)DeviceNumber.Lun);
-#endif
-            CloseHandle(disk);
-            disk = INVALID_HANDLE_VALUE;
-            continue;
-        }
-
-        STORAGE_DEVICE_NUMBER device_number;
-
-        if (!DeviceIoControl(disk, IOCTL_STORAGE_GET_DEVICE_NUMBER,
-            NULL, 0,
-            &device_number, sizeof(device_number), &dw, NULL))
-        {
-            WErrMsg errmsg;
-
-            ImScsiDebugMessage(
-                L"Cannot get storage device number of '%1!ws!': %2!ws!",
-                (LPCWSTR)dev_path, (LPCWSTR)errmsg);
-
-            CloseHandle(disk);
-            disk = INVALID_HANDLE_VALUE;
-            continue;
-        }
-
-        if ((device_number.DeviceNumber != disk_number) ||
-            (device_number.DeviceType != FILE_DEVICE_DISK) ||
-            (device_number.PartitionNumber != 0))
-        {
-            ImScsiDebugMessage(
-                L"Disk %1!ws! has some unexpected properties: DeviceNumber=%2!u! DeviceType=%3!#x! PartitionNumber=%4!i!",
-                (LPCWSTR)dev_path, device_number.DeviceNumber,
-                device_number.DeviceType, device_number.PartitionNumber);
-
-            CloseHandle(disk);
-            disk = INVALID_HANDLE_VALUE;
 
             continue;
         }
 
-        DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
-            &dw, NULL);
+        DEVINST child;
 
-        GET_LENGTH_INFORMATION disk_size = { 0 };
-        if (DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
-            &disk_size, sizeof(disk_size), &dw, NULL))
+        for (status = CM_Get_Child(&child, devInst, 0);
+            status == CR_SUCCESS;
+            status = CM_Get_Sibling(&child, child, 0))
         {
-            LONGLONG diff = disk_size.Length.QuadPart -
-                config->DiskSize.QuadPart;
-            if ((diff > config->BytesPerSector) ||
-                (diff < -(LONG)config->BytesPerSector))
+            status = CM_Get_DevNode_Registry_Property(child,
+                CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, NULL, dev_path,
+                &name_buffer_size, 0);
+
+            if (status != CR_SUCCESS || name_buffer_size <= 2)
             {
-                ImScsiDebugMessage(
-                    L"Disk %1!ws! has unexpected size: %2!I64u!",
-                    (LPCWSTR)dev_path, disk_size.Length.QuadPart);
+                ImScsiDebugMessage(L"Device '%1!u!' CM_Get_DevNode_Registry_Property error 0x%2!X!", child, status);
+                continue;
+            }
+
+            UNICODE_STRING name;
+
+            RtlInitUnicodeString(&name, dev_path);
+
+            HANDLE disk = ImDiskOpenDeviceByName(&name,
+                GENERIC_READ | GENERIC_WRITE);
+
+            if (disk == INVALID_HANDLE_VALUE)
+            {
+                ImScsiDebugMessage(L"Error opening device '%1!ws!', error 0x%2!X!", dev_path, GetLastError());
+                continue;
+            }
+
+            DWORD dw;
+
+            SCSI_ADDRESS address;
+
+            if (!DeviceIoControl(disk, IOCTL_SCSI_GET_ADDRESS, NULL, 0,
+                &address, sizeof(address), &dw, NULL))
+            {
+#ifndef _DEBUG
+                switch (GetLastError())
+                {
+                case ERROR_INVALID_PARAMETER:
+                case ERROR_INVALID_FUNCTION:
+                case ERROR_NOT_SUPPORTED:
+                case ERROR_IO_DEVICE:
+                    break;
+
+                default:
+#endif
+                {
+                    WErrMsg errmsg;
+
+                    ImScsiDebugMessage(L"Cannot get SCSI address of '%1!ws!': %2!ws!",
+                        (LPCWSTR)dev_path, (LPCWSTR)errmsg);
+                }
+#ifndef _DEBUG
+                }
+#endif
 
                 CloseHandle(disk);
                 disk = INVALID_HANDLE_VALUE;
-
                 continue;
             }
-        }
-        else if (GetLastError() != ERROR_INVALID_FUNCTION)
-        {
-            WErrMsg errmsg;
+
+            if (((*PortNumber != IMSCSI_ANY_PORT_NUMBER) &&
+                (address.PortNumber != *PortNumber)) ||
+                (address.PathId != DeviceNumber.PathId) ||
+                (address.TargetId != DeviceNumber.TargetId) ||
+                (address.Lun != DeviceNumber.Lun))
+            {
+#ifdef _DEBUG
+                ImScsiDebugMessage(
+                    L"Disk %1!ws! has port:path:target:lun %2!i!:%3!i!:%4!i!:%5!i!, looking for %6!i!:%7!i!:%8!i!:%9!i!.",
+                    (LPCWSTR)dev_path,
+                    (int)address.PortNumber, (int)address.PathId, (int)address.TargetId, (int)address.Lun,
+                    (int)*PortNumber, (int)DeviceNumber.PathId, (int)DeviceNumber.TargetId, (int)DeviceNumber.Lun);
+#endif
+                CloseHandle(disk);
+                disk = INVALID_HANDLE_VALUE;
+                continue;
+            }
+
+            STORAGE_DEVICE_NUMBER device_number;
+
+            if (!DeviceIoControl(disk, IOCTL_STORAGE_GET_DEVICE_NUMBER,
+                NULL, 0,
+                &device_number, sizeof(device_number), &dw, NULL))
+            {
+                WErrMsg errmsg;
+
+                ImScsiDebugMessage(
+                    L"Cannot get storage device number of '%1!ws!': %2!ws!",
+                    (LPCWSTR)dev_path, (LPCWSTR)errmsg);
+
+                CloseHandle(disk);
+                disk = INVALID_HANDLE_VALUE;
+                continue;
+            }
+
+            if (((device_number.DeviceType != FILE_DEVICE_DISK) &&
+                (device_number.DeviceType != FILE_DEVICE_CD_ROM) ||
+                (((LONG)device_number.PartitionNumber) > 0)))
+            {
+                ImScsiDebugMessage(
+                    L"Disk %1!ws! has some unexpected properties: DeviceNumber=%2!u! DeviceType=%3!#x! PartitionNumber=%4!i!",
+                    (LPCWSTR)dev_path, device_number.DeviceNumber,
+                    device_number.DeviceType, device_number.PartitionNumber);
+
+                    CloseHandle(disk);
+                    disk = INVALID_HANDLE_VALUE;
+
+                    continue;
+            }
+
+            DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
+                &dw, NULL);
+
+#ifdef _DEBUG
+            LPCWSTR device_type = NULL;
+
+            switch (device_number.DeviceType)
+            {
+            case FILE_DEVICE_DISK:
+                device_type = L"\\\\?\\PhysicalDrive";
+                break;
+
+            case FILE_DEVICE_CD_ROM:
+                device_type = L"\\\\?\\CdRom";
+                break;
+            }
 
             ImScsiDebugMessage(
-                L"Cannot query size of disk %1!ws!: %2!ws!",
-                (LPCWSTR)dev_path, (LPCWSTR)errmsg);
+                L"Device %1!i!:%2!i!:%3!i!:%4!i! is %5!ws!%6!u!",
+                (int)address.PortNumber,
+                (int)address.PathId,
+                (int)address.TargetId,
+                (int)address.Lun,
+                device_type, device_number.DeviceNumber);
+#endif
 
-            CloseHandle(disk);
-            disk = INVALID_HANDLE_VALUE;
+            if (DiskNumber != NULL)
+            {
+                *DiskNumber = device_number;
+            }
 
-            continue;
+            *PortNumber = address.PortNumber;
+
+            return disk;
         }
-
-        ImScsiDebugMessage(L"Disk device is %1!ws!", (LPCWSTR)dev_path);
-
-        if (DiskNumber != NULL)
-        {
-            *DiskNumber = disk_number;
-        }
-
-        return disk;
     }
 
     SetLastError(ERROR_FILE_NOT_FOUND);
@@ -897,22 +1008,33 @@ IN ULONG ConfigSize)
     return TRUE;
 }
 
-BOOL
+AIMAPI_API BOOL
 WINAPI
 ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
-IN HANDLE Adapter,
-IN LPBYTE PortNumber,
-IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
-IN OUT PLARGE_INTEGER DiskSize OPTIONAL,
-IN OUT LPDWORD BytesPerSector OPTIONAL,
-IN PLARGE_INTEGER ImageOffset OPTIONAL,
-IN OUT LPDWORD Flags OPTIONAL,
-IN LPCWSTR FileName OPTIONAL,
-IN LPCWSTR WriteOverlayFileName OPTIONAL,
-IN BOOL NativePath,
-IN LPWSTR MountPoint OPTIONAL,
-IN BOOL CreatePartition)
+    IN HANDLE Adapter OPTIONAL,
+    IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
+    IN OUT PLARGE_INTEGER DiskSize OPTIONAL,
+    IN OUT LPDWORD BytesPerSector OPTIONAL,
+    IN PLARGE_INTEGER ImageOffset OPTIONAL,
+    IN OUT LPDWORD Flags OPTIONAL,
+    IN LPCWSTR FileName OPTIONAL,
+    IN LPCWSTR WriteOverlayFileName OPTIONAL,
+    IN BOOL NativePath,
+    IN LPWSTR MountPoint OPTIONAL,
+    IN BOOL CreatePartition)
 {
+    if (Adapter == INVALID_HANDLE_VALUE)
+    {
+        ImScsiSetStatusMsg(hWnd, L"Opening Arsenal Image Mounter...");
+
+        Adapter = ImScsiOpenScsiAdapter(NULL);
+
+        if (Adapter == INVALID_HANDLE_VALUE)
+        {
+            return FALSE;
+        }
+    }
+
     DWORD dw;
 
     if (!ImScsiCheckDriverVersion(Adapter))
@@ -993,65 +1115,66 @@ IN BOOL CreatePartition)
         }
     }
     // Proxy reconnection types requires the user mode service.
-    else if ((IMSCSI_TYPE(*Flags) == IMSCSI_TYPE_PROXY) &
-        ((IMSCSI_PROXY_TYPE(*Flags) == IMSCSI_PROXY_TYPE_TCP) |
+    else if ((IMSCSI_TYPE(*Flags) == IMSCSI_TYPE_PROXY) &&
+        ((IMSCSI_PROXY_TYPE(*Flags) == IMSCSI_PROXY_TYPE_TCP) ||
         (IMSCSI_PROXY_TYPE(*Flags) == IMSCSI_PROXY_TYPE_COMM)))
     {
-        if (!WaitNamedPipe(IMDPROXY_SVC_PIPE_DOSDEV_NAME, 0))
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                if (ImDiskStartService(IMDPROXY_SVC))
+        if (!WaitNamedPipe(IMDPROXY_SVC_PIPE_DOSDEV_NAME, 0) &&
+            GetLastError() == ERROR_FILE_NOT_FOUND)
+        {
+            if (ImDiskStartService(IMDPROXY_SVC))
+            {
+                while (!WaitNamedPipe(IMDPROXY_SVC_PIPE_DOSDEV_NAME, 0))
+                    if (GetLastError() == ERROR_FILE_NOT_FOUND)
+                        Sleep(500);
+                    else
+                        break;
+
+                ImScsiSetStatusMsg
+                (hWnd,
+                    L"ImDisk Virtual Disk Driver Helper Service started.");
+            }
+            else
+            {
+                switch (GetLastError())
                 {
-                    while (!WaitNamedPipe(IMDPROXY_SVC_PIPE_DOSDEV_NAME, 0))
-                        if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                            Sleep(500);
-                        else
-                            break;
+                case ERROR_SERVICE_DOES_NOT_EXIST:
 
+                    ImScsiDebugMsgBox(hWnd,
+                        L"The ImDisk Virtual Disk Driver Helper "
+                        L"Service is not installed. Please install "
+                        L"ImDisk Virtual Disk Driver.",
+                        L"Arsenal Image Mounter", MB_ICONSTOP);
+                    break;
 
-                    ImScsiSetStatusMsg
-                        (hWnd,
-                        L"ImDisk Virtual Disk Driver Helper Service started.");
+                case ERROR_PATH_NOT_FOUND:
+                case ERROR_FILE_NOT_FOUND:
+
+                    ImScsiDebugMsgBox(hWnd,
+                        L"Cannot start the ImDisk Virtual Disk Driver "
+                        L"Helper Service. Please install ImDisk Virtual Disk Driver.",
+                        L"Arsenal Image Mounter", MB_ICONSTOP);
+                    break;
+
+                case ERROR_SERVICE_DISABLED:
+
+                    ImScsiDebugMsgBox(hWnd,
+                        L"The ImDisk Virtual Disk Driver Helper "
+                        L"Service is disabled.",
+                        L"Arsenal Image Mounter", MB_ICONSTOP);
+                    break;
+
+                default:
+
+                    ImScsiMsgBoxLastError
+                    (hWnd,
+                        L"Error starting ImDisk Virtual Disk Driver Helper "
+                        L"Service:");
                 }
-                else
-                {
-                    switch (GetLastError())
-                    {
-                    case ERROR_SERVICE_DOES_NOT_EXIST:
 
-                        ImScsiDebugMsgBox(hWnd,
-                            L"The ImDisk Virtual Disk Driver Helper "
-                            L"Service is not installed. Please install "
-                            L"ImDisk Virtual Disk Driver.",
-                            L"Arsenal Image Mounter", MB_ICONSTOP);
-                        break;
-
-                    case ERROR_PATH_NOT_FOUND:
-                    case ERROR_FILE_NOT_FOUND:
-
-                        ImScsiDebugMsgBox(hWnd,
-                            L"Cannot start the ImDisk Virtual Disk Driver "
-                            L"Helper Service. Please install ImDisk Virtual Disk Driver.",
-                            L"Arsenal Image Mounter", MB_ICONSTOP);
-                        break;
-
-                    case ERROR_SERVICE_DISABLED:
-
-                        ImScsiDebugMsgBox(hWnd,
-                            L"The ImDisk Virtual Disk Driver Helper "
-                            L"Service is disabled.",
-                            L"Arsenal Image Mounter", MB_ICONSTOP);
-                        break;
-
-                    default:
-
-                        ImScsiMsgBoxLastError
-                            (hWnd,
-                            L"Error starting ImDisk Virtual Disk Driver Helper "
-                            L"Service:");
-                    }
-
-                    return FALSE;
-                }
+                return FALSE;
+            }
+        }
     }
 
     UNICODE_STRING file_name;
@@ -1142,7 +1265,6 @@ IN BOOL CreatePartition)
         }
     }
 
-
     ImScsiSetStatusMsg(hWnd, L"Creating virtual disk...");
 
     WHeapMem<SRB_IMSCSI_CREATE_DATA> create_data(
@@ -1230,17 +1352,20 @@ IN BOOL CreatePartition)
     if (Flags != NULL)
         *Flags = create_data->Fields.Flags;
 
-    if (PortNumber == NULL)
+    if ((MountPoint == NULL) && !CreatePartition)
     {
         return TRUE;
     }
 
-    DWORD disk_number;
+    STORAGE_DEVICE_NUMBER disk_number;
 
     for (;;)
     {
-        HANDLE disk = ImScsiOpenDiskByDeviceNumber(
-            create_data->Fields.DeviceNumber, *PortNumber, &disk_number);
+        BYTE port_number = IMSCSI_ANY_PORT_NUMBER;
+
+        HANDLE disk = ImScsiOpenDiskByDeviceNumberEx(
+            create_data->Fields.DeviceNumber, &port_number,
+            &disk_number);
 
         if (disk != INVALID_HANDLE_VALUE)
         {
@@ -1416,7 +1541,7 @@ IN BOOL CreatePartition)
             continue;
         }
 
-        if (!ImScsiVolumeUsesDisk(vol_handle, disk_number))
+        if (!ImScsiVolumeUsesDisk(vol_handle, disk_number.DeviceNumber))
         {
             CloseHandle(vol_handle);
             continue;
@@ -1427,7 +1552,7 @@ IN BOOL CreatePartition)
         ImScsiDebugMessage(L"Attached disk volume %1!ws!",
             (LPCWSTR)vol_name);
 
-        vol_handle = CreateFile(vol_name, GENERIC_READ|GENERIC_WRITE,
+        vol_handle = CreateFile(vol_name, GENERIC_READ | GENERIC_WRITE,
             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0,
             NULL);
 
@@ -1599,83 +1724,25 @@ ImScsiCreateDevice(IN HWND hWnd OPTIONAL,
 
 AIMAPI_API BOOL
 WINAPI
-ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
-IN HANDLE Adapter OPTIONAL,
-IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
-IN OUT PLARGE_INTEGER DiskSize OPTIONAL,
-IN OUT LPDWORD BytesPerSector OPTIONAL,
-IN PLARGE_INTEGER ImageOffset OPTIONAL,
-IN OUT LPDWORD Flags OPTIONAL,
-IN LPCWSTR FileName OPTIONAL,
-IN LPCWSTR WriteOverlayFileName OPTIONAL,
-IN BOOL NativePath,
-IN LPWSTR MountPoint OPTIONAL,
-IN BOOL CreatePartition)
-{
-    if (Adapter == INVALID_HANDLE_VALUE)
-    {
-
-        ImScsiSetStatusMsg(hWnd, L"Opening Arsenal Image Mounter...");
-
-        BYTE port_number;
-        Adapter = ImScsiOpenScsiAdapter(&port_number);
-
-        if (Adapter == INVALID_HANDLE_VALUE)
-        {
-            return FALSE;
-        }
-
-        auto rc = ImScsiCreateDeviceEx(
-            hWnd,
-            Adapter,
-            &port_number,
-            DeviceNumber,
-            DiskSize,
-            BytesPerSector,
-            ImageOffset,
-            Flags,
-            FileName,
-            WriteOverlayFileName,
-            NativePath,
-            MountPoint,
-            CreatePartition);
-
-        NtClose(Adapter);
-
-        return rc;
-    }
-    else if ((MountPoint == NULL) && !CreatePartition)
-    {
-        return ImScsiCreateDeviceEx(
-            hWnd,
-            Adapter,
-            NULL,
-            DeviceNumber,
-            DiskSize,
-            BytesPerSector,
-            ImageOffset,
-            Flags,
-            FileName,
-            WriteOverlayFileName,
-            NativePath,
-            MountPoint,
-            FALSE);
-    }
-    else
-    {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-}
-
-AIMAPI_API BOOL
-WINAPI
 ImScsiRemoveDeviceByNumber(HWND hWnd,
 HANDLE Adapter,
 DEVICE_NUMBER DeviceNumber)
 {
-    DWORD dw;
-    ImScsiSetStatusMsg(hWnd, L"Sending remove request...");
+    if (DeviceNumber.LongNumber == IMSCSI_ALL_DEVICES)
+    {
+        ImScsiSetStatusMsg(hWnd,
+            L"Removing all devices...");
+    }
+    else
+    {
+        LPWSTR msg = ImDiskAllocPrintF(
+            L"Removing device %1!.6X!...",
+            DeviceNumber.LongNumber);
+
+        ImScsiSetStatusMsg(hWnd, msg);
+
+        LocalFree(msg);
+    }
 
     SRB_IMSCSI_REMOVE_DEVICE remove_device;
 
@@ -1685,13 +1752,14 @@ DEVICE_NUMBER DeviceNumber)
 
     remove_device.DeviceNumber = DeviceNumber;
 
+    DWORD dw;
+
     if (!ImScsiDeviceIoControl(Adapter,
         SMP_IMSCSI_REMOVE_DEVICE,
         &remove_device.SrbIoControl,
         sizeof(remove_device),
         0, &dw))
     {
-
         ImScsiMsgBoxLastError(hWnd, L"Error removing virtual disk:");
 
         return FALSE;
@@ -1728,7 +1796,6 @@ LPCWSTR MountPoint)
         }
     }
 
-
     ImScsiSetStatusMsg(hWnd, L"Opening device...");
 
     HANDLE device = ImDiskOpenDeviceByMountPoint(MountPoint,
@@ -1749,24 +1816,25 @@ LPCWSTR MountPoint)
         return FALSE;
     }
 
-    SCSI_ADDRESS addresses[8];
+    DEVICE_NUMBER device_numbers[max_extent_count];
+    BYTE port_numbers[max_extent_count];
     DWORD number_of_disks = 1;
-    if ((!ImScsiGetScsiAddressForDisk(device, addresses)) &&
-        (!ImScsiGetScsiAddressesForVolume(device, addresses,
-        _countof(addresses), &number_of_disks)))
+
+    if (!ImScsiGetDeviceNumberForDiskEx(device, device_numbers, port_numbers) &&
+        !ImScsiGetDeviceNumbersForVolumeEx(device, device_numbers,
+            port_numbers, max_extent_count, &number_of_disks))
     {
-        ImScsiMsgBoxLastError(hWnd, L"Error opening device:");
+        ImScsiMsgBoxPrintF(hWnd, MB_ICONERROR, L"Arsenal Image Mounter",
+            L"Not an Arsenal Image Mounter device: '%1!ws!'", MountPoint);
 
         CloseHandle(device);
 
         return FALSE;
     }
 
-
     ImScsiSetStatusMsg(hWnd, L"Flushing file buffers...");
 
     FlushFileBuffers(device);
-
 
     ImScsiSetStatusMsg(hWnd, L"Locking volume...");
 
@@ -1874,14 +1942,19 @@ LPCWSTR MountPoint)
                 return FALSE;
             }
 
-            if (!DeviceIoControl(device,
+            if (DeviceIoControl(device,
                 IOCTL_STORAGE_EJECT_MEDIA,
                 NULL,
                 0,
                 NULL,
                 0,
                 &dw,
-                NULL) || force_dismount)
+                NULL))
+            {
+                ImScsiSetStatusMsg(hWnd, L"Done.");
+                return TRUE;
+            }
+            else if (!force_dismount)
             {
                 NtClose(device);
 
@@ -1893,13 +1966,12 @@ LPCWSTR MountPoint)
         }
     }
 
-
     ImScsiSetStatusMsg(hWnd, L"Removing device...");
 
     for (DWORD i = 0; i < number_of_disks; i++)
     {
         HANDLE adapter = ImScsiOpenScsiAdapterByScsiPortNumber(
-            addresses[i].PortNumber);
+            port_numbers[i]);
 
         if (adapter == INVALID_HANDLE_VALUE)
         {
@@ -1911,15 +1983,9 @@ LPCWSTR MountPoint)
             return FALSE;
         }
 
-        DEVICE_NUMBER device_number;
-        device_number.PathId = addresses[i].PathId;
-        device_number.TargetId = addresses[i].TargetId;
-        device_number.Lun = addresses[i].Lun;
-
-        if (!ImScsiRemoveDeviceByNumber(hWnd, adapter, device_number))
+        if (!ImScsiRemoveDeviceByNumber(hWnd, adapter, device_numbers[i]))
         {
             NtClose(device);
-
 
             ImScsiMsgBoxLastError(hWnd, L"Error removing device:");
 
@@ -1937,7 +2003,6 @@ LPCWSTR MountPoint)
         NULL);
 
     NtClose(device);
-
 
     ImScsiSetStatusMsg(hWnd, L"Done.");
 
@@ -2358,13 +2423,31 @@ AIMAPI_API
 BOOL
 WINAPI
 ImScsiGetDeviceNumberForDisk(HANDLE Device,
-PDEVICE_NUMBER DeviceNumber,
-LPDWORD PortNumber)
+    PDEVICE_NUMBER DeviceNumber,
+    LPDWORD PortNumber)
+{
+    if (PortNumber != NULL && *PortNumber > MAXBYTE)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    return ImScsiGetDeviceNumberForDiskEx(Device, DeviceNumber,
+        (LPBYTE)PortNumber);
+}
+
+AIMAPI_API
+BOOL
+WINAPI
+ImScsiGetDeviceNumberForDiskEx(HANDLE Device,
+    PDEVICE_NUMBER DeviceNumber,
+    LPBYTE PortNumber)
 {
     SCSI_ADDRESS address;
+    STORAGE_DEVICE_NUMBER disk_number;
 
-    if (!ImScsiGetScsiAddressForDisk(Device,
-        &address))
+    if (!ImScsiGetScsiAddressForDiskEx(Device,
+        &address, &disk_number))
     {
         return FALSE;
     }
@@ -2375,45 +2458,81 @@ LPDWORD PortNumber)
 
     *PortNumber = address.PortNumber;
 
+    STORAGE_DEVICE_NUMBER opened_disk_number;
+
+    HANDLE disk = ImScsiOpenDiskByDeviceNumberEx(*DeviceNumber, PortNumber,
+        &opened_disk_number);
+
+    if (disk == INVALID_HANDLE_VALUE)
+    {
+        SetLastError(ERROR_INVALID_FUNCTION);
+        return FALSE;
+    }
+
+    NtClose(disk);
+
+    if (memcmp(&disk_number, &opened_disk_number, sizeof disk_number) != 0)
+    {
+        SetLastError(ERROR_INVALID_FUNCTION);
+        return FALSE;
+    }
+
     return TRUE;
 }
 
 AIMAPI_API
 BOOL
 WINAPI
-ImScsiGetScsiAddressForDisk(HANDLE Device,
-PSCSI_ADDRESS ScsiAddress)
+ImScsiGetScsiAddressForDisk(IN HANDLE Device,
+    OUT PSCSI_ADDRESS ScsiAddress)
 {
     DWORD dw;
 
-    STORAGE_DEVICE_NUMBER device_number;
-    if (!DeviceIoControl(Device,
-        IOCTL_STORAGE_GET_DEVICE_NUMBER,
-        NULL,
-        0,
-        &device_number,
-        sizeof(device_number),
-        &dw,
-        NULL))
-    {
-        return FALSE;
-    }
-
-    if ((device_number.DeviceType != FILE_DEVICE_DISK) ||
-        (device_number.PartitionNumber != 0))
-    {
-        SetLastError(ERROR_INVALID_FUNCTION);
-        return FALSE;
-    }
-
-    return DeviceIoControl(Device,
+    if (DeviceIoControl(Device,
         IOCTL_SCSI_GET_ADDRESS,
         NULL,
         0,
         ScsiAddress,
         sizeof(*ScsiAddress),
         &dw,
-        NULL);
+        NULL))
+    {
+        return TRUE;
+    }
+
+    return FALSE;
 }
+
+AIMAPI_API
+BOOL
+WINAPI
+ImScsiGetScsiAddressForDiskEx(HANDLE Device,
+    PSCSI_ADDRESS ScsiAddress,
+    PSTORAGE_DEVICE_NUMBER DeviceNumber)
+{
+    DWORD dw;
+
+    if (DeviceIoControl(Device,
+        IOCTL_STORAGE_GET_DEVICE_NUMBER,
+        NULL,
+        0,
+        DeviceNumber,
+        sizeof(*DeviceNumber),
+        &dw,
+        NULL) && DeviceIoControl(Device,
+            IOCTL_SCSI_GET_ADDRESS,
+            NULL,
+            0,
+            ScsiAddress,
+            sizeof(*ScsiAddress),
+            &dw,
+            NULL))
+    {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 
 

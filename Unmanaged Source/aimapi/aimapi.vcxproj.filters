@@ -30,6 +30,12 @@
     <ClInclude Include="..\..\..\imdisk\inc\imdisk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="winstrct.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wscm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

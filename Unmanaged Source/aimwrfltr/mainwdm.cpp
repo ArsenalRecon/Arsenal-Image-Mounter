@@ -1352,7 +1352,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (io_status.Information < sizeof(SRB_IMSCSI_CREATE_DATA) ||
             (!IMSCSI_WRITE_OVERLAY(create_data->Fields.Flags)) ||
-            io_status.Information <
+            io_status.Information < (ULONG_PTR)
             FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, Fields.FileName) +
             create_data->Fields.FileNameLength +
             create_data->Fields.WriteOverlayFileNameLength +

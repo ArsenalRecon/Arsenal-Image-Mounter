@@ -136,6 +136,9 @@
 /// Specify as device number to auto-select device number for new device.
 #define IMSCSI_AUTO_DEVICE_NUMBER       (0x00FFFFFFUL)
 
+/// Specify as SCSI port number to look for devices with any number.
+#define IMSCSI_ANY_PORT_NUMBER          (0xFF)
+
 #pragma warning(push)
 #pragma warning(disable : 4200)                       /* Prevent C4200 messages. */
 #pragma warning(disable : 4201)                       /* Prevent C4201 messages. */
@@ -197,6 +200,7 @@ typedef union _DEVICE_NUMBER
     };
 
     /// On add/remove this can be set to IMSCSI_AUTO_DEVICE_NUMBER
+    /// or IMSCSI_ALL_DEVICES.
     ULONG       LongNumber;
 
 } DEVICE_NUMBER, *PDEVICE_NUMBER;

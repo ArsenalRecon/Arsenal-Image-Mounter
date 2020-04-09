@@ -2,7 +2,7 @@
 /// aimcmd.cpp
 /// Command line access to Arsenal Image Mounter features.
 /// 
-/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -84,6 +84,8 @@ enum
 #pragma warning(disable: 6255)
 #pragma warning(disable: 28719)
 #pragma warning(disable: 28159)
+
+const int max_extent_count = 8;
 
 void __declspec(noreturn)
 ImScsiSyntaxHelp()
@@ -775,7 +777,9 @@ LPWSTR FormatOptions)
 
     if ((IMSCSI_DEVICE_TYPE(create_data->Fields.Flags) != 0) &&
         (IMSCSI_DEVICE_TYPE(create_data->Fields.Flags) !=
-        IMSCSI_DEVICE_TYPE_HD))
+            IMSCSI_DEVICE_TYPE_HD) &&
+        (IMSCSI_DEVICE_TYPE(create_data->Fields.Flags) !=
+            IMSCSI_DEVICE_TYPE_CD))
     {
         puts("Non-harddisk device successfully attached.");
 
@@ -786,7 +790,7 @@ LPWSTR FormatOptions)
         HEAP_GENERATE_EXCEPTIONS);
 
     HANDLE disk = INVALID_HANDLE_VALUE;
-    DWORD disk_number = ULONG_MAX;
+    STORAGE_DEVICE_NUMBER disk_number = { 0 };
 
     char wait_char = 0;
 
@@ -794,9 +798,9 @@ LPWSTR FormatOptions)
 
     for (;;)
     {
-        disk = ImScsiOpenDiskByDeviceNumber(
+        disk = ImScsiOpenDiskByDeviceNumberEx(
             create_data->Fields.DeviceNumber,
-            port_number, &disk_number);
+            &port_number, &disk_number);
 
         if (disk != INVALID_HANDLE_VALUE)
         {
@@ -828,8 +832,25 @@ LPWSTR FormatOptions)
 
     CloseHandle(disk);
 
-    WMem<WCHAR> dev_path(ImDiskAllocPrintF(L"\\\\?\\PhysicalDrive%1!u!",
-        disk_number));
+    WMem<WCHAR> dev_path;
+    
+    switch (disk_number.DeviceType)
+    {
+    case FILE_DEVICE_DISK:
+        dev_path = ImDiskAllocPrintF(L"\\\\?\\PhysicalDrive%1!u!",
+            disk_number.DeviceNumber);
+        break;
+
+    case FILE_DEVICE_CD_ROM:
+        dev_path = ImDiskAllocPrintF(L"\\\\?\\CdRom%1!u!",
+            disk_number.DeviceNumber);
+        break;
+
+    default:
+        puts("Non-disk device successfully attached.");
+
+        return IMSCSI_CLI_SUCCESS;
+    }
 
     if (!dev_path)
     {
@@ -851,6 +872,7 @@ LPWSTR FormatOptions)
 
     SET_DISK_ATTRIBUTES disk_attributes = { sizeof(disk_attributes) };
     disk_attributes.AttributesMask = DISK_ATTRIBUTE_OFFLINE;
+
     if (!IMSCSI_READONLY(create_data->Fields.Flags))
     {
         disk_attributes.AttributesMask |= DISK_ATTRIBUTE_READ_ONLY;
@@ -1003,10 +1025,31 @@ LPWSTR FormatOptions)
                 continue;
             }
 
-            if (!ImScsiVolumeUsesDisk(vol_handle, disk_number))
+            switch (IMSCSI_DEVICE_TYPE(create_data->Fields.Flags))
             {
-                CloseHandle(vol_handle);
-                continue;
+            case IMSCSI_DEVICE_TYPE_HD:
+                if (!ImScsiVolumeUsesDisk(vol_handle, disk_number.DeviceNumber))
+                {
+                    CloseHandle(vol_handle);
+                    continue;
+                }
+                break;
+
+            default:
+            {
+                STORAGE_DEVICE_NUMBER device_number;
+                if (!DeviceIoControl(vol_handle,
+                    IOCTL_STORAGE_GET_DEVICE_NUMBER,
+                    NULL, 0,
+                    &device_number, sizeof device_number,
+                    &dw, NULL) ||
+                    device_number.DeviceNumber != disk_number.DeviceNumber ||
+                    device_number.DeviceType != disk_number.DeviceType)
+                {
+                    CloseHandle(vol_handle);
+                    continue;
+                }
+            }
             }
 
             CloseHandle(vol_handle);
@@ -1232,6 +1275,7 @@ BOOL RemoveSettings)
             return IMSCSI_CLI_ERROR_DRIVER_INACCESSIBLE;
         }
 
+#ifdef _DEBUG
         if (DeviceNumber.LongNumber == IMSCSI_ALL_DEVICES)
         {
             puts("Removing all devices...");
@@ -1240,6 +1284,7 @@ BOOL RemoveSettings)
         {
             printf("Removing device %.6X...\n", DeviceNumber.LongNumber);
         }
+#endif
 
         if ((DeviceNumber.LongNumber == IMSCSI_ALL_DEVICES) ||
             EmergencyRemove)
@@ -1323,43 +1368,31 @@ BOOL RemoveSettings)
         }
     }
 
-    SCSI_ADDRESS addresses[8];
+    DEVICE_NUMBER device_numbers[max_extent_count];
+    BYTE port_numbers[max_extent_count];
+
     DWORD number_of_disks = 1;
-    if ((!ImScsiGetScsiAddressForDisk(device, addresses)) &&
-        (!ImScsiGetScsiAddressesForVolume(device, addresses,
-        _countof(addresses), &number_of_disks)))
+
+    if ((!ImScsiGetDeviceNumberForDiskEx(device, device_numbers,
+        port_numbers)) &&
+        (!ImScsiGetDeviceNumbersForVolumeEx(device, device_numbers,
+            port_numbers, max_extent_count, &number_of_disks)))
     {
         PrintLastError(MountPoint);
         CloseHandle(device);
-        return IMSCSI_CLI_ERROR_DEVICE_INACCESSIBLE;
+        return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
     }
 
-    for (DWORD i = 0; i < number_of_disks; i++)
+    if (RemoveSettings)
     {
-        HANDLE adapter = ImScsiOpenScsiAdapterByScsiPortNumber(
-            addresses[i].PortNumber);
-
-        if (adapter == INVALID_HANDLE_VALUE)
-        {
-            PrintLastError();
-            CloseHandle(device);
-            return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
-        }
-
-        DeviceNumber.PathId = addresses[i].PathId;
-        DeviceNumber.TargetId = addresses[i].TargetId;
-        DeviceNumber.Lun = addresses[i].Lun;
-
-        if (RemoveSettings)
+        for (DWORD i = 0; i < number_of_disks; i++)
         {
             printf("Removing registry settings for device %.6X...\n",
-                DeviceNumber.LongNumber);
+                device_numbers[i].LongNumber);
 
-            if (!ImScsiRemoveRegistrySettings(DeviceNumber))
+            if (!ImScsiRemoveRegistrySettings(device_numbers[i]))
                 PrintLastError(L"Registry edit failed");
         }
-
-        CloseHandle(adapter);
     }
 
     if (!ImScsiRemoveDeviceByMountPoint(NULL, MountPoint))
@@ -1425,13 +1458,16 @@ ImScsiCliQueryStatusWriteFilter(HANDLE Device)
 // either a device number or mount point.
 int
 ImScsiCliQueryStatusDevice(DEVICE_NUMBER DeviceNumber,
-LPWSTR MountPoint)
+    LPWSTR MountPoint)
 {
     WHeapMem<IMSCSI_DEVICE_CONFIGURATION> config(
         UNICODE_STRING_MAX_BYTES,
         HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY);
 
-    SCSI_ADDRESS addresses[8];
+    STORAGE_DEVICE_NUMBER device_number;
+
+    SCSI_ADDRESS scsi_addresses[max_extent_count];
+    DWORD disk_numbers[max_extent_count];
     DWORD number_of_disks = 1;
 
     if (MountPoint != NULL)
@@ -1445,21 +1481,33 @@ LPWSTR MountPoint)
             return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
         }
 
-        if ((!ImScsiGetScsiAddressForDisk(device, addresses)) &&
-            (!ImScsiGetScsiAddressesForVolume(device, addresses,
-            _countof(addresses), &number_of_disks)))
+        if (ImScsiGetScsiAddressForDiskEx(device, scsi_addresses,
+            &device_number))
         {
-            NtClose(device);
-
-            if (GetLastError() == ERROR_INVALID_FUNCTION)
+            disk_numbers[0] = device_number.DeviceNumber;
+        }
+        else
+        {
+            if (ImScsiGetScsiAddressesForVolumeEx(device, scsi_addresses,
+                disk_numbers, max_extent_count, &number_of_disks))
             {
-                puts("Not an Arsenal Image Mounter device.");
-                return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
+                device_number.DeviceType = FILE_DEVICE_DISK;
+                device_number.DeviceNumber = disk_numbers[0];
             }
             else
             {
-                PrintLastError(L"Error querying device:");
-                return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
+                NtClose(device);
+
+                if (GetLastError() == ERROR_INVALID_FUNCTION)
+                {
+                    puts("Not an Arsenal Image Mounter device.");
+                    return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
+                }
+                else
+                {
+                    PrintLastError(L"Error querying device:");
+                    return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
+                }
             }
         }
 
@@ -1467,152 +1515,165 @@ LPWSTR MountPoint)
     }
     else
     {
-        HANDLE adapter = ImScsiOpenScsiAdapter(&addresses[0].PortNumber);
-        if (adapter == INVALID_HANDLE_VALUE)
+        scsi_addresses[0].PortNumber = IMSCSI_ANY_PORT_NUMBER;
+
+        HANDLE device = ImScsiOpenDiskByDeviceNumberEx(DeviceNumber,
+            &scsi_addresses[0].PortNumber, &device_number);
+
+        if (device == INVALID_HANDLE_VALUE)
         {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-            {
-                fprintf(stderr, "Arsenal Image Mounter not installed.\n");
-                return IMSCSI_CLI_ERROR_DRIVER_NOT_INSTALLED;
-            }
-            else
-            {
-                PrintLastError();
-                return IMSCSI_CLI_ERROR_DRIVER_INACCESSIBLE;
-            }
+            PrintLastError(L"Error opening device:");
+            return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
         }
 
-        CloseHandle(adapter);
+        NtClose(device);
 
-        addresses[0].PathId = DeviceNumber.PathId;
-        addresses[0].TargetId = DeviceNumber.TargetId;
-        addresses[0].Lun = DeviceNumber.Lun;
+        scsi_addresses[0].PathId = DeviceNumber.PathId;
+        scsi_addresses[0].TargetId = DeviceNumber.TargetId;
+        scsi_addresses[0].Lun = DeviceNumber.Lun;
+
+        disk_numbers[0] = device_number.DeviceNumber;
     }
 
     for (DWORD i = 0; i < number_of_disks; i++)
     {
-        DeviceNumber.PathId = addresses[i].PathId;
-        DeviceNumber.TargetId = addresses[i].TargetId;
-        DeviceNumber.Lun = addresses[i].Lun;
-
-        printf("SCSI port number %i device number %.6X\n",
-            (int)addresses[i].PortNumber, DeviceNumber.LongNumber);
-
-        HANDLE adapter = ImScsiOpenScsiAdapterByScsiPortNumber(
-            addresses[0].PortNumber);
-
-        if (adapter == INVALID_HANDLE_VALUE)
+        switch (device_number.DeviceType)
         {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
+        case FILE_DEVICE_DISK:
+            printf("Device is \\\\?\\PhysicalDrive%u\n", disk_numbers[i]);
+            break;
+
+        case FILE_DEVICE_CD_ROM:
+            printf("Device is \\\\?\\CdRom%u\n", disk_numbers[i]);
+            break;
+        }
+
+        config->DeviceNumber.PathId = scsi_addresses[0].PathId;
+        config->DeviceNumber.TargetId = scsi_addresses[0].TargetId;
+        config->DeviceNumber.Lun = scsi_addresses[0].Lun;
+
+        STORAGE_DEVICE_NUMBER opened_device_number;
+
+        HANDLE device = ImScsiOpenDiskByDeviceNumberEx(config->DeviceNumber,
+            &scsi_addresses[i].PortNumber, &opened_device_number);
+
+        if (device == INVALID_HANDLE_VALUE)
+        {
+            switch (GetLastError())
             {
+            case ERROR_FILE_NOT_FOUND:
+            case ERROR_INVALID_FUNCTION:
                 fprintf(stderr, "Not an Arsenal Image Mounter device.\n");
-            }
-            else
-            {
-                PrintLastError();
-            }
-            continue;
-        }
+                break;
 
-        config->DeviceNumber = DeviceNumber;
-
-        if (!ImScsiQueryDevice(adapter, config, (DWORD)config.GetSize()))
-        {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-            {
-                fputs("No such device.\n", stderr);
-                return IMSCSI_CLI_ERROR_DEVICE_NOT_FOUND;
-            }
-            else
-            {
+            default:
                 PrintLastError();
-                return IMSCSI_CLI_ERROR_DEVICE_INACCESSIBLE;
+                break;
             }
         }
-
-        if (config->FileNameLength != 0)
+        else if (opened_device_number.DeviceNumber != disk_numbers[i])
         {
-            ImScsiOemPrintF(stdout,
-                "Image file: %1!.*ws!",
-                (int)(config->FileNameLength /
-                sizeof(*config->FileName)),
-                config->FileName);
+            fprintf(stderr, "Not an Arsenal Image Mounter device.\n");
+
+            NtClose(device);
         }
         else
         {
-            puts("No image file.");
+#ifdef _DEBUG
+            printf("SCSI port number %i device number %.6X\n",
+                (int)scsi_addresses[i].PortNumber,
+                config->DeviceNumber.LongNumber);
+#endif
+
+            HANDLE adapter = ImScsiOpenScsiAdapterByScsiPortNumber(
+                scsi_addresses[i].PortNumber);
+
+            if (adapter == INVALID_HANDLE_VALUE)
+            {
+                PrintLastError(L"Error opening SCSI adapter");
+
+                NtClose(device);
+
+                continue;
+            }
+
+            if (!ImScsiQueryDevice(adapter, config, (DWORD)config.GetSize()))
+            {
+                PrintLastError(L"Error querying device configuration");
+
+                NtClose(device);
+                CloseHandle(adapter);
+
+                return IMSCSI_CLI_ERROR_DEVICE_INACCESSIBLE;
+            }
+
+            CloseHandle(adapter);
+
+            if (config->FileNameLength != 0)
+            {
+                ImScsiOemPrintF(stdout,
+                    "Image file: %1!.*ws!",
+                    (int)(config->FileNameLength /
+                        sizeof(*config->FileName)),
+                    config->FileName);
+            }
+            else
+            {
+                puts("No image file.");
+            }
+
+            if (config->ImageOffset.QuadPart > 0)
+            {
+                printf("Image file offset: %I64i bytes\n",
+                    config->ImageOffset.QuadPart);
+            }
+
+            printf("Size: %I64i bytes (%.4g %s)",
+                config->DiskSize.QuadPart,
+                _h(config->DiskSize.QuadPart),
+                _p(config->DiskSize.QuadPart));
+
+            printf("%s%s%s%s%s%s.\n",
+                IMSCSI_SHARED_IMAGE(config->Flags) ? ", Shared image" : "",
+                IMSCSI_READONLY(config->Flags) ? ", ReadOnly" : "",
+                IMSCSI_REMOVABLE(config->Flags) ? ", Removable" : "",
+                IMSCSI_TYPE(config->Flags) == IMSCSI_TYPE_VM ? ", Virtual Memory" :
+                IMSCSI_TYPE(config->Flags) == IMSCSI_TYPE_PROXY ? ", Proxy" :
+                IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_AWEALLOC ? ", Physical Memory" :
+                IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_PARALLEL_IO ? ", Parallel I/O Image File" :
+                IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_BUFFERED_IO ? ", Queued buffered I/O Image File" :
+                ", Queued unbuffered I/O Image File",
+                IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_CD ? ", CD-ROM" :
+                IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_RAW ? ", RAW" :
+                IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_FD ? ", Floppy" :
+                ", HDD",
+                config->Flags & IMSCSI_IMAGE_MODIFIED ? ", Modified" :
+                config->Flags & IMSCSI_FAKE_DISK_SIG ? ", Fake disk signature" : "");
+
+            if (IMSCSI_WRITE_OVERLAY(config->Flags) &&
+                config->WriteOverlayFileNameLength > 0)
+            {
+                ImScsiOemPrintF(stdout,
+                    "Write overlay differencing image file: %1!.*ws!",
+                    (int)(config->WriteOverlayFileNameLength /
+                        sizeof(*config->FileName)),
+                    (LPCWSTR)(((PUCHAR)config->FileName) + config->FileNameLength));
+            }
+
+            flushall();
+
+            // Show write filter status
+
+            if (IMSCSI_WRITE_OVERLAY(config->Flags) &&
+                config->WriteOverlayFileNameLength > 0)
+            {
+                ImScsiCliQueryStatusWriteFilter(device);
+            }
+
+            NtClose(device);
         }
-
-        if (config->ImageOffset.QuadPart > 0)
-        {
-            printf("Image file offset: %I64i bytes\n",
-                config->ImageOffset.QuadPart);
-        }
-
-        printf("Size: %I64i bytes (%.4g %s)",
-            config->DiskSize.QuadPart,
-            _h(config->DiskSize.QuadPart),
-            _p(config->DiskSize.QuadPart));
-
-        printf("%s%s%s%s%s%s.\n",
-            IMSCSI_SHARED_IMAGE(config->Flags)  ? ", Shared image" : "",
-            IMSCSI_READONLY(config->Flags)      ? ", ReadOnly" : "",
-            IMSCSI_REMOVABLE(config->Flags)     ? ", Removable" : "",
-            IMSCSI_TYPE(config->Flags) == IMSCSI_TYPE_VM ? ", Virtual Memory" :
-            IMSCSI_TYPE(config->Flags) == IMSCSI_TYPE_PROXY ? ", Proxy" :
-            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_AWEALLOC ? ", Physical Memory" :
-            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_PARALLEL_IO ? ", Parallel I/O Image File" :
-            IMSCSI_FILE_TYPE(config->Flags) == IMSCSI_FILE_TYPE_BUFFERED_IO ? ", Queued buffered I/O Image File" :
-            ", Queued unbuffered I/O Image File",
-            IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_CD ? ", CD-ROM" :
-            IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_RAW ? ", RAW" :
-            IMSCSI_DEVICE_TYPE(config->Flags) == IMSCSI_DEVICE_TYPE_FD ? ", Floppy" :
-            ", HDD",
-            config->Flags & IMSCSI_IMAGE_MODIFIED ? ", Modified" :
-            config->Flags & IMSCSI_FAKE_DISK_SIG ? ", Fake disk signature" : "");
-
-        if (IMSCSI_WRITE_OVERLAY(config->Flags) &&
-            config->WriteOverlayFileNameLength > 0)
-        {
-            ImScsiOemPrintF(stdout,
-                "Write overlay differencing image file: %1!.*ws!",
-                (int)(config->WriteOverlayFileNameLength /
-                    sizeof(*config->FileName)),
-                (LPCWSTR)(((PUCHAR)config->FileName) + config->FileNameLength));
-        }
-
-        flushall();
 
         // Now enumerate disk volumes
-
-        BYTE port_number;
-        HANDLE device = ImScsiOpenScsiAdapter(&port_number);
-        if (device == INVALID_HANDLE_VALUE)
-        {
-            PrintLastError(L"Error opening virtual SCSI adapter:");
-            return IMSCSI_CLI_ERROR_DRIVER_INACCESSIBLE;
-        }
-
-        CloseHandle(device);
-
-        DWORD disk_number;
-
-        device = ImScsiOpenDiskByDeviceNumber(DeviceNumber, port_number,
-            &disk_number);
-
-        if (device == INVALID_HANDLE_VALUE)
-        {
-            PrintLastError(L"Cannot find any associated PhysicalDrive object:");
-            return IMSCSI_CLI_ERROR_DEVICE_INACCESSIBLE;
-        }
-
-        if (IMSCSI_WRITE_OVERLAY(config->Flags) &&
-            config->WriteOverlayFileNameLength > 0)
-        {
-            ImScsiCliQueryStatusWriteFilter(device);
-        }
-
-        CloseHandle(device);
 
         WCHAR vol_name[50];
 
@@ -1631,8 +1692,6 @@ LPWSTR MountPoint)
 
         do
         {
-            SCSI_ADDRESS address;
-
             vol_name[48] = 0;
 
             HANDLE vol_handle = CreateFile(vol_name, 0,
@@ -1646,42 +1705,41 @@ LPWSTR MountPoint)
                 break;
             }
 
-            if (!DeviceIoControl(vol_handle,
-                IOCTL_SCSI_GET_ADDRESS,
-                NULL, 0,
-                &address, sizeof(address),
-                &dw, NULL))
+            switch (device_number.DeviceType)
             {
-                CloseHandle(vol_handle);
-                continue;
-            }
+            case FILE_DEVICE_DISK:
 
-            if ((address.PortNumber != port_number) ||
-                (address.PathId != DeviceNumber.PathId) ||
-                (address.TargetId != DeviceNumber.TargetId) ||
-                (address.Lun != DeviceNumber.Lun))
-            {
-                CloseHandle(vol_handle);
-                continue;
-            }
+                if (!ImScsiVolumeUsesDisk(vol_handle, device_number.DeviceNumber))
+                {
+                    CloseHandle(vol_handle);
+                    continue;
+                }
 
-            STORAGE_DEVICE_NUMBER device_number;
-            if (!DeviceIoControl(vol_handle,
-                IOCTL_STORAGE_GET_DEVICE_NUMBER,
-                NULL, 0,
-                &device_number, sizeof(device_number),
-                &dw, NULL))
-            {
-                CloseHandle(vol_handle);
-                continue;
-            }
+                break;
 
-            if ((device_number.DeviceNumber != disk_number) ||
-                (device_number.DeviceType != FILE_DEVICE_DISK) ||
-                (((LONG)device_number.PartitionNumber) <= 0))
-            {
-                CloseHandle(vol_handle);
-                continue;
+            default:
+                STORAGE_DEVICE_NUMBER volume_device_number;
+
+                if (!DeviceIoControl(vol_handle,
+                    IOCTL_STORAGE_GET_DEVICE_NUMBER,
+                    NULL, 0,
+                    &volume_device_number, sizeof(volume_device_number),
+                    &dw, NULL))
+                {
+                    CloseHandle(vol_handle);
+                    continue;
+                }
+
+                if ((volume_device_number.DeviceNumber !=
+                    device_number.DeviceNumber) ||
+                    (volume_device_number.DeviceType !=
+                        device_number.DeviceType))
+                {
+                    CloseHandle(vol_handle);
+                    continue;
+                }
+
+                break;
             }
 
             CloseHandle(vol_handle);
@@ -1884,7 +1942,7 @@ wmain(int argc, LPWSTR argv[])
             "\n"
             "Version " PHDSKMNT_RC_VERSION_STR " - (Compiled " __DATE__ ")\n"
             "\n"
-            "Copyright (C) 2012-2015 Arsenal Recon.\n"
+            "Copyright (C) 2012-2020 Arsenal Recon.\n"
             "\n"
             "\n"
             "http://www.ArsenalRecon.com\n"

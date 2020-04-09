@@ -2,7 +2,7 @@
 /// aimapi.h
 /// Declarations for Arsenal Image Mounter public Win32 API in aimapi.dll.
 /// 
-/// Copyright (c) 2012-2019, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -419,56 +419,109 @@ extern "C" {
         BOOL
         WINAPI
         ImScsiVolumeUsesDisk(IN HANDLE Volume,
-        IN DWORD DiskNumber);
+            IN DWORD DiskNumber);
 
     /**
     Returns a list of Arsenal Image Mounter DEVICE_NUMBER items that
-    correspond to each disk in the set of extents for a given disk
-    volume.
+    correspond to each disk in the set of extents for a given disk volume.
 
-    This function does not check whether the specified port number really
-    corresponds to an Arsenal Image Mounter virtual SCSI adapter.
+    This function now only returns devices that correspond to devices mounted
+    by an Arsenal Image Mounter virtual SCSI adapter.
     */
     AIMAPI_API
         BOOL
         WINAPI
         ImScsiGetDeviceNumbersForVolume(IN HANDLE Volume,
-        IN DWORD PortNumber,
-        OUT PDEVICE_NUMBER DeviceNumbers,
-        IN DWORD NumberOfItems,
-        OUT LPDWORD NeededNumberOfItems);
+            IN DWORD PortNumber,
+            OUT PDEVICE_NUMBER DeviceNumbers,
+            IN DWORD NumberOfItems,
+            OUT LPDWORD NeededNumberOfItems);
+
+    /**
+    Returns a list of Arsenal Image Mounter DEVICE_NUMBER items that
+    correspond to each disk in the set of extents for a given disk volume.
+
+    This function now only returns devices that correspond to devices mounted
+    by an Arsenal Image Mounter virtual SCSI adapter.
+    */
+    AIMAPI_API
+        BOOL
+        WINAPI
+        ImScsiGetDeviceNumbersForVolumeEx(IN HANDLE Volume,
+            OUT PDEVICE_NUMBER DeviceNumbers,
+            OUT LPBYTE PortNumbers,
+            IN DWORD NumberOfItems,
+            OUT LPDWORD NeededNumberOfItems);
 
     /**
     Opens the PhysicalDrive disk object that corresponds to a given
     DEVICE_NUMBER connected to specified Arsenal Image Mounter virtual
-    SCSI port . Optionally also returns the PhysicalDrive object number
+    SCSI port. Optionally also returns the PhysicalDrive object number
     (disk number) for that disk in the DiskNumber parameter.
 
-    This function does not check whether the specified port number really
+    This function now checks whether the specified port number really
     corresponds to an Arsenal Image Mounter virtual SCSI adapter.
+
+    PortNumber can be set to IMSCSI_ANY_PORT_NUMBER. This function does not
+    return actual port number of found device. Call
+    ImScsiOpenDiskByDeviceNumberEx function if port number is needed.
     */
     AIMAPI_API
         HANDLE
         WINAPI
         ImScsiOpenDiskByDeviceNumber(IN DEVICE_NUMBER DeviceNumber,
-        IN DWORD PortNumber,
-        OUT LPDWORD DiskNumber OPTIONAL CPP_DEF_ZERO);
+            IN DWORD PortNumber,
+            OUT LPDWORD DiskNumber OPTIONAL CPP_DEF_ZERO);
+
+    /**
+    Opens the PhysicalDrive disk object that corresponds to a given
+    DEVICE_NUMBER connected to specified Arsenal Image Mounter virtual
+    SCSI port, or any Arsenal Image Mounter SCSI port if the value that
+    PortNumber points to specifies IMSCSI_ANY_PORT_NUMBER. If it specifies
+    IMSCSI_ANY_PORT_NUMBER, it will upon successful return contain the actual
+    port number where the device was found. This function can optionally also
+    return the a STORAGE_DEVICE_NUMBER structure with the PhysicalDrive object
+    number (disk number) and device type.
+
+    This function only opens devices that belong to an Arsenal Image Mounter
+    virtual SCSI adapter.
+    */
+    AIMAPI_API
+        HANDLE
+        WINAPI
+        ImScsiOpenDiskByDeviceNumberEx(IN DEVICE_NUMBER DeviceNumber,
+            IN OUT LPBYTE PortNumber,
+            OUT PSTORAGE_DEVICE_NUMBER DiskNumber OPTIONAL CPP_DEF_ZERO);
 
     /**
     Returns Arsenal Image Mounter DEVICE_NUMBER and SCSI port number
     for an open physical disk ("PhysicalDrive" object).
 
-    This function does not check whether the open disk really belongs
-    to an Arsenal Image Mounter virtual SCSI adapter. Use the returned
-    port number in a call to ImScsiOpenScsiAdapterByScsiPortNumber to
-    find out.
+    This function now checks that the opened disk really belongs to an
+    Arsenal Image Mounter virtual SCSI adapter by internally calling
+    ImScsiOpenDiskByDeviceNumber.
     */
     AIMAPI_API
         BOOL
         WINAPI
         ImScsiGetDeviceNumberForDisk(HANDLE Device,
-        PDEVICE_NUMBER DeviceNumber,
-        LPDWORD PortNumber);
+            PDEVICE_NUMBER DeviceNumber,
+            LPDWORD PortNumber);
+
+    /**
+    Returns Arsenal Image Mounter DEVICE_NUMBER and SCSI port number
+    for an open physical disk ("PhysicalDrive" object).
+
+    This function now checks that the opened disk really belongs to an
+    Arsenal Image Mounter virtual SCSI adapter by internally calling
+    ImScsiOpenDiskByDeviceNumber.
+    */
+    AIMAPI_API
+        BOOL
+        WINAPI
+        ImScsiGetDeviceNumberForDiskEx(HANDLE Device,
+            PDEVICE_NUMBER DeviceNumber,
+            LPBYTE PortNumber);
 
 #pragma endregion
 
@@ -516,7 +569,21 @@ extern "C" {
         BOOL
         WINAPI
         ImScsiGetScsiAddressForDisk(IN HANDLE Disk,
-        OUT PSCSI_ADDRESS ScsiAddress);
+            OUT PSCSI_ADDRESS ScsiAddress);
+
+    /**
+    Returns SCSI_ADDRESS and STORAGE_DEVICE_NUMBER structures for an open
+    physical disk object.
+
+    This function does not check whether the disk is created by an
+    Arsenal Image Mounter virtual SCSI adapter.
+    */
+    AIMAPI_API
+        BOOL
+        WINAPI
+        ImScsiGetScsiAddressForDiskEx(IN HANDLE Disk,
+            OUT PSCSI_ADDRESS ScsiAddress,
+            OUT PSTORAGE_DEVICE_NUMBER DeviceNumber);
 
     /**
     Returns a list of SCSI_ADDRESS items that correspond to each disk in the
@@ -529,9 +596,26 @@ extern "C" {
         BOOL
         WINAPI
         ImScsiGetScsiAddressesForVolume(IN HANDLE Volume,
-        OUT PSCSI_ADDRESS ScsiAddresses,
-        IN DWORD NumberOfItems,
-        OUT LPDWORD NeededNumberOfItems);
+            OUT PSCSI_ADDRESS ScsiAddresses,
+            IN DWORD NumberOfItems,
+            OUT LPDWORD NeededNumberOfItems);
+
+    /**
+    Returns a list of SCSI_ADDRESS items and disk numbers ("PhysicalDrive"
+    numbers) that correspond to each disk in the set of extents for an open
+    disk volume.
+
+    This function does not check whether the involved disks are created by an
+    Arsenal Image Mounter virtual SCSI adapter.
+    */
+    AIMAPI_API
+        BOOL
+        WINAPI
+        ImScsiGetScsiAddressesForVolumeEx(IN HANDLE Volume,
+            OUT PSCSI_ADDRESS ScsiAddresses,
+            OUT LPDWORD DiskNumbers,
+            IN DWORD NumberOfItems,
+            OUT LPDWORD NeededNumberOfItems);
 
     /**
     Opens the PhysicalDrive disk object that corresponds to a given
