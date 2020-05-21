@@ -165,7 +165,7 @@ Namespace Server.Services
 
             Catch ex As Exception
                 Trace.WriteLine($"Unhandled exception in service thread: {ex}")
-                OnServiceUnhandledException(New UnhandledExceptionEventArgs(ex, True))
+                OnServiceUnhandledException(New ThreadExceptionEventArgs(ex))
 
             Finally
                 OnServiceShutdown(EventArgs.Empty)

@@ -11,6 +11,8 @@ Namespace PSDisk
 
         Private _DetailsVisible As Boolean
         Private _Selected As Boolean
+        Private _ImagePath As String
+        Private _DiskSizeNumeric As Long?
 
         Public Property DeviceProperties As ScsiAdapter.DeviceProperties
 
@@ -24,14 +26,21 @@ Namespace PSDisk
 
         Public ReadOnly Property ScsiId As String
             Get
-                Return _DeviceProperties.DeviceNumber.ToString("X6")
+                If _DeviceProperties IsNot Nothing Then
+                    Return _DeviceProperties.DeviceNumber.ToString("X6")
+                Else
+                    Return "N/A"
+                End If
             End Get
         End Property
 
-        Public ReadOnly Property ImagePath As String
+        Public Property ImagePath As String
             Get
-                Return _DeviceProperties.Filename
+                Return If(_ImagePath, _DeviceProperties?.Filename)
             End Get
+            Set
+                _ImagePath = Value
+            End Set
         End Property
 
         Public Property NativePropertyDiskOffline As Boolean?
@@ -46,7 +55,7 @@ Namespace PSDisk
             Get
                 Dim state = IsOffline
                 If Not state.HasValue Then
-                    Return Nothing
+                    Return "N/A"
                 ElseIf state.Value Then
                     Return "Offline"
                 Else
@@ -86,19 +95,24 @@ Namespace PSDisk
                 ElseIf _RawDiskSignature.HasValue Then
                     Return _RawDiskSignature.Value.ToString("X8")
                 Else
-                    Return Nothing
+                    Return "N/A"
                 End If
             End Get
         End Property
 
-        Public ReadOnly Property DiskSizeNumeric As ULong?
+        Public Property DiskSizeNumeric As Long?
             Get
-                If _DeviceProperties IsNot Nothing Then
-                    Return Convert.ToUInt64(_DeviceProperties.DiskSize)
+                If _DiskSizeNumeric.HasValue Then
+                    Return _DiskSizeNumeric
+                ElseIf _DeviceProperties IsNot Nothing Then
+                    Return _DeviceProperties.DiskSize
                 Else
                     Return Nothing
                 End If
             End Get
+            Set
+                _DiskSizeNumeric = Value
+            End Set
         End Property
 
         Public ReadOnly Property DiskSize As String
@@ -112,7 +126,7 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public Property NativePropertyDiskOReadOnly As Boolean?
+        Public Property NativePropertyDiskReadOnly As Boolean?
 
         Public Property FakeDiskSignature As Boolean
 
@@ -145,8 +159,8 @@ Namespace PSDisk
 
         Public ReadOnly Property IsReadOnly As Boolean?
             Get
-                If _NativePropertyDiskOReadOnly.HasValue Then
-                    Return _NativePropertyDiskOReadOnly.Value
+                If _NativePropertyDiskReadOnly.HasValue Then
+                    Return _NativePropertyDiskReadOnly.Value
                 Else
                     Return _DeviceProperties?.Flags.HasFlag(DeviceFlags.ReadOnly)
                 End If

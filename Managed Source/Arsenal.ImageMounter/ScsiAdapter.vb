@@ -37,33 +37,43 @@ Public Class ScsiAdapter
     <SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification:="<Pending>")>
     Public NotInheritable Class DeviceProperties
 
-        Friend Sub New()
+        Public Sub New(adapter As ScsiAdapter, device_number As UInt32)
+
+            _DeviceNumber = device_number
+
+            adapter.QueryDevice(_DeviceNumber,
+                                _DiskSize,
+                                _BytesPerSector,
+                                _ImageOffset,
+                                _Flags,
+                                _Filename,
+                                _WriteOverlayImageFile)
 
         End Sub
 
         ''' <summary>Device number of virtual disk.</summary>
-        Public Property DeviceNumber As UInt32
+        Public ReadOnly Property DeviceNumber As UInt32
 
         ''' <summary>Size of virtual disk.</summary>
-        Public Property DiskSize As Int64
+        Public ReadOnly Property DiskSize As Int64
 
         ''' <summary>Number of bytes per sector for virtual disk geometry.</summary>
-        Public Property BytesPerSector As UInt32
+        Public ReadOnly Property BytesPerSector As UInt32
 
         ''' <summary>A skip offset if virtual disk data does not begin immediately at start of disk image file.
         ''' Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter
         ''' or Windows filesystem drivers.</summary>
-        Public Property ImageOffset As Int64
+        Public ReadOnly Property ImageOffset As Int64
 
         ''' <summary>Flags specifying properties for virtual disk. See comments for each flag value.</summary>
-        Public Property Flags As DeviceFlags
+        Public ReadOnly Property Flags As DeviceFlags
 
         ''' <summary>Name of disk image file holding storage for file type virtual disk or used to create a
         ''' virtual memory type virtual disk.</summary>
         Public Property Filename As String
 
         ''' <summary>Path to differencing file used in write-temporary mode.</summary>
-        Public Property WriteOverlayImageFile As String
+        Public ReadOnly Property WriteOverlayImageFile As String
 
     End Class
 
@@ -721,19 +731,7 @@ Public Class ScsiAdapter
     ''' <param name="DeviceNumber">Device number of virtual disk to retrieve properties for.</param>
     Public Function QueryDevice(DeviceNumber As UInt32) As DeviceProperties
 
-        Dim DeviceProperties As New DeviceProperties With {
-          .DeviceNumber = DeviceNumber
-        }
-
-        QueryDevice(DeviceNumber,
-                    DeviceProperties.DiskSize,
-                    DeviceProperties.BytesPerSector,
-                    DeviceProperties.ImageOffset,
-                    DeviceProperties.Flags,
-                    DeviceProperties.Filename,
-                    DeviceProperties.WriteOverlayImageFile)
-
-        Return DeviceProperties
+        Return New DeviceProperties(Me, DeviceNumber)
 
     End Function
 

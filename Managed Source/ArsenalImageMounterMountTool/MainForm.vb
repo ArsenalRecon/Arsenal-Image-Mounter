@@ -369,9 +369,7 @@ Public Class MainForm
     Private Sub DeviceListRefreshThread()
         Try
 
-            Dim devicelist = Task.Factory.StartNew(AddressOf Adapter.EnumerateDevicesProperties, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
-
-            Dim simpleviewtask = Task.Factory.StartNew(Function() DiskStateParser.GetSimpleView(Adapter, devicelist.Result.ToList()), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
+            Dim simpleviewtask = Task.Factory.StartNew(Function() DiskStateParser.GetSimpleView(Adapter, Adapter.EnumerateDevicesProperties()).ToList(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
 
             'Dim fullviewtask = Task.Factory.StartNew(Function() parser.GetFullView(Adapter.ScsiPortNumber, devicelist.Result))
 
@@ -392,7 +390,7 @@ Public Class MainForm
 
             Invoke(Sub() SetDiskView(simpleview, finished:=False))
 
-            Dim listFunction As Func(Of ScsiAdapter, List(Of ScsiAdapter.DeviceProperties), List(Of DiskStateView))
+            Dim listFunction As Func(Of ScsiAdapter, IEnumerable(Of ScsiAdapter.DeviceProperties), IEnumerable(Of DiskStateView))
 
             'Try
             '    Dim fullview = fullviewtask.Result
@@ -424,7 +422,7 @@ Public Class MainForm
 
                 Invoke(New Action(AddressOf SetLabelBusy))
 
-                Dim view = listFunction(Adapter, Adapter.EnumerateDevicesProperties().ToList())
+                Dim view = listFunction(Adapter, Adapter.EnumerateDevicesProperties()).ToList()
 
                 If IsClosing OrElse Disposing OrElse IsDisposed Then
                     Return

@@ -214,7 +214,7 @@ Public NotInheritable Class API
             End If
         Next
 
-        Return size.ToString() & " byte"
+        Return $"{size} byte"
 
     End Function
 

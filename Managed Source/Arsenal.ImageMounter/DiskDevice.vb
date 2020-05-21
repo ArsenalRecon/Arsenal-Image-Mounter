@@ -463,9 +463,17 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves volume size of disk device.
     ''' </summary>
-    Public ReadOnly Property DiskSize As Long
+    Public ReadOnly Property DiskSize As Long?
         Get
-            Return NativeFileIO.GetDiskSize(SafeFileHandle)
+            Dim partition_info = NativeFileIO.GetPartitionInformationEx(SafeFileHandle)
+            If partition_info.HasValue Then
+                Return partition_info.Value.PartitionLength
+            End If
+            Dim disk_size = NativeFileIO.GetDiskSize(SafeFileHandle)
+            If disk_size.HasValue Then
+                Return disk_size.Value
+            End If
+            Return Nothing
         End Get
     End Property
 

@@ -13,13 +13,13 @@ Namespace PSDisk
 
         End Sub
 
-        Public Shared Function GetSimpleView(portnumber As ScsiAdapter, deviceProperties As List(Of DeviceProperties)) As List(Of DiskStateView)
+        Public Shared Function GetSimpleView(portnumber As ScsiAdapter, deviceProperties As IEnumerable(Of DeviceProperties)) As IEnumerable(Of DiskStateView)
 
             Return GetSimpleViewSpecial(Of DiskStateView)(portnumber, deviceProperties)
 
         End Function
 
-        Public Shared Function GetSimpleViewSpecial(Of T As {New, DiskStateView})(portnumber As ScsiAdapter, deviceProperties As List(Of DeviceProperties)) As List(Of T)
+        Public Shared Function GetSimpleViewSpecial(Of T As {New, DiskStateView})(portnumber As ScsiAdapter, deviceProperties As IEnumerable(Of DeviceProperties)) As IEnumerable(Of T)
 
             Try
                 Dim ids = NativeFileIO.GetDevicesScsiAddresses(portnumber)
@@ -37,7 +37,7 @@ Namespace PSDisk
 
                 Return _
                     deviceProperties.
-                    ConvertAll(
+                    Select(
                         Function(dev)
 
                             Dim view As New T With {
@@ -52,7 +52,7 @@ Namespace PSDisk
                                         view.RawDiskSignature = device.DiskSignature
                                         view.FakeDiskSignature = dev.Flags.HasFlag(DeviceFlags.FakeDiskSignatureIfZero)
                                         view.NativePropertyDiskOffline = device.DiskPolicyOffline
-                                        view.NativePropertyDiskOReadOnly = device.DiskPolicyReadOnly
+                                        view.NativePropertyDiskReadOnly = device.DiskPolicyReadOnly
                                         Dim drive_layout = device.DriveLayoutEx
                                         view.DiskId = TryCast(drive_layout, NativeFileIO.DriveLayoutInformationGPT)?.GPT.DiskId
                                         If device.HasValidPartitionTable Then

@@ -22,7 +22,7 @@ Namespace Server.Services
     ''' for I/O requests received from client.
     ''' </summary>
     Public MustInherit Class DevioServiceBase
-        Implements IDisposable
+        Implements IVirtualDiskService
 
         Public Property Exception As Exception
 
@@ -51,7 +51,7 @@ Namespace Server.Services
         ''' </summary>
         ''' <value>Size of virtual disk device.</value>
         ''' <returns>Size of virtual disk device.</returns>
-        Public Overridable Property DiskSize As Long
+        Public Overridable Property DiskSize As Long Implements IVirtualDiskService.DiskSize
 
         ''' <summary>
         ''' Offset in disk image where this virtual disk device begins.
@@ -65,14 +65,14 @@ Namespace Server.Services
         ''' </summary>
         ''' <value>Sector size of virtual disk device.</value>
         ''' <returns>Sector size of virtual disk device.</returns>
-        Public Overridable Property SectorSize As UInteger
+        Public Overridable Property SectorSize As UInteger Implements IVirtualDiskService.SectorSize
 
         ''' <summary>
         ''' Description of service.
         ''' </summary>
         ''' <value>Description of service.</value>
         ''' <returns>Description of service.</returns>
-        Public Overridable Property Description As String
+        Public Overridable Property Description As String Implements IVirtualDiskService.Description
 
         ''' <summary>
         ''' Event raised when service thread is ready to start accepting connection from a client.
@@ -103,7 +103,7 @@ Namespace Server.Services
         ''' disk device object is removed. Note that this event is not raised if device is directly
         ''' removed by some other method.
         ''' </summary>
-        Public Event ServiceStopping As EventHandler
+        Public Event ServiceStopping As EventHandler Implements IVirtualDiskService.ServiceStopping
         Protected Overridable Sub OnServiceStopping(e As EventArgs)
             RaiseEvent ServiceStopping(Me, e)
         End Sub
@@ -111,7 +111,7 @@ Namespace Server.Services
         ''' <summary>
         ''' Event raised when service thread exits.
         ''' </summary>
-        Public Event ServiceShutdown As EventHandler
+        Public Event ServiceShutdown As EventHandler Implements IVirtualDiskService.ServiceShutdown
         Protected Overridable Sub OnServiceShutdown(e As EventArgs)
             RaiseEvent ServiceShutdown(Me, e)
         End Sub
@@ -121,11 +121,11 @@ Namespace Server.Services
         ''' but before associated virtual disk device is forcefully removed, as specified by ForceRemoveDiskDeviceOnCrash
         ''' property.
         ''' </summary>
-        Public Event ServiceUnhandledException As UnhandledExceptionEventHandler
-        Protected Overridable Sub OnServiceUnhandledException(e As UnhandledExceptionEventArgs)
+        Public Event ServiceUnhandledException As ThreadExceptionEventHandler Implements IVirtualDiskService.ServiceUnhandledException
+        Protected Overridable Sub OnServiceUnhandledException(e As ThreadExceptionEventArgs)
             RaiseEvent ServiceUnhandledException(Me, e)
-            If HasDiskDevice AndAlso ForceRemoveDiskDeviceOnCrash AndAlso _ScsiAdapter IsNot Nothing Then
-                _ScsiAdapter.RemoveDevice(DiskDeviceNumber)
+            If HasDiskDevice AndAlso _ForceRemoveDiskDeviceOnCrash AndAlso _ScsiAdapter IsNot Nothing Then
+                _ScsiAdapter.RemoveDevice(_DiskDeviceNumber)
             End If
         End Sub
 
@@ -449,7 +449,7 @@ Namespace Server.Services
         ''' </summary>
         ''' <value>Returns True if an Arsenal Image Mounter Disk Device has been created, False otherwise.</value>
         ''' <returns>Returns True if an Arsenal Image Mounter Disk Device has been created, False otherwise.</returns>
-        Public Overridable ReadOnly Property HasDiskDevice As Boolean
+        Public Overridable ReadOnly Property HasDiskDevice As Boolean Implements IVirtualDiskService.HasDiskDevice
             Get
                 Return _DiskDeviceNumber <> UInteger.MaxValue
             End Get
@@ -467,7 +467,7 @@ Namespace Server.Services
         ''' Returns a PhysicalDrive or CdRom device name for a mounted device provided by
         ''' this service instance.
         ''' </summary>
-        Public Overridable Function GetDiskDeviceName() As String
+        Public Overridable Function GetDiskDeviceName() As String Implements IVirtualDiskService.GetDiskDeviceName
             Return _ScsiAdapter.GetDeviceName(DiskDeviceNumber)
         End Function
 
@@ -481,8 +481,20 @@ Namespace Server.Services
         ''' forcefully removed if a crash occurs in service thread of this instance. Default is True.</returns>
         Public Overridable Property ForceRemoveDiskDeviceOnCrash As Boolean = True
 
+        Public Overridable Sub RemoveDevice() Implements IVirtualDiskService.RemoveDevice
+
+            _ScsiAdapter.RemoveDevice(DiskDeviceNumber)
+
+        End Sub
+
+        Public Overridable Sub RemoveDeviceSafe() Implements IVirtualDiskService.RemoveDeviceSafe
+
+            _ScsiAdapter.RemoveDeviceSafe(DiskDeviceNumber)
+
+        End Sub
+
 #Region "IDisposable Support"
-        Public ReadOnly Property IsDisposed As Boolean ' To detect redundant calls
+        Public ReadOnly Property IsDisposed As Boolean Implements IVirtualDiskService.IsDisposed ' To detect redundant calls
 
         ' IDisposable
         Protected Overridable Sub Dispose(disposing As Boolean)

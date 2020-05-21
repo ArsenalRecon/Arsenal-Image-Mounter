@@ -333,12 +333,12 @@ Namespace IO
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
               <Out, MarshalAs(UnmanagedType.LPArray)> lpszVolumePathNames As Char(),
               cchBufferLength As Int32,
-              <Out> ByRef lpcchReturnLength As Int32) As UInt32
+              <Out> ByRef lpcchReturnLength As Int32) As Boolean
 
             Friend Declare Auto Function GetVolumeNameForVolumeMountPoint Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
               <MarshalAs(UnmanagedType.LPTStr), [In](), Out> DestinationInfFileName As StringBuilder,
-              DestinationInfFileNameSize As Int32) As UInt32
+              DestinationInfFileNameSize As Int32) As Boolean
 
             Friend Declare Auto Function GetCommTimeouts Lib "kernel32" (
               hFile As SafeFileHandle,
@@ -1957,13 +1957,19 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetDiskSize(SafeFileHandle As SafeFileHandle) As Int64
+        Public Shared Function GetDiskSize(SafeFileHandle As SafeFileHandle) As Int64?
 
             Dim FileSize As Int64
 
-            Win32Try(UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_GET_LENGTH_INFO, IntPtr.Zero, 0UI, FileSize, CUInt(Marshal.SizeOf(FileSize)), 0UI, IntPtr.Zero))
+            If UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_GET_LENGTH_INFO, IntPtr.Zero, 0UI, FileSize, CUInt(Marshal.SizeOf(FileSize)), 0UI, IntPtr.Zero) Then
 
-            Return FileSize
+                Return FileSize
+
+            Else
+
+                Return Nothing
+
+            End If
 
         End Function
 
@@ -2982,9 +2988,33 @@ Namespace IO
 
             Dim str As New StringBuilder(65536)
 
-            Win32Try(UnsafeNativeMethods.GetVolumeNameForVolumeMountPoint(MountPoint, str, str.Capacity))
+            If UnsafeNativeMethods.GetVolumeNameForVolumeMountPoint(MountPoint, str, str.Capacity) AndAlso
+                    str.Length > 0 Then
 
-            Return str.ToString()
+                Return str.ToString()
+
+            End If
+
+            If MountPoint.StartsWith("\\?\", StringComparison.Ordinal) Then
+                MountPoint = MountPoint.Substring(4)
+            End If
+
+            MountPoint = MountPoint.TrimEnd("\"c)
+
+            Dim nt_device_path = QueryDosDevice(MountPoint)?.FirstOrDefault()
+
+            If String.IsNullOrWhiteSpace(nt_device_path) Then
+
+                Return Nothing
+
+            End If
+
+            Return _
+                Aggregate dosdevice In QueryDosDevice()
+                Where dosdevice.Length = 44 AndAlso dosdevice.StartsWith("Volume{", StringComparison.OrdinalIgnoreCase)
+                Where QueryDosDevice(dosdevice).Contains(nt_device_path, StringComparer.OrdinalIgnoreCase)
+                Select $"\\?\{dosdevice}\"
+                    Into FirstOrDefault()
 
         End Function
 
@@ -3092,17 +3122,40 @@ Namespace IO
 
         Public Shared Function EnumerateVolumeMountPoints(VolumeName As String) As IEnumerable(Of String)
 
+            VolumeName.NullCheck(NameOf(VolumeName))
+
             Dim TargetPath(0 To 65536) As Char
 
             Dim length As Int32
 
-            Win32Try(UnsafeNativeMethods.GetVolumePathNamesForVolumeName(VolumeName, TargetPath, TargetPath.Length, length))
+            If UnsafeNativeMethods.GetVolumePathNamesForVolumeName(VolumeName, TargetPath, TargetPath.Length, length) AndAlso
+                length > 2 Then
 
-            If length <= 2 Then
+                Return ParseDoubleTerminatedString(TargetPath, length)
+
+            End If
+
+            If VolumeName.StartsWith("\\?\Volume{", StringComparison.OrdinalIgnoreCase) Then
+                VolumeName = VolumeName.Substring("\\?\".Length, 44)
+            ElseIf VolumeName.StartsWith("Volume{", StringComparison.OrdinalIgnoreCase) Then
+                VolumeName = VolumeName.Substring(0, 44)
+            Else
                 Return {}
             End If
 
-            Return ParseDoubleTerminatedString(TargetPath, length)
+            VolumeName = QueryDosDevice(VolumeName).FirstOrDefault()
+
+            If String.IsNullOrWhiteSpace(VolumeName) Then
+                Return {}
+            End If
+
+            Dim names = From link In QueryDosDevice()
+                        Where link.Length = 2 AndAlso link(1) = ":"c
+                        From target In QueryDosDevice(link)
+                        Where target.Equals(VolumeName, StringComparison.OrdinalIgnoreCase)
+                        Select $"{link}\"
+
+            Return names
 
         End Function
 
@@ -3133,6 +3186,13 @@ Namespace IO
         End Function
 
         Public Shared Function EnumerateVolumeNamesForDeviceObject(DeviceObject As String) As IEnumerable(Of String)
+
+            If DeviceObject.EndsWith("}", StringComparison.Ordinal) AndAlso
+                    DeviceObject.StartsWith("\Device\Volume{", StringComparison.Ordinal) Then
+
+                Return {DeviceObject.Substring("\Device\".Length)}
+
+            End If
 
             Return (New VolumeEnumerator).Where(
                 Function(volumeGuid)

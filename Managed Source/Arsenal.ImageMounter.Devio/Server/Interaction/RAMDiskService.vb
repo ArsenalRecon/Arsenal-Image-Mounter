@@ -30,10 +30,10 @@ Namespace Server.Interaction
                     Dim kernel_geometry = device.Geometry.Value
 
                     Dim discutils_geometry As New Geometry(
-                    device.DiskSize,
-                    kernel_geometry.TracksPerCylinder,
-                    kernel_geometry.SectorsPerTrack,
-                    kernel_geometry.BytesPerSector)
+                        device.DiskSize.Value,
+                        kernel_geometry.TracksPerCylinder,
+                        kernel_geometry.SectorsPerTrack,
+                        kernel_geometry.BytesPerSector)
 
                     Dim disk As New Raw.Disk(device.GetRawDiskStream(), Ownership.None, discutils_geometry)
 
