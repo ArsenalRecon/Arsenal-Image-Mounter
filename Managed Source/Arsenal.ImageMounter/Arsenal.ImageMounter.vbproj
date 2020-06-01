@@ -139,6 +139,7 @@
     <Compile Include="IO\DisposableList.vb" />
     <Compile Include="IO\FileStreamsEnumerator.vb" />
     <Compile Include="IO\PinnedBuffer.vb" />
+    <Compile Include="IO\SystemNotificationEvent.vb" />
     <Compile Include="IO\VolumeMountPointEnumerator.vb" />
     <Compile Include="IO\VolumeEnumerator.vb" />
     <Compile Include="IO\WriteFilterStatistics.vb" />

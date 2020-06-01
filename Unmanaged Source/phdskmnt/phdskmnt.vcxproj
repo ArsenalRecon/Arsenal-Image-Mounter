@@ -496,7 +496,7 @@
     <None Exclude="@(None)" Include="*.def;*.bat;*.hpj;*.asmx" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Exclude="@(ClInclude)" Include="*.h;*.hpp;*.hxx;*.hm;*.inl;*.xsd" />
+    <ClInclude Include="cd.h" />
     <ClInclude Include="inc\common.h" />
     <ClInclude Include="inc\legacycompat.h" />
     <ClInclude Include="inc\phdskmnt.h" />

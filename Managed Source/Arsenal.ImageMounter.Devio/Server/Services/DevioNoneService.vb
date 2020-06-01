@@ -40,13 +40,13 @@ Namespace Server.Services
         ''' </summary>
         ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
         Public Sub New(Imagefile As String, DiskAccess As FileAccess)
-            MyBase.New(New DevioProviderFromStream(New FileStream(Imagefile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete), ownsStream:=True) With {.CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)}, OwnsProvider:=True)
+            MyBase.New(New DummyProvider(NativeFileIO.GetFileSize(Imagefile)), OwnsProvider:=True)
 
             Offset = API.GetOffsetByFileExt(Imagefile)
 
-            Me.DiskAccess = DiskAccess
+            _DiskAccess = DiskAccess
 
-            Me.Imagefile = Imagefile
+            _Imagefile = Imagefile
 
             If Not DiskAccess.HasFlag(FileAccess.Write) Then
                 _ProxyModeFlags = DeviceFlags.TypeFile Or DeviceFlags.ReadOnly
@@ -85,6 +85,33 @@ Namespace Server.Services
             Else
                 AdditionalFlags = DeviceFlags.TypeVM
             End If
+
+        End Sub
+
+        Private Shared Function GetVhdSize(Imagefile As String) As Long
+
+            Using disk = VirtualDisk.OpenDisk(Imagefile, FileAccess.Read)
+
+                Return disk.Capacity
+
+            End Using
+
+        End Function
+
+        ''' <summary>
+        ''' Creates a DevioServiceBase compatible object, but without providing a proxy service.
+        ''' Instead, it just requests the SCSI adapter, awealloc and vhdaccess drivers to create
+        ''' a dynamically expanding RAM disk based on the contents of the supplied VHD image.
+        ''' </summary>
+        ''' <param name="Imagefile">Path to VHD image file to use as template for the RAM disk.</param>
+        Public Sub New(Imagefile As String)
+            MyBase.New(New DummyProvider(GetVhdSize(Imagefile)), OwnsProvider:=True)
+
+            DiskAccess = FileAccess.ReadWrite
+
+            _Imagefile = Imagefile
+
+            _ProxyObjectName = "\\?\vhdaccess\??\awealloc" & NativeFileIO.GetNtPath(Imagefile)
 
         End Sub
 

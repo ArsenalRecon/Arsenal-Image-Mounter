@@ -237,6 +237,40 @@ Public NotInheritable Class DriverSetup
 
         End If
 
+        StartInstalledServices()
+
+    End Sub
+
+    Private Shared Sub StartInstalledServices()
+
+        For Each service_name In {"vhdaccess", "awealloc", "dokan1"}
+
+            Try
+                Using service As New ServiceController(service_name)
+
+                    Select Case service.Status
+                        Case ServiceControllerStatus.Stopped, ServiceControllerStatus.Paused
+                            service.Start()
+                            service.WaitForStatus(ServiceControllerStatus.Running)
+                            Trace.WriteLine($"Successfully loaded driver '{service_name}'")
+
+                        Case ServiceControllerStatus.Running
+                            Trace.WriteLine($"Driver '{service_name}' is already loaded.")
+
+                        Case Else
+                            Trace.WriteLine($"Driver '{service_name}' is '{service.Status}' and cannot be loaded at this time.")
+
+                    End Select
+
+                End Using
+
+            Catch ex As Exception
+                Trace.WriteLine($"Warning: Failed to open service controller for driver '{service_name}'. Driver not loaded.")
+
+            End Try
+
+        Next
+
     End Sub
 
     ''' <summary>

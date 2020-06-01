@@ -462,6 +462,12 @@ Namespace Server.Interaction
 
                 Return New DevioNoneService(Imagefile, DiskAccess)
 
+            ElseIf Proxy = ProxyType.DiscUtils AndAlso Not FakeMBR AndAlso
+                    (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) OrElse
+                    Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase)) Then
+
+                Return New DevioNoneService("\\?\vhdaccess" & NativeFileIO.GetNtPath(Imagefile), DiskAccess)
+
             End If
 
             Dim Provider = GetProvider(Imagefile, DiskAccess, Proxy)
@@ -494,7 +500,16 @@ Namespace Server.Interaction
             Select Case Proxy
 
                 Case ProxyType.None
-                    Service = New DevioNoneService(Imagefile, DiskAccess)
+                    If Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) OrElse
+                        Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase) Then
+
+                        Return New DevioNoneService("\\?\vhdaccess" & NativeFileIO.GetNtPath(Imagefile), DiskAccess)
+
+                    Else
+
+                        Service = New DevioNoneService(Imagefile, DiskAccess)
+
+                    End If
 
                 Case Else
                     Service = New DevioShmService(GetProvider(Imagefile, DiskAccess, Proxy), OwnsProvider:=True)
