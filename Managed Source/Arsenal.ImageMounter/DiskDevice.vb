@@ -465,15 +465,17 @@ Public Class DiskDevice
     ''' </summary>
     Public ReadOnly Property DiskSize As Long?
         Get
-            Dim partition_info = NativeFileIO.GetPartitionInformationEx(SafeFileHandle)
-            If partition_info.HasValue Then
-                Return partition_info.Value.PartitionLength
-            End If
-            Dim disk_size = NativeFileIO.GetDiskSize(SafeFileHandle)
-            If disk_size.HasValue Then
-                Return disk_size.Value
-            End If
-            Return Nothing
+            Return NativeFileIO.GetDiskSize(SafeFileHandle)
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Retrieves partition information.
+    ''' </summary>
+    ''' <returns></returns>
+    Public ReadOnly Property VolumeSizeInformation As NativeFileIO.FILE_FS_FULL_SIZE_INFORMATION?
+        Get
+            Return NativeFileIO.GetVolumeSizeInformation(SafeFileHandle)
         End Get
     End Property
 

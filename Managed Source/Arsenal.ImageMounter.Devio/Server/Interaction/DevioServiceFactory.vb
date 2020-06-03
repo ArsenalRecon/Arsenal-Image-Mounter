@@ -214,7 +214,7 @@ Namespace Server.Interaction
         ''' <returns></returns>
         Public Shared Function OpenOVA(imagefile As String, diskAccess As FileAccess) As VirtualDisk
 
-            If (diskAccess.HasFlag(FileAccess.Write)) Then
+            If diskAccess.HasFlag(FileAccess.Write) Then
                 Throw New NotSupportedException("Cannot modify OVA files")
             End If
 

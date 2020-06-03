@@ -3,6 +3,7 @@ Imports Arsenal.ImageMounter.Extensions
 Imports System.Security.Permissions
 Imports System.Diagnostics.CodeAnalysis
 Imports Microsoft.Win32
+Imports System.Globalization
 
 ''''' NativeFileIO.vb
 ''''' Routines for accessing some useful Win32 API functions to access features not
@@ -948,17 +949,24 @@ Namespace IO
               <Out> ByRef ReturnLength As Integer) As Boolean
 
             Friend Declare Unicode Function NtQuerySystemInformation Lib "ntdll.dll" (
-              <[In]> SystemInformationClass As SystemInfoClass,
+              <[In]> SystemInformationClass As SystemInformationClass,
               <[In]> pSystemInformation As SafeBuffer,
               <[In]> uSystemInformationLength As Integer,
               <Out> ByRef puReturnLength As Integer) As Integer
 
             Friend Declare Unicode Function NtQueryObject Lib "ntdll.dll" (
               <[In]> ObjectHandle As SafeFileHandle,
-              <[In]> ObjectInformationClass As ObjectInfoClass,
+              <[In]> ObjectInformationClass As ObjectInformationClass,
               <[In]> ObjectInformation As SafeBuffer,
               <[In]> ObjectInformationLength As Integer,
               <Out> ByRef puReturnLength As Integer) As Integer
+
+            Friend Declare Unicode Function NtQueryVolumeInformationFile Lib "ntdll.dll" (
+              <[In]> FileHandle As SafeFileHandle,
+              <[In], Out> IoStatusBlock As IoStatusBlock,
+              <[In]> FsInformation As SafeBuffer,
+              <[In]> FsInformationLength As Integer,
+              <[In]> FsInformationClass As FsInformationClass) As Integer
 
             Friend Declare Unicode Function NtDuplicateObject Lib "ntdll.dll" (
               <[In]> SourceProcessHandle As SafeHandle,
@@ -1372,7 +1380,7 @@ Namespace IO
 
                 Do
                     Dim status = UnsafeNativeMethods.NtQuerySystemInformation(
-                        SystemInfoClass.SystemHandleInformation,
+                        SystemInformationClass.SystemHandleInformation,
                         buffer,
                         CInt(buffer.ByteLength),
                         Nothing)
@@ -1471,7 +1479,7 @@ Namespace IO
                         Using duphandle
                             Dim newbuffersize As Integer
                             Do
-                                status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInfoClass.ObjectTypeInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+                                status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectTypeInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
                                 If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
                                     buffer.Resize(newbuffersize)
                                     Continue Do
@@ -1490,7 +1498,7 @@ Namespace IO
                                 handle.GrantedAccess <> &H1A019F Then
 
                                 Do
-                                    status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInfoClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+                                    status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
                                     If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
                                         buffer.Resize(newbuffersize)
                                         Continue Do
@@ -2031,6 +2039,24 @@ Namespace IO
 
         End Function
 
+        Public Shared Function GetVolumeSizeInformation(SafeFileHandle As SafeFileHandle) As FILE_FS_FULL_SIZE_INFORMATION?
+
+            Using buffer As New PinnedBuffer(Of FILE_FS_FULL_SIZE_INFORMATION)(1)
+
+                Dim io_status_block As New IoStatusBlock
+
+                Dim status = UnsafeNativeMethods.NtQueryVolumeInformationFile(SafeFileHandle, io_status_block, buffer, CInt(buffer.ByteLength), FsInformationClass.FileFsFullSizeInformation)
+
+                If status < 0 Then
+                    Return Nothing
+                End If
+
+                Return buffer.Read(Of FILE_FS_FULL_SIZE_INFORMATION)(0)
+
+            End Using
+
+        End Function
+
         Public Shared Function IsDiskWritable(SafeFileHandle As SafeFileHandle) As Boolean
 
             Dim rc = UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_IS_WRITABLE, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
@@ -2300,7 +2326,7 @@ Namespace IO
             Dim size As UInteger
 
             If Not UnsafeNativeMethods.DeviceIoControl(source, NativeConstants.FSCTL_GET_REPARSE_POINT, IntPtr.Zero, 0UI, buffer, CUInt(buffer.Length), size, IntPtr.Zero) Then
-                Throw New Win32Exception
+                Return Nothing
             End If
 
             Using wr As New BinaryReader(New MemoryStream(buffer, 0, CInt(size)))
@@ -3263,8 +3289,10 @@ Namespace IO
 
             If DevicePath.NullCheck(NameOf(DevicePath)).StartsWith("\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase) Then          ' \\?\PhysicalDrive paths to partitioned disks
                 Return EnumerateDiskVolumes(UInteger.Parse(DevicePath.Substring("\\?\PhysicalDrive".Length)))
-            Else
+            ElseIf DevicePath.StartsWith("\\?\", StringComparison.Ordinal) Then
                 Return EnumerateVolumeNamesForDeviceObject(QueryDosDevice(DevicePath.Substring("\\?\".Length)).First())     ' \\?\C: or similar paths to mounted volumes
+            Else
+                Return Nothing
             End If
 
         End Function
@@ -3290,7 +3318,7 @@ Namespace IO
             If DeviceObject.EndsWith("}", StringComparison.Ordinal) AndAlso
                 DeviceObject.StartsWith("\Device\Volume{", StringComparison.Ordinal) Then
 
-                Return {DeviceObject.Substring("\Device\".Length)}
+                Return {$"\\?\{DeviceObject.Substring("\Device\".Length)}\"}
 
             End If
 
@@ -4396,7 +4424,18 @@ Namespace IO
             End Function
         End Structure
 
-        Public Enum SystemInfoClass As UInteger
+        Public Enum FsInformationClass As UInteger
+            FileFsVolumeInformation = 1
+            FileFsLabelInformation = 2
+            FileFsSizeInformation = 3
+            FileFsDeviceInformation = 4
+            FileFsAttributeInformation = 5
+            FileFsControlInformation = 6
+            FileFsFullSizeInformation = 7
+            FileFsObjectIdInformation = 8
+        End Enum
+
+        Public Enum SystemInformationClass As UInteger
             SystemBasicInformation  '' 0x002C 
             SystemProcessorInformation  '' 0x000C 
             SystemPerformanceInformation    '' 0x0138 
@@ -4454,7 +4493,7 @@ Namespace IO
             MaxSystemInfoClass
         End Enum
 
-        Public Enum ObjectInfoClass As UInteger
+        Public Enum ObjectInformationClass As UInteger
             ObjectBasicInformation  '' 0 Y N 
             ObjectNameInformation   '' 1 Y N 
             ObjectTypeInformation   '' 2 Y N 
@@ -5585,6 +5624,31 @@ Namespace IO
         Public Structure DISK_GROW_PARTITION
             Public Property PartitionNumber As Int32
             Public Property BytesToGrow As Int64
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure FILE_FS_FULL_SIZE_INFORMATION
+            Public ReadOnly Property TotalAllocationUnits As Int64
+            Public ReadOnly Property CallerAvailableAllocationUnits As Int64
+            Public ReadOnly Property ActualAvailableAllocationUnits As Int64
+            Public ReadOnly Property SectorsPerAllocationUnit As UInt32
+            Public ReadOnly Property BytesPerSector As UInt32
+
+            Public ReadOnly Property TotalBytes As Int64
+                Get
+                    Return _TotalAllocationUnits * _SectorsPerAllocationUnit * _BytesPerSector
+                End Get
+            End Property
+
+            Public ReadOnly Property BytesPerAllocationUnit As UInt32
+                Get
+                    Return _SectorsPerAllocationUnit * _BytesPerSector
+                End Get
+            End Property
+
+            Public Overrides Function ToString() As String
+                Return TotalBytes.ToString(NumberFormatInfo.InvariantInfo)
+            End Function
         End Structure
 
         <StructLayout(LayoutKind.Sequential)>
