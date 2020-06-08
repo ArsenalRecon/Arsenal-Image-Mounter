@@ -506,7 +506,7 @@ Public Class ScsiAdapter
                 End Using
 
                 Try
-                    API.RegisterWriteFilter(DeviceInstance, DeviceNumber, API.RegisterWriteFilterOperation.Register)
+                    API.RegisterWriteFilter(_DeviceInstance, DeviceNumber, API.RegisterWriteFilterOperation.Register)
 
                 Catch ex As Exception
                     RemoveDevice(DeviceNumber)
@@ -863,7 +863,7 @@ Public Class ScsiAdapter
 
     Public Function RescanScsiAdapter() As Boolean
 
-        Return API.RescanScsiAdapter(DeviceInstance)
+        Return API.RescanScsiAdapter(_DeviceInstance)
 
     End Function
 
@@ -877,7 +877,7 @@ Public Class ScsiAdapter
 
         Catch ex As Exception
             Trace.WriteLine($"IOCTL_SCSI_RESCAN_BUS failed: {ex.JoinMessages()}")
-            API.RescanScsiAdapter(DeviceInstance)
+            API.RescanScsiAdapter(_DeviceInstance)
 
         End Try
 
@@ -975,7 +975,16 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function GetRawDeviceName(DeviceNumber As UInteger) As String
 
-        Return API.EnumeratePhysicalDeviceObjectPaths(DeviceInstance, DeviceNumber).FirstOrDefault()
+        Return API.EnumeratePhysicalDeviceObjectPaths(_DeviceInstance, DeviceNumber).FirstOrDefault()
+
+    End Function
+
+    ''' <summary>
+    ''' Returns a PnP registry property for the device object that SCSI port driver has created for a mounted device.
+    ''' </summary>
+    Public Function GetPnPDeviceName(DeviceNumber As UInteger, prop As NativeFileIO.CmDevNodeRegistryProperty) As IEnumerable(Of String)
+
+        Return API.EnumerateDeviceProperty(_DeviceInstance, DeviceNumber, prop)
 
     End Function
 

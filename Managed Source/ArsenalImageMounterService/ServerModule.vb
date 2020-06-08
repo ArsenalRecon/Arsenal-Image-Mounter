@@ -240,6 +240,9 @@ Please see EULA.txt for license information.")
             If arg.Equals("/trace", StringComparison.OrdinalIgnoreCase) Then
                 Trace.Listeners.Add(New ConsoleTraceListener(True))
                 verbose = True
+                'ElseIf arg.StartsWith("/filever=", StringComparison.OrdinalIgnoreCase) Then
+                '    Dim fileverpath = arg.Substring("/filever=".Length)
+                '    Console.WriteLine(NativeFileIO.GetFileVersion(fileverpath).ToString())
             ElseIf arg.StartsWith("/trace=", StringComparison.OrdinalIgnoreCase) Then
                 Dim tracefile = New StreamWriter(arg.Substring("/trace=".Length), append:=True) With {.AutoFlush = True}
                 Trace.Listeners.Add(New TextWriterTraceListener(tracefile))

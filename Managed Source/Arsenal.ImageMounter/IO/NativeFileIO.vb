@@ -2463,29 +2463,29 @@ Namespace IO
 
         End Function
 
-        Public Shared Function GetFileVersionInfo(exe As Stream) As Version
+        Public Shared Function GetFileVersion(exe As Stream) As Version
 
             Dim buffer = New Byte(0 To CInt(exe.NullCheck(NameOf(exe)).Length - 1)) {}
             exe.Read(buffer, 0, buffer.Length)
 
-            Return GetFileVersionInfo(buffer)
+            Return GetFileVersion(buffer)
 
         End Function
 
-        Public Shared Function GetFileVersionInfo(exepath As String) As Version
+        Public Shared Function GetFileVersion(exepath As String) As Version
 
             Dim buffer As Byte()
 
-            Using exe = NativeFileIO.OpenFileStream(exepath, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete)
+            Using exe = OpenFileStream(exepath, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete)
                 buffer = New Byte(0 To CInt(exe.Length - 1)) {}
                 exe.Read(buffer, 0, buffer.Length)
             End Using
 
-            Return GetFileVersionInfo(buffer)
+            Return GetFileVersion(buffer)
 
         End Function
 
-        Public Shared Function GetFileVersionInfo(exe As Byte()) As Version
+        Public Shared Function GetFileVersion(exe As Byte()) As Version
 
             Dim exe_signature = Encoding.ASCII.GetString(exe, 0, 2)
             If Not exe_signature.Equals("MZ", StringComparison.Ordinal) Then
@@ -2604,38 +2604,56 @@ Namespace IO
 
                     Dim len = BitConverter.ToUInt16(exe, version)
                     Dim val_len = BitConverter.ToUInt16(exe, version + 2)
-                    Dim type = BitConverter.ToUInt16(exe, version + 4)
+                    'Dim type = BitConverter.ToUInt16(exe, version + 4)
 
-                    off = 6
-                    Do
-                        Dim c = BitConverter.ToChar(exe, version + off)
-                        If c = New Char Then
-                            Exit Do
-                        End If
-                        off += 2
-                    Loop
+                    off = version + 6
 
-                    Dim info = Encoding.Unicode.GetString(exe, version + 6, off - 6)
-
-                    off += 2
+                    Dim info = ReadNullTerminatedString(exe, off)
 
                     off = PadValue(off, 4)
 
                     If info.Equals("VS_VERSION_INFO", StringComparison.Ordinal) Then
 
-                        Dim fixed = version + off
+                        Dim fixed = off
 
                         Dim fileA = BitConverter.ToUInt16(exe, fixed + 10)
                         Dim fileB = BitConverter.ToUInt16(exe, fixed + 8)
                         Dim fileC = BitConverter.ToUInt16(exe, fixed + 14)
                         Dim fileD = BitConverter.ToUInt16(exe, fixed + 12)
+
+                        Dim file_version As New Version(fileA, fileB, fileC, fileD)
+
                         'Dim prodA = BitConverter.ToUInt16(exe, fixed + 18)
                         'Dim prodB = BitConverter.ToUInt16(exe, fixed + 16)
                         'Dim prodC = BitConverter.ToUInt16(exe, fixed + 22)
                         'Dim prodD = BitConverter.ToUInt16(exe, fixed + 20)
-
-                        Dim file_version As New Version(fileA, fileB, fileC, fileD)
                         'Dim prod_version As New Version(prodA, prodB, prodC, prodD)
+
+                        'off += val_len
+
+                        'off = PadValue(off, 4)
+
+                        'Do
+
+                        '    len = BitConverter.ToUInt16(exe, off)
+                        '    val_len = BitConverter.ToUInt16(exe, off + 2)
+                        '    type = BitConverter.ToUInt16(exe, off + 4)
+
+                        '    off += 6
+
+                        '    info = ReadNullTerminatedString(exe, off)
+
+                        '    off = PadValue(off, 4)
+
+                        '    If type = 1 AndAlso info.Equals("StringFileInfo", StringComparison.Ordinal) Then
+
+                        '    End If
+
+                        '    off += val_len
+
+                        '    off = PadValue(off, 4)
+
+                        'Loop
 
                         Return file_version
 
@@ -2646,6 +2664,23 @@ Namespace IO
             Next
 
             Throw New KeyNotFoundException("No version resource exists in file")
+
+        End Function
+
+        Public Shared Function ReadNullTerminatedString(buffer As Byte(), ByRef offset As Integer) As String
+
+            Dim sb As New StringBuilder
+
+            Do
+                Dim c = BitConverter.ToChar(buffer, offset)
+                offset += 2
+                If c = Nothing Then
+                    Exit Do
+                End If
+                sb.Append(c)
+            Loop
+
+            Return sb.ToString()
 
         End Function
 
@@ -3246,6 +3281,28 @@ Namespace IO
 
         End Function
 
+        Public Shared Function GetMountPointBasedPath(path As String) As String
+
+            path.NullCheck(NameOf(path))
+
+            Const volume_path_prefix = "\\?\Volume{00000000-0000-0000-0000-000000000000}\"
+
+            If path.Length > volume_path_prefix.Length AndAlso
+                    path.StartsWith("\\?\Volume{", StringComparison.OrdinalIgnoreCase) Then
+
+                Dim vol = path.Substring(0, volume_path_prefix.Length)
+                Dim mountpoint = EnumerateVolumeMountPoints(vol)?.FirstOrDefault()
+
+                If mountpoint IsNot Nothing Then
+                    path = $"{mountpoint}{path.Substring(volume_path_prefix.Length)}"
+                End If
+
+            End If
+
+            Return path
+
+        End Function
+
         Public Shared Function EnumerateVolumeMountPoints(VolumeName As String) As IEnumerable(Of String)
 
             VolumeName.NullCheck(NameOf(VolumeName))
@@ -3255,7 +3312,7 @@ Namespace IO
             Dim length As Int32
 
             If UnsafeNativeMethods.GetVolumePathNamesForVolumeName(VolumeName, TargetPath, TargetPath.Length, length) AndAlso
-            length > 2 Then
+                length > 2 Then
 
                 Return ParseDoubleTerminatedString(TargetPath, length)
 
@@ -3653,12 +3710,32 @@ Namespace IO
 
         End Function
 
+        Public Shared Function GetDeviceRegistryProperty(devInst As UInt32, prop As CmDevNodeRegistryProperty) As IEnumerable(Of String)
+
+            Dim regtype As RegistryValueKind = Nothing
+
+            Dim buffer(0 To 518) As Byte
+            Dim buffersize = buffer.Length
+
+            Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, prop, regtype, buffer, buffersize, 0)
+
+            If rc <> 0 Then
+                Trace.WriteLine($"Error getting registry property for device {devInst}. Status=0x{rc:X}")
+                Return Nothing
+            End If
+
+            Dim name = ParseDoubleTerminatedString(buffer, buffersize)
+
+            Return name
+
+        End Function
+
         Public Shared Function EnumerateWin32DevicePaths(nt_device_path As String) As IEnumerable(Of String)
 
             Return _
-            From dosdevice In QueryDosDevice()
-            Where QueryDosDevice(dosdevice).Contains(nt_device_path, StringComparer.OrdinalIgnoreCase)
-            Select $"\\?\{dosdevice}"
+                From dosdevice In QueryDosDevice()
+                Where QueryDosDevice(dosdevice).Contains(nt_device_path, StringComparer.OrdinalIgnoreCase)
+                Select $"\\?\{dosdevice}"
 
         End Function
 
@@ -4393,8 +4470,19 @@ Namespace IO
 
         <SuppressMessage("Design", "CA1008:Enums should have zero value", Justification:="<Pending>")>
         Public Enum CmDevNodeRegistryProperty As UInt32
+            CM_DRP_DEVICEDESC = &H1
+            CM_DRP_HARDWAREID = &H2
+            CM_DRP_COMPATIBLEIDS = &H3
+            CM_DRP_SERVICE = &H5
+            CM_DRP_CLASS = &H8
+            CM_DRP_CLASSGUID = &H9
+            CM_DRP_DRIVER = &HA
+            CM_DRP_MFG = &HC
+            CM_DRP_FRIENDLYNAME = &HD
+            CM_DRP_LOCATION_INFORMATION = &HE
             CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME = &HF
             CM_DRP_UPPERFILTERS = &H12
+            CM_DRP_LOWERFILTERS = &H13
         End Enum
 
         <Flags>

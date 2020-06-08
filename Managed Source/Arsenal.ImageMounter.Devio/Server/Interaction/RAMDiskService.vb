@@ -38,7 +38,7 @@ Namespace Server.Interaction
 
                     Dim disk As New Raw.Disk(device.GetRawDiskStream(), Ownership.None, discutils_geometry)
 
-                    DiscUtilsInteraction.InitializeVirtualDisk(disk, discutils_geometry, FormatFileSystem, "RAM disk")
+                    DiscUtilsInteraction.InitializeVirtualDisk(disk, discutils_geometry, NativeFileIO.PARTITION_STYLE.PARTITION_STYLE_MBR, FormatFileSystem, "RAM disk")
 
                     device.FlushBuffers()
 

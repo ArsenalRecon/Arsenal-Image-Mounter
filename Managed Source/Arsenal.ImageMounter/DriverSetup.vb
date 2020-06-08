@@ -83,7 +83,7 @@ Public NotInheritable Class DriverSetup
 
         Using versionFile = entry.OpenReader()
 
-            Return NativeFileIO.GetFileVersionInfo(versionFile)
+            Return NativeFileIO.GetFileVersion(versionFile)
 
         End Using
 
@@ -330,7 +330,9 @@ Public NotInheritable Class DriverSetup
 
         Dim hwinstances As IEnumerable(Of String) = Nothing
 
-        NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", hwinstances)
+        If NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", hwinstances) <> 0 Then
+            Return
+        End If
 
         For Each hwinstance In hwinstances
             NativeFileIO.RemovePnPDevice(ownerWindow.Handle, hwinstance)

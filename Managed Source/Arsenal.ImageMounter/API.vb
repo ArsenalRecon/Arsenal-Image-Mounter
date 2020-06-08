@@ -302,6 +302,19 @@ Public NotInheritable Class API
 
     End Function
 
+    Public Shared Function EnumerateDeviceProperty(devinstAdapter As UInt32, DeviceNumber As UInt32, prop As NativeFileIO.CmDevNodeRegistryProperty) As IEnumerable(Of String)
+
+        Return _
+            From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
+            Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
+            Where Not String.IsNullOrWhiteSpace(path)
+            Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
+            Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)
+            From value In NativeFileIO.GetDeviceRegistryProperty(devinstChild, prop)
+            Select value
+
+    End Function
+
     Public Shared Sub UnregisterWriteOverlayImage(devInst As UInteger)
         RegisterWriteOverlayImage(devInst, Nothing)
     End Sub
