@@ -3171,10 +3171,11 @@ Namespace IO
             End If
 
             Return _
-            Aggregate dosdevice In QueryDosDevice()
-            Where dosdevice.Length = 44 AndAlso dosdevice.StartsWith("Volume{", StringComparison.OrdinalIgnoreCase)
-            Where QueryDosDevice(dosdevice).Contains(nt_device_path, StringComparer.OrdinalIgnoreCase)
-            Select $"\\?\{dosdevice}\"
+                Aggregate dosdevice In QueryDosDevice()
+                Where dosdevice.Length = 44 AndAlso dosdevice.StartsWith("Volume{", StringComparison.OrdinalIgnoreCase)
+                Let target = QueryDosDevice(dosdevice)
+                Where target IsNot Nothing AndAlso target.Contains(nt_device_path, StringComparer.OrdinalIgnoreCase)
+                Select $"\\?\{dosdevice}\"
                 Into FirstOrDefault()
 
         End Function
