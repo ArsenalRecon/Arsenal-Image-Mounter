@@ -583,7 +583,7 @@ extern "C" {
 
 #ifdef USE_STORPORT
 
-#define STORAGE_MAP_BUFFERS_SETTING                             STOR_MAP_NO_BUFFERS
+#define STORAGE_MAP_BUFFERS_SETTING                             STOR_MAP_NON_READ_WRITE_BUFFERS
 
 #define STORAGE_INTERFACE_TYPE                                  Internal
 

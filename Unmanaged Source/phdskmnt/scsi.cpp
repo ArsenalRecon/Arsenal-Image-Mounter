@@ -2,7 +2,7 @@
 /// proxy.c
 /// SCSI support routines, called from miniport callback functions, normally
 /// at DISPATCH_LEVEL. This includes responding to control requests and
-/// queueing work items for requests that need to be carried out at
+/// queuing work items for requests that need to be carried out at
 /// PASSIVE_LEVEL.
 /// 
 /// Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -90,7 +90,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
     if (pSrb->DataTransferLength > 0)
     {
-        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        RtlZeroMemory((PUCHAR)pInqData, pSrb->DataTransferLength);
         pInqData->DeviceType = ARRAY_CONTROLLER_DEVICE;
     }
 
@@ -367,10 +367,10 @@ __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension
 __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
+    UNREFERENCED_PARAMETER(pHBAExt);
+
     PGET_CONFIGURATION_HEADER output_buffer = (PGET_CONFIGURATION_HEADER)pSrb->DataBuffer;
     PCDB   cdb = (PCDB)pSrb->Cdb;
-
-    UNREFERENCED_PARAMETER(pHBAExt);
 
     USHORT length;
     REVERSE_BYTES_SHORT(&length, cdb->GET_CONFIGURATION.AllocationLength);
@@ -434,10 +434,10 @@ ScsiOpGetEventStatus(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-o
     __in PSCSI_REQUEST_BLOCK  pSrb
     )
 {
+    UNREFERENCED_PARAMETER(pHBAExt);
+
     PNOTIFICATION_EVENT_STATUS_HEADER output_buffer = (PNOTIFICATION_EVENT_STATUS_HEADER)pSrb->DataBuffer;
     PCDB   cdb = (PCDB)pSrb->Cdb;
-
-    UNREFERENCED_PARAMETER(pHBAExt);
 
     USHORT length;
     REVERSE_BYTES_SHORT(&length, cdb->GET_EVENT_STATUS_NOTIFICATION.EventListLength);
@@ -502,11 +502,10 @@ __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension
 __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
-    PTRACK_INFORMATION output_buffer = (PTRACK_INFORMATION)pSrb->DataBuffer;
-    PCDB   cdb = (PCDB)pSrb->Cdb;
-
     UNREFERENCED_PARAMETER(pHBAExt);
 
+    PTRACK_INFORMATION output_buffer = (PTRACK_INFORMATION)pSrb->DataBuffer;
+    PCDB   cdb = (PCDB)pSrb->Cdb;
     cdb;
 
     if ((device_extension->DeviceType != READ_ONLY_DIRECT_ACCESS_DEVICE) ||
@@ -547,10 +546,10 @@ __in pHW_LU_EXTENSION     device_extension,       // LUN device-object extension
 __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
+    UNREFERENCED_PARAMETER(pHBAExt);
+
     PDISC_INFORMATION output_buffer = (PDISC_INFORMATION)pSrb->DataBuffer;
     PCDB   cdb = (PCDB)pSrb->Cdb;
-
-    UNREFERENCED_PARAMETER(pHBAExt);
 
     if ((device_extension->DeviceType != READ_ONLY_DIRECT_ACCESS_DEVICE) ||
         (pSrb->DataTransferLength < sizeof(DISC_INFORMATION)))
@@ -607,10 +606,10 @@ __in pHW_LU_EXTENSION     pLUExt,       // LUN device-object extension from port
 __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
+    UNREFERENCED_PARAMETER(pHBAExt);
+
     PCDB       cdb = (PCDB)pSrb->Cdb;
 
-    UNREFERENCED_PARAMETER(pHBAExt);
-    
     KdPrint(("PhDskMnt::ScsiOpReadTOC for device %i:%i:%i.\n",
         (int)pLUExt->DeviceNumber.PathId,
         (int)pLUExt->DeviceNumber.TargetId,
@@ -752,7 +751,7 @@ __in pHW_LU_EXTENSION     pLUExt,       // LUN device-object extension from port
 __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
-    PINQUIRYDATA          pInqData = (PINQUIRYDATA)pSrb->DataBuffer;// Point to Inquiry buffer.
+    PINQUIRYDATA          pInqData = (PINQUIRYDATA)pSrb->DataBuffer;
     PCDB                  pCdb = (PCDB)pSrb->Cdb;
 
     KdPrint(("PhDskMnt::ScsiOpInquiry:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
@@ -774,39 +773,6 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     if (pSrb->DataTransferLength == 0)
     {
         pSrb->DataTransferLength = pCdb->CDB6INQUIRY3.AllocationLength;
-    }
-
-    if (pSrb->DataTransferLength > 0 && !MmIsAddressValid(pSrb->DataBuffer))
-    {
-        DbgPrint(
-            "PhDskMnt::ScsiOpInquiry: Detected SCSI inqury request with bad data buffer pointer. Srb=%p, OriginalRequest=%p, DataBuffer=%p, DataTransferLength=%u, Path=%i, Target=%i, Lun=%i, VPD=%i, PageCode=%i\n",
-            pSrb,
-            pSrb->OriginalRequest,
-            pSrb->DataBuffer,
-            pSrb->DataTransferLength,
-            (int)pSrb->PathId,
-            (int)pSrb->TargetId,
-            (int)pSrb->Lun,
-            (int)pCdb->CDB6INQUIRY3.EnableVitalProductData,
-            pCdb->CDB6INQUIRY3.PageCode);
-
-        StoragePortLogError(pHBAExt, pSrb, pSrb->PathId, pSrb->TargetId, pSrb->Lun, SP_INTERNAL_ADAPTER_ERROR, 1001);
-
-        ScsiSetCheckCondition(
-            pSrb,
-            SRB_STATUS_ERROR,
-            SCSI_SENSE_ILLEGAL_REQUEST,
-            SCSI_ADSENSE_INVALID_CDB,
-            0);
-
-#if DBG
-        if (!KD_DEBUGGER_NOT_PRESENT)
-        {
-            DbgBreakPoint();
-        }
-#endif
-
-        return;
     }
 
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
@@ -836,7 +802,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     {
         if (pSrb->DataTransferLength > 0)
         {
-            RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+            RtlZeroMemory((PUCHAR)pInqData, pSrb->DataTransferLength);
             pInqData->DeviceType = pLUExt->DeviceType;
         }
 
@@ -1029,9 +995,6 @@ ScsiOpVPDCdRomUnit(
 {
     CDB::_CDB6INQUIRY3 * pVpdInquiry = (CDB::_CDB6INQUIRY3 *)&pSrb->Cdb;
 
-    UNREFERENCED_PARAMETER(pHBAExt);
-    UNREFERENCED_PARAMETER(pLUExt);
-
     ASSERT(pSrb->DataTransferLength>0);
 
     KdPrint(("PhDskMnt::ScsiOpVPDCdRomUnit:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
@@ -1053,7 +1016,7 @@ ScsiOpVPDCdRomUnit(
 
         pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
-        RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+        RtlZeroMemory((PUCHAR)system_buffer, pSrb->DataTransferLength);
         pSupportedPages->DeviceType = pLUExt->DeviceType;
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
         pSupportedPages->PageLength = 1;
@@ -1083,10 +1046,9 @@ ScsiOpVPDCdRomUnit(
     __in PSCSI_REQUEST_BLOCK  pSrb
     )
 {
-    CDB::_CDB6INQUIRY3 * pVpdInquiry = (CDB::_CDB6INQUIRY3 *)&pSrb->Cdb;
-
     UNREFERENCED_PARAMETER(pHBAExt);
-    UNREFERENCED_PARAMETER(pLUExt);
+
+    CDB::_CDB6INQUIRY3 * pVpdInquiry = (CDB::_CDB6INQUIRY3 *)&pSrb->Cdb;
 
     ASSERT(pSrb->DataTransferLength>0);
 
@@ -1209,10 +1171,9 @@ ScsiOpVPDDiskUnit(
     __in PSCSI_REQUEST_BLOCK  pSrb
     )
 {
-    CDB::_CDB6INQUIRY3 * pVpdInquiry = (CDB::_CDB6INQUIRY3 *)&pSrb->Cdb;
-
     UNREFERENCED_PARAMETER(pHBAExt);
-    UNREFERENCED_PARAMETER(pLUExt);
+
+    CDB::_CDB6INQUIRY3 * pVpdInquiry = (CDB::_CDB6INQUIRY3 *)&pSrb->Cdb;
 
     ASSERT(pSrb->DataTransferLength>0);
 
@@ -1474,9 +1435,9 @@ __in pHW_HBA_EXT          pHBAExt,          // Adapter device-object extension f
 __in PSCSI_REQUEST_BLOCK  pSrb
 )
 {
-    CDB::_CDB6INQUIRY3 * pVpdInquiry = (CDB::_CDB6INQUIRY3 *)&pSrb->Cdb;
-
     UNREFERENCED_PARAMETER(pHBAExt);
+
+    CDB::_CDB6INQUIRY3 * pVpdInquiry = (CDB::_CDB6INQUIRY3 *)&pSrb->Cdb;
 
     ASSERT(pSrb->DataTransferLength>0);
 
@@ -1501,7 +1462,6 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
         RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
         pSupportedPages->DeviceType = ARRAY_CONTROLLER_DEVICE;
-        pSupportedPages = (PVPD_SUPPORTED_PAGES_PAGE)pSrb->DataBuffer;             // Point to output buffer.
 
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
         pSupportedPages->PageLength = 3;
@@ -1613,51 +1573,44 @@ __in pHW_LU_EXTENSION     pLUExt,  // LUN device-object extension from port driv
 __in __deref PSCSI_REQUEST_BLOCK  pSrb
 )
 {
+    UNREFERENCED_PARAMETER(pHBAExt);
+
     PREAD_CAPACITY_DATA     readCapacity = (PREAD_CAPACITY_DATA)pSrb->DataBuffer;
     ULARGE_INTEGER          maxBlocks;
     ULONG                   blockSize;
 
-    UNREFERENCED_PARAMETER(pHBAExt);
-
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p, Action=0x%X\n", pHBAExt, pLUExt, pSrb, (int)pSrb->Cdb[0]));
 
-    RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
-
-    //if ((pLUExt == NULL) ? TRUE : ((pLUExt->DiskSize.QuadPart == 0) | (!pLUExt->Initialized)))
-    //{
-    //    KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Device not initialized.\n"));
-
-    //    ScsiSetCheckCondition(
-    //        pSrb,
-    //        SRB_STATUS_BUSY,
-    //        SCSI_SENSE_NOT_READY,
-    //        SCSI_ADSENSE_LUN_NOT_READY,
-    //        SCSI_SENSEQ_BECOMING_READY);
-
-    //    return;
-    //}
+    RtlZeroMemory((PUCHAR)readCapacity, pSrb->DataTransferLength);
 
     blockSize = 1UL << pLUExt->BlockPower;
 
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Block Size: 0x%X\n", blockSize));
 
     if (pLUExt->DiskSize.QuadPart > 0)
+    {
         maxBlocks.QuadPart = (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower) - 1;
+    }
     else
+    {
         maxBlocks.QuadPart = 0;
+    }
 
-    if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY)
-        if (maxBlocks.QuadPart > MAXULONG)
-            maxBlocks.QuadPart = MAXULONG;
+    if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY && maxBlocks.QuadPart > MAXULONG)
+    {
+        maxBlocks.QuadPart = MAXULONG;
+    }
 
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Max Blocks: 0x%I64X\n", maxBlocks));
 
-    if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY)
+    if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY &&
+        pSrb->DataTransferLength >= sizeof(READ_CAPACITY_DATA))
     {
         REVERSE_BYTES(&readCapacity->BytesPerBlock, &blockSize);
         REVERSE_BYTES(&readCapacity->LogicalBlockAddress, &maxBlocks.LowPart);
     }
-    else if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY16)
+    else if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY16 &&
+        pSrb->DataTransferLength >= RTL_SIZEOF_THROUGH_FIELD(READ_CAPACITY16_DATA, BytesPerBlock))
     {
         PREAD_CAPACITY16_DATA readCapacity16 = (PREAD_CAPACITY16_DATA)readCapacity;
         REVERSE_BYTES(&readCapacity16->BytesPerBlock, &blockSize);
@@ -1863,13 +1816,13 @@ __in pHW_LU_EXTENSION     pLUExt,     // LUN device-object extension from port d
 __in __deref PSCSI_REQUEST_BLOCK  pSrb
 )
 {
-    PMODE_PARAMETER_HEADER mph = (PMODE_PARAMETER_HEADER)pSrb->DataBuffer;
-
     UNREFERENCED_PARAMETER(pHBAExt);
 
+    PMODE_PARAMETER_HEADER mph = (PMODE_PARAMETER_HEADER)pSrb->DataBuffer;
+    
     KdPrint2(("PhDskMnt::ScsiOpModeSense:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
-    RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+    RtlZeroMemory((PUCHAR)mph, pSrb->DataTransferLength);
 
     if (pSrb->DataTransferLength < sizeof(MODE_PARAMETER_HEADER))
     {
@@ -1898,14 +1851,13 @@ __in pHW_LU_EXTENSION     pLUExt,     // LUN device-object extension from port d
 __in __deref PSCSI_REQUEST_BLOCK  pSrb
 )
 {
-    PMODE_PARAMETER_HEADER10 mph = (PMODE_PARAMETER_HEADER10)pSrb->DataBuffer;
-
     UNREFERENCED_PARAMETER(pHBAExt);
-    UNREFERENCED_PARAMETER(pLUExt);
+
+    PMODE_PARAMETER_HEADER10 mph = (PMODE_PARAMETER_HEADER10)pSrb->DataBuffer;
 
     KdPrint(("PhDskMnt::ScsiOpModeSense10:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
-    RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+    RtlZeroMemory((PUCHAR)mph, pSrb->DataTransferLength);
 
     if (pSrb->DataTransferLength < sizeof(MODE_PARAMETER_HEADER10))
     {
@@ -1936,7 +1888,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
 {
     UCHAR                 count;
     PLIST_ENTRY           list_ptr;
-    PLUN_LIST             pLunList = (PLUN_LIST)pSrb->DataBuffer; // Point to LUN list.
+    PLUN_LIST             pLunList = (PLUN_LIST)pSrb->DataBuffer;
     KLOCK_QUEUE_HANDLE    LockHandle;
 
     KdPrint(("PhDskMnt::ScsiOpReportLuns:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
@@ -1944,7 +1896,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
     // This opcode will be one of the earliest I/O requests for a new HBA (and may be received later, too).
     pHBAExt->bReportAdapterDone = TRUE;
 
-    RtlZeroMemory((PUCHAR)pSrb->DataBuffer, pSrb->DataTransferLength);
+    RtlZeroMemory((PUCHAR)pLunList, pSrb->DataTransferLength);
 
     ImScsiAcquireLock(                   // Serialize the linked list of LUN extensions.              
         &pHBAExt->LUListLock, &LockHandle, *LowestAssumedIrql);
@@ -1993,10 +1945,6 @@ ScsiOpUnmap(
     PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
 
     USHORT length = RtlUshortByteSwap(*(PUSHORT)((PUNMAP)pCdb)->AllocationLength);
-
-    UNREFERENCED_PARAMETER(pHBAExt);
-    UNREFERENCED_PARAMETER(pResult);
-    UNREFERENCED_PARAMETER(LowestAssumedIrql);
 
     KdPrint(("PhDskMnt::ScsiOpUnmap:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
@@ -2212,8 +2160,6 @@ __inout __deref PKIRQL               LowestAssumedIrql
 {
     pHW_LU_EXTENSION          pLUExt;
     PSTOR_DEVICE_CAPABILITIES pStorageCapabilities = (PSTOR_DEVICE_CAPABILITIES)pSrb->DataBuffer;
-
-    UNREFERENCED_PARAMETER(pHBAExt);
 
     KdPrint(("PhDskMnt::ScsiPnPQueryCapabilities:  pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
 
