@@ -246,7 +246,7 @@ Namespace Server.Services
         ''' Waits for service thread created by StartServiceThread() to exit. If no service thread
         ''' has been created or if it has already exit, this method returns immediately.
         ''' </summary>
-        Public Overridable Sub WaitForServiceThreadExit()
+        Public Overridable Sub WaitForServiceThreadExit() Implements IVirtualDiskService.WaitForServiceThreadExit
 
             If _ServiceThread IsNot Nothing AndAlso
                 _ServiceThread.ManagedThreadId <> Thread.CurrentThread.ManagedThreadId AndAlso

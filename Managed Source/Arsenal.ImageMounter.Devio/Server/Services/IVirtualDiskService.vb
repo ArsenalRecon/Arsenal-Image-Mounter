@@ -36,6 +36,8 @@ Namespace Server.Services
 
         Sub RemoveDeviceSafe()
 
+        Sub WaitForServiceThreadExit()
+
     End Interface
 
 End Namespace

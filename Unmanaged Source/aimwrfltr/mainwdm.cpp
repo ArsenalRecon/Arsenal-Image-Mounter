@@ -275,6 +275,7 @@ AIMWrFltSaveDiffHeader(IN PDEVICE_EXTENSION DeviceExtension)
         DeviceExtension->Statistics.DiffDeviceVbr.Raw.Bytes,
         sizeof(DeviceExtension->Statistics.DiffDeviceVbr),
         &offset,
+        NULL,
         &io_status);
 
     if (!NT_SUCCESS(status) || io_status.Information !=
@@ -297,6 +298,7 @@ AIMWrFltSaveDiffHeader(IN PDEVICE_EXTENSION DeviceExtension)
         (PVOID)DeviceExtension->AllocationTable,
         alloc_table_size,
         &offset,
+        NULL,
         &io_status);
 
     if (io_status.Information != alloc_table_size || !NT_SUCCESS(status))
@@ -466,6 +468,7 @@ AIMWrFltrSynchronousReadWrite(
     IN OUT PVOID SystemBuffer,
     IN ULONG BufferLength,
     IN PLARGE_INTEGER StartingOffset,
+    IN PETHREAD Thread,
     OUT PIO_STATUS_BLOCK IoStatus)
 {
     if (DeviceObject == NULL)
@@ -473,7 +476,7 @@ AIMWrFltrSynchronousReadWrite(
         DeviceObject = IoGetRelatedDeviceObject(FileObject);
     }
 
-    PIRP ioctl_irp = IoBuildAsynchronousFsdRequest(
+    PIRP lower_irp = IoBuildAsynchronousFsdRequest(
         MajorFunction,
         DeviceObject,
         SystemBuffer,
@@ -481,36 +484,50 @@ AIMWrFltrSynchronousReadWrite(
         StartingOffset,
         IoStatus);
 
-    if (ioctl_irp == NULL)
+    if (lower_irp == NULL)
     {
         KdBreakPoint();
 
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    IoGetNextIrpStackLocation(ioctl_irp)->FileObject = FileObject;
+    PIO_STACK_LOCATION lower_io_stack = IoGetNextIrpStackLocation(lower_irp);
+    
+    lower_io_stack->FileObject = FileObject;
+
+    lower_irp->Tail.Overlay.Thread = Thread;
+
+    if (MajorFunction == IRP_MJ_WRITE)
+    {
+        lower_irp->Flags |= IRP_WRITE_OPERATION | IRP_NOCACHE;
+        lower_io_stack->Flags |= SL_WRITE_THROUGH;
+    }
+    else if (MajorFunction == IRP_MJ_READ)
+    {
+        lower_irp->Flags |= IRP_READ_OPERATION | IRP_NOCACHE;
+    }
 
     KEVENT event;
     KeInitializeEvent(&event, NotificationEvent, FALSE);
 
-    IoSetCompletionRoutine(ioctl_irp, AIMWrFltrSynchronousIrpCompletion,
+    IoSetCompletionRoutine(lower_irp, AIMWrFltrSynchronousIrpCompletion,
         &event, TRUE, TRUE, TRUE);
 
-    NTSTATUS status = IoCallDriver(DeviceObject, ioctl_irp);
+    NTSTATUS status = IoCallDriver(DeviceObject, lower_irp);
 
     if (status == STATUS_PENDING)
     {
         KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
     }
 
-    status = ioctl_irp->IoStatus.Status;
+    status = lower_irp->IoStatus.Status;
 
     if (IoStatus != NULL)
     {
-        *IoStatus = ioctl_irp->IoStatus;
+        *IoStatus = lower_irp->IoStatus;
     }
 
-    AIMWrFltrFreeIrpWithMdls(ioctl_irp);
+    AIMWrFltrFreeIrpWithMdls(lower_irp);
 
     return status;
 }
@@ -620,6 +637,7 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
             DeviceExtension->Statistics.DiffDeviceVbr.Raw.Bytes,
             sizeof(DeviceExtension->Statistics.DiffDeviceVbr),
             &lower_offset,
+            NULL,
             &io_status);
 
         if (!NT_SUCCESS(status) && status != STATUS_END_OF_FILE)
@@ -816,6 +834,7 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
             DeviceExtension->Statistics.DiffDeviceVbr.Raw.Bytes,
             sizeof(DeviceExtension->Statistics.DiffDeviceVbr),
             &lower_offset,
+            NULL,
             &io_status);
 
         if (!NT_SUCCESS(status) && status != STATUS_END_OF_FILE)
@@ -1043,6 +1062,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
         DeviceExtension->Statistics.DiffDeviceVbr.Raw.Bytes,
         sizeof(DeviceExtension->Statistics.DiffDeviceVbr),
         &lower_offset,
+        NULL,
         &io_status);
 
     if (!NT_SUCCESS(status) ||
@@ -1102,6 +1122,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
             (PVOID)DeviceExtension->AllocationTable,
             (ULONG)alloc_table_blocks << DIFF_BLOCK_BITS,
             &lower_offset,
+            NULL,
             &io_status);
 
         if (!NT_SUCCESS(status) && status != STATUS_END_OF_FILE)
@@ -2088,6 +2109,20 @@ NTSTATUS
 
 }				// end AIMWrFltrForwardIrpSynchronous()
 
+#define IGNORE_FLUSH_AND_SHUTDOWN
+#ifdef IGNORE_FLUSH_AND_SHUTDOWN
+
+NTSTATUS
+AIMWrFltrFlushShutdown(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
+{
+    UNREFERENCED_PARAMETER(DeviceObject);
+
+    Irp->IoStatus.Status = STATUS_SUCCESS;
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    return STATUS_SUCCESS;
+}
+
+#else
 
 NTSTATUS
 AIMWrFltrFlushShutdown(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
@@ -2163,6 +2198,7 @@ NT Status
     return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
 }				// end AIMWrFltrFlushShutdown()
 
+#endif
 
 VOID
 AIMWrFltrUnload(IN PDRIVER_OBJECT DriverObject)

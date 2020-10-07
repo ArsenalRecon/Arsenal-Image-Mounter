@@ -362,6 +362,24 @@ typedef struct _DEVICE_EXTENSION
 
 } DEVICE_EXTENSION, *PDEVICE_EXTENSION;
 
+typedef struct _CACHED_IRP
+{
+    //
+    //
+    //
+    LIST_ENTRY ListEntry;
+
+    //
+    // Copy of IO_STACK_LOCATION from original IRP
+    //
+    IO_STACK_LOCATION IoStack;
+
+    //
+    // Buffer allocated with copy of data to write 
+    //
+    PUCHAR Buffer;
+
+} CACHED_IRP, *PCACHED_IRP;
 
 //
 // Function to free a driver allocated IRP, including unlocking and
@@ -654,6 +672,7 @@ extern "C"
             IN OUT PVOID SystemBuffer = NULL,
             IN ULONG BufferLength = 0,
             IN PLARGE_INTEGER StartingOffset = NULL,
+            IN PETHREAD Thread = NULL,
             OUT PIO_STATUS_BLOCK IoStatus = NULL);
 
     NTSTATUS

@@ -38,7 +38,7 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         // Turn a zero-byte write request into a read request to take
         // advantage of just bound checks etc by target device driver
 
-        IoGetNextIrpStackLocation(Irp)->MajorFunction = IRP_MJ_READ;
+        io_stack->MajorFunction = IRP_MJ_READ;
 
         return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
     }
@@ -87,16 +87,21 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
 #else
 
-    if (current_irql >= DISPATCH_LEVEL)
+    if (current_irql > PASSIVE_LEVEL)
     {
+        KdPrint(("AIMWrFltrWrite: Called at IRQL=%i, deferring to worker thread.\n",
+            (int)current_irql));
+
         defer_to_worker_thread = true;
     }
-
-    for (LONG i = first; i <= last && !defer_to_worker_thread; i++)
+    else
     {
-        if (device_extension->AllocationTable[i] == DIFF_BLOCK_UNALLOCATED)
+        for (LONG i = first; i <= last && !defer_to_worker_thread; i++)
         {
-            defer_to_worker_thread = true;
+            if (device_extension->AllocationTable[i] == DIFF_BLOCK_UNALLOCATED)
+            {
+                defer_to_worker_thread = true;
+            }
         }
     }
 
@@ -448,6 +453,7 @@ PUCHAR BlockBuffer)
             BlockBuffer + page_offset_this_iter,
             bytes_this_iter,
             &lower_offset,
+            Irp->Tail.Overlay.Thread,
             &io_status);
 
 #pragma warning(suppress: 6102)
@@ -497,6 +503,7 @@ AIMWrFltrDeferredFlushBuffers(
         NULL,
         0,
         NULL,
+        Irp->Tail.Overlay.Thread,
         &Irp->IoStatus);
 
     Irp->IoStatus.Status = status;

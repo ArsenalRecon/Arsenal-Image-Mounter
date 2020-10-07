@@ -214,9 +214,17 @@ Namespace IO
         ''' </summary>
         ''' <param name="count">Number of items in new array.</param>
         Public Sub New(count As Integer)
-            MyBase.New(New T(count - 1) {}, SizeOf(GetType(T)) * count)
+            MyBase.New(New T(count - 1) {}, GetTypeSize() * count)
 
         End Sub
+
+        Private Shared Function GetTypeSize() As Integer
+            If GetType(T) Is GetType(Char) Then
+                Return 2
+            Else
+                Return SizeOf(GetType(T))
+            End If
+        End Function
 
         ''' <summary>
         ''' Initializes a new instance with an existing type T array and pins memory

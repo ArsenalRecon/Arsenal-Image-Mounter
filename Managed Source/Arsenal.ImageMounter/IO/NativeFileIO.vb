@@ -5679,13 +5679,13 @@ Namespace IO
             Private ReadOnly _bootIndicator As Boolean
 
             <MarshalAs(UnmanagedType.I1)>
-            Private ReadOnly _ecognizedPartition As Boolean
+            Private ReadOnly _recognizedPartition As Boolean
 
             Public ReadOnly Property HiddenSectors As Integer
 
-            Public ReadOnly Property EcognizedPartition As Boolean
+            Public ReadOnly Property RecognizedPartition As Boolean
                 Get
-                    Return _ecognizedPartition
+                    Return _recognizedPartition
                 End Get
             End Property
 
@@ -5699,15 +5699,41 @@ Namespace IO
         <StructLayout(LayoutKind.Sequential, Pack:=4)>
         Public Structure PARTITION_INFORMATION_GPT
 
-            Public ReadOnly Property DiskId As Guid
+            Public ReadOnly Property PartitionType As Guid
 
-            Public ReadOnly Property StartingUsableOffset As Long
+            Public ReadOnly Property PartitionId As Guid
 
-            Public ReadOnly Property UsableLength As Long
+            Public ReadOnly Property Attributes As GptAttributes
 
-            Public ReadOnly Property MaxPartitionCount As Integer
+            Private ReadOnly _name0 As Long
+            Private ReadOnly _name1 As Long
+            Private ReadOnly _name2 As Long
+            Private ReadOnly _name3 As Long
+            Private ReadOnly _name4 As Long
+            Private ReadOnly _name5 As Long
+            Private ReadOnly _name6 As Long
+            Private ReadOnly _name7 As Long
+            Private ReadOnly _name8 As Long
+
+            Public ReadOnly Property Name As String
+                Get
+                    Using buffer As New PinnedBuffer(Of Char)(56)
+                        buffer.Write(0, Me)
+                        Return New String(buffer.Target, 20, 36)
+                    End Using
+                End Get
+            End Property
 
         End Structure
+
+        <Flags>
+        Public Enum GptAttributes As Long
+            GPT_ATTRIBUTE_PLATFORM_REQUIRED = &H1
+            GPT_BASIC_DATA_ATTRIBUTE_NO_DRIVE_LETTER = &H8000000000000000
+            GPT_BASIC_DATA_ATTRIBUTE_HIDDEN = &H4000000000000000
+            GPT_BASIC_DATA_ATTRIBUTE_SHADOW_COPY = &H2000000000000000
+            GPT_BASIC_DATA_ATTRIBUTE_READ_ONLY = &H1000000000000000
+        End Enum
 
         <StructLayout(LayoutKind.Sequential)>
         Public Structure DISK_GROW_PARTITION

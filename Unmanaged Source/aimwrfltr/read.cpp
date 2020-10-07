@@ -1,5 +1,7 @@
 #include "aimwrfltr.h"
 
+#define AIMWRFLTR_DEFER_ALL_READS
+
 NTSTATUS
 AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
@@ -59,6 +61,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     }
 
     bool any_block_modified = false;
+
     LONG first = (LONG)
         DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Read.ByteOffset.QuadPart);
     LONG last = (LONG)
@@ -96,10 +99,21 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     KIRQL current_irql = KeGetCurrentIrql();
 
-    if (current_irql >= DISPATCH_LEVEL)
+#ifdef AIMWRFLTR_DEFER_ALL_READS
+
+    defer_to_worker_thread = true;
+
+#else
+
+    if (current_irql > PASSIVE_LEVEL)
     {
+        KdPrint(("AIMWrFltrRead: Called at IRQL=%i, deferring to worker thread.\n",
+            (int)current_irql));
+
         defer_to_worker_thread = true;
     }
+
+#endif
 
     if (defer_to_worker_thread)
     {
@@ -415,6 +429,7 @@ AIMWrFltrDeferredRead(
                 BlockBuffer + page_offset_this_iter,
                 bytes_this_iter,
                 &lower_offset,
+                Irp->Tail.Overlay.Thread,
                 &io_status);
 
 #pragma warning(suppress: 6102)
