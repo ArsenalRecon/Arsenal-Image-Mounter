@@ -85,6 +85,8 @@
 #define ExFreePool(a) ExFreePoolWithTag(a,POOL_TAG)
 #endif
 
+#pragma warning(disable: 4200)
+
 inline void *operator_new(size_t Size, UCHAR FillByte)
 {
     void * result = ExAllocatePoolWithTag(NonPagedPool, Size, POOL_TAG);
@@ -375,9 +377,137 @@ typedef struct _CACHED_IRP
     IO_STACK_LOCATION IoStack;
 
     //
-    // Buffer allocated with copy of data to write 
+    // Enqueued IRP that should be issued from worker thread
     //
-    PUCHAR Buffer;
+    PIRP Irp;
+
+    //
+    // DeviceObject to use when issuing enqueued IRP from worker thread
+    //
+    PDEVICE_OBJECT DeviceObject;
+
+    //
+    // Buffer with copy of data to write 
+    //
+    UCHAR Buffer[];
+
+    //
+    // Creates a work item for a pending IRP that will be forwarded to a target device by worker
+    // thread
+    //
+    static _CACHED_IRP* CreateEnqueuedForwardIrp(PDEVICE_OBJECT DeviceObject, PIRP Irp)
+    {
+        PCACHED_IRP cached_irp = new CACHED_IRP;
+
+        if (cached_irp == NULL)
+        {
+            return NULL;
+        }
+
+        cached_irp->DeviceObject = DeviceObject;
+        cached_irp->Irp = Irp;
+
+        return cached_irp;
+    }
+
+    //
+    // Creates a work item for a pending IRP that will be completed by worker
+    // thread
+    //
+    static _CACHED_IRP* CreateEnqueuedIrp(PIRP Irp)
+    {
+        PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(Irp);
+
+        PCACHED_IRP cached_irp = new CACHED_IRP;
+
+        if (cached_irp == NULL)
+        {
+            return NULL;
+        }
+
+        cached_irp->Irp = Irp;
+        cached_irp->IoStack = *io_stack;
+
+        return cached_irp;
+    }
+
+    //
+    // Creates a cache work item based on a write IRP. All required data is cached
+    // so that the supplied IRP is not needed by worker thread later
+    //
+    static _CACHED_IRP *CreateFromWriteIrp(PDEVICE_OBJECT DeviceObject, PIRP Irp)
+    {
+        PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(Irp);
+
+        PCACHED_IRP cached_irp = NULL;
+
+        if (io_stack->MajorFunction == IRP_MJ_WRITE)
+        {
+            PUCHAR buffer = NULL;
+
+            if (DeviceObject->Flags & DO_BUFFERED_IO)
+            {
+                buffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
+            }
+            else
+            {
+                buffer = (PUCHAR)MmGetSystemAddressForMdlSafe(
+                    Irp->MdlAddress, NormalPagePriority);
+            }
+
+            if (buffer == NULL)
+            {
+                return NULL;
+            }
+
+            cached_irp = (PCACHED_IRP)ExAllocatePool(NonPagedPool,
+                FIELD_OFFSET(CACHED_IRP, Buffer) + io_stack->Parameters.Write.Length);
+
+            if (cached_irp == NULL)
+            {
+                return NULL;
+            }
+
+            RtlZeroMemory(cached_irp, sizeof(CACHED_IRP));
+            cached_irp->IoStack = *io_stack;
+            RtlCopyMemory(cached_irp->Buffer, buffer, io_stack->Parameters.Write.Length);
+        }
+        else if ((io_stack->MajorFunction == IRP_MJ_DEVICE_CONTROL ||
+            io_stack->MajorFunction == IRP_MJ_FILE_SYSTEM_CONTROL ||
+            io_stack->MajorFunction == IRP_MJ_INTERNAL_DEVICE_CONTROL) &&
+            METHOD_FROM_CTL_CODE(io_stack->Parameters.DeviceIoControl.IoControlCode) == METHOD_BUFFERED)
+        {
+            PUCHAR buffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
+
+            cached_irp = (PCACHED_IRP)ExAllocatePool(NonPagedPool,
+                FIELD_OFFSET(CACHED_IRP, Buffer) + io_stack->Parameters.DeviceIoControl.InputBufferLength);
+
+            if (cached_irp == NULL)
+            {
+                return NULL;
+            }
+
+            RtlZeroMemory(cached_irp, sizeof(CACHED_IRP));
+            cached_irp->IoStack = *io_stack;
+            if (io_stack->Parameters.DeviceIoControl.InputBufferLength > 0)
+            {
+                RtlCopyMemory(cached_irp->Buffer, buffer, io_stack->Parameters.DeviceIoControl.InputBufferLength);
+            }
+        }
+        else
+        {
+            cached_irp = new CACHED_IRP;
+
+            if (cached_irp == NULL)
+            {
+                return NULL;
+            }
+
+            cached_irp->IoStack = *io_stack;
+        }
+
+        return cached_irp;
+    }
 
 } CACHED_IRP, *PCACHED_IRP;
 
@@ -592,9 +722,8 @@ extern "C"
         _Dispatch_type_(IRP_MJ_INTERNAL_DEVICE_CONTROL)
         DRIVER_DISPATCH AIMWrFltrDeviceControl;
 
-    _Dispatch_type_(IRP_MJ_SHUTDOWN)
-        _Dispatch_type_(IRP_MJ_FLUSH_BUFFERS)
-        DRIVER_DISPATCH AIMWrFltrFlushShutdown;
+    _Dispatch_type_(IRP_MJ_FLUSH_BUFFERS)
+        DRIVER_DISPATCH AIMWrFltrFlushBuffers;
 
     DRIVER_DISPATCH AIMWrFltrTrim;
 
@@ -613,27 +742,22 @@ extern "C"
 
     KSTART_ROUTINE AIMWrFltrDeviceWorkerThread;
 
-    VOID
+    NTSTATUS
         AIMWrFltrDeferredRead(
             PDEVICE_EXTENSION DeviceExtension,
             PIRP Irp,
             PUCHAR BlockBuffer);
 
-    VOID
+    NTSTATUS
         AIMWrFltrDeferredWrite(
             PDEVICE_EXTENSION DeviceExtension,
-            PIRP Irp,
+            PCACHED_IRP Irp,
             PUCHAR BlockBuffer);
 
-    VOID
-        AIMWrFltrDeferredFlushBuffers(
-            PDEVICE_EXTENSION DeviceExtension,
-            PIRP Irp);
-
-    VOID
+    NTSTATUS
         AIMWrFltrDeferredManageDataSetAttributes(
             PDEVICE_EXTENSION DeviceExtension,
-            PIRP Irp,
+            PCACHED_IRP Irp,
             PUCHAR BlockBuffer);
 
     VOID

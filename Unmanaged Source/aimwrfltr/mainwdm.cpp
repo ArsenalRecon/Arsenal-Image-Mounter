@@ -220,8 +220,7 @@ STATUS_SUCCESS if successful
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AIMWrFltrDeviceControl;
     DriverObject->MajorFunction[IRP_MJ_INTERNAL_DEVICE_CONTROL] = AIMWrFltrDeviceControl;
 
-    DriverObject->MajorFunction[IRP_MJ_SHUTDOWN] = AIMWrFltrFlushShutdown;
-    DriverObject->MajorFunction[IRP_MJ_FLUSH_BUFFERS] = AIMWrFltrFlushShutdown;
+    DriverObject->MajorFunction[IRP_MJ_FLUSH_BUFFERS] = AIMWrFltrFlushBuffers;
 
     DriverObject->MajorFunction[IRP_MJ_PNP] = AIMWrFltrPnp;
 
@@ -2109,96 +2108,25 @@ NTSTATUS
 
 }				// end AIMWrFltrForwardIrpSynchronous()
 
-#define IGNORE_FLUSH_AND_SHUTDOWN
-#ifdef IGNORE_FLUSH_AND_SHUTDOWN
-
 NTSTATUS
-AIMWrFltrFlushShutdown(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
+AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
-
-    Irp->IoStatus.Status = STATUS_SUCCESS;
-    IoCompleteRequest(Irp, IO_NO_INCREMENT);
-    return STATUS_SUCCESS;
-}
-
-#else
-
-NTSTATUS
-AIMWrFltrFlushShutdown(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
-/*++
-
-Routine Description:
-
-This routine is called for a shutdown and flush IRPs.  These are sent by the
-system before it actually shuts down or when the file system does a flush.
-
-Arguments:
-
-DriverObject - Pointer to device object to being shutdown by system.
-Irp          - IRP involved.
-
-Return Value:
-
-NT Status
-
---*/
-{
-    KdPrint(("AIMWrFltrFlushShutdown: DeviceObject %p Irp %p MJ %X\n",
-        DeviceObject, Irp, IoGetCurrentIrpStackLocation(Irp)->MajorFunction));
+    //KdPrint(("AIMWrFltrFlushBuffers: DeviceObject %p Irp %p\n",
+    //    DeviceObject, Irp));
 
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
 
-    if (device_extension->Statistics.IsProtected &&
-        device_extension->Statistics.Initialized)
+    if (!device_extension->Statistics.IsProtected ||
+        !device_extension->Statistics.Initialized)
     {
-        InterlockedIncrement64(
-            &device_extension->Statistics.DeferredWriteRequests);
-
-        //
-        // Acquire the remove lock so that device will not be removed while
-        // processing this irp.
-        //
-        NTSTATUS status =
-            IoAcquireRemoveLock(&device_extension->RemoveLock, Irp);
-
-        if (!NT_SUCCESS(status))
-        {
-            DbgPrint(
-                "AIMWrFltrWrite: Remove lock failed write type Irp: 0x%X\n",
-                status);
-
-            Irp->IoStatus.Status = status;
-            IoCompleteRequest(Irp, IO_NO_INCREMENT);
-
-            KdBreakPoint();
-
-            return status;
-        }
-
-        IoMarkIrpPending(Irp);
-
-        KLOCK_QUEUE_HANDLE lock_handle;
-
-        KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
-
-        AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
-            lowest_assumed_irql);
-
-        InsertTailList(&device_extension->ListHead,
-            &Irp->Tail.Overlay.ListEntry);
-
-        AIMWrFltrReleaseLock(&lock_handle, &lowest_assumed_irql);
-
-        KeSetEvent(&device_extension->ListEvent, 0, FALSE);
-
-        return STATUS_PENDING;
+        return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
     }
 
-    return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
-}				// end AIMWrFltrFlushShutdown()
-
-#endif
+    Irp->IoStatus.Information = 0;
+    Irp->IoStatus.Status = STATUS_SUCCESS;
+    IoCompleteRequest(Irp, IO_DISK_INCREMENT);
+    return STATUS_SUCCESS;
+}
 
 VOID
 AIMWrFltrUnload(IN PDRIVER_OBJECT DriverObject)
@@ -2254,6 +2182,8 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
         return;
     }
 
+    PLIST_ENTRY request = &device_extension->ListHead;
+
     for (;;)
     {
         KLOCK_QUEUE_HANDLE lock_handle;
@@ -2263,7 +2193,14 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
         AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
             lowest_assumed_irql);
 
-        PLIST_ENTRY request = RemoveHeadList(&device_extension->ListHead);
+        if (request != &device_extension->ListHead)
+        {
+            RemoveEntryList(request);
+
+            delete request;
+        }
+
+        request = device_extension->ListHead.Flink;
 
         AIMWrFltrReleaseLock(&lock_handle, &lowest_assumed_irql);
 
@@ -2305,51 +2242,61 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
             continue;
         }
 
-        PIRP irp = CONTAINING_RECORD(request, IRP, Tail.Overlay.ListEntry);
-        PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(irp);
+        PCACHED_IRP cached_irp = CONTAINING_RECORD(request, CACHED_IRP, ListEntry);
 
-        irp->IoStatus.Information = 0;
-        irp->IoStatus.Status = STATUS_SUCCESS;
-
-        switch (io_stack->MajorFunction)
+        if (cached_irp->DeviceObject != NULL && cached_irp->Irp != NULL)
         {
-        case IRP_MJ_READ:
-            AIMWrFltrDeferredRead(device_extension, irp, block_buffer);
-            break;
+            IoCallDriver(cached_irp->DeviceObject, cached_irp->Irp);
+        }
+        else
+        {
+            NTSTATUS status;
+            PIO_STACK_LOCATION io_stack = &cached_irp->IoStack;
 
-        case IRP_MJ_WRITE:
-            AIMWrFltrDeferredWrite(device_extension, irp, block_buffer);
-            break;
-
-        case IRP_MJ_FLUSH_BUFFERS:
-        case IRP_MJ_SHUTDOWN:
-            AIMWrFltrDeferredFlushBuffers(device_extension, irp);
-            break;
-
-        case IRP_MJ_DEVICE_CONTROL:
-            switch (io_stack->Parameters.DeviceIoControl.IoControlCode)
+            switch (io_stack->MajorFunction)
             {
-#ifdef FSCTL_FILE_LEVEL_TRIM
-            case IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES:
-                AIMWrFltrDeferredManageDataSetAttributes(device_extension, irp,
-                    block_buffer);
-
+            case IRP_MJ_READ:
+                status = AIMWrFltrDeferredRead(device_extension, cached_irp->Irp, block_buffer);
                 break;
+
+            case IRP_MJ_WRITE:
+                status = AIMWrFltrDeferredWrite(device_extension, cached_irp, block_buffer);
+                break;
+
+            case IRP_MJ_DEVICE_CONTROL:
+                switch (io_stack->Parameters.DeviceIoControl.IoControlCode)
+                {
+#ifdef FSCTL_FILE_LEVEL_TRIM
+                case IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES:
+                    status = AIMWrFltrDeferredManageDataSetAttributes(device_extension, cached_irp,
+                        block_buffer);
+
+                    break;
 #endif
 
-            default:
-                irp->IoStatus.Status = STATUS_DRIVER_INTERNAL_ERROR;
+                default:
+                    status = STATUS_INTERNAL_ERROR;
+                    KdPrint(("AimWrFltrDeviceWorkerThread: Internal error.\n"));
+                    KdBreakPoint();
 #pragma warning(suppress: 4065)
-            }
-            break;
+                }
 
-        default:
-            irp->IoStatus.Status = STATUS_DRIVER_INTERNAL_ERROR;
+                break;
+
+            default:
+                status = STATUS_INTERNAL_ERROR;
+                KdPrint(("AimWrFltrDeviceWorkerThread: Internal error.\n"));
+                KdBreakPoint();
+            }
+
+            if (cached_irp->Irp != NULL)
+            {
+                cached_irp->Irp->IoStatus.Status = status;
+                IoCompleteRequest(cached_irp->Irp, IO_NO_INCREMENT);
+            }
         }
 
-        IoCompleteRequest(irp, IO_DISK_INCREMENT);
-
-        IoReleaseRemoveLock(&device_extension->RemoveLock, irp);
+        IoReleaseRemoveLock(&device_extension->RemoveLock, cached_irp);
     }
 
     KdPrint(("AIMWrFltr: Terminating worker thread for device %p\n",

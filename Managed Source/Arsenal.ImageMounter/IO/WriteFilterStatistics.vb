@@ -229,6 +229,16 @@ Namespace IO
         Public ReadOnly Property PagingPathCount As Integer
 
         ''
+        '' Number of requests read from cache queue.
+        ''
+        Public ReadOnly Property ReadRequestsFromCache As Long
+
+        ''
+        '' Number of bytes read from cache queue.
+        ''
+        Public ReadOnly Property ReadBytesFromCache As Long
+
+        ''
         '' Copy of diff device volume boot record. This structure holds
         '' information about offset to private data/log data/etc.
         ''

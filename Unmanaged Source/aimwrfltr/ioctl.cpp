@@ -502,15 +502,6 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
         PDEVICE_DATA_SET_RANGE range = (PDEVICE_DATA_SET_RANGE)
             ((PUCHAR)attrs + attrs->DataSetRangesOffset);
 
-        if (!device_extension->Statistics.IsProtected)
-        {
-            KdPrint((
-                "AIMWrFltrControl: Passing through IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES action [0x%X]\n",
-                attrs->Action));
-
-            return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
-        }
-
         if (attrs->Action == DeviceDsmAction_Trim)
         {
             InterlockedIncrement64(
@@ -580,11 +571,23 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                 return status;
             }
 
+            PCACHED_IRP cached_irp = CACHED_IRP::CreateFromWriteIrp(DeviceObject, Irp);
+
+            if (cached_irp == NULL)
+            {
+                status = STATUS_INSUFFICIENT_RESOURCES;
+
+                Irp->IoStatus.Status = status;
+                IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
+                return status;
+            }
+
             //
             // Acquire the remove lock so that device will not be removed
             // while processing this irp.
             //
-            status = IoAcquireRemoveLock(&device_extension->RemoveLock, Irp);
+            status = IoAcquireRemoveLock(&device_extension->RemoveLock, cached_irp);
 
             if (!NT_SUCCESS(status))
             {
@@ -600,7 +603,8 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                 return status;
             }
 
-            IoMarkIrpPending(Irp);
+            Irp->IoStatus.Status = STATUS_SUCCESS;
+            IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
             KLOCK_QUEUE_HANDLE lock_handle;
 
@@ -610,13 +614,13 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                 lowest_assumed_irql);
 
             InsertTailList(&device_extension->ListHead,
-                &Irp->Tail.Overlay.ListEntry);
+                &cached_irp->ListEntry);
 
             AIMWrFltrReleaseLock(&lock_handle, &lowest_assumed_irql);
 
             KeSetEvent(&device_extension->ListEvent, 0, FALSE);
 
-            return STATUS_PENDING;
+            return STATUS_SUCCESS;
         }
 
         return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
@@ -670,12 +674,17 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             case SCSIOP_READ_CAPACITY16:
                 return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
 
-            default:
-                ;
-            }
+#ifdef SCSIOP_UNMAP
+            case SCSIOP_UNMAP:
+                KdPrint(("AIMWrFltr:DeviceControl: Ignoring SCSIOP_UNMAP\n"));
 
-            KdPrint(("AIMWrFltr:DeviceControl: Attempt IOCTL_SCSI_PASS_THROUGH_DIRECT. Operation %#.2x\n",
-                (int)pCdb->CDB6GENERIC.OperationCode));
+                break;
+#endif
+
+            default:
+                KdPrint(("AIMWrFltr:DeviceControl: Attempt IOCTL_SCSI_PASS_THROUGH_DIRECT. Operation %#.2x\n",
+                    (int)pCdb->CDB6GENERIC.OperationCode));
+            }
 
 #if DBG
             static bool break_here = true;
@@ -714,11 +723,12 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
         if (IOCTL_STORAGE_QUERY_PROPERTY ==
             io_stack->Parameters.DeviceIoControl.IoControlCode)
         {
+#if 0
             PSTORAGE_PROPERTY_QUERY query = (PSTORAGE_PROPERTY_QUERY)
                 Irp->AssociatedIrp.SystemBuffer;
 
-            //KdPrint(("AIMWrFltr:DeviceControl: IOCTL_STORAGE_QUERY_PROPERTY QueryType=%i, PropertyId=%i.\n",
-            //    query->QueryType, query->PropertyId));
+            KdPrint(("AIMWrFltr:DeviceControl: IOCTL_STORAGE_QUERY_PROPERTY QueryType=%i, PropertyId=%i.\n",
+                query->QueryType, query->PropertyId));
 
             if (query->PropertyId > StorageDeviceWriteAggregationProperty)
             {
@@ -732,6 +742,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                 IoCompleteRequest(Irp, IO_NO_INCREMENT);
                 return status;
             }
+#endif
 
             return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
         }
