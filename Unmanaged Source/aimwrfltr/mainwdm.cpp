@@ -203,8 +203,8 @@ STATUS_SUCCESS if successful
     PDRIVER_DISPATCH *dispatch;
     for (
         ulIndex = 0, dispatch = DriverObject->MajorFunction;
-        ulIndex <= IRP_MJ_MAXIMUM_FUNCTION; ulIndex++,
-        dispatch++)
+        ulIndex <= IRP_MJ_MAXIMUM_FUNCTION;
+        ulIndex++, dispatch++)
     {
         *dispatch = AIMWrFltrSendToNextDriver;
     }
@@ -1317,6 +1317,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
     HANDLE diff_device_handle = NULL;
 
     // Query SCSI address
+#pragma warning(suppress: 28175)
     if (RtlEqualUnicodeString(&PhysicalDeviceObject->DriverObject->DriverName,
         &phdskmnt_driver_name, FALSE))
     {
@@ -1397,7 +1398,17 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
             diff_device_handle,
             &obj_name_info->Name);
 
-        //KdBreakPoint();
+#if DBG
+
+        DbgPrint("AIMWrFltr: Device stack for %p:\n", PhysicalDeviceObject);
+        for (PDEVICE_OBJECT devobj = PhysicalDeviceObject; devobj != NULL; devobj = devobj->AttachedDevice)
+        {
+            DbgPrint("%p %wZ\n", devobj, &devobj->DriverObject->DriverName);
+        }
+
+        //DbgBreakPoint();
+
+#endif
     }
     else
     {
@@ -1688,14 +1699,43 @@ NTSTATUS
     }
     case IRP_MN_DEVICE_USAGE_NOTIFICATION:
     {
-        KdPrint((
-            "AIMWrFltrPnp: Processing DEVICE_USAGE_NOTIFICATION\n"));
+        KdPrint(("AIMWrFltrPnp: Processing DEVICE_USAGE_NOTIFICATION\n"));
 
         status = AIMWrFltrDeviceUsageNotification(DeviceObject, Irp);
 
         break;
     }
+    case IRP_MN_QUERY_REMOVE_DEVICE:
+    {
+        KdPrint(("AIMWrFltrPnp: Processing IRP_MN_QUERY_REMOVE_DEVICE\n"));
 
+        device_extension->QueryRemoveDeviceSent = true;
+
+        status = AIMWrFltrSendToNextDriver(DeviceObject, Irp);
+
+        break;
+    }
+    case IRP_MN_SURPRISE_REMOVAL:
+    {
+        KdPrint(("AIMWrFltrPnp: Processing IRP_MN_SURPRISE_REMOVAL\n"));
+
+        device_extension->SurpriseRemoveDeviceSent = true;
+        device_extension->ShutdownThread = true;
+
+        status = AIMWrFltrSendToNextDriver(DeviceObject, Irp);
+
+        break;
+    }
+    case IRP_MN_CANCEL_REMOVE_DEVICE:
+    {
+        KdPrint(("AIMWrFltrPnp: Processing IRP_MN_CANCEL_REMOVE_DEVICE\n"));
+
+        device_extension->CancelRemoveDeviceSent = true;
+
+        status = AIMWrFltrSendToNextDriver(DeviceObject, Irp);
+
+        break;
+    }
     default:
         //KdPrint(("AIMWrFltrPnp: Forwarding irp\n"));
 
@@ -1836,6 +1876,16 @@ Status of removing the device
 
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
 
+    device_extension->ShutdownThread = true;
+
+    KdPrint(("AIMWrFltr: Waiting for remove lock completion.\n"));
+
+    //
+    // Call Remove lock and wait to ensure all outstanding operations
+    // have completed
+    //
+    IoReleaseRemoveLockAndWait(&device_extension->RemoveLock, Irp);
+
     //
     // Forward the Removal Irp below as per the DDK
     // We aren't required to complete this Irp status should
@@ -1843,20 +1893,22 @@ Status of removing the device
     //
     NTSTATUS status = AIMWrFltrSendToNextDriver(DeviceObject, Irp);
 
-    //
-    // Call Remove lock and wait to ensure all outstanding operations
-    // have completed
-    //
-    IoReleaseRemoveLockAndWait(&device_extension->RemoveLock, Irp);
-    
+    KdPrint(("AIMWrFltr: REMOVE_DEVICE sent to lower device (status %#x), detaching from device stack.\n", status));
+
     //
     // Detach us from the stack 
     //
     IoDetachDevice(device_extension->TargetDeviceObject);
 
+    KdPrint(("AIMWrFltr: Detached from device stack, cleaning up.\n"));
+
     AIMWrFltrCleanupDevice(device_extension);
 
+    KdPrint(("AIMWrFltr: Deleting device object %p.\n", DeviceObject));
+
     IoDeleteDevice(DeviceObject);
+
+    KdPrint(("AIMWrFltr: REMOVE_DEVICE finished (status %#x)\n", status));
 
     return status;
 }
@@ -2005,6 +2057,11 @@ AIMWrFltrCreate(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
 
+    if (device_extension->ShutdownThread)
+    {
+        return AIMWrFltrHandleRemovedDevice(Irp);
+    }
+
     if (device_extension->Statistics.IsProtected)
     {
         KeSetEvent(&device_extension->ListEvent, 0, FALSE);
@@ -2108,26 +2165,6 @@ NTSTATUS
 
 }				// end AIMWrFltrForwardIrpSynchronous()
 
-NTSTATUS
-AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
-{
-    //KdPrint(("AIMWrFltrFlushBuffers: DeviceObject %p Irp %p\n",
-    //    DeviceObject, Irp));
-
-    PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
-
-    if (!device_extension->Statistics.IsProtected ||
-        !device_extension->Statistics.Initialized)
-    {
-        return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
-    }
-
-    Irp->IoStatus.Information = 0;
-    Irp->IoStatus.Status = STATUS_SUCCESS;
-    IoCompleteRequest(Irp, IO_DISK_INCREMENT);
-    return STATUS_SUCCESS;
-}
-
 VOID
 AIMWrFltrUnload(IN PDRIVER_OBJECT DriverObject)
 /*++
@@ -2197,7 +2234,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
         {
             RemoveEntryList(request);
 
-            delete request;
+            delete CONTAINING_RECORD(request, CACHED_IRP, ListEntry);
         }
 
         request = device_extension->ListHead.Flink;
@@ -2261,6 +2298,10 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 
             case IRP_MJ_WRITE:
                 status = AIMWrFltrDeferredWrite(device_extension, cached_irp, block_buffer);
+                break;
+
+            case IRP_MJ_FLUSH_BUFFERS:
+                status = AIMWrFltrDeferredFlushBuffers(device_extension, cached_irp);
                 break;
 
             case IRP_MJ_DEVICE_CONTROL:

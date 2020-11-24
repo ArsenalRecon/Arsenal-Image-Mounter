@@ -5,6 +5,11 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
 
+    if (device_extension->ShutdownThread)
+    {
+        return AIMWrFltrHandleRemovedDevice(Irp);
+    }
+
     PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(Irp);
 
     NTSTATUS status;
@@ -289,14 +294,14 @@ PUCHAR BlockBuffer)
                         KdPrint(("AIMWrFltrDeferredWrite: Fill read from original device failed: 0x%X\n",
                             status));
 
-                        KdBreakPoint();
+                        //KdBreakPoint();
 
                         return status;
                     }
 
                     if (io_status.Information != page_offset_this_iter)
                     {
-                        KdPrint(("AIMWrFltrDeferredWrite: Fill read request 0x%IX bytes, got 0x%IX.\n",
+                        KdPrint(("AIMWrFltrDeferredWrite: Fill read request 0x%X bytes, got 0x%IX.\n",
                             page_offset_this_iter, io_status.Information));
                     }
 
@@ -331,15 +336,15 @@ PUCHAR BlockBuffer)
                         KdPrint(("AIMWrFltrDeferredWrite: Fill read from original device failed: 0x%X\n",
                             status));
 
-                        KdBreakPoint();
+                        //KdBreakPoint();
 
                         return status;
                     }
 
                     if (io_status.Information != DIFF_BLOCK_SIZE - bytes_this_iter)
                     {
-                        KdPrint(("AIMWrFltrDeferredWrite: Fill read request 0x%IX bytes, got 0x%IX.\n",
-                            DIFF_BLOCK_SIZE - bytes_this_iter, io_status.Information));
+                        KdPrint(("AIMWrFltrDeferredWrite: Fill read request 0x%X bytes, got 0x%IX.\n",
+                            (ULONG)(DIFF_BLOCK_SIZE - bytes_this_iter), io_status.Information));
                     }
 
                     ++DeviceExtension->Statistics.FillReads;
@@ -400,24 +405,142 @@ PUCHAR BlockBuffer)
     return STATUS_SUCCESS;
 }
 
-VOID
+NTSTATUS
 AIMWrFltrDeferredFlushBuffers(
     PDEVICE_EXTENSION DeviceExtension,
-    PIRP Irp)
+    PCACHED_IRP Irp)
 {
-    PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(Irp);
+    IO_STATUS_BLOCK io_status;
 
     NTSTATUS status = AIMWrFltrSynchronousReadWrite(
         DeviceExtension->DiffDeviceObject,
         DeviceExtension->DiffFileObject,
-        io_stack->MajorFunction,
+        Irp->IoStack.MajorFunction,
         NULL,
         0,
         NULL,
-        Irp->Tail.Overlay.Thread,
-        &Irp->IoStatus);
+        Irp->Irp != NULL ? Irp->Irp->Tail.Overlay.Thread : NULL,
+        &io_status);
 
-    Irp->IoStatus.Status = status;
+    KdPrint(("AIMWrFltrDeferredFlushBuffers: Flush buffers complete.\n"));
+
+    return status;
+}
+
+NTSTATUS
+AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
+{
+    //KdPrint(("AIMWrFltrFlushBuffers: DeviceObject %p Irp %p\n",
+    //    DeviceObject, Irp));
+
+    PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
+
+    if (device_extension->ShutdownThread)
+    {
+        return AIMWrFltrHandleRemovedDevice(Irp);
+    }
+
+    if (!device_extension->Statistics.IsProtected ||
+        !device_extension->Statistics.Initialized)
+    {
+        return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
+    }
+
+    Irp->IoStatus.Information = 0;
+    
+//#define IGNORE_FLUSH_BUFFERS
+#ifdef IGNORE_FLUSH_BUFFERS
+    KdPrint(("AIMWrFltr: Ignoring IRP_MJ_FLUSH_BUFFERS\n"));
+
+    Irp->IoStatus.Status = STATUS_SUCCESS;
+    IoCompleteRequest(Irp, IO_DISK_INCREMENT);
+    return STATUS_SUCCESS;
+#else
+    KLOCK_QUEUE_HANDLE lock_handle;
+    KIRQL current_irql = PASSIVE_LEVEL;
+
+    PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
+
+    if (cached_irp == NULL)
+    {
+        KdBreakPoint();
+
+        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    InterlockedIncrement64(
+        &device_extension->Statistics.DeferredWriteRequests);
+
+    //
+    // Acquire the remove lock so that device will not be removed while
+    // processing this irp.
+    //
+    NTSTATUS status = IoAcquireRemoveLock(&device_extension->RemoveLock, cached_irp);
+
+    if (!NT_SUCCESS(status))
+    {
+        DbgPrint(
+            "AIMWrFltrFlushBuffers: Remove lock failed flush type Irp: 0x%X\n",
+            status);
+
+        KdBreakPoint();
+
+        delete cached_irp;
+
+        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+        current_irql);
+
+    if (IsListEmpty(&device_extension->ListHead))
+    {
+        KdPrint(("AIMWrFltrFlushBuffers: Completing flush request with empty queue.\n"));
+
+        AIMWrFltrReleaseLock(&lock_handle, &current_irql);
+
+        IoReleaseRemoveLock(&device_extension->RemoveLock, cached_irp);
+
+        Irp->IoStatus.Status = STATUS_SUCCESS;
+        IoCompleteRequest(Irp, IO_DISK_INCREMENT);
+
+        delete cached_irp;
+
+        return STATUS_SUCCESS;
+    }
+
+#if DBG
+
+    ULONG items_in_queue = 0;
+
+    for (PLIST_ENTRY entry = device_extension->ListHead.Flink;
+        entry != &device_extension->ListHead;
+        entry = entry->Flink)
+    {
+        items_in_queue++;
+    }
+
+    DbgPrint(
+        "AIMWrFltrFlushBuffers: Queuing flush request, %u items in queue.\n",
+        items_in_queue);
+
+#endif
+
+    IoMarkIrpPending(Irp);
+
+    InsertTailList(&device_extension->ListHead,
+        &cached_irp->ListEntry);
+
+    AIMWrFltrReleaseLock(&lock_handle, &current_irql);
+
+    KeSetEvent(&device_extension->ListEvent, 0, FALSE);
+
+    return STATUS_PENDING;
+#endif
 }
 
 #ifdef FSCTL_FILE_LEVEL_TRIM

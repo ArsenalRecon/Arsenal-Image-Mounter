@@ -7,6 +7,11 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
 
+    if (device_extension->ShutdownThread)
+    {
+        return AIMWrFltrHandleRemovedDevice(Irp);
+    }
+
     if ((!device_extension->Statistics.IsProtected) ||
         (!device_extension->Statistics.Initialized &&
         !NT_SUCCESS(AIMWrFltrInitializeDiffDevice(device_extension))))

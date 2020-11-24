@@ -7,6 +7,11 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 {
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
 
+    if (device_extension->ShutdownThread)
+    {
+        return AIMWrFltrHandleRemovedDevice(Irp);
+    }
+
     PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(Irp);
 
     if (device_extension->Statistics.IsProtected &&

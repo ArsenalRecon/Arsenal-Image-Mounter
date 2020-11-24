@@ -516,6 +516,7 @@
     <ClCompile Include="write.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\phdskmnt\inc\phdskmntver.h" />
     <ClInclude Include="fltstats.h" />
     <ClInclude Include="aimwrfltr.h" />
   </ItemGroup>

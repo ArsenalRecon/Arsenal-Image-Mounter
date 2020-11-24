@@ -347,6 +347,10 @@ typedef struct _DEVICE_EXTENSION
     //
     bool ShutdownThread;
 
+    bool QueryRemoveDeviceSent;
+    bool SurpriseRemoveDeviceSent;
+    bool CancelRemoveDeviceSent;
+
     //
     // Handle to running worker thread
     //
@@ -755,6 +759,11 @@ extern "C"
             PUCHAR BlockBuffer);
 
     NTSTATUS
+        AIMWrFltrDeferredFlushBuffers(
+            PDEVICE_EXTENSION DeviceExtension,
+            PCACHED_IRP Irp);
+
+    NTSTATUS
         AIMWrFltrDeferredManageDataSetAttributes(
             PDEVICE_EXTENSION DeviceExtension,
             PCACHED_IRP Irp,
@@ -818,6 +827,19 @@ extern "C"
         PDEVICE_OBJECT lower_device = IoGetLowerDeviceObject(DeviceObject);
         ObDereferenceObject(DeviceObject);
         return lower_device;
+    }
+
+    FORCEINLINE
+        NTSTATUS
+        AIMWrFltrHandleRemovedDevice(PIRP Irp)
+    {
+        KdPrint(("AIMWrFltr: IRP %p MJ %#x sent to device that is being removed.\n",
+            Irp, (int)IoGetCurrentIrpStackLocation(Irp)->MajorFunction));
+
+        Irp->IoStatus.Information = 0;
+        Irp->IoStatus.Status = STATUS_DEVICE_DOES_NOT_EXIST;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+        return STATUS_DEVICE_DOES_NOT_EXIST;
     }
 
     extern HANDLE AIMWrFltrParametersKey;
