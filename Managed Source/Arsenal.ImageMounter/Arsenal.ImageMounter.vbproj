@@ -53,8 +53,7 @@
     <RegisterForComInterop>false</RegisterForComInterop>
     <IntermediateOutputPath>C:\Users\Niklas\AppData\Local\Temp\vsEB45.tmp\Release\</IntermediateOutputPath>
     <RunCodeAnalysis>true</RunCodeAnalysis>
-    <CodeAnalysisRuleSet>
-    </CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>Arsenal.ImageMounter.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
     <OptionExplicit>On</OptionExplicit>
@@ -129,7 +128,6 @@
       <Link>CommonAssemblyInfo.vb</Link>
     </Compile>
     <Compile Include="GlobalCriticalMutex.vb" />
-    <Compile Include="GlobalSuppressions.vb" />
     <Compile Include="IO\BufferedBinaryWriter.vb" />
     <Compile Include="IO\CachedIniFile.vb" />
     <Compile Include="DriverSetup.vb" />

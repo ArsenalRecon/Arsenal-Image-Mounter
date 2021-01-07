@@ -104,7 +104,9 @@ Namespace IO
 
             Public Const FILE_DEVICE_DISK As UInt32 = &H7
 
-            Public Const ERROR_WRITE_PROTECT As UInt32 = 19UI
+            Public Const ERROR_WRITE_PROTECT As Int32 = 19I
+            Public Const ERROR_NOT_READY As Int32 = 21I
+            Public Const FVE_E_LOCKED_VOLUME As Int32 = &H80310000I
 
             Public Const SC_MANAGER_CREATE_SERVICE As UInt32 = &H2
             Public Const SC_MANAGER_ALL_ACCESS As UInt32 = &HF003F
@@ -2064,11 +2066,20 @@ Namespace IO
                 Return True
             Else
                 Dim err = Marshal.GetLastWin32Error()
-                If err = NativeConstants.ERROR_WRITE_PROTECT Then
-                    Return False
-                Else
-                    Throw New Win32Exception(err)
-                End If
+
+                Select Case err
+
+                    Case NativeConstants.ERROR_WRITE_PROTECT,
+                         NativeConstants.ERROR_NOT_READY,
+                         NativeConstants.FVE_E_LOCKED_VOLUME
+
+                        Return False
+
+                    Case Else
+                        Throw New Win32Exception(err)
+
+                End Select
+
             End If
 
         End Function
@@ -3193,7 +3204,7 @@ Namespace IO
             End Sub
 
             Public Overrides Function Equals(obj As Object) As Boolean
-                If Not TypeOf obj Is ScsiAddressAndLength Then
+                If TypeOf obj IsNot ScsiAddressAndLength Then
                     Return False
                 End If
 
@@ -5185,7 +5196,7 @@ Namespace IO
             End Function
 
             Public Overrides Function Equals(obj As Object) As Boolean
-                If Not TypeOf obj Is SCSI_ADDRESS Then
+                If TypeOf obj IsNot SCSI_ADDRESS Then
                     Return False
                 End If
 
