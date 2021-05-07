@@ -22,7 +22,6 @@
     <Rule Id="CA1601" Action="Warning" />
     <Rule Id="CA1821" Action="Warning" />
     <Rule Id="CA1824" Action="Warning" />
-    <Rule Id="CA2001" Action="Warning" />
     <Rule Id="CA2003" Action="Warning" />
     <Rule Id="CA2135" Action="Warning" />
     <Rule Id="CA2136" Action="Warning" />

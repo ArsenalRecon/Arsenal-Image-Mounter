@@ -24,7 +24,6 @@ Namespace IO
     ''' Provides wrappers for Win32 file API. This makes it possible to open everything that
     ''' CreateFile() can open and get a FileStream based .NET wrapper around the file handle.
     ''' </summary>
-    <SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification:="<Pending>")>
     Public NotInheritable Class NativeFileIO
 
 #Region "Win32 API"
@@ -1118,7 +1117,6 @@ Namespace IO
         Public Shared ReadOnly SystemArchitecture As String
         Public Shared ReadOnly ProcessArchitecture As String
 
-        <SuppressMessage("Performance", "CA1810:Initialize reference type static fields inline", Justification:="<Pending>")>
         <SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification:="<Pending>")>
         Shared Sub New()
 
@@ -1466,9 +1464,7 @@ Namespace IO
                     If processHandle Is Nothing Then
                         Continue For
                     End If
-#Disable Warning CA2000 ' Dispose objects before losing scope
                     Dim duphandle As New SafeFileHandle(Nothing, True)
-#Enable Warning CA2000 ' Dispose objects before losing scope
                     Dim status = UnsafeNativeMethods.NtDuplicateObject(processHandle, New IntPtr(handle.Handle), UnsafeNativeMethods.GetCurrentProcess(), duphandle, 0, 0, 0)
                     If status < 0 Then
                         Continue For
@@ -1738,7 +1734,6 @@ Namespace IO
         ''' <param name="RootDirectory">Root directory to start path parsing from, or null for rooted path.</param>
         ''' <param name="WasCreated">Return information about whether a file was created, existing file opened etc.</param>
         ''' <returns>NTSTATUS value indicating result of the operation.</returns>
-        <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Public Shared Function NtCreateFile(FileName As String,
                                             ObjectAttributes As NtObjectAttributes,
                                             DesiredAccess As FileAccess,
@@ -1806,7 +1801,6 @@ Namespace IO
         ''' <param name="ObjectAttributes">Object attributes.</param>
         ''' <param name="RootDirectory">Root directory to start path parsing from, or null for rooted path.</param>
         ''' <returns>NTSTATUS value indicating result of the operation.</returns>
-        <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Public Shared Function NtOpenEvent(EventName As String,
                                            ObjectAttributes As NtObjectAttributes,
                                            DesiredAccess As UInt32,
@@ -2890,7 +2884,6 @@ Namespace IO
 
         End Class
 
-        <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Public Shared Function GetDriveLayoutEx(disk As SafeFileHandle) As DriveLayoutInformation
 
             Static partition_struct_size As Integer = Marshal.SizeOf(GetType(PARTITION_INFORMATION_EX))
@@ -2948,7 +2941,6 @@ Namespace IO
 
         End Function
 
-        <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Public Shared Sub SetDriveLayoutEx(disk As SafeFileHandle, layout As DriveLayoutInformation)
 
             Static partition_struct_size As Integer = Marshal.SizeOf(GetType(PARTITION_INFORMATION_EX))
@@ -3962,8 +3954,6 @@ Namespace IO
 
         End Function
 
-        <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="SetupDiEnumDeviceInfo")>
-        <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="SetupDiCreateDeviceInfoList")>
         Public Shared Function RemovePnPDevice(OwnerWindow As IntPtr, hwid As String) As Integer
 
             Trace.WriteLine($"RemovePnPDevice: hwid='{hwid}'")
@@ -4475,12 +4465,10 @@ Namespace IO
             End Sub
         End Structure
 
-        <SuppressMessage("Design", "CA1008:Enums should have zero value", Justification:="<Pending>")>
         Public Enum CmClassRegistryProperty As UInt32
             CM_CRP_UPPERFILTERS = &H12
         End Enum
 
-        <SuppressMessage("Design", "CA1008:Enums should have zero value", Justification:="<Pending>")>
         Public Enum CmDevNodeRegistryProperty As UInt32
             CM_DRP_DEVICEDESC = &H1
             CM_DRP_HARDWAREID = &H2
@@ -4601,7 +4589,6 @@ Namespace IO
             ObjectHandleInformation '' 4 Y Y 
         End Enum
 
-        <SuppressMessage("Design", "CA1008:Enums should have zero value", Justification:="<Pending>")>
         Public Enum ObType As Byte
             OB_TYPE_TYPE = 1
             OB_TYPE_DIRECTORY = 2
@@ -4736,8 +4723,6 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a Service Control Management object handle that is closed by calling CloseServiceHandle() Win32 API.
         ''' </summary>
-        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
-        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeServiceHandle
             Inherits SafeHandleZeroOrMinusOneIsInvalid
 
@@ -4777,8 +4762,6 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a FindVolume handle that is closed by calling FindVolumeClose() Win32 API.
         ''' </summary>
-        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
-        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeFindVolumeHandle
             Inherits SafeHandleMinusOneIsInvalid
 
@@ -4818,8 +4801,6 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
         ''' </summary>
-        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
-        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeFindVolumeMountPointHandle
             Inherits SafeHandleMinusOneIsInvalid
 
@@ -4859,8 +4840,6 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
         ''' </summary>
-        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
-        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeInfHandle
             Inherits SafeHandleMinusOneIsInvalid
 
@@ -4901,8 +4880,6 @@ Namespace IO
         ''' <summary>
         ''' Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
         ''' </summary>
-        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
-        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class", Justification:="<Pending>")>
         Public NotInheritable Class SafeDeviceInfoSetHandle
             Inherits SafeHandleMinusOneIsInvalid
 
@@ -4939,7 +4916,6 @@ Namespace IO
             End Function
         End Class
 
-        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
         Public Class HGlobalBuffer
             Inherits SafeBuffer
 
@@ -5024,8 +5000,6 @@ Namespace IO
         ''' </summary>
         <SecurityCritical>
         <SecurityPermission(SecurityAction.Demand, Flags:=SecurityPermissionFlag.AllFlags)>
-        <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
-        <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class")>
         Public NotInheritable Class SafeFindHandle
             Inherits SafeHandleMinusOneIsInvalid
 
@@ -5238,18 +5212,13 @@ Namespace IO
             ''' </summary>
             ''' <returns>Managed string</returns>
             Public Overrides Function ToString() As String
-                Try
-                    If Length = 0 Then
-                        Return String.Empty
-                    Else
-                        Return Marshal.PtrToStringUni(Buffer, Length >> 1)
-                    End If
-
-                Catch ex As Exception
-                    Return $"{{{ex.Message}}}"
-
-                End Try
+                If _Length = 0 Then
+                    Return String.Empty
+                Else
+                    Return Marshal.PtrToStringUni(Buffer, _Length >> 1)
+                End If
             End Function
+
         End Structure
 
         <StructLayout(LayoutKind.Sequential)>

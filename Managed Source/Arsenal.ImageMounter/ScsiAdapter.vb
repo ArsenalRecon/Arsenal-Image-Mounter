@@ -34,7 +34,6 @@ Public Class ScsiAdapter
     ''' Object storing properties for a virtual disk device. Returned by
     ''' QueryDevice() method.
     ''' </summary>
-    <SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification:="<Pending>")>
     Public NotInheritable Class DeviceProperties
 
         Public Sub New(adapter As ScsiAdapter, device_number As UInt32)
@@ -77,7 +76,6 @@ Public Class ScsiAdapter
 
     End Class
 
-    <SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times")>
     Private Shared Function OpenAdapterHandle(ntdevice As String, devInst As UInteger) As SafeFileHandle
 
         Dim handle As SafeFileHandle

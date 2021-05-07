@@ -70,7 +70,6 @@ Public Module ServerModule
 
     End Sub
 
-    <SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
     <MTAThread>
     Public Function Main(ParamArray args As String()) As Integer
 
@@ -176,7 +175,6 @@ Public Module ServerModule
 
     End Function
 
-    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="ArsenalRecon")>
     Public Sub ShowVersionInfo()
 
         Dim asm_file = Assembly.GetExecutingAssembly().Location
@@ -210,9 +208,6 @@ Please see EULA.txt for license information.")
 
     End Sub
 
-    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly")>
-    <SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification:="<Pending>")>
-    <SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification:="<Pending>")>
     Private Function SafeMain(args As IEnumerable(Of String)) As Integer
 
         Dim image_path As String = Nothing
@@ -525,9 +520,29 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             service.StartServiceThreadAndMount(adapter, device_flags)
 
-            Using device = service.OpenDiskDevice(0)
-                Console.WriteLine($"Virtual disk is {device.DevicePath} with SCSI address {device.ScsiAddress}")
-            End Using
+            Try
+                Dim device_name = $"\\?\{service.GetDiskDeviceName()}"
+
+                Console.WriteLine($"Device number {service.DiskDeviceNumber:X6}")
+                Console.WriteLine($"Device is {device_name}")
+                Console.WriteLine()
+
+                For Each vol In NativeFileIO.EnumerateDiskVolumes(device_name)
+
+                    Console.WriteLine($"Contains volume {vol}")
+
+                    For Each mnt In NativeFileIO.EnumerateVolumeMountPoints(vol)
+
+                        Console.WriteLine($"  Mounted at {mnt}")
+
+                    Next
+
+                Next
+
+            Catch ex As Exception
+                Console.WriteLine($"Error displaying volume mount points: {ex.JoinMessages()}")
+
+            End Try
 
         Else
 
@@ -644,7 +659,6 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
     End Sub
 
-    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="devinst")>
     Public Sub ListDevices()
 
         Dim adapters = API.EnumerateAdapterDeviceInstanceNames()
