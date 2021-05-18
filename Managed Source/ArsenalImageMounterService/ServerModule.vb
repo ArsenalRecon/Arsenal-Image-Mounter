@@ -250,8 +250,6 @@ Please see EULA.txt for license information.")
                 listen_port = Integer.Parse(arg.Substring("/port=".Length))
             ElseIf arg.StartsWith("/buffersize=", StringComparison.OrdinalIgnoreCase) Then
                 buffer_size = Long.Parse(arg.Substring("/buffersize=".Length))
-            ElseIf arg.StartsWith("/device=", StringComparison.OrdinalIgnoreCase) Then
-                image_path = arg.Substring("/device=".Length)
             ElseIf arg.StartsWith("/filename=", StringComparison.OrdinalIgnoreCase) Then
                 image_path = arg.Substring("/filename=".Length)
             ElseIf arg.StartsWith("/provider=", StringComparison.OrdinalIgnoreCase) Then
@@ -341,6 +339,9 @@ aim_cli.exe /filename=imagefilename [/fakembr] /provider=DiscUtils|LibEWF|LibAFF
 
 Syntax to save a new disk image after mounting:
 aim_cli.exe /device=devicenumber /saveas=outputimagefilename [/variant=fixed|dynamic] [/background]
+
+Syntax to save a physical disk as an image file:
+aim_cli.exe /device=\\?\PhysicalDriveN /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
 
 Syntax to dismount a mounted device:
 aim_cli.exe /dismount[=devicenumber] [/force]
