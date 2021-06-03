@@ -26,6 +26,7 @@ variable. It also needs to be built for the correct machine architecture, for
 example x86 or x64.
 
 libewf.dll sources can be downloaded from libewf project website:
+https://github.com/libyal/libewf
 
 There is also a 7-zip archive with DLL binaries for each of the x86 and x64
 architectures in the libewf subdirectory.
