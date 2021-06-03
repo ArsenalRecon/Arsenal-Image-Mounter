@@ -3339,7 +3339,7 @@ Namespace IO
             Dim names = From link In QueryDosDevice()
                         Where link.Length = 2 AndAlso link(1) = ":"c
                         From target In QueryDosDevice(link)
-                        Where target.Equals(VolumeName, StringComparison.OrdinalIgnoreCase)
+                        Where VolumeName.Equals(target, StringComparison.OrdinalIgnoreCase)
                         Select $"{link}\"
 
             Return names

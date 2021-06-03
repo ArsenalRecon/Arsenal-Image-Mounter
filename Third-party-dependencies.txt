@@ -8,9 +8,11 @@ DiscUtils.dll is a .NET managed DLL that is used to access several kinds of
 virtual disk image files, such as VHD, VDI, VMDK. DiscUtils.dll is included in
 Arsenal Image Mounter and does not need to be installed separately.
 
-Sources, as well as most recent binary version of DiscUtils.dll, can be
-downloaded from DiscUtils project website:
-http://discutils.codeplex.com
+Sources for DiscUtils are based on the repository at
+https://github.com/DiscUtils/DiscUtils and forked into a version with added
+features for analyzing NTFS internal structures etc. The forked version is
+maintained here:
+https://github.com/LTRData/DiscUtils
 
 libewf.dll
 ----------
@@ -24,7 +26,6 @@ variable. It also needs to be built for the correct machine architecture, for
 example x86 or x64.
 
 libewf.dll sources can be downloaded from libewf project website:
-http://code.google.com/p/libewf/
 
 There is also a 7-zip archive with DLL binaries for each of the x86 and x64
 architectures in the libewf subdirectory.
