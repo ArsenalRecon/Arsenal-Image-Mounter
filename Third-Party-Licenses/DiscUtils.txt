@@ -1,3 +1,6 @@
+-- Included library from this fork:
+https://github.com/LTRData/DiscUtils
+
 Copyright (c) 2008-2011, Kenneth Bell
 Copyright (c) 2014, Quamotion
 

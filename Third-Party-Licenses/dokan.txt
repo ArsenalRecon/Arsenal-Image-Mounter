@@ -1,3 +1,11 @@
+-- Driver and user mode unmanaged API DLL from this location:
+https://github.com/dokan-dev/dokany/releases
+
+-- .NET library from this fork:
+https://github.com/LTRData/dokan-dotnet/tree/LTRData.DokanNet-initial
+
+-- Recent "dokany" and "dokan-dotnet" license
+
 Copyright (C) 2015 - 2020 Adrien J. <liryna.stark@gmail.com> and Maxime C. <maxime@islog.com>
 Copyright (C) 2007 - 2011 Hiroki Asakawa <info@dokan-dev.net>
 
@@ -18,3 +26,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+-- Original "dokan" project license
+
+GNU LESSER GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+lgpl-3.0.txt
