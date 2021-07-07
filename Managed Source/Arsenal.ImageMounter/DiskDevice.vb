@@ -367,12 +367,12 @@ Public Class DiskDevice
     ''' <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
     ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
     ''' virtual memory type virtual disk.</param>
-    Public Sub QueryDevice(ByRef DeviceNumber As UInt32,
-                           ByRef DiskSize As Int64,
-                           ByRef BytesPerSector As UInt32,
-                           ByRef ImageOffset As Int64,
-                           ByRef Flags As DeviceFlags,
-                           ByRef Filename As String)
+    Public Sub QueryDevice(<Out> ByRef DeviceNumber As UInt32,
+                           <Out> ByRef DiskSize As Int64,
+                           <Out> ByRef BytesPerSector As UInt32,
+                           <Out> ByRef ImageOffset As Int64,
+                           <Out> ByRef Flags As DeviceFlags,
+                           <Out> ByRef Filename As String)
 
         Dim scsi_address = ScsiAddress.Value
 
@@ -404,13 +404,13 @@ Public Class DiskDevice
     ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
     ''' virtual memory type virtual disk.</param>
     ''' <param name="WriteOverlayImagefile">Path to differencing file used in write-temporary mode.</param>
-    Public Sub QueryDevice(ByRef DeviceNumber As UInt32,
-                           ByRef DiskSize As Int64,
-                           ByRef BytesPerSector As UInt32,
-                           ByRef ImageOffset As Int64,
-                           ByRef Flags As DeviceFlags,
-                           ByRef Filename As String,
-                           ByRef WriteOverlayImagefile As String)
+    Public Sub QueryDevice(<Out> ByRef DeviceNumber As UInt32,
+                           <Out> ByRef DiskSize As Int64,
+                           <Out> ByRef BytesPerSector As UInt32,
+                           <Out> ByRef ImageOffset As Int64,
+                           <Out> ByRef Flags As DeviceFlags,
+                           <Out> ByRef Filename As String,
+                           <Out> ByRef WriteOverlayImagefile As String)
 
         Dim scsi_address = ScsiAddress.Value
 
@@ -526,6 +526,18 @@ Public Class DiskDevice
             Return statistics
         End Get
     End Property
+
+    ''' <summary>
+    ''' Deletes the write overlay image file after use. Also sets the filter driver to
+    ''' silently ignore flush requests to improve performance when integrity of the write
+    ''' overlay image is not needed for future sessions.
+    ''' </summary>
+    Public Sub SetWriteOverlayDeleteOnClose()
+        Dim rc = API.SetWriteOverlayDeleteOnClose(SafeFileHandle)
+        If rc <> NativeFileIO.NativeConstants.NO_ERROR Then
+            Throw New Win32Exception(rc)
+        End If
+    End Sub
 
     ''' <summary>
     ''' Returns an DiskStream object that can be used to directly access disk data.

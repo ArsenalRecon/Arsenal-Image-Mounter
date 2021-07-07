@@ -25,12 +25,12 @@ Public Module MainModule
         My.Settings.Reload()
 
         Dim privileges_enabled = NativeFileIO.EnablePrivileges(
-            NativeFileIO.UnsafeNativeMethods.SE_BACKUP_NAME,
-            NativeFileIO.UnsafeNativeMethods.SE_RESTORE_NAME,
-            NativeFileIO.UnsafeNativeMethods.SE_DEBUG_NAME,
-            NativeFileIO.UnsafeNativeMethods.SE_MANAGE_VOLUME_NAME,
-            NativeFileIO.UnsafeNativeMethods.SE_SECURITY_NAME,
-            NativeFileIO.UnsafeNativeMethods.SE_TCB_NAME)
+            NativeFileIO.NativeConstants.SE_BACKUP_NAME,
+            NativeFileIO.NativeConstants.SE_RESTORE_NAME,
+            NativeFileIO.NativeConstants.SE_DEBUG_NAME,
+            NativeFileIO.NativeConstants.SE_MANAGE_VOLUME_NAME,
+            NativeFileIO.NativeConstants.SE_SECURITY_NAME,
+            NativeFileIO.NativeConstants.SE_TCB_NAME)
 
         If privileges_enabled IsNot Nothing Then
             Trace.WriteLine($"Enabled privileges: {String.Join(", ", privileges_enabled)}")
@@ -78,7 +78,7 @@ Public Module MainModule
                                  $"---------------{Environment.NewLine}{Date.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}{msg}{Environment.NewLine}")
 
         Catch ex As Exception
-            Trace.WriteLine($"Exception while logging message: {ex.ToString()}")
+            Trace.WriteLine($"Exception while logging message: {ex}")
 
         End Try
 

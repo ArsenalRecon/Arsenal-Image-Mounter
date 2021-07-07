@@ -615,7 +615,7 @@ Public Class ScsiAdapter
                                                       BitConverter.GetBytes(DeviceNumber),
                                                       ReturnCode)
 
-        If ReturnCode = NativeFileIO.UnsafeNativeMethods.STATUS_OBJECT_NAME_NOT_FOUND Then ' Device already removed
+        If ReturnCode = NativeFileIO.NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND Then ' Device already removed
             Return
         ElseIf ReturnCode <> 0 Then
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
@@ -645,11 +645,11 @@ Public Class ScsiAdapter
     ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
     ''' virtual memory type virtual disk.</param>
     Public Sub QueryDevice(DeviceNumber As UInt32,
-                           ByRef DiskSize As Int64,
-                           ByRef BytesPerSector As UInt32,
-                           ByRef ImageOffset As Int64,
-                           ByRef Flags As DeviceFlags,
-                           ByRef Filename As String)
+                           <Out> ByRef DiskSize As Int64,
+                           <Out> ByRef BytesPerSector As UInt32,
+                           <Out> ByRef ImageOffset As Int64,
+                           <Out> ByRef Flags As DeviceFlags,
+                           <Out> ByRef Filename As String)
 
         QueryDevice(DeviceNumber, DiskSize, BytesPerSector, ImageOffset, Flags, Filename, WriteOverlayImagefile:=Nothing)
 
@@ -669,12 +669,12 @@ Public Class ScsiAdapter
     ''' virtual memory type virtual disk.</param>
     ''' <param name="WriteOverlayImagefile">Path to differencing file used in write-temporary mode.</param>
     Public Sub QueryDevice(DeviceNumber As UInt32,
-                           ByRef DiskSize As Int64,
-                           ByRef BytesPerSector As UInt32,
-                           ByRef ImageOffset As Int64,
-                           ByRef Flags As DeviceFlags,
-                           ByRef Filename As String,
-                           ByRef WriteOverlayImagefile As String)
+                           <Out> ByRef DiskSize As Int64,
+                           <Out> ByRef BytesPerSector As UInt32,
+                           <Out> ByRef ImageOffset As Int64,
+                           <Out> ByRef Flags As DeviceFlags,
+                           <Out> ByRef Filename As String,
+                           <Out> ByRef WriteOverlayImagefile As String)
 
         Dim Request As New BufferedBinaryWriter
         Request.Write(DeviceNumber)

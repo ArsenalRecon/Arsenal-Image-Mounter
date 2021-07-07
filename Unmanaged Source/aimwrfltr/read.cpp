@@ -294,12 +294,15 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             return IoCallDriver(device_extension->TargetDeviceObject, Irp);
         }
     }
-    else if (bytes_from_cache == io_stack->Parameters.Read.Length)
+    else if (bytes_from_cache >= io_stack->Parameters.Read.Length &&
+        RtlAreBitsSet(&bitmap, 0, io_stack->Parameters.Read.Length >> 9))
     {
         // If entire buffer filled by write queue
-        KdPrint(("AIMWrFltrRead: Read %u bytes at 0x%I64X from write queue. Items in queue: %u\n",
+#if 1
+        KdPrint(("AIMWrFltrRead: Read %u bytes at 0x%I64X completed from write queue. Items in queue: %u\n",
             io_stack->Parameters.Read.Length, io_stack->Parameters.Read.ByteOffset.QuadPart,
             items_in_queue));
+#endif
 
         Irp->IoStatus.Status = STATUS_SUCCESS;
         Irp->IoStatus.Information = io_stack->Parameters.Read.Length;
@@ -340,7 +343,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     ULONG splits = 0;
 
-    do
+    while (clear_bits > 0)
     {
         ULONG original_irp_offset = clear_index << 9;
 
@@ -511,7 +514,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         clear_bits = RtlFindNextForwardRunClear(&bitmap, clear_index + clear_bits, &clear_index);
 
-    } while (clear_bits > 0);
+    }
 
     if (splits > 0)
     {
@@ -586,7 +589,7 @@ AIMWrFltrDeferredRead(
         ULONG bytes_this_iter = io_stack->Parameters.Read.Length -
             length_done;
 
-        if ((page_offset_this_iter + bytes_this_iter) > DIFF_BLOCK_SIZE)
+        if (((ULONGLONG)page_offset_this_iter + bytes_this_iter) > DIFF_BLOCK_SIZE)
         {
             bytes_this_iter = DIFF_BLOCK_SIZE - page_offset_this_iter;
         }

@@ -54,6 +54,8 @@ Namespace Server.Interaction
 
             ReadOnlyFileSystem = 9
 
+            ReadWriteFileSystem = 11
+
         End Enum
 
         Private Shared ReadOnly SupportedVirtualDiskAccess As New Dictionary(Of ProxyType, ReadOnlyCollection(Of VirtualDiskAccess)) From
@@ -61,16 +63,19 @@ Namespace Server.Interaction
                 {ProxyType.None,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOriginal,
-                                   VirtualDiskAccess.ReadOnlyFileSystem})},
+                                   VirtualDiskAccess.ReadOnlyFileSystem,
+                                   VirtualDiskAccess.ReadWriteFileSystem})},
                 {ProxyType.MultiPartRaw,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOriginal,
-                                   VirtualDiskAccess.ReadOnlyFileSystem})},
+                                   VirtualDiskAccess.ReadOnlyFileSystem,
+                                   VirtualDiskAccess.ReadWriteFileSystem})},
                 {ProxyType.DiscUtils,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOriginal,
                                    VirtualDiskAccess.ReadWriteOverlay,
-                                   VirtualDiskAccess.ReadOnlyFileSystem})},
+                                   VirtualDiskAccess.ReadOnlyFileSystem,
+                                   VirtualDiskAccess.ReadWriteFileSystem})},
                 {ProxyType.LibEwf,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOverlay,

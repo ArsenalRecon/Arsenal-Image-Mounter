@@ -34,6 +34,9 @@
     <ClCompile Include="partialirp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ioctldbg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aimwrfltr.h">

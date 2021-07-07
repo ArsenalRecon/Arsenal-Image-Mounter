@@ -167,7 +167,7 @@ Public Class MainForm
 
         Catch ex As Exception
             If TypeOf ex Is Win32Exception Then
-                Trace.WriteLine("Win32 error: " & DirectCast(ex, Win32Exception).NativeErrorCode)
+                Trace.WriteLine($"Win32 error: {DirectCast(ex, Win32Exception).NativeErrorCode}")
             End If
             Trace.WriteLine(ex.ToString())
             MessageBox.Show(Me,

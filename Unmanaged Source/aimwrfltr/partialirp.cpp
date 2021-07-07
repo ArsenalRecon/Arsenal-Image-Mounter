@@ -143,17 +143,34 @@ PIRP SCATTERED_IRP::BuildIrp(
     partial->CopyBack = copy_back;
     partial->OriginalIrpOffset = OriginalIrpOffset;
     partial->BytesThisIrp = BytesThisIrp;
+#ifdef  DBG
+    partial->LowerDeviceOffset = LowerDeviceOffset->QuadPart;
+#endif //  DBG
 
     lower_irp->Tail.Overlay.Thread = OriginalIrp->Tail.Overlay.Thread;
 
     if (MajorFunction == IRP_MJ_WRITE)
     {
-        lower_irp->Flags |= IRP_WRITE_OPERATION | IRP_NOCACHE;
-        lower_io_stack->Flags |= SL_WRITE_THROUGH;
+        if (FileObject == NULL || (FileObject->Flags & FO_NO_INTERMEDIATE_BUFFERING) != 0)
+        {
+            lower_irp->Flags |= IRP_WRITE_OPERATION | IRP_NOCACHE;
+            lower_io_stack->Flags |= SL_WRITE_THROUGH;
+        }
+        else
+        {
+            lower_irp->Flags |= IRP_WRITE_OPERATION;
+        }
     }
     else if (MajorFunction == IRP_MJ_READ)
     {
-        lower_irp->Flags |= IRP_READ_OPERATION | IRP_NOCACHE;
+        if (FileObject == NULL || (FileObject->Flags & FO_NO_INTERMEDIATE_BUFFERING) != 0)
+        {
+            lower_irp->Flags |= IRP_READ_OPERATION | IRP_NOCACHE;
+        }
+        else
+        {
+            lower_irp->Flags |= IRP_READ_OPERATION;
+        }
     }
 
     lower_io_stack->FileObject = FileObject;
@@ -202,10 +219,10 @@ PVOID Context
     }
     else
     {
-        KdPrint(("AIMWrFltr::IrpCompletionRoutine: Lower level I/O failed: 0x%X\n",
-            Irp->IoStatus.Status));
+        KdPrint(("AIMWrFltr::IrpCompletionRoutine: Lower level I/O 0x%X bytes at 0x%I64X failed: 0x%X\n",
+            partial->BytesThisIrp, partial->LowerDeviceOffset, Irp->IoStatus.Status));
 
-        //KdBreakPoint();
+        KdBreakPoint();
 
         InterlockedExchange(&scatter->LastFailedStatus, Irp->IoStatus.Status);
     }

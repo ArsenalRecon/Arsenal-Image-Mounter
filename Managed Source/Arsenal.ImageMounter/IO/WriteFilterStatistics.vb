@@ -1,13 +1,13 @@
 ﻿''''' WriteFilterStatistics.vb
 ''''' Statistics data from write filter driver.
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http:''www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
 ''''' Please see LICENSE.txt for full license terms, including the availability of
 ''''' proprietary exceptions.
-''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+''''' Questions, comments, or requests for clarification: http:''ArsenalRecon.com/contact/
 '''''
 
 Namespace IO
@@ -35,21 +35,18 @@ Namespace IO
         Public ReadOnly Property Initialized As Byte
 
         ''
+        '' TRUE if all IRP_MJ_FLUSH_BUFFERS requests are silently ignored
+        '' And returned as successful by this filter driver. This Is useful
+        '' to gain performance in cases where the write overlay image Is
+        '' temporary And contents of it does Not need to be reliably
+        '' maintained for another session.
+        ''
+        Public ReadOnly Property IgnoreFlushBuffers As Byte
+
+        ''
         '' Last NTSTATUS error code if failed to attach a diff device.
         ''
         Public ReadOnly Property LastErrorCode As Integer
-
-        ''
-        '' Total size of protected volume in bytes.
-        ''
-        Public ReadOnly Property Size As Long
-
-        ''
-        '' Number of allocation blocks reserved at the beginning of
-        '' diff device for future use for saving allocation table
-        '' between reboots.
-        ''
-        Public ReadOnly Property AllocationTableBlocks As Integer
 
         ''
         '' Value of AllocationTableBlocks converted to bytes instead
@@ -62,11 +59,6 @@ Namespace IO
         End Property
 
         ''
-        '' Last allocated block at diff device.
-        ''
-        Public ReadOnly Property LastAllocatedBlock As Integer
-
-        ''
         '' Value of LastAllocatedBlock converted to bytes instead of
         '' number of allocation block. This gives the total number of
         '' bytes currently in use at diff device.
@@ -76,11 +68,6 @@ Namespace IO
                 Return CLng(_LastAllocatedBlock) << _DiffBlockBits
             End Get
         End Property
-
-        ''
-        '' Number of bits in block size calculations.
-        ''
-        Public ReadOnly Property DiffBlockBits As Byte
 
         ''
         '' Calculates allocation block size.
@@ -140,6 +127,17 @@ Namespace IO
         '' Number of bytes read from diff device.
         ''
         Public ReadOnly Property ReadBytesFromDiff As Long
+
+        ''
+        '' Number of read requests deferred to worker thread due
+        ' to call at raised IRQL.
+        ''
+        Public ReadOnly Property DeferredReadRequests As Long
+
+        ''
+        '' Total number of bytes in DeferredReadRequests.
+        ''
+        Public ReadOnly Property DeferredReadBytes As Long
 
         ''
         '' Number of write requests.
@@ -242,8 +240,52 @@ Namespace IO
         '' Copy of diff device volume boot record. This structure holds
         '' information about offset to private data/log data/etc.
         ''
-        <MarshalAs(UnmanagedType.ByValArray, SizeConst:=512)>
-        Private ReadOnly DiffDeviceVbr As Byte()
+
+        <MarshalAs(UnmanagedType.ByValArray, SizeConst:=16)>
+        Private ReadOnly Magic As Byte()        '' Bytes 0xF4 0xEB followed by the String "AIMWriteFilter"
+
+        Public ReadOnly Property MajorVersion As Integer    '' will be increased if there's significant, backward incompatible changes in the format
+        Public ReadOnly Property MinorVersion As Integer    '' will be increased for each change that Is backward compatible within the current MajorVersion
+
+        '' All sizes And offsets in 512 byte units.
+
+        Public ReadOnly Property OffsetToPrivateData As Long
+        Public ReadOnly Property SizeOfPrivateData As Long
+
+        Public ReadOnly Property OffsetToLogData As Long
+        Public ReadOnly Property SizeOfLogData As Long
+
+        Public ReadOnly Property OffsetToAllocationTable As Long
+        Public ReadOnly Property SizeOfAllocationTable As Long
+
+        Public ReadOnly Property OffsetToFirstAllocatedBlock As Long
+
+        ''
+        '' Total size of protected volume in bytes.
+        ''
+        Public ReadOnly Property Size As Long
+
+        ''
+        '' Number of allocation blocks reserved at the beginning of
+        '' diff device for future use for saving allocation table
+        '' between reboots.
+        ''
+        Public ReadOnly Property AllocationTableBlocks As Integer
+
+        ''
+        '' Last allocated block at diff device.
+        ''
+        Public ReadOnly Property LastAllocatedBlock As Integer
+
+        ''
+        '' Number of bits in block size calculations.
+        ''
+        Public ReadOnly Property DiffBlockBits As Byte
+
+        <MarshalAs(UnmanagedType.ByValArray, SizeConst:=408)>
+        Private ReadOnly Unused As Byte()
+
+        Public ReadOnly Property VbrSignature As UShort
 
     End Structure
 

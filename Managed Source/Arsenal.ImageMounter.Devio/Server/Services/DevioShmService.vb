@@ -290,7 +290,6 @@ Namespace Server.Services
 
         End Sub
 
-        <CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Private Sub ReadData(MapView As SafeBuffer)
 
             Dim Request = MapView.Read(Of IMDPROXY_READ_REQ)(&H0)
@@ -328,7 +327,6 @@ Namespace Server.Services
 
         End Sub
 
-        <CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId:="System.Runtime.InteropServices.SafeHandle.DangerousGetHandle")>
         Private Sub WriteData(MapView As SafeBuffer)
 
             Dim Request = MapView.Read(Of IMDPROXY_WRITE_REQ)(&H0)

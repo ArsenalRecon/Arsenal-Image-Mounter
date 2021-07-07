@@ -52,7 +52,7 @@
     <WarningsAsErrors>41999,42016,42017,42018,42019,42020,42021,42022,42032,42036</WarningsAsErrors>
     <RegisterForComInterop>false</RegisterForComInterop>
     <IntermediateOutputPath>C:\Users\Niklas\AppData\Local\Temp\vsEB45.tmp\Release\</IntermediateOutputPath>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
     <CodeAnalysisRuleSet>Arsenal.ImageMounter.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
@@ -136,6 +136,7 @@
     <Compile Include="IO\DisposableDictionary.vb" />
     <Compile Include="IO\DisposableList.vb" />
     <Compile Include="IO\FileStreamsEnumerator.vb" />
+    <Compile Include="Reflection\MembersStringParser.vb" />
     <Compile Include="IO\PinnedBuffer.vb" />
     <Compile Include="IO\SystemNotificationEvent.vb" />
     <Compile Include="IO\VolumeMountPointEnumerator.vb" />

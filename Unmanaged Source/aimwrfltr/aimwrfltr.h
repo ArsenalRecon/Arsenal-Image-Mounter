@@ -59,6 +59,7 @@
 #define IDLE_TRIM_BLOCKS_INTERVAL               32
 
 #define ACCESS_FROM_CTL_CODE(ctrlCode)          ((UCHAR)((ctrlCode >> 14) & 0x03))
+#define FUNCTN_FROM_CTL_CODE(ctrlCode)          (((ctrlCode) >> 2) & 0xfff)
 
 #ifndef _countof
 #define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
@@ -113,9 +114,21 @@ protected:
     T *ptr;
     SIZE_T bytecount;
 
-    explicit WPoolMem(T *pBlk, SIZE_T AllocationSize)
+    explicit WPoolMem(T* pBlk, SIZE_T AllocationSize)
         : ptr(pBlk),
         bytecount(pBlk != NULL ? AllocationSize : 0) { }
+
+    bool ReAlloc(T* pBlk, SIZE_T AllocateSize)
+    {
+        Free();
+        ptr = pBlk;
+        if (ptr != NULL)
+        {
+            bytecount = AllocateSize;
+            return true;
+        }
+        return false;
+    }
 
 public:
     operator bool()
@@ -176,6 +189,7 @@ public:
             ExFreePool(ptr);
             ptr = NULL;
         }
+        bytecount = 0;
     }
 
     void Clear()
@@ -211,6 +225,16 @@ public:
         : WPoolMem((T*)ExAllocatePool(PagedPool, AllocateSize), AllocateSize)
     {
     }
+
+    WPagedPoolMem()
+        : WPoolMem()
+    {
+    }
+
+    bool ReAlloc(SIZE_T AllocateSize)
+    {
+        return WPoolMem::ReAlloc((T*)ExAllocatePool(PagedPool, AllocateSize), AllocateSize);
+    }
 };
 
 template<typename T> class WNonPagedPoolMem : public WPoolMem < T >
@@ -219,6 +243,16 @@ public:
     explicit WNonPagedPoolMem(SIZE_T AllocateSize)
         : WPoolMem((T*)ExAllocatePool(NonPagedPool, AllocateSize), AllocateSize)
     {
+    }
+
+    WNonPagedPoolMem()
+        : WPoolMem()
+    {
+    }
+
+    bool ReAlloc(SIZE_T AllocateSize)
+    {
+        return WPoolMem::ReAlloc((T*)ExAllocatePool(NonPagedPool, AllocateSize), AllocateSize);
     }
 };
 
@@ -464,15 +498,15 @@ typedef struct _CACHED_IRP
                 return NULL;
             }
 
-            cached_irp = (PCACHED_IRP)ExAllocatePool(NonPagedPool,
-                FIELD_OFFSET(CACHED_IRP, Buffer) + io_stack->Parameters.Write.Length);
+            SIZE_T cached_irp_size = FIELD_OFFSET(CACHED_IRP, Buffer) + (SIZE_T)io_stack->Parameters.Write.Length;
+            cached_irp = (PCACHED_IRP)ExAllocatePool(NonPagedPool, cached_irp_size);
 
             if (cached_irp == NULL)
             {
                 return NULL;
             }
 
-            RtlZeroMemory(cached_irp, sizeof(CACHED_IRP));
+            RtlZeroMemory(cached_irp, cached_irp_size);
             cached_irp->IoStack = *io_stack;
             RtlCopyMemory(cached_irp->Buffer, buffer, io_stack->Parameters.Write.Length);
         }
@@ -483,15 +517,15 @@ typedef struct _CACHED_IRP
         {
             PUCHAR buffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
 
-            cached_irp = (PCACHED_IRP)ExAllocatePool(NonPagedPool,
-                FIELD_OFFSET(CACHED_IRP, Buffer) + io_stack->Parameters.DeviceIoControl.InputBufferLength);
-
+            SIZE_T cached_irp_size = FIELD_OFFSET(CACHED_IRP, Buffer) + (SIZE_T)io_stack->Parameters.DeviceIoControl.InputBufferLength;
+            cached_irp = (PCACHED_IRP)ExAllocatePool(NonPagedPool, cached_irp_size);
+                
             if (cached_irp == NULL)
             {
                 return NULL;
             }
 
-            RtlZeroMemory(cached_irp, sizeof(CACHED_IRP));
+            RtlZeroMemory(cached_irp, cached_irp_size);
             cached_irp->IoStack = *io_stack;
             if (io_stack->Parameters.DeviceIoControl.InputBufferLength > 0)
             {
@@ -525,11 +559,10 @@ AIMWrFltrFreeIrpWithMdls(IN PIRP Irp)
 {
     if (Irp->MdlAddress != NULL)
     {
-        PMDL mdl;
-        PMDL nextMdl;
-        for (mdl = Irp->MdlAddress; mdl != NULL; mdl = nextMdl)
+        PMDL mdl = Irp->MdlAddress;
+        while (mdl != NULL)
         {
-            nextMdl = mdl->Next;
+            PMDL nextMdl = mdl->Next;
 
             if (mdl->MdlFlags & MDL_PAGES_LOCKED)
             {
@@ -537,6 +570,8 @@ AIMWrFltrFreeIrpWithMdls(IN PIRP Irp)
             }
 
             IoFreeMdl(mdl);
+
+            mdl = nextMdl;
         }
         Irp->MdlAddress = NULL;
     }
@@ -563,10 +598,6 @@ typedef class SCATTERED_IRP
     PUCHAR AllocatedBuffer;
 
     static IO_COMPLETION_ROUTINE IrpCompletionRoutine;
-
-    SCATTERED_IRP()
-    {
-    }
 
     ~SCATTERED_IRP()
     {
@@ -664,6 +695,10 @@ typedef struct PARTIAL_IRP
     ULONG OriginalIrpOffset;
 
     ULONG BytesThisIrp;
+
+#ifdef DBG
+    ULONGLONG LowerDeviceOffset;
+#endif
 
     bool CopyBack;
 
@@ -796,6 +831,20 @@ extern "C"
             IN ULONG InputBufferLength = 0,
             IN ULONG OutputBufferLength = 0,
             OUT PIO_STATUS_BLOCK IoStatus = NULL);
+
+#if DBG
+    PCSTR
+        AIMWrFltrGetIoctlDeviceTypeName(ULONG ctrlCode);
+
+    PCSTR
+        AIMWrFltrGetIoctlMethodName(ULONG ctrlCode);
+
+    PCSTR
+        AIMWrFltrGetIoctlAccessName(ULONG ctrlCode);
+
+    PCSTR
+        AIMWrFltrGetIoctlFunctionName(ULONG ctrlCode);
+#endif
 
     NTSTATUS
         AIMWrFltrSynchronousReadWrite(

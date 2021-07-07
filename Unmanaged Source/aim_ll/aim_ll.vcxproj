@@ -320,6 +320,11 @@
     <ClCompile Include="drvsetup.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\imdisk\inc\imdisk.h" />
+    <ClInclude Include="..\aimapi\aimapi.h" />
+    <ClInclude Include="..\aimapi\winstrct.hpp" />
+    <ClInclude Include="..\aimwrfltr\fltstats.h" />
+    <ClInclude Include="..\phdskmnt\inc\phdskmntver.h" />
     <ClInclude Include="aimcmd.h" />
   </ItemGroup>
   <ItemGroup>

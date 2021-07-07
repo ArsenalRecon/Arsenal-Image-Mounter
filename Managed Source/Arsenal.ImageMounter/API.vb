@@ -210,7 +210,7 @@ Public NotInheritable Class API
 
         For Each m In multipliers
             If size >= m.Key Then
-                Return $"{size / m.Key:0.000}{m.Value}"
+                Return $"{size / m.Key:0.0}{m.Value}"
             End If
         Next
 
@@ -327,15 +327,16 @@ Public NotInheritable Class API
             nativepath = NativeFileIO.GetNtPath(OverlayImagePath)
         End If
 
-        Dim dev_path = NativeFileIO.GetPhysicalDeviceObjectName(devInst)
+        Dim pdo_path = NativeFileIO.GetPhysicalDeviceObjectName(devInst)
+        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDrivePathForNtDevice(pdo_path)).FirstOrDefault()
 
-        Trace.WriteLine($"Device {dev_path} devinst {devInst}. Registering write overlay '{nativepath}'")
+        Trace.WriteLine($"Device {pdo_path} devinst {devInst}. Registering write overlay '{nativepath}'")
 
         Using regkey = Registry.LocalMachine.CreateSubKey("SYSTEM\CurrentControlSet\Services\aimwrfltr\Parameters")
             If nativepath Is Nothing Then
-                regkey.DeleteValue(dev_path, throwOnMissingValue:=False)
+                regkey.DeleteValue(pdo_path, throwOnMissingValue:=False)
             Else
-                regkey.SetValue(dev_path, nativepath, RegistryValueKind.String)
+                regkey.SetValue(pdo_path, nativepath, RegistryValueKind.String)
             End If
         End Using
 
@@ -357,7 +358,7 @@ Public NotInheritable Class API
 
             Dim statistics As New WriteFilterStatistics
 
-            last_error = GetWriteOverlayStatus(dev_path, statistics)
+            last_error = GetWriteOverlayStatus(pdo_path, statistics)
 
 
             If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
@@ -376,15 +377,26 @@ Public NotInheritable Class API
 
         Next
 
-        Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev_path).ToArray()
+        Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).ToArray()
 
         If in_use_apps.Length = 0 AndAlso last_error > 0 Then
             Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
         ElseIf in_use_apps.Length = 0 Then
             Throw New NotSupportedException("Write filter driver not attached to device")
         Else
-            Dim apps = String.Join(", ", From app In in_use_apps Select $"{app.ProcessName} (id={app.HandleTableEntry.ProcessId})")
-            Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the virtual disk device open. Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open: {apps}")
+            Dim apps = String.Join(", ",
+                                   in_use_apps.Select(
+                                   Function(app)
+                                       Using ps = Process.GetProcessById(app.HandleTableEntry.ProcessId)
+                                           If ps.SessionId = 0 OrElse String.IsNullOrWhiteSpace(ps.MainWindowTitle) Then
+                                               Return $"{ps.ProcessName} (id={app.HandleTableEntry.ProcessId})"
+                                           Else
+                                               Return $"{ps.MainWindowTitle} (id={app.HandleTableEntry.ProcessId})"
+                                           End If
+                                       End Using
+                                   End Function))
+
+            Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the disk device open. Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open: {apps}")
         End If
 
         Throw New FileNotFoundException("Error adding write overlay: Device not found.")
@@ -464,7 +476,9 @@ Public NotInheritable Class API
     ''' <summary>
     ''' Retrieves status of write overlay for mounted device.
     ''' </summary>
-    ''' <param name="NtDevicePath">Path to device.</param>
+    ''' <param name="NtDevicePath">NT path to device.</param>
+    ''' <param name="Statistics">Data structure that receives current statistics and settings for filter</param>
+    ''' <returns>Returns 0 on success or Win32 error code on failure</returns>
     Public Shared Function GetWriteOverlayStatus(NtDevicePath As String, <Out> ByRef Statistics As WriteFilterStatistics) As Integer
 
         Using hDevice = NativeFileIO.NtCreateFile(NtDevicePath, 0, 0, FileShare.ReadWrite, NativeFileIO.NtCreateDisposition.Open, NativeFileIO.NtCreateOptions.NonDirectoryFile, 0, Nothing, Nothing)
@@ -479,6 +493,8 @@ Public NotInheritable Class API
     ''' Retrieves status of write overlay for mounted device.
     ''' </summary>
     ''' <param name="hDevice">Handle to device.</param>
+    ''' <param name="Statistics">Data structure that receives current statistics and settings for filter</param>
+    ''' <returns>Returns 0 on success or Win32 error code on failure</returns>
     Public Shared Function GetWriteOverlayStatus(hDevice As SafeFileHandle, <Out> ByRef Statistics As WriteFilterStatistics) As Integer
 
         Statistics.Initialize()
@@ -493,7 +509,40 @@ Public NotInheritable Class API
 
     End Function
 
-    <SuppressMessage("Style", "CA1812:Naming Styles")>
+    ''' <summary>
+    ''' Deletes the write overlay image file after use. Also sets this filter driver to
+    ''' silently ignore flush requests to improve performance when integrity of the write
+    ''' overlay image is not needed for future sessions.
+    ''' </summary>
+    ''' <param name="NtDevicePath">NT path to device.</param>
+    ''' <returns>Returns 0 on success or Win32 error code on failure</returns>
+    Public Shared Function SetWriteOverlayDeleteOnClose(NtDevicePath As String) As Integer
+
+        Using hDevice = NativeFileIO.NtCreateFile(NtDevicePath, 0, FileAccess.ReadWrite, FileShare.ReadWrite, NativeFileIO.NtCreateDisposition.Open, NativeFileIO.NtCreateOptions.NonDirectoryFile, 0, Nothing, Nothing)
+
+            Return SetWriteOverlayDeleteOnClose(hDevice)
+
+        End Using
+
+    End Function
+
+    ''' <summary>
+    ''' Deletes the write overlay image file after use. Also sets this filter driver to
+    ''' silently ignore flush requests to improve performance when integrity of the write
+    ''' overlay image is not needed for future sessions.
+    ''' </summary>
+    ''' <param name="hDevice">Handle to device.</param>
+    ''' <returns>Returns 0 on success or Win32 error code on failure</returns>
+    Public Shared Function SetWriteOverlayDeleteOnClose(hDevice As SafeFileHandle) As Integer
+
+        If UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_DELETE_ON_CLOSE, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing) Then
+            Return NativeFileIO.NativeConstants.NO_ERROR
+        Else
+            Return Marshal.GetLastWin32Error()
+        End If
+
+    End Function
+
     Private NotInheritable Class UnsafeNativeMethods
 
         Private Sub New()
@@ -501,12 +550,24 @@ Public NotInheritable Class API
 
         Public Const IOCTL_AIMWRFLTR_GET_DEVICE_DATA = &H88443404UI
 
+        Public Const IOCTL_AIMWRFLTR_DELETE_ON_CLOSE = &H8844F407UI
+
         Public Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
               dwIoControlCode As UInt32,
               lpInBuffer As IntPtr,
               nInBufferSize As UInt32,
               <Out> ByRef lpOutBuffer As WriteFilterStatistics,
+              nOutBufferSize As UInt32,
+              <Out> ByRef lpBytesReturned As UInt32,
+              lpOverlapped As IntPtr) As Boolean
+
+        Public Declare Function DeviceIoControl Lib "kernel32" (
+              hDevice As SafeFileHandle,
+              dwIoControlCode As UInt32,
+              lpInBuffer As IntPtr,
+              nInBufferSize As UInt32,
+              lpOutBuffer As IntPtr,
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean

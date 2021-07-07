@@ -61,7 +61,6 @@ Public NotInheritable Class DriverSetup
     ''' Returns version of driver located inside a setup zip archive.
     ''' </summary>
     ''' <param name="zipFile">ZipFile object with setup files</param>
-    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId:="phdskmnt")>
     Public Shared Function GetArchiveDriverVersion(zipFile As ZipFile) As Version
 
         Dim infpath1 = $"{_Kernel}\x86\phdskmnt.sys"
@@ -311,9 +310,34 @@ Public NotInheritable Class DriverSetup
 
         End Try
 
+        Dim reboot_required = False
+
         '' Create device node and install driver
         Dim infPath = Path.Combine(setupsource, _Kernel, "phdskmnt.inf")
-        NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, "root\phdskmnt")
+        NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, "root\phdskmnt", ForceReplaceExistingDrivers:=False, reboot_required)
+
+        If reboot_required AndAlso
+            MessageBox.Show(ownerWindow,
+                           "You need to restart your computer to finish driver setup. Do you want to restart now?",
+                           "Arsenal Image Mounter",
+                           MessageBoxButtons.OKCancel,
+                           MessageBoxIcon.Information,
+                           MessageBoxDefaultButton.Button2) = DialogResult.OK Then
+
+            Try
+                NativeFileIO.ShutdownSystem(NativeFileIO.ShutdownFlags.Reboot, NativeFileIO.ShutdownReasons.ReasonFlagPlanned)
+
+            Catch ex2 As Exception
+                Trace.WriteLine(ex2.ToString())
+                MessageBox.Show(ownerWindow,
+                                $"Reboot failed: {ex2.JoinMessages()}",
+                                "Arsenal Image Mounter",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error)
+
+            End Try
+
+        End If
 
     End Sub
 
@@ -362,7 +386,7 @@ Public NotInheritable Class DriverSetup
         Dim CtlUnitInfPath = Path.Combine(setupsource, "CtlUnit", "ctlunit.inf")
 
         CtlUnitInfPath = NativeFileIO.SetupCopyOEMInf(CtlUnitInfPath, NoOverwrite:=False)
-        Trace.WriteLine("Pre-installed controller inf: '" & CtlUnitInfPath & "'")
+        Trace.WriteLine($"Pre-installed controller inf: '{CtlUnitInfPath}'")
 
         Directory.SetCurrentDirectory(setupsource)
 
@@ -388,7 +412,6 @@ Public NotInheritable Class DriverSetup
     ''' <summary>
     ''' Removes Arsenal Image Mounter driver components.
     ''' </summary>
-    <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly")>
     Protected Shared Sub RemoveDriver()
 
         Using scm = NativeFileIO.UnsafeNativeMethods.OpenSCManager(Nothing, Nothing, NativeFileIO.NativeConstants.SC_MANAGER_ALL_ACCESS)
@@ -397,23 +420,31 @@ Public NotInheritable Class DriverSetup
                 Throw New Win32Exception("OpenSCManager")
             End If
 
-            Using svc = NativeFileIO.UnsafeNativeMethods.OpenService(scm, "phdskmnt", NativeFileIO.NativeConstants.SC_MANAGER_ALL_ACCESS)
+            For Each svcname In {"phdskmnt", "aimwrfltr"}
 
-                If svc.IsInvalid Then
-                    Throw New Win32Exception("OpenService")
-                End If
+                Using svc = NativeFileIO.UnsafeNativeMethods.OpenService(scm, svcname, NativeFileIO.NativeConstants.SC_MANAGER_ALL_ACCESS)
 
-                NativeFileIO.UnsafeNativeMethods.DeleteService(svc)
+                    If svc.IsInvalid Then
+                        Throw New Win32Exception("OpenService")
+                    End If
 
-            End Using
+                    NativeFileIO.UnsafeNativeMethods.DeleteService(svc)
+
+                End Using
+
+            Next
 
         End Using
 
-        Dim driverSysFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System, Environment.SpecialFolderOption.DoNotVerify), "drivers\phdskmnt.sys")
+        For Each svcname In {"phdskmnt", "aimwrfltr"}
 
-        If File.Exists(driverSysFile) Then
-            File.Delete(driverSysFile)
-        End If
+            Dim driverSysFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System, Environment.SpecialFolderOption.DoNotVerify), $"drivers\{svcname}.sys")
+
+            If File.Exists(driverSysFile) Then
+                File.Delete(driverSysFile)
+            End If
+
+        Next
 
     End Sub
 

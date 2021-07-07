@@ -184,6 +184,27 @@ Namespace Extensions
 
         End Function
 
+        <Extension>
+        Public Function ToMembersString(o As Object) As String
+
+            If o Is Nothing Then
+                Return "{null}"
+            Else
+                Return TryCast(GetType(Reflection.MembersStringParser(Of )).
+                    MakeGenericType(o.GetType()).
+                    GetMethod("ToString", BindingFlags.Public Or BindingFlags.Static).
+                    Invoke(Nothing, {o}), String)
+            End If
+
+        End Function
+
+        <Extension>
+        Public Function ToMembersString(Of T As Structure)(o As T) As String
+
+            Return Reflection.MembersStringParser(Of T).ToString(o)
+
+        End Function
+
     End Module
 
 End Namespace

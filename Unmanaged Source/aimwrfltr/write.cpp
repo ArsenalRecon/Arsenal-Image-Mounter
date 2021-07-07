@@ -383,8 +383,8 @@ PUCHAR BlockBuffer)
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint(("AIMWrFltrDeferredWrite: Write to diff device failed: 0x%X\n",
-                status));
+            KdPrint(("AIMWrFltrDeferredWrite: IRQL=%i Write 0x%X bytes at 0x%I64X to diff device failed: 0x%X\n",
+                (int)KeGetCurrentIrql(), bytes_this_iter, lower_offset.QuadPart, status));
 
             KdBreakPoint();
 
@@ -448,14 +448,15 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     Irp->IoStatus.Information = 0;
     
-//#define IGNORE_FLUSH_BUFFERS
-#ifdef IGNORE_FLUSH_BUFFERS
-    KdPrint(("AIMWrFltr: Ignoring IRP_MJ_FLUSH_BUFFERS\n"));
+    if (device_extension->Statistics.IgnoreFlushBuffers)
+    {
+        KdPrint(("AIMWrFltrFlushBuffers: Ignoring IRP_MJ_FLUSH_BUFFERS\n"));
 
-    Irp->IoStatus.Status = STATUS_SUCCESS;
-    IoCompleteRequest(Irp, IO_DISK_INCREMENT);
-    return STATUS_SUCCESS;
-#else
+        Irp->IoStatus.Status = STATUS_SUCCESS;
+        IoCompleteRequest(Irp, IO_DISK_INCREMENT);
+        return STATUS_SUCCESS;
+    }
+
     KLOCK_QUEUE_HANDLE lock_handle;
     KIRQL current_irql = PASSIVE_LEVEL;
 
@@ -540,7 +541,6 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     KeSetEvent(&device_extension->ListEvent, 0, FALSE);
 
     return STATUS_PENDING;
-#endif
 }
 
 #ifdef FSCTL_FILE_LEVEL_TRIM

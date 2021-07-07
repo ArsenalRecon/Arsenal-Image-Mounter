@@ -40,7 +40,6 @@ Public Class MainForm
 
     Private ReadOnly DeviceListRefreshEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset)
 
-    <SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification:="<Pending>")>
     Protected Overrides Sub OnLoad(e As EventArgs)
 
         Dim SetupRun As Boolean
@@ -97,15 +96,8 @@ Public Class MainForm
                                        MessageBoxIcon.Information,
                                        MessageBoxDefaultButton.Button2) = DialogResult.OK Then
 
-                        Dim sd As New ProcessStartInfo With {
-                            .Arguments = "-r -t 0 -d p:0:0",
-                            .FileName = "shutdown.exe",
-                            .UseShellExecute = False,
-                            .CreateNoWindow = True
-                        }
                         Try
-                            Using Process.Start(sd)
-                            End Using
+                            NativeFileIO.ShutdownSystem(NativeFileIO.ShutdownFlags.Reboot, NativeFileIO.ShutdownReasons.ReasonFlagPlanned)
 
                         Catch ex2 As Exception
                             Trace.WriteLine(ex2.ToString())
@@ -179,7 +171,6 @@ Public Class MainForm
 
     End Sub
 
-    <SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification:="<Pending>")>
     Protected Overrides Sub OnClosing(e As CancelEventArgs)
 
         IsClosing = True

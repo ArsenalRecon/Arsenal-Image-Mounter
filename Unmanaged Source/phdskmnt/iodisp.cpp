@@ -26,6 +26,23 @@
 //#include "trace.h"
 //#include "iodisp.tmh"
 
+//
+// Number of bits to use in block size mask. For instance,
+// 21 = 2 MB, 19 = 512 KB, 16 = 64 K, 12 = 4 K etc.
+// The smaller block size the more non-paged pool is needed
+// for the allocation table. On the other hand, smaller block
+// sizes mean less space likely wasted on diff device to fill
+// up complete blocks as new blocks are allocated by small
+// write requests.
+//
+#define DIFF_BLOCK_BITS                         16
+
+//
+// Macros for easier block/offset calculation
+//
+#define DIFF_BLOCK_SIZE                         (1ULL << DIFF_BLOCK_BITS)
+
+
 /**************************************************************************************************/
 /*                                                                                                */
 /* Globals, forward definitions, etc.                                                             */
@@ -1203,7 +1220,7 @@ __in __deref PETHREAD ClientThread)
 
         // If no device-type specified, check if filename ends with .iso or .nrg.
         // In that case, set device-type automatically to FILE_DEVICE_CDROM
-        if ((IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) == 0) &
+        if ((IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) == 0) &&
             (CreateData->Fields.FileNameLength >= (4 * sizeof(*CreateData->Fields.FileName))))
         {
             LPWSTR name = CreateData->Fields.FileName +
@@ -1346,7 +1363,7 @@ __in __deref PETHREAD ClientThread)
                 NULL);
         }
 
-        if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_PROXY) &
+        if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_PROXY) &&
             (IMSCSI_PROXY_TYPE(CreateData->Fields.Flags) ==
             IMSCSI_PROXY_TYPE_SHM))
         {
@@ -1843,7 +1860,7 @@ __in __deref PETHREAD ClientThread)
                     CreateData->Fields.ImageOffset.QuadPart;
                 else if ((disk_size.QuadPart <
                     CreateData->Fields.DiskSize.QuadPart +
-                    CreateData->Fields.ImageOffset.QuadPart) &
+                    CreateData->Fields.ImageOffset.QuadPart) &&
                     (!IMSCSI_READONLY(CreateData->Fields.Flags)))
                 {
                     LARGE_INTEGER new_image_size;
@@ -2154,7 +2171,7 @@ __in __deref PETHREAD ClientThread)
         pLUExt->VMDisk = FALSE;
 
     // AWEAlloc disk.
-    if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &
+    if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &&
         (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_AWEALLOC))
         pLUExt->AWEAllocDisk = TRUE;
     else
@@ -2221,7 +2238,13 @@ __in __deref PETHREAD ClientThread)
     status = RtlStringFromGUID(*(PGUID)pLUExt->UniqueId, &guid);
     if (NT_SUCCESS(status))
     {
-        sprintf(pLUExt->GuidString, "%.38ws", guid.Buffer);
+        ANSI_STRING ansi_guid = {
+            0,
+            sizeof(pLUExt->GuidString),
+            pLUExt->GuidString
+        };
+
+        RtlUnicodeStringToAnsiString(&ansi_guid, &guid, FALSE);
 
         RtlFreeUnicodeString(&guid);
 
@@ -2241,20 +2264,31 @@ __in __deref PETHREAD ClientThread)
         InitializeObjectAttributes(&object_attributes,
             &overlay_file_name,
             OBJ_CASE_INSENSITIVE |
-            OBJ_FORCE_ACCESS_CHECK,
+            OBJ_FORCE_ACCESS_CHECK |
+            OBJ_OPENIF,
             NULL,
             NULL);
+
+        LARGE_INTEGER allocation_size;
+        allocation_size.QuadPart = DIFF_BLOCK_SIZE;
 
         IO_STATUS_BLOCK io_status;
 
         HANDLE write_overlay;
 
-        status = ZwCreateFile(&write_overlay, GENERIC_READ | GENERIC_WRITE,
-            &object_attributes, &io_status, NULL, FILE_ATTRIBUTE_NORMAL,
-            FILE_SHARE_READ | FILE_SHARE_DELETE, FILE_OPEN_IF,
-            FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS | FILE_WRITE_THROUGH |
-            FILE_NO_INTERMEDIATE_BUFFERING | FILE_SYNCHRONOUS_IO_NONALERT,
-            NULL, 0);
+        status = ZwCreateFile(
+            &write_overlay,
+            GENERIC_READ | GENERIC_WRITE | DELETE,
+            &object_attributes,
+            &io_status,
+            &allocation_size,
+            FILE_ATTRIBUTE_NORMAL,
+            FILE_SHARE_READ | FILE_SHARE_DELETE,
+            FILE_OPEN_IF,
+            FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS |
+            FILE_SYNCHRONOUS_IO_NONALERT,
+            NULL,
+            0);
 
         if (!NT_SUCCESS(status))
         {

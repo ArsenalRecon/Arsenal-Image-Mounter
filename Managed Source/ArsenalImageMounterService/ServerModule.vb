@@ -200,7 +200,7 @@ Application version {file_ver}
 
 {driver_ver}
             
-Copyright (C) 2012-2020 Arsenal Recon.
+Copyright (C) 2012-2021 Arsenal Recon.
 
 http://www.ArsenalRecon.com
 
@@ -690,6 +690,15 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
                 Let physical_drive_path = NativeFileIO.GetPhysicalDrivePathForNtDevice(path)
 
                 Console.WriteLine($"SCSI address {dev.address} found at {dev.path} devinst {dev.devinstChild} ({dev.physical_drive_path}).")
+
+#If DEBUG Then
+
+                Using h = NativeFileIO.NtCreateFile(dev.path, NativeFileIO.NtObjectAttributes.OpenIf, 0, FileShare.ReadWrite, NativeFileIO.NtCreateDisposition.Open, NativeFileIO.NtCreateOptions.NonDirectoryFile Or NativeFileIO.NtCreateOptions.SynchronousIoNonAlert, FileAttributes.Normal, Nothing, Nothing)
+                    Dim prop = NativeFileIO.GetStorageStandardProperties(h)
+                    Console.WriteLine("")
+                End Using
+
+#End If
 
             Next
 

@@ -18,7 +18,7 @@ Public Class AsyncMessageBox
     End Sub
 
     Public Property MsgText() As String
-        <DebuggerHidden()> _
+        <DebuggerHidden> _
         Get
             Return m_Text
         End Get
@@ -156,7 +156,7 @@ Public Class AsyncMessageBox
     End Sub
 
     Public Overrides Property ForeColor() As Color
-        <DebuggerHidden()> _
+        <DebuggerHidden> _
         Get
             Return MyBase.ForeColor
         End Get

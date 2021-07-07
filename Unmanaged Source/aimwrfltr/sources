@@ -50,6 +50,7 @@ DRIVERTYPE=WDM
 
 SOURCES = mainwdm.cpp		\
           ioctl.cpp		\
+          ioctldbg.cpp		\
           partialirp.cpp	\
           aimwrfltr.rc		\
           read.cpp		\
