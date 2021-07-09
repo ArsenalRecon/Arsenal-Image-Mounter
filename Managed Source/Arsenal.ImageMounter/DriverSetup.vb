@@ -5,6 +5,7 @@ Imports System.Windows.Forms
 Imports Ionic.Crc
 Imports Arsenal.ImageMounter.Extensions
 Imports System.Diagnostics.CodeAnalysis
+Imports Microsoft.Win32
 
 ''' <summary>
 ''' Routines for installing or uninstalling Arsenal Image Mounter kernel level
@@ -314,7 +315,29 @@ Public NotInheritable Class DriverSetup
 
         '' Create device node and install driver
         Dim infPath = Path.Combine(setupsource, _Kernel, "phdskmnt.inf")
+
+        Dim cachedInf = New CachedIniFile(infPath)
+
         NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, "root\phdskmnt", ForceReplaceExistingDrivers:=False, reboot_required)
+
+        If Not reboot_required Then
+
+            Dim pending_renames = TryCast(Registry.GetValue("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager", "PendingFileRenameOperations", Nothing), String())
+
+            If pending_renames IsNot Nothing Then
+
+                reboot_required = cachedInf("PhysicalDiskMounterDevice.Services").
+                    OfType(Of KeyValuePair(Of String, String)).
+                    Where(Function(item) "AddService".Equals(item.Key, StringComparison.OrdinalIgnoreCase)).
+                    Select(Function(item) $"\system32\drivers\{item.Value.Split(","c)(0)}.sys").
+                    Any(Function(path) Array.FindIndex(pending_renames,
+                                                       Function(rename) rename.EndsWith(path, StringComparison.OrdinalIgnoreCase)) >= 0)
+
+                Trace.WriteLine("Detected pending file replace operation for a driver file. Requesting reboot.")
+
+            End If
+
+        End If
 
         If reboot_required AndAlso
             MessageBox.Show(ownerWindow,

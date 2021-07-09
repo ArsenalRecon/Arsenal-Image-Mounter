@@ -70,12 +70,10 @@ Namespace IO
             m_Dictionary.Clear()
         End Sub
 
-        <SuppressMessage("Design", "CA1033:Interface methods should be callable by child types")>
         Private Function ICollection_Contains(item As KeyValuePair(Of TKey, TValue)) As Boolean Implements ICollection(Of KeyValuePair(Of TKey, TValue)).Contains
             Return DirectCast(m_Dictionary, ICollection(Of KeyValuePair(Of TKey, TValue))).Contains(item)
         End Function
 
-        <SuppressMessage("Design", "CA1033:Interface methods should be callable by child types")>
         Private Sub ICollection_CopyTo(array() As KeyValuePair(Of TKey, TValue), arrayIndex As Integer) Implements ICollection(Of KeyValuePair(Of TKey, TValue)).CopyTo
             DirectCast(m_Dictionary, ICollection(Of KeyValuePair(Of TKey, TValue))).CopyTo(array, arrayIndex)
         End Sub
@@ -128,12 +126,11 @@ Namespace IO
             Return DirectCast(m_Dictionary, ICollection(Of KeyValuePair(Of TKey, TValue))).GetEnumerator()
         End Function
 
-        Public Function GetEnumerator() As System.Collections.IEnumerator Implements System.Collections.IEnumerable.GetEnumerator
+        Public Function GetEnumerator() As IEnumerator Implements IEnumerable.GetEnumerator
             Return m_Dictionary.GetEnumerator()
         End Function
     End Class
 
-    <SuppressMessage("Microsoft.Interoperability", "CA1405:ComVisibleTypeBaseTypesShouldBeComVisible")>
     Public Class NullSafeStringDictionary
         Inherits NullSafeDictionary(Of String, String)
 
