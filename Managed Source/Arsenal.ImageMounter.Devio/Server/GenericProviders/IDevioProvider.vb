@@ -1,7 +1,6 @@
-﻿
-''''' IDataProvider.vb
+﻿''''' IDataProvider.vb
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -9,8 +8,6 @@
 ''''' proprietary exceptions.
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
-
-Imports System.Diagnostics.CodeAnalysis
 
 Namespace Server.GenericProviders
 
@@ -29,9 +26,12 @@ Namespace Server.GenericProviders
     ''' and writing data from unmanaged memory provided a pointer to unmanaged block of
     ''' memory.</para>
     ''' </summary>
-    <SuppressMessage("Microsoft.Interoperability", "CA1402:AvoidOverloadsInComVisibleInterfaces")>
     Public Interface IDevioProvider
         Inherits IDisposable
+
+        Event Disposing As EventHandler
+
+        Event Disposed As EventHandler
 
         ''' <summary>
         ''' Size of virtual disk.

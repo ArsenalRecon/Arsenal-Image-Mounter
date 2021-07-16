@@ -2,7 +2,7 @@
 ''''' ServerModule.vb
 ''''' Main module for PhysicalDiskMounterService application.
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -11,7 +11,6 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
-Imports System.Diagnostics.CodeAnalysis
 Imports System.Globalization
 Imports System.Reflection
 Imports System.Runtime.CompilerServices
@@ -160,7 +159,7 @@ Public Module ServerModule
         Catch ex As Exception
             Trace.WriteLine(ex.ToString())
             Console.ForegroundColor = ConsoleColor.Red
-            Console.Error.WriteLine(ex.JoinMessages(Environment.NewLine))
+            Console.Error.WriteLine(ex.JoinMessages())
             Console.ResetColor()
             Return Marshal.GetHRForException(ex)
 
@@ -646,6 +645,9 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                     Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN", "001"
                         provider.ConvertToRawImage(outputImage, OutputImageVariant, cancel.Token)
+
+                    Case "E01"
+                        provider.ConvertToLibEwfImage(outputImage, cancel.Token)
 
                     Case Else
                         provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, cancel.Token)

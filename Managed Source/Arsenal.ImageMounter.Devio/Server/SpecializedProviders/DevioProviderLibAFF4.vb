@@ -1,7 +1,7 @@
 ﻿
 ''''' DevioProviderLibEwf.vb
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -16,7 +16,6 @@ Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Namespace Server.SpecializedProviders
 
     <SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")>
-    <SuppressMessage("Design", "CA1060:Move pinvokes to native methods class")>
     Public Class DevioProviderLibAFF4
         Inherits DevioProviderDLLWrapperBase
 

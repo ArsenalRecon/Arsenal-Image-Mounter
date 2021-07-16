@@ -1,7 +1,7 @@
 ﻿
 ''''' DevioProviderManagedBase.vb
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -22,12 +22,12 @@ Namespace Server.GenericProviders
         ''' <summary>
         ''' Event when object is about to be disposed
         ''' </summary>
-        Public Event Disposing As EventHandler
+        Public Event Disposing As EventHandler Implements IDevioProvider.Disposing
 
         ''' <summary>
         ''' Event when object has been disposed
         ''' </summary>
-        Public Event Disposed As EventHandler
+        Public Event Disposed As EventHandler Implements IDevioProvider.Disposed
 
         ''' <summary>
         ''' Determines whether virtual disk is writable or read-only.
@@ -159,13 +159,13 @@ Namespace Server.GenericProviders
 
         End Sub
 
-        Private disposedValue As Boolean ' To detect redundant calls
+        Public ReadOnly Property IsDisposed As Boolean ' To detect redundant calls
 
         ' IDisposable
         Protected Overridable Sub Dispose(disposing As Boolean)
             OnDisposing(EventArgs.Empty)
 
-            If Not Me.disposedValue Then
+            If Not _IsDisposed Then
                 If disposing Then
                     ' TODO: dispose managed state (managed objects).
                 End If
@@ -173,7 +173,7 @@ Namespace Server.GenericProviders
                 ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
                 ' TODO: set large fields to null.
             End If
-            Me.disposedValue = True
+            _IsDisposed = True
 
             OnDisposed(EventArgs.Empty)
         End Sub

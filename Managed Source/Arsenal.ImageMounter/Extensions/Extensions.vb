@@ -42,7 +42,7 @@ Namespace Extensions
         <Extension>
         Public Function JoinMessages(ex As Exception) As String
 
-            Return ex?.JoinMessages(" -> ")
+            Return ex?.JoinMessages(Environment.NewLine & Environment.NewLine)
 
         End Function
 
@@ -202,6 +202,22 @@ Namespace Extensions
         Public Function ToMembersString(Of T As Structure)(o As T) As String
 
             Return Reflection.MembersStringParser(Of T).ToString(o)
+
+        End Function
+
+        <Extension>
+        Public Function ToHexString(bytes As Byte()) As String
+
+            If bytes Is Nothing Then
+                Return Nothing
+            End If
+
+            Dim valuestr As New StringBuilder(bytes.Length << 1)
+            For Each b In bytes
+                valuestr.Append(b.ToString("x2"))
+            Next
+
+            Return valuestr.ToString()
 
         End Function
 

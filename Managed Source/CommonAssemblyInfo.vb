@@ -6,7 +6,7 @@ Imports System.Runtime.InteropServices
 <Assembly: AssemblyDescription("")>
 <Assembly: AssemblyCompany("Arsenal Recon")>
 <Assembly: AssemblyProduct("Arsenal Image Mounter")>
-<Assembly: AssemblyCopyright("Copyright: (c) Arsenal Recon 2013-2020")>
+<Assembly: AssemblyCopyright("Copyright: (c) Arsenal Recon 2013-2021")>
 <Assembly: AssemblyTrademark("")>
 
 <Assembly: NeutralResourcesLanguage("en-US")>
@@ -43,4 +43,4 @@ Imports System.Runtime.InteropServices
 ' <Assembly: AssemblyVersion("1.0.*")> 
 
 <Assembly: AssemblyVersion("1.0.0.0")>
-<Assembly: AssemblyFileVersion("3.5.147.0")>
+<Assembly: AssemblyFileVersion("3.5.148.0")>

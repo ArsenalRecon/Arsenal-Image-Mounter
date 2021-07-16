@@ -28,8 +28,9 @@ Namespace IO
             End If
             Me.disposedValue = True
 
-            ' TODO: free shared unmanaged resources
             Clear()
+
+            ' TODO: free shared unmanaged resources
 
         End Sub
 

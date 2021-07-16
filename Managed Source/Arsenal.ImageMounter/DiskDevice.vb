@@ -1,7 +1,7 @@
 ﻿''''' DiskDevice.vb
 ''''' Class for controlling Arsenal Image Mounter Disk Devices.
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -80,7 +80,7 @@ Public Class DiskDevice
     End Sub
 
     ''' <summary>
-    ''' Retrieves device number for this disk.
+    ''' Retrieves device number for this disk on the owner SCSI adapter.
     ''' </summary>
     Public ReadOnly Property DeviceNumber As UInt32
         Get
@@ -113,6 +113,24 @@ Public Class DiskDevice
     Public ReadOnly Property StorageDeviceNumber As NativeFileIO.STORAGE_DEVICE_NUMBER?
         Get
             Return NativeFileIO.GetStorageDeviceNumber(SafeFileHandle)
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Retrieves StorageStandardProperties information.
+    ''' </summary>
+    Public ReadOnly Property StorageStandardProperties As NativeFileIO.StorageStandardProperties?
+        Get
+            Return NativeFileIO.GetStorageStandardProperties(SafeFileHandle)
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Retrieves TRIM enabled information.
+    ''' </summary>
+    Public ReadOnly Property TrimEnabled As Boolean?
+        Get
+            Return NativeFileIO.GetStorageTrimProperties(SafeFileHandle)
         End Get
     End Property
 
@@ -349,6 +367,11 @@ Public Class DiskDevice
         NativeFileIO.InitializeDisk(SafeFileHandle, PartitionStyle)
     End Sub
 
+    ''' <summary>
+    ''' Disk identifier string.
+    ''' </summary>
+    ''' <returns>8 digit hex string for MBR disks or disk GUID for
+    ''' GPT disks.</returns>
     Public ReadOnly Property DiskId As String
         Get
             Return If(DriveLayoutEx?.ToString(), "(Unknown)")

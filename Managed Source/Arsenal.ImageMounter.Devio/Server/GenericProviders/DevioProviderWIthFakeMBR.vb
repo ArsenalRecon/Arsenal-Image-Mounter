@@ -1,7 +1,7 @@
 ﻿
 ''''' DevioProviderUnmanagedBase.vb
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -19,6 +19,16 @@ Namespace Server.GenericProviders
 
     Public Class DevioProviderWithFakeMBR
         Implements IDevioProvider
+
+        ''' <summary>
+        ''' Event when object is about to be disposed
+        ''' </summary>
+        Public Event Disposing As EventHandler Implements IDevioProvider.Disposing
+
+        ''' <summary>
+        ''' Event when object has been disposed
+        ''' </summary>
+        Public Event Disposed As EventHandler Implements IDevioProvider.Disposed
 
         Public Const PrefixLength As Integer = 64 << 10
 
@@ -339,22 +349,19 @@ Namespace Server.GenericProviders
 
         ' IDisposable
         Protected Overridable Sub Dispose(disposing As Boolean)
+            OnDisposing(EventArgs.Empty)
 
             If Not _IsDisposed Then
-
                 If disposing Then
                     ' TODO: dispose managed state (managed objects).
-                    _BaseProvider?.Dispose()
                 End If
 
                 ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-
                 ' TODO: set large fields to null.
-                _BaseProvider = Nothing
             End If
-
             _IsDisposed = True
 
+            OnDisposed(EventArgs.Empty)
         End Sub
 
         ' TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.
@@ -370,6 +377,22 @@ Namespace Server.GenericProviders
             Dispose(True)
             ' TODO: uncomment the following line if Finalize() is overridden above.
             GC.SuppressFinalize(Me)
+        End Sub
+
+        ''' <summary>
+        ''' Raises Disposing event.
+        ''' </summary>
+        ''' <param name="e">Event arguments</param>
+        Protected Overridable Sub OnDisposing(e As EventArgs)
+            RaiseEvent Disposing(Me, e)
+        End Sub
+
+        ''' <summary>
+        ''' Raises Disposed event.
+        ''' </summary>
+        ''' <param name="e">Event arguments</param>
+        Protected Overridable Sub OnDisposed(e As EventArgs)
+            RaiseEvent Disposed(Me, e)
         End Sub
 
         Private Const DiskSignatureOffset As Integer = &H1B8

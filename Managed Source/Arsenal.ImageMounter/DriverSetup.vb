@@ -16,15 +16,13 @@ Public NotInheritable Class DriverSetup
     Private Sub New()
     End Sub
 
-    Public Shared ReadOnly Property Kernel As String
+    Public Shared ReadOnly Property OSVersion As Version = NativeFileIO.GetOSVersion().Version
+
+    Public Shared ReadOnly Property Kernel As String = GetKernelName()
 
     Public Shared ReadOnly Property HasStorPort As Boolean
 
-    Public Shared ReadOnly Property OSVersion As Version
-
-    Shared Sub New()
-
-        _OSVersion = NativeFileIO.GetOSVersion().Version
+    Private Shared Function GetKernelName() As String
 
         If _OSVersion >= New Version(10, 0) Then
             _Kernel = "Win10"
@@ -51,12 +49,12 @@ Public NotInheritable Class DriverSetup
             _Kernel = "Win2K"
             _HasStorPort = False
         Else
-#Disable Warning CA1065 ' Do not raise exceptions in unexpected locations
             Throw New NotSupportedException($"Unsupported Windows version ('{_OSVersion}')")
-#Enable Warning CA1065 ' Do not raise exceptions in unexpected locations
         End If
 
-    End Sub
+        Return _Kernel
+
+    End Function
 
     ''' <summary>
     ''' Returns version of driver located inside a setup zip archive.

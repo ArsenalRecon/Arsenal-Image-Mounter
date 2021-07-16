@@ -3,7 +3,7 @@
 ''''' Main module for control application.
 ''''' 
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -182,23 +182,20 @@ Module MainModule
                         Console.WriteLine()
                         For Each field In Device.GetType().GetFields()
                             If field.FieldType Is GetType(UInt32) Then
-                                Console.WriteLine($"{field.Name} = {DirectCast(field.GetValue(Device), UInt32).ToString("X8")}")
+                                Console.WriteLine($"{field.Name} = {DirectCast(field.GetValue(Device), UInt32):X8}")
                             Else
-                                Console.WriteLine($"{field.Name} = {If(field.GetValue(Device), "(null)").ToString()}")
+                                Console.WriteLine($"{field.Name} = {If(field.GetValue(Device), "(null)")}")
                             End If
                         Next
                         Try
                             Using disk = adapter.OpenDevice(Device.DeviceNumber, 0)
                                 Console.WriteLine(disk.DevicePath)
-                                If disk.DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase) Then
-                                    Dim disknumber = UInteger.Parse(disk.DevicePath.Substring("\\?\PhysicalDrive".Length))
-                                    For Each volume In NativeFileIO.EnumerateDiskVolumes(disknumber)
-                                        Console.WriteLine($"Contains volume {volume}")
-                                        For Each mount_point In NativeFileIO.EnumerateVolumeMountPoints(volume)
-                                            Console.WriteLine($"  Mounted at {mount_point}")
-                                        Next
+                                For Each volume In disk.EnumerateDiskVolumes()
+                                    Console.WriteLine($"Contains volume {volume}")
+                                    For Each mount_point In NativeFileIO.EnumerateVolumeMountPoints(volume)
+                                        Console.WriteLine($"  Mounted at {mount_point}")
                                     Next
-                                End If
+                                Next
                             End Using
 
                         Catch ex As Exception

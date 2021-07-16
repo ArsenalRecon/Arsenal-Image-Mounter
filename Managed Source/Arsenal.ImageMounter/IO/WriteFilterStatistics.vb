@@ -1,7 +1,7 @@
 ﻿''''' WriteFilterStatistics.vb
 ''''' Statistics data from write filter driver.
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http:''www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http:''www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -15,13 +15,13 @@ Namespace IO
     Public Structure WriteFilterStatistics
 
         Public Sub Initialize()
-            _Version = Marshal.SizeOf(Me)
+            _Version = CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics)))
         End Sub
 
         ''
         '' Version of structure. Set to sizeof(AIMWRFLTR_DEVICE_STATISTICS)
         ''
-        Public ReadOnly Property Version As Integer
+        Public ReadOnly Property Version As UInteger
 
         ''
         '' TRUE if volume Is protected by filter driver, FALSE otherwise.

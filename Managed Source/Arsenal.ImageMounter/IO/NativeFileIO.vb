@@ -1,15 +1,15 @@
-﻿Imports System.Security
-Imports Arsenal.ImageMounter.Extensions
-Imports System.Security.Permissions
-Imports System.Diagnostics.CodeAnalysis
-Imports Microsoft.Win32
+﻿Imports System.Diagnostics.CodeAnalysis
 Imports System.Globalization
+Imports System.Security
+Imports System.Security.Permissions
+Imports Arsenal.ImageMounter.Extensions
+Imports Microsoft.Win32
 
 ''''' NativeFileIO.vb
 ''''' Routines for accessing some useful Win32 API functions to access features not
 ''''' directly accessible through .NET Framework.
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -17,6 +17,8 @@ Imports System.Globalization
 ''''' proprietary exceptions.
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
+
+#Disable Warning CA1060 ' Move pinvokes to native methods class
 
 Namespace IO
 
@@ -551,6 +553,16 @@ Namespace IO
               <[In]> ByRef lpInBuffer As STORAGE_PROPERTY_QUERY,
               nInBufferSize As UInt32,
               <Out> ByRef lpOutBuffer As STORAGE_DESCRIPTOR_HEADER,
+              nOutBufferSize As UInt32,
+              <Out> ByRef lpBytesReturned As UInt32,
+              lpOverlapped As IntPtr) As Boolean
+
+            Friend Declare Function DeviceIoControl Lib "kernel32" (
+              hDevice As SafeFileHandle,
+              dwIoControlCode As UInt32,
+              <[In]> ByRef lpInBuffer As STORAGE_PROPERTY_QUERY,
+              nInBufferSize As UInt32,
+              <Out> ByRef lpOutBuffer As DEVICE_TRIM_DESCRIPTOR,
               nOutBufferSize As UInt32,
               <Out> ByRef lpBytesReturned As UInt32,
               lpOverlapped As IntPtr) As Boolean
@@ -1213,6 +1225,72 @@ Namespace IO
             End If
 
             Return result
+
+        End Function
+
+        Public Shared Function OfflineDiskVolumes(device_path As String, force As Boolean) As Boolean
+
+            Dim refresh = False
+
+            For Each volume In NativeFileIO.EnumerateDiskVolumes(device_path)
+
+                Try
+                    Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
+                        If device.IsDiskWritable AndAlso Not device.DiskPolicyReadOnly.GetValueOrDefault() Then
+                            device.FlushBuffers()
+                            device.DismountVolumeFilesystem(Force:=False)
+                        Else
+                            device.DismountVolumeFilesystem(Force:=True)
+                        End If
+                        device.SetVolumeOffline(True)
+                    End Using
+
+                    refresh = True
+
+                    Continue For
+
+                Catch ex As Exception
+                    Trace.WriteLine($"Failed to safely dismount volume '{volume}': {ex.JoinMessages()}")
+
+                    If Not force Then
+                        Throw New IOException($"Failed to safely dismount volume '{volume}'", ex)
+                    End If
+
+                End Try
+
+                Try
+                    Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
+                        device.FlushBuffers()
+                        device.DismountVolumeFilesystem(True)
+                        device.SetVolumeOffline(True)
+                    End Using
+
+                    refresh = True
+                    Continue For
+
+                Catch ex As Exception
+                    Trace.WriteLine($"Failed to forcefully dismount volume '{volume}': {ex.JoinMessages()}")
+
+                End Try
+
+                Return False
+
+                Try
+                    Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
+                        device.SetVolumeOffline(True)
+                    End Using
+
+                    refresh = True
+                    Continue For
+
+                Catch ex As Exception
+                    Trace.WriteLine($"Failed to offline volume '{volume}': {ex.JoinMessages()}")
+
+                End Try
+
+            Next
+
+            Return refresh
 
         End Function
 
@@ -2298,7 +2376,7 @@ Namespace IO
         ''' Retrieves storage standard properties.
         ''' </summary>
         ''' <param name="hDevice">Handle to device.</param>
-        Public Shared Function GetStorageStandardProperties(hDevice As SafeFileHandle) As StorageStandardProperties
+        Public Shared Function GetStorageStandardProperties(hDevice As SafeFileHandle) As StorageStandardProperties?
 
             Dim StoragePropertyQuery As New STORAGE_PROPERTY_QUERY(STORAGE_PROPERTY_ID.StorageDeviceProperty, STORAGE_QUERY_TYPE.PropertyStandardQuery)
             Dim StorageDescriptorHeader As New STORAGE_DESCRIPTOR_HEADER
@@ -2322,6 +2400,26 @@ Namespace IO
                 Return New StorageStandardProperties(buffer)
 
             End Using
+
+        End Function
+
+        ''' <summary>
+        ''' Retrieves storage TRIM properties.
+        ''' </summary>
+        ''' <param name="hDevice">Handle to device.</param>
+        Public Shared Function GetStorageTrimProperties(hDevice As SafeFileHandle) As Boolean?
+
+            Dim StoragePropertyQuery As New STORAGE_PROPERTY_QUERY(STORAGE_PROPERTY_ID.StorageDeviceTrimProperty, STORAGE_QUERY_TYPE.PropertyStandardQuery)
+            Dim DeviceTrimDescriptor As New DEVICE_TRIM_DESCRIPTOR
+
+            If Not UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_STORAGE_QUERY_PROPERTY,
+                                               StoragePropertyQuery, CUInt(Marshal.SizeOf(GetType(STORAGE_PROPERTY_QUERY))),
+                                               DeviceTrimDescriptor, CUInt(Marshal.SizeOf(GetType(DEVICE_TRIM_DESCRIPTOR))),
+                                               Nothing, Nothing) Then
+                Return Nothing
+            End If
+
+            Return DeviceTrimDescriptor.TrimEnabled <> 0
 
         End Function
 
@@ -3448,7 +3546,7 @@ Namespace IO
 
             Else
 
-                Return Nothing
+                Return Enumerable.Empty(Of String)()
 
             End If
 
@@ -3457,16 +3555,16 @@ Namespace IO
         Public Shared Function EnumerateDiskVolumes(DiskNumber As UInteger) As IEnumerable(Of String)
 
             Return (New VolumeEnumerator).Where(
-            Function(volumeGuid)
-                Try
-                    Return VolumeUsesDisk(volumeGuid, DiskNumber)
+                Function(volumeGuid)
+                    Try
+                        Return VolumeUsesDisk(volumeGuid, DiskNumber)
 
-                Catch ex As Exception
-                    Trace.WriteLine($"{volumeGuid}: {ex.JoinMessages()}")
-                    Return False
+                    Catch ex As Exception
+                        Trace.WriteLine($"{volumeGuid}: {ex.JoinMessages()}")
+                        Return False
 
-                End Try
-            End Function)
+                    End Try
+                End Function)
 
         End Function
 
@@ -5306,6 +5404,16 @@ Namespace IO
 
         End Structure
 
+        <StructLayout(LayoutKind.Sequential)>
+        Public Structure DEVICE_TRIM_DESCRIPTOR
+
+            Public ReadOnly Property Header As STORAGE_DESCRIPTOR_HEADER
+
+            Public ReadOnly Property TrimEnabled As Byte
+
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
         Public Structure STORAGE_DEVICE_DESCRIPTOR
 
             Public ReadOnly Property Header As STORAGE_DESCRIPTOR_HEADER

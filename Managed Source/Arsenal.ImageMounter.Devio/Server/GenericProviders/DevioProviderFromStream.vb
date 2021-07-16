@@ -3,7 +3,7 @@
 ''''' Proxy provider that implements devio proxy service with a .NET Stream derived
 ''''' object as storage backend.
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -41,7 +41,7 @@ Namespace Server.GenericProviders
         ''' instance is disposed.</param>
         Public Sub New(Stream As Stream, ownsStream As Boolean)
             _BaseStream = Stream
-            OwnsBaseStream = ownsStream
+            _OwnsBaseStream = ownsStream
         End Sub
 
         ''' <summary>
@@ -51,7 +51,7 @@ Namespace Server.GenericProviders
         ''' <returns>Value of BaseStream.CanWrite.</returns>
         Public Overrides ReadOnly Property CanWrite As Boolean
             Get
-                Return BaseStream.CanWrite
+                Return _BaseStream.CanWrite
             End Get
         End Property
 
@@ -62,7 +62,7 @@ Namespace Server.GenericProviders
         ''' <returns>Value of BaseStream.Length.</returns>
         Public Overrides ReadOnly Property Length As Long
             Get
-                Return BaseStream.Length
+                Return _BaseStream.Length
             End Get
         End Property
 
@@ -86,21 +86,33 @@ Namespace Server.GenericProviders
 
         Public Overloads Overrides Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
-            BaseStream.Position = fileoffset
-            Return BaseStream.Read(buffer, bufferoffset, count)
+            _BaseStream.Position = fileoffset
+
+            If _BaseStream.Position <= _BaseStream.Length AndAlso
+                count > _BaseStream.Length - _BaseStream.Position Then
+
+                count = CInt(_BaseStream.Length - _BaseStream.Position)
+
+            End If
+
+            Return _BaseStream.Read(buffer, bufferoffset, count)
 
         End Function
 
         Public Overloads Overrides Function Write(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
-            BaseStream.Position = fileoffset
-            BaseStream.Write(buffer, bufferoffset, count)
+            _BaseStream.Position = fileoffset
+            _BaseStream.Write(buffer, bufferoffset, count)
             Return count
 
         End Function
 
         Protected Overrides Sub Dispose(disposing As Boolean)
-            _BaseStream?.Dispose()
+
+            If disposing AndAlso _OwnsBaseStream AndAlso _BaseStream IsNot Nothing Then
+                _BaseStream.Dispose()
+            End If
+
             _BaseStream = Nothing
 
             MyBase.Dispose(disposing)

@@ -5,7 +5,7 @@
 ''''' for directly examining virtual disk contents directly in an application,
 ''''' even if that disk contents is accessed through a proxy.
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -21,6 +21,10 @@ Namespace Client
     ''' </summary>
     Public MustInherit Class DevioStream
         Inherits Stream
+
+        Public Event Disposing As EventHandler
+
+        Public Event Disposed As EventHandler
 
         ''' <summary>
         ''' Object name used by proxy implementation.
@@ -96,8 +100,14 @@ Namespace Client
         ''' <summary>
         ''' When overridden in a derived class, closes communication and causes server side to exit.
         ''' </summary>
-        Public Overrides Sub Close()
-            MyBase.Close()
+        Protected Overrides Sub Dispose(disposing As Boolean)
+
+            RaiseEvent Disposing(Me, EventArgs.Empty)
+
+            MyBase.Dispose(disposing)
+
+            RaiseEvent Disposed(Me, EventArgs.Empty)
+
         End Sub
 
         ''' <summary>

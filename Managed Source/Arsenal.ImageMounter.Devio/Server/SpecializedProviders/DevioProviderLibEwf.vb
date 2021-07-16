@@ -1,7 +1,7 @@
 ﻿
 ''''' DevioProviderLibEwf.vb
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -10,14 +10,18 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
-Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports System.Diagnostics.CodeAnalysis
 Imports System.IO.Pipes
+Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports Arsenal.ImageMounter.Extensions
+Imports Arsenal.ImageMounter.IO
 
 Namespace Server.SpecializedProviders
 
     Public Class DevioProviderLibEwf
         Inherits DevioProviderUnmanagedBase
+
+        Public Event Finishing As EventHandler
 
         Public Shared ReadOnly AccessFlagsRead As Byte = libewf_get_access_flags_read()
         Public Shared ReadOnly AccessFlagsReadWrite As Byte = libewf_get_access_flags_read_write()
@@ -100,7 +104,7 @@ Namespace Server.SpecializedProviders
         End Class
 #End Region
 
-        Private ReadOnly Flags As Byte
+        Public ReadOnly Property Flags As Byte
 
         Public ReadOnly Property SafeHandle As SafeLibEwfFileHandle
 
@@ -215,6 +219,109 @@ Namespace Server.SpecializedProviders
         Private Shared Function libewf_handle_get_sectors_per_chunk(safeLibEwfHandle As SafeLibEwfFileHandle, <Out> ByRef SectorsPerChunk As UInteger, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_utf16_header_value(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                     <[In], MarshalAs(UnmanagedType.LPStr, SizeParamIndex:=2)> identifier As String,
+                                                                     identifier_length As IntPtr,
+                                                                     <[In], MarshalAs(UnmanagedType.LPWStr, SizeParamIndex:=4)> utf16_string As String,
+                                                                     utf16_string_length As IntPtr,
+                                                                     <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_utf8_hash_value(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                     <[In], MarshalAs(UnmanagedType.LPStr, SizeParamIndex:=2)> hash_value_identifier As String,
+                                                                     hash_value_identifier_length As IntPtr,
+                                                                     <[In]> utf8_string As IntPtr,
+                                                                     utf8_string_length As IntPtr,
+                                                                     <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_header_codepage(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  codepage As Integer,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_bytes_per_sector(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  bytes_per_sector As UInteger,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_media_size(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  media_size As ULong,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_media_type(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  media_type As LIBEWF_MEDIA_TYPE,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_media_flags(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  media_flags As LIBEWF_MEDIA_FLAGS,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_format(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  ewf_format As LIBEWF_FORMAT,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_compression_method(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  compression_method As LIBEWF_COMPRESSION_METHOD,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_compression_values(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  compression_level As LIBEWF_COMPRESSION_LEVEL,
+                                                                  compression_flags As LIBEWF_COMPRESSION_FLAGS,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_maximum_segment_size(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  maximum_segment_size As ULong,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_sectors_per_chunk(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  sectors_per_chunk As UInteger,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_set_error_granularity(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                  sectors_per_chunk As UInteger,
+                                                                  <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        Private Delegate Function libewf_handle_set_header_value_func(Of TValue As Structure)(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                                              value As TValue,
+                                                                                              <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+
+        Private Delegate Function libewf_handle_set_header_value_func(Of TValue1 As Structure, TValue2 As Structure)(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                                                                     value1 As TValue1,
+                                                                                                                     value2 As TValue2,
+                                                                                                                     <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+
+        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_get_utf16_header_value(safeLibEwfHandle As SafeLibEwfFileHandle,
+                                                                     <[In], MarshalAs(UnmanagedType.LPStr, SizeParamIndex:=2)> identifier As String,
+                                                                     identifier_length As IntPtr,
+                                                                     <Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex:=4)> utf16_string As String,
+                                                                     utf16_string_length As IntPtr,
+                                                                     <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
         <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True, CharSet:=CharSet.Ansi)>
         Private Shared Function libewf_error_sprint(errobj As SafeLibEwfErrorObjectHandle, buffer As StringBuilder, length As Integer) As Integer
         End Function
@@ -261,7 +368,7 @@ Namespace Server.SpecializedProviders
         End Property
 
         Public Sub New(filenames As String(), Flags As Byte)
-            Me.Flags = Flags
+            _Flags = Flags
 
             Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
 
@@ -315,12 +422,12 @@ Namespace Server.SpecializedProviders
         End Sub
 
         Public Sub New(firstfilename As String, Flags As Byte)
-            Me.New(ProviderSupport.GetMultiSegmentFiles(firstfilename), Flags)
+            Me.New(GetMultiSegmentFiles(firstfilename), Flags)
         End Sub
 
         Public Overrides ReadOnly Property CanWrite As Boolean
             Get
-                Return (Flags And AccessFlagsWrite) = AccessFlagsWrite
+                Return (_Flags And AccessFlagsWrite) = AccessFlagsWrite
             End Get
         End Property
 
@@ -444,10 +551,17 @@ Namespace Server.SpecializedProviders
         End Function
 
         Protected Overrides Sub Dispose(disposing As Boolean)
-            _SafeHandle?.Dispose()
+
+            RaiseEvent Finishing(Me, EventArgs.Empty)
+
+            If disposing AndAlso _SafeHandle IsNot Nothing Then
+                _SafeHandle.Dispose()
+            End If
+
             _SafeHandle = Nothing
 
             MyBase.Dispose(disposing)
+
         End Sub
 
         Public Overrides ReadOnly Property SectorSize As UInteger
@@ -455,6 +569,235 @@ Namespace Server.SpecializedProviders
         Public ReadOnly Property ChunkSize As UInteger
 
         Public ReadOnly Property SectorsPerChunk As UInteger
+
+        Public Sub SetOutputStringParameter(identifier As String, value As String)
+
+            If String.IsNullOrWhiteSpace(value) Then
+                Return
+            End If
+
+            Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
+
+            Dim retval = libewf_handle_set_utf16_header_value(SafeHandle, identifier, New IntPtr(identifier.Length), value, New IntPtr(value.Length), errobj)
+
+            If retval <> 1 Then
+                ThrowError(errobj, $"Parameter set '{identifier}'='{value}' failed")
+            End If
+
+        End Sub
+
+        Public Sub SetOutputHashParameter(identifier As String, value As Byte())
+
+            If value Is Nothing Then
+                Return
+            End If
+
+            Dim valuestr = value.ToHexString()
+
+            Trace.WriteLine($"{identifier} = {valuestr}")
+
+            Using utf8 = PinnedBuffer.Create(Encoding.UTF8.GetBytes(valuestr))
+
+                Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
+
+                Dim retval = libewf_handle_set_utf8_hash_value(SafeHandle, identifier, New IntPtr(identifier.Length), utf8.DangerousGetHandle(), New IntPtr(valuestr.Length), errobj)
+
+                If retval <> 1 Then
+                    ThrowError(errobj, $"Hash result set '{identifier}'='{value}' failed")
+                End If
+
+            End Using
+
+        End Sub
+
+        Private Sub SetOutputValueParameter(Of TValue As Structure)(func As libewf_handle_set_header_value_func(Of TValue), value As TValue)
+
+            Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
+
+            Dim retval = func(SafeHandle, value, errobj)
+
+            If retval <> 1 Then
+                ThrowError(errobj, $"Parameter set {func.Method.Name}({value}) failed")
+            End If
+
+        End Sub
+
+        Private Sub SetOutputValueParameter(Of TValue1 As Structure, TValue2 As Structure)(func As libewf_handle_set_header_value_func(Of TValue1, TValue2), value1 As TValue1, value2 As TValue2)
+
+            Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
+
+            Dim retval = func(SafeHandle, value1, value2, errobj)
+
+            If retval <> 1 Then
+                ThrowError(errobj, $"Parameter set {func.Method.Name}({value1}, {value2}) failed")
+            End If
+
+        End Sub
+
+        Public Sub SetOutputParameters(ImagingParameters As ImagingParameters)
+
+            SetOutputStringParameter("case_number", ImagingParameters.CaseNumber)
+            SetOutputStringParameter("description", ImagingParameters.Description)
+            SetOutputStringParameter("evidence_number", ImagingParameters.EvidenceNumber)
+            SetOutputStringParameter("examiner_name", ImagingParameters.ExaminerName)
+            SetOutputStringParameter("notes", ImagingParameters.Notes)
+            SetOutputStringParameter("acquiry_operating_system", ImagingParameters.AcquiryOperatingSystem)
+            SetOutputStringParameter("acquiry_software", ImagingParameters.AcquirySoftware)
+
+            SetOutputStringParameter("model", ImagingParameters.StorageStandardProperties.ProductId)
+            SetOutputStringParameter("serial_number", ImagingParameters.StorageStandardProperties.SerialNumber)
+
+            SetOutputValueParameter(AddressOf libewf_handle_set_header_codepage, ImagingParameters.LIBEWF_CODEPAGE_ASCII)
+            SetOutputValueParameter(AddressOf libewf_handle_set_bytes_per_sector, ImagingParameters.BytesPerSector)
+            SetOutputValueParameter(AddressOf libewf_handle_set_media_size, ImagingParameters.MediaSize)
+            SetOutputValueParameter(AddressOf libewf_handle_set_media_type, ImagingParameters.MediaType)
+            SetOutputValueParameter(AddressOf libewf_handle_set_media_flags, ImagingParameters.MediaFlags)
+            SetOutputValueParameter(AddressOf libewf_handle_set_format, ImagingParameters.UseEWFFileFormat)
+            SetOutputValueParameter(AddressOf libewf_handle_set_compression_method, ImagingParameters.CompressionMethod)
+            SetOutputValueParameter(AddressOf libewf_handle_set_compression_values, ImagingParameters.CompressionLevel, ImagingParameters.CompressionFlags)
+            SetOutputValueParameter(AddressOf libewf_handle_set_maximum_segment_size, ImagingParameters.SegmentFileSize)
+            SetOutputValueParameter(AddressOf libewf_handle_set_sectors_per_chunk, ImagingParameters.SectorsPerChunk)
+
+            If ImagingParameters.SectorErrorGranularity = 0 OrElse
+                ImagingParameters.SectorErrorGranularity >= ImagingParameters.SectorsPerChunk Then
+
+                ImagingParameters.SectorErrorGranularity = ImagingParameters.SectorsPerChunk
+            End If
+
+            SetOutputValueParameter(AddressOf libewf_handle_set_error_granularity, ImagingParameters.SectorErrorGranularity)
+
+        End Sub
+
+        Public Class ImagingParameters
+
+            Public Const LIBEWF_CODEPAGE_ASCII = 20127
+
+            Public Property StorageStandardProperties As NativeFileIO.StorageStandardProperties
+
+            Public Property CaseNumber As String
+
+            Public Property Description As String
+
+            Public Property EvidenceNumber As String
+
+            Public Property ExaminerName As String
+
+            Public Property Notes As String
+
+            Public Property AcquiryOperatingSystem As String = $"Windows {DriverSetup.OSVersion}"
+
+            Public Property AcquirySoftware As String = $"aim-libewf"
+
+            Public Property MediaSize As ULong
+
+            Public Property BytesPerSector As UInteger
+
+            Public Property SectorsPerChunk As UInteger = 64
+
+            Public Property SectorErrorGranularity As UInteger = 64
+
+            ''' <summary>
+            ''' logical, physical
+            ''' </summary>
+            Public Property MediaFlags As LIBEWF_MEDIA_FLAGS = LIBEWF_MEDIA_FLAGS.PHYSICAL
+
+            ''' <summary>
+            ''' fixed, removable, optical, memory
+            ''' </summary>
+            Public Property MediaType As LIBEWF_MEDIA_TYPE = LIBEWF_MEDIA_TYPE.FIXED
+
+            ''' <summary>
+            ''' ewf, smart, ftk, encase1, encase2, encase3, encase4, encase5, encase6, encase7, encase7-v2, linen5, linen6, linen7, ewfx
+            ''' </summary>
+            Public Property UseEWFFileFormat As LIBEWF_FORMAT = LIBEWF_FORMAT.ENCASE6
+
+            ''' <summary>
+            ''' deflate
+            ''' </summary>
+            Public Property CompressionMethod As LIBEWF_COMPRESSION_METHOD = LIBEWF_COMPRESSION_METHOD.DEFLATE
+
+            ''' <summary>
+            ''' none, empty-block, fast, best
+            ''' </summary>
+            Public Property CompressionLevel As LIBEWF_COMPRESSION_LEVEL = LIBEWF_COMPRESSION_LEVEL.FAST
+
+            Public Property CompressionFlags As LIBEWF_COMPRESSION_FLAGS
+
+            Public Property SegmentFileSize As ULong = 2UL << 30
+
+        End Class
+
+        Public Enum LIBEWF_FORMAT As Byte
+
+            ENCASE1 = &H1
+            ENCASE2 = &H2
+            ENCASE3 = &H3
+            ENCASE4 = &H4
+            ENCASE5 = &H5
+            ENCASE6 = &H6
+            ENCASE7 = &H7
+
+            SMART = &HE
+            FTK_IMAGER = &HF
+
+            LOGICAL_ENCASE5 = &H10
+            LOGICAL_ENCASE6 = &H11
+            LOGICAL_ENCASE7 = &H12
+
+            LINEN5 = &H25
+            LINEN6 = &H26
+            LINEN7 = &H27
+
+            V2_ENCASE7 = &H37
+
+            V2_LOGICAL_ENCASE7 = &H47
+
+            '' The format as specified by Andrew Rosen
+
+            EWF = &H70
+
+            '' Libewf eXtended EWF format
+
+            EWFX = &H71
+        End Enum
+
+        Public Enum LIBEWF_MEDIA_TYPE As Byte
+            REMOVABLE = &H0
+            FIXED = &H1
+            OPTICAL = &H3
+            SINGLE_FILES = &HE
+            MEMORY = &H10
+        End Enum
+
+        <Flags>
+        Public Enum LIBEWF_MEDIA_FLAGS As Byte
+
+            PHYSICAL = &H2
+            FASTBLOC = &H4
+            TABLEAU = &H8
+
+        End Enum
+
+        Public Enum LIBEWF_COMPRESSION_METHOD As UShort
+            NONE = 0
+            DEFLATE = 1
+            BZIP2 = 2
+        End Enum
+
+        Public Enum LIBEWF_COMPRESSION_LEVEL As SByte
+            [DEFAULT] = -1
+            NONE = 0
+            FAST = 1
+            BEST = 2
+        End Enum
+
+        <Flags>
+        Public Enum LIBEWF_COMPRESSION_FLAGS As Byte
+            NONE = &H0
+            USE_EMPTY_BLOCK_COMPRESSION = &H1
+            USE_PATTERN_FILL_COMPRESSION = &H10
+        End Enum
+
 
     End Class
 

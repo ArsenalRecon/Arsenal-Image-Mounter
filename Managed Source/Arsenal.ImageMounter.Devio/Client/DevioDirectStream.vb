@@ -25,6 +25,10 @@ Namespace Client
     Public Class DevioDirectStream
         Inherits DevioStream
 
+        Public Event Closing As EventHandler
+
+        Public Event Closed As EventHandler
+
         Public ReadOnly Property Provider As IDevioProvider
 
         Public ReadOnly Property OwnsProvider As Boolean
@@ -35,9 +39,9 @@ Namespace Client
         Public Sub New(provider As IDevioProvider, ownsProvider As Boolean)
             MyBase.New(provider.NullCheck(NameOf(provider)).ToString(), Not provider.CanWrite)
 
-            Me._Provider = provider
-            Me.OwnsProvider = ownsProvider
-            MyBase.Size = provider.Length
+            _Provider = provider
+            _OwnsProvider = ownsProvider
+            Size = provider.Length
         End Sub
 
         Public Overrides Function Read(buffer() As Byte, offset As Integer, count As Integer) As Integer
@@ -62,7 +66,7 @@ Namespace Client
             End If
         End Sub
 
-        Public Overrides Sub Close()
+        Protected Overrides Sub Dispose(disposing As Boolean)
 
             If OwnsProvider Then
                 _Provider?.Dispose()
@@ -70,7 +74,7 @@ Namespace Client
 
             _Provider = Nothing
 
-            MyBase.Close()
+            MyBase.Dispose(disposing)
 
         End Sub
 

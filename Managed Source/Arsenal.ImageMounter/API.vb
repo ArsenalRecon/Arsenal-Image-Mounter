@@ -2,7 +2,7 @@
 ''''' API for manipulating flag values, issuing SCSI bus rescans and similar
 ''''' tasks.
 ''''' 
-''''' Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -11,26 +11,24 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
-Imports System.Diagnostics.CodeAnalysis
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32
 
 ''' <summary>
-''' API for manipulating flag values, issuing SCSI bus rescans and similar tasks.
+''' API for manipulating flag values, issuing SCSI bus rescans, manage write filter driver and similar tasks.
 ''' </summary>
 <ComVisible(False)>
 Public NotInheritable Class API
 
     Private Sub New()
-
     End Sub
 
     ''' <summary>
     ''' Builds a list of device paths for active Arsenal Image Mounter
     ''' objects.
     ''' </summary>
-    Public Shared Iterator Function EnumerateAdapterDevicePaths(hwndParent As IntPtr) As IEnumerable(Of String)
+    Public Shared Iterator Function EnumerateAdapterDevicePaths(HwndParent As IntPtr) As IEnumerable(Of String)
 
         Dim devinstances As IEnumerable(Of String) = Nothing
         Dim status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", devinstances)
@@ -45,7 +43,7 @@ Public NotInheritable Class API
 
             Using DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevs(NativeFileIO.NativeConstants.SerenumBusEnumeratorGuid,
                                                                          devinstname,
-                                                                         hwndParent,
+                                                                         HwndParent,
                                                                          NativeFileIO.UnsafeNativeMethods.DIGCF_DEVICEINTERFACE Or NativeFileIO.UnsafeNativeMethods.DIGCF_PRESENT)
 
                 If DevInfoSet.IsInvalid Then
@@ -352,25 +350,31 @@ Public NotInheritable Class API
 
             NativeFileIO.RestartDevice(NativeFileIO.NativeConstants.DiskClassGuid, devInst)
 
-            If nativepath Is Nothing Then
-                Return
-            End If
-
             Dim statistics As New WriteFilterStatistics
 
             last_error = GetWriteOverlayStatus(pdo_path, statistics)
 
+            If nativepath Is Nothing AndAlso last_error = NativeFileIO.NativeConstants.NO_ERROR Then
 
-            If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
+                Trace.WriteLine("Filter driver not yet unloaded, retrying...")
+                Thread.Sleep(200)
+                Continue For
+
+            ElseIf nativepath IsNot Nothing AndAlso last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
+
                 Trace.WriteLine("Filter driver not yet loaded, retrying...")
                 Thread.Sleep(200)
                 Continue For
-            ElseIf last_error <> NativeFileIO.NativeConstants.NO_ERROR Then
-                Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
-            End If
 
-            If statistics.Initialized = 1 Then
+            ElseIf (nativepath IsNot Nothing AndAlso last_error <> NativeFileIO.NativeConstants.NO_ERROR) OrElse
+                (nativepath Is Nothing AndAlso last_error <> NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION) Then
+
+                Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
+
+            ElseIf statistics.Initialized = 1 OrElse nativepath Is Nothing Then
+
                 Return
+
             End If
 
             Throw New IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode))
@@ -499,9 +503,7 @@ Public NotInheritable Class API
 
         Statistics.Initialize()
 
-        Static WriteFilterStatisticsSize As UInteger = CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics)))
-
-        If UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, WriteFilterStatisticsSize, Nothing, Nothing) Then
+        If UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, Statistics.Version, Nothing, Nothing) Then
             Return NativeFileIO.NativeConstants.NO_ERROR
         Else
             Return Marshal.GetLastWin32Error()
