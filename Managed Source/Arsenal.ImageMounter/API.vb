@@ -369,7 +369,7 @@ Public NotInheritable Class API
             ElseIf (nativepath IsNot Nothing AndAlso last_error <> NativeFileIO.NativeConstants.NO_ERROR) OrElse
                 (nativepath Is Nothing AndAlso last_error <> NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION) Then
 
-                Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
+                Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception(last_error))
 
             ElseIf statistics.Initialized = 1 OrElse nativepath Is Nothing Then
 
@@ -383,7 +383,7 @@ Public NotInheritable Class API
 
         Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).ToArray()
 
-        If in_use_apps.Length = 0 AndAlso last_error > 0 Then
+        If in_use_apps.Length = 0 AndAlso last_error <> 0 Then
             Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
         ElseIf in_use_apps.Length = 0 Then
             Throw New NotSupportedException("Write filter driver not attached to device")

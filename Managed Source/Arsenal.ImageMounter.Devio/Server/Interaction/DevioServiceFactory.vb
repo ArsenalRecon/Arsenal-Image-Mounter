@@ -386,49 +386,37 @@ Namespace Server.Interaction
 
         End Function
 
-        Public Shared ReadOnly Property InstalledProvidersByProxyValueAndVirtualDiskAccess As New Dictionary(Of ProxyType, Func(Of String, VirtualDiskAccess, IDevioProvider))()
+        Public Shared ReadOnly Property InstalledProvidersByProxyValueAndVirtualDiskAccess As New Dictionary(Of ProxyType, Func(Of String, VirtualDiskAccess, IDevioProvider))() From {
+            {ProxyType.DiscUtils, AddressOf GetProviderDiscUtils},
+            {ProxyType.LibEwf, AddressOf GetProviderLibEwf},
+            {ProxyType.LibAFF4, AddressOf GetProviderLibAFF4},
+            {ProxyType.MultiPartRaw, AddressOf GetProviderMultiPartRaw},
+            {ProxyType.None, AddressOf GetProviderRaw}
+        }
 
-        Public Shared ReadOnly Property InstalledProvidersByProxyValueAndFileAccess As New Dictionary(Of ProxyType, Func(Of String, FileAccess, IDevioProvider))()
+        Public Shared ReadOnly Property InstalledProvidersByProxyValueAndFileAccess As New Dictionary(Of ProxyType, Func(Of String, FileAccess, IDevioProvider))() From {
+            {ProxyType.DiscUtils, AddressOf GetProviderDiscUtils},
+            {ProxyType.LibEwf, AddressOf GetProviderLibEwf},
+            {ProxyType.LibAFF4, AddressOf GetProviderLibAFF4},
+            {ProxyType.MultiPartRaw, AddressOf GetProviderMultiPartRaw},
+            {ProxyType.None, AddressOf GetProviderRaw}
+        }
 
-        Public Shared ReadOnly Property InstalledProvidersByNameAndVirtualDiskAccess As New Dictionary(Of String, Func(Of String, VirtualDiskAccess, IDevioProvider))(StringComparer.OrdinalIgnoreCase)
+        Public Shared ReadOnly Property InstalledProvidersByNameAndVirtualDiskAccess As New Dictionary(Of String, Func(Of String, VirtualDiskAccess, IDevioProvider))(StringComparer.OrdinalIgnoreCase) From {
+            {"DiscUtils", AddressOf GetProviderDiscUtils},
+            {"LibEwf", AddressOf GetProviderLibEwf},
+            {"LibAFF4", AddressOf GetProviderLibAFF4},
+            {"MultiPartRaw", AddressOf GetProviderMultiPartRaw},
+            {"None", AddressOf GetProviderRaw}
+        }
 
-        Public Shared ReadOnly Property InstalledProvidersByNameAndFileAccess As New Dictionary(Of String, Func(Of String, FileAccess, IDevioProvider))(StringComparer.OrdinalIgnoreCase)
-
-        Shared Sub New()
-
-            _InstalledProvidersByProxyValueAndVirtualDiskAccess.Add(ProxyType.DiscUtils, AddressOf GetProviderDiscUtils)
-            _InstalledProvidersByProxyValueAndVirtualDiskAccess.Add(ProxyType.LibEwf, AddressOf GetProviderLibEwf)
-            _InstalledProvidersByProxyValueAndVirtualDiskAccess.Add(ProxyType.LibAFF4, AddressOf GetProviderLibAFF4)
-            _InstalledProvidersByProxyValueAndVirtualDiskAccess.Add(ProxyType.MultiPartRaw, AddressOf GetProviderMultiPartRaw)
-            _InstalledProvidersByProxyValueAndVirtualDiskAccess.Add(ProxyType.None, AddressOf GetProviderRaw)
-
-            _InstalledProvidersByProxyValueAndFileAccess.Add(ProxyType.DiscUtils, AddressOf GetProviderDiscUtils)
-            _InstalledProvidersByProxyValueAndFileAccess.Add(ProxyType.LibEwf, AddressOf GetProviderLibEwf)
-            _InstalledProvidersByProxyValueAndFileAccess.Add(ProxyType.LibAFF4, AddressOf GetProviderLibAFF4)
-            _InstalledProvidersByProxyValueAndFileAccess.Add(ProxyType.MultiPartRaw, AddressOf GetProviderMultiPartRaw)
-            _InstalledProvidersByProxyValueAndFileAccess.Add(ProxyType.None, AddressOf GetProviderRaw)
-
-            _InstalledProvidersByNameAndFileAccess.Add("DiscUtils", AddressOf GetProviderDiscUtils)
-            _InstalledProvidersByNameAndFileAccess.Add("LibEWF", AddressOf GetProviderLibEwf)
-            _InstalledProvidersByNameAndFileAccess.Add("LibAFF4", AddressOf GetProviderLibAFF4)
-            _InstalledProvidersByNameAndFileAccess.Add("MultipartRaw", AddressOf GetProviderMultiPartRaw)
-            _InstalledProvidersByNameAndFileAccess.Add("None", AddressOf GetProviderRaw)
-
-            _InstalledProvidersByNameAndVirtualDiskAccess.Add("DiscUtils", AddressOf GetProviderDiscUtils)
-            _InstalledProvidersByNameAndVirtualDiskAccess.Add("LibEWF", AddressOf GetProviderLibEwf)
-            _InstalledProvidersByNameAndVirtualDiskAccess.Add("LibAFF4", AddressOf GetProviderLibAFF4)
-            _InstalledProvidersByNameAndVirtualDiskAccess.Add("MultipartRaw", AddressOf GetProviderMultiPartRaw)
-            _InstalledProvidersByNameAndVirtualDiskAccess.Add("None", AddressOf GetProviderRaw)
-
-            For Each asm In DiscUtilsAssemblies.Distinct()
-                Trace.WriteLine($"Registering DiscUtils assembly '{asm.FullName}'...")
-                Setup.SetupHelper.RegisterAssembly(asm)
-            Next
-
-        End Sub
-
-        Friend Shared Sub Initialize()
-        End Sub
+        Public Shared ReadOnly Property InstalledProvidersByNameAndFileAccess As New Dictionary(Of String, Func(Of String, FileAccess, IDevioProvider))(StringComparer.OrdinalIgnoreCase) From {
+            {"DiscUtils", AddressOf GetProviderDiscUtils},
+            {"LibEwf", AddressOf GetProviderLibEwf},
+            {"LibAFF4", AddressOf GetProviderLibAFF4},
+            {"MultiPartRaw", AddressOf GetProviderMultiPartRaw},
+            {"None", AddressOf GetProviderRaw}
+        }
 
         Private Shared ReadOnly DiscUtilsAssemblies As Assembly() = {
             GetType(Vmdk.Disk).Assembly,
@@ -440,6 +428,16 @@ Namespace Server.Interaction
             GetType(OpticalDisk.Disc).Assembly,
             GetType(Raw.Disk).Assembly
         }
+
+        Friend Shared ReadOnly Property DiscUtilsInitialized As Boolean = InitializeDiscUtils()
+
+        Private Shared Function InitializeDiscUtils() As Boolean
+            For Each asm In DiscUtilsAssemblies.Distinct()
+                Trace.WriteLine($"Registering DiscUtils assembly '{asm.FullName}'...")
+                Setup.SetupHelper.RegisterAssembly(asm)
+            Next
+            Return True
+        End Function
 
         ''' <summary>
         ''' Creates an object, of a DevioServiceBase derived class, to support devio proxy server end

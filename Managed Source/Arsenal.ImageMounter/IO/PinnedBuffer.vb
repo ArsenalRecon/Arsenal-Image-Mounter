@@ -246,7 +246,6 @@ Namespace IO
 
         End Sub
 
-        <SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly")>
         Private Shared Function MakeTotalByteSize(obj() As T, arrayOffset As Integer, arrayItems As Integer) As Integer
 
             If arrayOffset >= obj.Length OrElse

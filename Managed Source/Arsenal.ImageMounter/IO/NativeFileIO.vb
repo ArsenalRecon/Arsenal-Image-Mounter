@@ -18,7 +18,7 @@ Imports Microsoft.Win32
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
-#Disable Warning CA1060 ' Move pinvokes to native methods class
+#Disable Warning CA1308 ' Normalize strings to uppercase
 
 Namespace IO
 
@@ -1147,13 +1147,12 @@ Namespace IO
 
 #End Region
 
-        Public Shared ReadOnly SystemArchitecture As String
-        Public Shared ReadOnly ProcessArchitecture As String
+        Public Shared ReadOnly SystemArchitecture As String = GetSystemArchitecture()
+        Public Shared ReadOnly ProcessArchitecture As String = GetProcessArchitecture()
 
-        <SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification:="<Pending>")>
-        Shared Sub New()
+        Private Shared Function GetSystemArchitecture() As String
 
-            SystemArchitecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")
+            Dim SystemArchitecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")
             If SystemArchitecture Is Nothing Then
                 SystemArchitecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
             End If
@@ -1164,7 +1163,13 @@ Namespace IO
 
             Trace.WriteLine($"System architecture is: {SystemArchitecture}")
 
-            ProcessArchitecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
+            Return SystemArchitecture
+
+        End Function
+
+        Private Shared Function GetProcessArchitecture() As String
+
+            Dim ProcessArchitecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
             If ProcessArchitecture Is Nothing Then
                 ProcessArchitecture = "x86"
             End If
@@ -1172,7 +1177,9 @@ Namespace IO
 
             Trace.WriteLine($"Process architecture is: {ProcessArchitecture}")
 
-        End Sub
+            Return ProcessArchitecture
+
+        End Function
 
         Private Sub New()
 
@@ -1232,7 +1239,7 @@ Namespace IO
 
             Dim refresh = False
 
-            For Each volume In NativeFileIO.EnumerateDiskVolumes(device_path)
+            For Each volume In EnumerateDiskVolumes(device_path)
 
                 Try
                     Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
@@ -1652,7 +1659,7 @@ Namespace IO
         ''' <param name="ctrlcode">IOCTL or FSCTL control code.</param>
         ''' <param name="data">Optional function to create input data for the control function.</param>
         ''' <param name="outdatasize">Number of bytes returned in output buffer by driver.</param>
-        ''' <returns>This method returns a BinaryReader object that can be used to read and parse data returned by
+        ''' <returns>This method returns a byte array that can be used to read and parse data returned by
         ''' driver in the output buffer.</returns>
         Public Shared Function DeviceIoControl(device As SafeFileHandle,
                                                ctrlcode As UInt32,
@@ -2572,10 +2579,41 @@ Namespace IO
 
         End Function
 
+        Public Shared Function GetProcAddressNoThrow(hModule As IntPtr, procedureName As String, delegateType As Type) As [Delegate]
+
+            Dim fptr = UnsafeNativeMethods.GetProcAddress(hModule, procedureName)
+
+            If fptr = Nothing Then
+                Return Nothing
+            End If
+
+            Return Marshal.GetDelegateForFunctionPointer(fptr, delegateType)
+
+        End Function
+
         Public Shared Function GetProcAddress(moduleName As String, procedureName As String, delegateType As Type) As [Delegate]
 
             Dim hModule = Win32Try(UnsafeNativeMethods.LoadLibrary(moduleName))
+
             Return Marshal.GetDelegateForFunctionPointer(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)), delegateType)
+
+        End Function
+
+        Public Shared Function GetProcAddressNoThrow(moduleName As String, procedureName As String, delegateType As Type) As [Delegate]
+
+            Dim hModule = UnsafeNativeMethods.LoadLibrary(moduleName)
+
+            If hModule = Nothing Then
+                Return Nothing
+            End If
+
+            Dim fptr = UnsafeNativeMethods.GetProcAddress(hModule, procedureName)
+
+            If fptr = Nothing Then
+                Return Nothing
+            End If
+
+            Return Marshal.GetDelegateForFunctionPointer(fptr, delegateType)
 
         End Function
 
@@ -2903,7 +2941,7 @@ Namespace IO
 
             Dim buffer As Byte()
 
-            Using exe = NativeFileIO.OpenFileStream(exepath, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete)
+            Using exe = OpenFileStream(exepath, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete)
                 buffer = New Byte(0 To CInt(exe.Length - 1)) {}
                 exe.Read(buffer, 0, buffer.Length)
             End Using
@@ -2932,15 +2970,11 @@ Namespace IO
 
             Dim coff = pe + 4
 
-            Dim handle = GCHandle.Alloc(exe, GCHandleType.Pinned)
+            Using mem = PinnedBuffer.Create(exe)
 
-            Try
-                Return CType(Marshal.PtrToStructure(handle.AddrOfPinnedObject() + coff, GetType(ImageFileHeader)), ImageFileHeader)
+                Return mem.Read(Of ImageFileHeader)(CULng(coff))
 
-            Finally
-                handle.Free()
-
-            End Try
+            End Using
 
         End Function
 
@@ -2948,6 +2982,7 @@ Namespace IO
             Return (value + align - 1) And -align
         End Function
 
+        <StructLayout(LayoutKind.Sequential)>
         Public Structure DiskExtent
             Public ReadOnly Property DiskNumber As UInteger
             Public ReadOnly Property StartingOffset As Long
@@ -3511,13 +3546,13 @@ Namespace IO
             ElseIf VolumeName.StartsWith("Volume{", StringComparison.OrdinalIgnoreCase) Then
                 VolumeName = VolumeName.Substring(0, 44)
             Else
-                Return {}
+                Return Enumerable.Empty(Of String)()
             End If
 
             VolumeName = QueryDosDevice(VolumeName).FirstOrDefault()
 
             If String.IsNullOrWhiteSpace(VolumeName) Then
-                Return {}
+                Return Enumerable.Empty(Of String)()
             End If
 
             Dim names = From link In QueryDosDevice()
@@ -3987,7 +4022,7 @@ Namespace IO
             Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
 
             If rc = NativeConstants.CR_NO_SUCH_VALUE Then
-                Return {}
+                Return Enumerable.Empty(Of String)()
             ElseIf rc <> 0 Then
                 Dim msg = $"Error getting registry property for device. Status=0x{rc:X}"
                 Throw New IOException(msg)
@@ -4634,7 +4669,7 @@ Namespace IO
         Public Shared Function ParseDoubleTerminatedString(bbuffer As Array, byte_count As Integer) As IEnumerable(Of String)
 
             If bbuffer Is Nothing Then
-                Return {}
+                Return Enumerable.Empty(Of String)()
             End If
 
             byte_count = Math.Min(Buffer.ByteLength(bbuffer), byte_count)

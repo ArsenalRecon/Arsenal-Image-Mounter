@@ -647,7 +647,7 @@ Namespace Server.SpecializedProviders
             SetOutputStringParameter("model", ImagingParameters.StorageStandardProperties.ProductId)
             SetOutputStringParameter("serial_number", ImagingParameters.StorageStandardProperties.SerialNumber)
 
-            SetOutputValueParameter(AddressOf libewf_handle_set_header_codepage, ImagingParameters.LIBEWF_CODEPAGE_ASCII)
+            SetOutputValueParameter(AddressOf libewf_handle_set_header_codepage, ImagingParameters.CodePage)
             SetOutputValueParameter(AddressOf libewf_handle_set_bytes_per_sector, ImagingParameters.BytesPerSector)
             SetOutputValueParameter(AddressOf libewf_handle_set_media_size, ImagingParameters.MediaSize)
             SetOutputValueParameter(AddressOf libewf_handle_set_media_type, ImagingParameters.MediaType)
@@ -671,6 +671,8 @@ Namespace Server.SpecializedProviders
         Public Class ImagingParameters
 
             Public Const LIBEWF_CODEPAGE_ASCII = 20127
+
+            Public Property CodePage As Integer = LIBEWF_CODEPAGE_ASCII
 
             Public Property StorageStandardProperties As NativeFileIO.StorageStandardProperties
 
@@ -723,7 +725,7 @@ Namespace Server.SpecializedProviders
 
             Public Property CompressionFlags As LIBEWF_COMPRESSION_FLAGS
 
-            Public Property SegmentFileSize As ULong = 2UL << 30
+            Public Property SegmentFileSize As ULong = 2UL << 40
 
         End Class
 
