@@ -172,6 +172,10 @@
     <Compile Include="Server\GenericProviders\DevioProviderDLLWrapperBase.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderWIthFakeMBR.vb" />
     <Compile Include="Server\GenericProviders\DummyProvider.vb" />
+    <Compile Include="Server\Interaction\AsyncMessageBox.Designer.vb">
+      <DependentUpon>AsyncMessageBox.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Server\Interaction\AsyncMessageBox.vb" />
     <Compile Include="Server\Interaction\DiscUtilsInteraction.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderFromStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderManagedBase.vb" />
@@ -219,6 +223,9 @@
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
       <CustomToolNamespace>My.Resources</CustomToolNamespace>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Server\Interaction\AsyncMessageBox.resx">
+      <DependentUpon>AsyncMessageBox.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Server\Interaction\FormMountOptions.resx">
       <DependentUpon>FormMountOptions.vb</DependentUpon>

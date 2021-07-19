@@ -70,6 +70,7 @@ Namespace IO
             m_Dictionary.Clear()
         End Sub
 
+#Disable Warning CA1033 ' Interface methods should be callable by child types
         Private Function ICollection_Contains(item As KeyValuePair(Of TKey, TValue)) As Boolean Implements ICollection(Of KeyValuePair(Of TKey, TValue)).Contains
             Return DirectCast(m_Dictionary, ICollection(Of KeyValuePair(Of TKey, TValue))).Contains(item)
         End Function
@@ -77,6 +78,7 @@ Namespace IO
         Private Sub ICollection_CopyTo(array() As KeyValuePair(Of TKey, TValue), arrayIndex As Integer) Implements ICollection(Of KeyValuePair(Of TKey, TValue)).CopyTo
             DirectCast(m_Dictionary, ICollection(Of KeyValuePair(Of TKey, TValue))).CopyTo(array, arrayIndex)
         End Sub
+#Enable Warning CA1033 ' Interface methods should be callable by child types
 
         Public ReadOnly Property Count As Integer Implements ICollection(Of KeyValuePair(Of TKey, TValue)).Count
             Get

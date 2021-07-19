@@ -19,6 +19,7 @@ Imports Microsoft.Win32
 '''''
 
 #Disable Warning CA1308 ' Normalize strings to uppercase
+#Disable Warning CA1060 ' Move pinvokes to native methods class
 
 Namespace IO
 
