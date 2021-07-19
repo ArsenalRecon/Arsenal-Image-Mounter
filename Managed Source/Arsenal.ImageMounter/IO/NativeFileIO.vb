@@ -61,6 +61,8 @@ Namespace IO
             Public Const ERROR_ACCESS_DENIED As UInt32 = 5UI
             Public Const ERROR_NO_MORE_FILES As UInt32 = 18UI
             Public Const ERROR_HANDLE_EOF As UInt32 = 38UI
+            Public Const ERROR_NOT_SUPPORTED As UInt32 = 50UI
+            Public Const ERROR_INVALID_PARAMETER As UInt32 = 87UI
             Public Const ERROR_MORE_DATA As UInt32 = &H234UI
             Public Const ERROR_NOT_ALL_ASSIGNED As UInt32 = 1300UI
             Public Const ERROR_INSUFFICIENT_BUFFER As UInt32 = 122UI
@@ -1261,7 +1263,17 @@ Namespace IO
                     Trace.WriteLine($"Failed to safely dismount volume '{volume}': {ex.JoinMessages()}")
 
                     If Not force Then
-                        Throw New IOException($"Failed to safely dismount volume '{volume}'", ex)
+                        Dim dev_path = QueryDosDevice(volume.Substring(4, 44)).ToArray()
+                        Dim in_use_apps = EnumerateProcessesHoldingFileHandle(dev_path).Take(10).Select(AddressOf FormatProcessName).ToArray()
+
+                        If in_use_apps.Length > 1 Then
+                            Throw New IOException($"Failed to safely dismount volume '{volume}'. Currently, the following applications have files open on this volume: {String.Join(", ", in_use_apps)}", ex)
+                        ElseIf in_use_apps.Length = 1 Then
+                            Throw New IOException($"Failed to safely dismount volume '{volume}'. Currently, the following application has files open on this volume: {in_use_apps(0)}", ex)
+                        Else
+                            Throw New IOException($"Failed to safely dismount volume '{volume}'", ex)
+                        End If
+
                     End If
 
                 End Try
@@ -1547,6 +1559,12 @@ Namespace IO
 
         End Class
 
+        Public Shared Function EnumerateHandleTableHandleInformation() As IEnumerable(Of HandleTableEntryInformation)
+
+            Return EnumerateHandleTableHandleInformation(GetSystemHandleTable())
+
+        End Function
+
         Public Shared Iterator Function EnumerateHandleTableHandleInformation(handleTable As IEnumerable(Of SystemHandleTableEntryInformation)) As IEnumerable(Of HandleTableEntryInformation)
 
             handleTable.NullCheck(NameOf(handleTable))
@@ -1640,17 +1658,35 @@ Namespace IO
 
         End Function
 
-        Public Shared Function EnumerateProcessesHoldingFileHandle(ParamArray nativeFullPaths As String()) As IEnumerable(Of HandleTableEntryInformation)
+        Public Shared Function EnumerateProcessesHoldingFileHandle(ParamArray nativeFullPaths As String()) As IEnumerable(Of Integer)
 
             Dim paths = Array.ConvertAll(nativeFullPaths, Function(path) New With {path, .dir_path = String.Concat(path, "\")})
 
             Return _
-                From handle In EnumerateHandleTableHandleInformation(GetSystemHandleTable())
+                From handle In EnumerateHandleTableHandleInformation()
                 Where
                     Not String.IsNullOrWhiteSpace(handle.ObjectName) AndAlso
                     paths.Any(Function(path) handle.ObjectName.Equals(path.path, StringComparison.OrdinalIgnoreCase) OrElse
                         handle.ObjectName.StartsWith(path.dir_path, StringComparison.OrdinalIgnoreCase))
+                Select handle.HandleTableEntry.ProcessId
+                Distinct
 
+        End Function
+
+        Public Shared Function FormatProcessName(processId As Integer) As String
+            Try
+                Using ps = Process.GetProcessById(processId)
+                    If ps.SessionId = 0 OrElse String.IsNullOrWhiteSpace(ps.MainWindowTitle) Then
+                        Return $"'{ps.ProcessName}' (id={processId})"
+                    Else
+                        Return $"'{ps.MainWindowTitle}' (id={processId})"
+                    End If
+                End Using
+
+            Catch
+                Return $"id={processId}"
+
+            End Try
         End Function
 
         ''' <summary>

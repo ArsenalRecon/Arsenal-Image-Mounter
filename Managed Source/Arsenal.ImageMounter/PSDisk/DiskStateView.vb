@@ -24,6 +24,14 @@ Namespace PSDisk
 
         Public Property DeviceName As String
 
+        Public Property StorageDeviceNumber As IO.NativeFileIO.STORAGE_DEVICE_NUMBER?
+
+        Public ReadOnly Property DriveNumberString As String
+            Get
+                Return _StorageDeviceNumber?.DeviceNumber.ToString()
+            End Get
+        End Property
+
         Public ReadOnly Property ScsiId As String
             Get
                 If _DeviceProperties IsNot Nothing Then

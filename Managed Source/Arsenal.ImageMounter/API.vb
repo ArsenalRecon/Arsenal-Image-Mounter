@@ -319,10 +319,13 @@ Public NotInheritable Class API
 
     Public Shared Sub RegisterWriteOverlayImage(devInst As UInteger, OverlayImagePath As String)
 
-        Dim nativepath As String = Nothing
+        Dim nativepath As String
 
         If Not String.IsNullOrWhiteSpace(OverlayImagePath) Then
             nativepath = NativeFileIO.GetNtPath(OverlayImagePath)
+        Else
+            OverlayImagePath = Nothing
+            nativepath = Nothing
         End If
 
         Dim pdo_path = NativeFileIO.GetPhysicalDeviceObjectName(devInst)
@@ -354,24 +357,31 @@ Public NotInheritable Class API
 
             last_error = GetWriteOverlayStatus(pdo_path, statistics)
 
+            Trace.WriteLine($"Overlay path '{nativepath}', I/O error code: {last_error}, aimwrfltr error code: 0x{statistics.LastErrorCode:X}, protection: {statistics.IsProtected}, initialized: {statistics.Initialized}")
+
             If nativepath Is Nothing AndAlso last_error = NativeFileIO.NativeConstants.NO_ERROR Then
 
                 Trace.WriteLine("Filter driver not yet unloaded, retrying...")
                 Thread.Sleep(200)
                 Continue For
 
-            ElseIf nativepath IsNot Nothing AndAlso last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
+            ElseIf nativepath IsNot Nothing AndAlso (last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION OrElse
+                last_error = NativeFileIO.NativeConstants.ERROR_INVALID_PARAMETER OrElse
+                last_error = NativeFileIO.NativeConstants.ERROR_NOT_SUPPORTED) Then
 
                 Trace.WriteLine("Filter driver not yet loaded, retrying...")
                 Thread.Sleep(200)
                 Continue For
 
             ElseIf (nativepath IsNot Nothing AndAlso last_error <> NativeFileIO.NativeConstants.NO_ERROR) OrElse
-                (nativepath Is Nothing AndAlso last_error <> NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION) Then
+                (nativepath Is Nothing AndAlso last_error <> NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION AndAlso
+                last_error <> NativeFileIO.NativeConstants.ERROR_INVALID_PARAMETER AndAlso
+                last_error <> NativeFileIO.NativeConstants.ERROR_NOT_SUPPORTED) Then
 
                 Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception(last_error))
 
-            ElseIf statistics.Initialized = 1 OrElse nativepath Is Nothing Then
+            ElseIf (nativepath IsNot Nothing AndAlso statistics.Initialized = 1) OrElse
+                nativepath Is Nothing Then
 
                 Return
 
@@ -381,24 +391,14 @@ Public NotInheritable Class API
 
         Next
 
-        Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).ToArray()
+        Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(AddressOf NativeFileIO.FormatProcessName).ToArray()
 
         If in_use_apps.Length = 0 AndAlso last_error <> 0 Then
             Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
         ElseIf in_use_apps.Length = 0 Then
             Throw New NotSupportedException("Write filter driver not attached to device")
         Else
-            Dim apps = String.Join(", ",
-                                   in_use_apps.Select(
-                                   Function(app)
-                                       Using ps = Process.GetProcessById(app.HandleTableEntry.ProcessId)
-                                           If ps.SessionId = 0 OrElse String.IsNullOrWhiteSpace(ps.MainWindowTitle) Then
-                                               Return $"{ps.ProcessName} (id={app.HandleTableEntry.ProcessId})"
-                                           Else
-                                               Return $"{ps.MainWindowTitle} (id={app.HandleTableEntry.ProcessId})"
-                                           End If
-                                       End Using
-                                   End Function))
+            Dim apps = String.Join(", ", in_use_apps)
 
             Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the disk device open. Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open: {apps}")
         End If
@@ -461,14 +461,14 @@ Public NotInheritable Class API
 
             Next
 
-            Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).ToArray()
+            Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).Take(10).Select(AddressOf NativeFileIO.FormatProcessName).ToArray()
 
             If in_use_apps.Length = 0 AndAlso last_error > 0 Then
                 Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
             ElseIf in_use_apps.Length = 0 Then
                 Throw New NotSupportedException("Write filter driver not attached to device")
             Else
-                Dim apps = String.Join(", ", From app In in_use_apps Select $"{app.ProcessName} (id={app.HandleTableEntry.ProcessId})")
+                Dim apps = String.Join(", ", in_use_apps)
                 Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the virtual disk device open. Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open: {apps}")
             End If
         Next
@@ -501,7 +501,7 @@ Public NotInheritable Class API
     ''' <returns>Returns 0 on success or Win32 error code on failure</returns>
     Public Shared Function GetWriteOverlayStatus(hDevice As SafeFileHandle, <Out> ByRef Statistics As WriteFilterStatistics) As Integer
 
-        Statistics.Initialize()
+        Statistics = WriteFilterStatistics.Initialize()
 
         If UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, Statistics.Version, Nothing, Nothing) Then
             Return NativeFileIO.NativeConstants.NO_ERROR

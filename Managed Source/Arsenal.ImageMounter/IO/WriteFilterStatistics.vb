@@ -14,9 +14,11 @@ Namespace IO
     <StructLayout(LayoutKind.Sequential)>
     Public Structure WriteFilterStatistics
 
-        Public Sub Initialize()
-            _Version = CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics)))
-        End Sub
+        Public Shared Function Initialize() As WriteFilterStatistics
+            Return New WriteFilterStatistics With {
+                ._Version = CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics)))
+            }
+        End Function
 
         ''
         '' Version of structure. Set to sizeof(AIMWRFLTR_DEVICE_STATISTICS)
@@ -24,20 +26,20 @@ Namespace IO
         Public ReadOnly Property Version As UInteger
 
         ''
-        '' TRUE if volume Is protected by filter driver, FALSE otherwise.
+        '' TRUE if volume is protected by filter driver, FALSE otherwise.
         ''
         Public ReadOnly Property IsProtected As Byte
 
         ''
-        '' TRUE if all initialization Is complete for protection of this
+        '' TRUE if all initialization is complete for protection of this
         '' device
         ''
         Public ReadOnly Property Initialized As Byte
 
         ''
         '' TRUE if all IRP_MJ_FLUSH_BUFFERS requests are silently ignored
-        '' And returned as successful by this filter driver. This Is useful
-        '' to gain performance in cases where the write overlay image Is
+        '' And returned as successful by this filter driver. This is useful
+        '' to gain performance in cases where the write overlay image is
         '' temporary And contents of it does Not need to be reliably
         '' maintained for another session.
         ''
@@ -80,7 +82,7 @@ Namespace IO
 
         ''
         '' Number of next allocation block at diff device that will
-        '' receive a TRIM request while the filter driver Is idle.
+        '' receive a TRIM request while the filter driver is idle.
         ''
         Public ReadOnly Property NextIdleTrimBlock As Integer
 
@@ -185,7 +187,7 @@ Namespace IO
 
         ''
         '' Number of read requests issued to original device as
-        '' part of allocating New blocks at diff device. This Is
+        '' part of allocating New blocks at diff device. This is
         '' done to fill up complete allocation blocks with both
         '' data to write And padding with data from original device.
         ''
@@ -210,7 +212,7 @@ Namespace IO
         ''
         '' Total number of bytes for TRIM requests ignored. This
         '' happens when TRIM requests are received for areas Not yet
-        '' allocated at diff device. That Is, Not yet written to.
+        '' allocated at diff device. That is, Not yet written to.
         ''
         Public ReadOnly Property TrimBytesIgnored As Long
 
@@ -245,7 +247,7 @@ Namespace IO
         Private ReadOnly Magic As Byte()        '' Bytes 0xF4 0xEB followed by the String "AIMWriteFilter"
 
         Public ReadOnly Property MajorVersion As Integer    '' will be increased if there's significant, backward incompatible changes in the format
-        Public ReadOnly Property MinorVersion As Integer    '' will be increased for each change that Is backward compatible within the current MajorVersion
+        Public ReadOnly Property MinorVersion As Integer    '' will be increased for each change that is backward compatible within the current MajorVersion
 
         '' All sizes And offsets in 512 byte units.
 

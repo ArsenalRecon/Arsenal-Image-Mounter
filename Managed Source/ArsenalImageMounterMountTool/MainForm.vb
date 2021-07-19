@@ -482,11 +482,12 @@ Public Class MainForm
                 Task.Factory.StartNew(
                     Function()
 
-                        Dim paths = API.EnumeratePhysicalDeviceObjectPaths(Adapter.DeviceInstance, DeviceItem.DeviceProperties.DeviceNumber).ToArray()
+                        Dim pdo_path = API.EnumeratePhysicalDeviceObjectPaths(Adapter.DeviceInstance, DeviceItem.DeviceProperties.DeviceNumber).FirstOrDefault()
+                        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDrivePathForNtDevice(pdo_path)).FirstOrDefault()
 
-                        Dim processes = NativeFileIO.EnumerateProcessesHoldingFileHandle(paths)
+                        Dim processes = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Select(AddressOf NativeFileIO.FormatProcessName)
 
-                        Dim processlist = String.Join(Environment.NewLine, From proc In processes Select $"Id = {proc.HandleTableEntry.ProcessId} Name = {proc.ProcessName}")
+                        Dim processlist = String.Join(Environment.NewLine, processes)
 
                         Return processlist
 
