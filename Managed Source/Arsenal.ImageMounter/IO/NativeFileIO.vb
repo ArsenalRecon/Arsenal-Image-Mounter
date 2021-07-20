@@ -19,6 +19,7 @@ Imports Microsoft.Win32
 '''''
 
 #Disable Warning CA1308 ' Normalize strings to uppercase
+#Disable Warning CA1060 ' Move pinvokes to native methods class
 
 Namespace IO
 
@@ -1268,9 +1269,15 @@ Namespace IO
                         Dim in_use_apps = EnumerateProcessesHoldingFileHandle(dev_path).Take(10).Select(AddressOf FormatProcessName).ToArray()
 
                         If in_use_apps.Length > 1 Then
-                            Throw New IOException($"Failed to safely dismount volume '{volume}'. Currently, the following applications have files open on this volume: {String.Join(", ", in_use_apps)}", ex)
+                            Throw New IOException($"Failed to safely dismount volume '{volume}'.
+
+Currently, the following applications have files open on this volume:
+{String.Join(", ", in_use_apps)}", ex)
                         ElseIf in_use_apps.Length = 1 Then
-                            Throw New IOException($"Failed to safely dismount volume '{volume}'. Currently, the following application has files open on this volume: {in_use_apps(0)}", ex)
+                            Throw New IOException($"Failed to safely dismount volume '{volume}'.
+
+Currently, the following application has files open on this volume:
+{in_use_apps(0)}", ex)
                         Else
                             Throw New IOException($"Failed to safely dismount volume '{volume}'", ex)
                         End If
@@ -1538,7 +1545,7 @@ Namespace IO
 
             Public ReadOnly Property HandleTableEntry As SystemHandleTableEntryInformation
 
-            Public ReadOnly Property ObjectTypeInfo As ObjectTypeInformation
+            Public ReadOnly Property ObjectType As String
 
             Public ReadOnly Property ObjectName As String
             Public ReadOnly Property ProcessName As String
@@ -1546,12 +1553,12 @@ Namespace IO
             Public ReadOnly Property SessionId As Integer
 
             Friend Sub New(HandleTableEntry As SystemHandleTableEntryInformation,
-                                     ObjectTypeInfo As ObjectTypeInformation,
+                                     ObjectType As String,
                                      ObjectName As String,
                                      Process As Process)
 
                 _HandleTableEntry = HandleTableEntry
-                _ObjectTypeInfo = ObjectTypeInfo
+                _ObjectType = ObjectType
                 _ObjectName = ObjectName
                 _ProcessName = Process.ProcessName
                 _ProcessStartTime = Process.StartTime
@@ -1571,15 +1578,21 @@ Namespace IO
         End Property
 
         Public Shared ReadOnly Property LastObjectNameQuueryTime As Long
+
         Public Shared ReadOnly Property LastObjectNameQueryGrantedAccess As UInteger
 
-        Public Shared Function EnumerateHandleTableHandleInformation() As IEnumerable(Of HandleTableEntryInformation)
+        ''' <summary>
+        ''' Enumerates open handles in the system.
+        ''' </summary>
+        ''' <param name="filterObjectType">Name of object types to return in the enumeration. Normally set to for example "File" to return file handles or "Key" to return registry key handles</param>
+        ''' <returns>Enumeration with information about each handle table entry</returns>
+        Public Shared Function EnumerateHandleTableHandleInformation(filterObjectType As String) As IEnumerable(Of HandleTableEntryInformation)
 
-            Return EnumerateHandleTableHandleInformation(GetSystemHandleTable())
+            Return EnumerateHandleTableHandleInformation(GetSystemHandleTable(), filterObjectType)
 
         End Function
 
-        Public Shared Iterator Function EnumerateHandleTableHandleInformation(handleTable As IEnumerable(Of SystemHandleTableEntryInformation)) As IEnumerable(Of HandleTableEntryInformation)
+        Private Shared Iterator Function EnumerateHandleTableHandleInformation(handleTable As IEnumerable(Of SystemHandleTableEntryInformation), filterObjectType As String) As IEnumerable(Of HandleTableEntryInformation)
 
             handleTable.NullCheck(NameOf(handleTable))
 
@@ -1617,10 +1630,10 @@ Namespace IO
                         Continue For
                     End If
 
-                    Dim object_type_info As ObjectTypeInformation = Nothing
-                    Dim object_name As String = Nothing
-
                     Try
+                        Dim object_type As String = Nothing
+                        Dim object_name As String = Nothing
+
                         Using duphandle
                             Dim newbuffersize As Integer
                             Do
@@ -1634,11 +1647,23 @@ Namespace IO
                                 Exit Do
                             Loop
 
-                            object_type_info = buffer.Read(Of ObjectTypeInformation)(0)
+                            Dim object_type_str = buffer.Read(Of UNICODE_STRING)(0)
 
-                            If object_type_info.Name.Length = 8 AndAlso
-                                "File".Equals(object_type_info.Name.ToString(), StringComparison.Ordinal) AndAlso
-                                handle.GrantedAccess <> &H12019F AndAlso
+                            If filterObjectType IsNot Nothing AndAlso
+                                object_type_str.Length <> (filterObjectType.Length << 1) Then
+
+                                Continue For
+                            End If
+
+                            object_type = object_type_str.ToString()
+
+                            If filterObjectType IsNot Nothing AndAlso
+                                Not filterObjectType.Equals(object_type, StringComparison.Ordinal) Then
+
+                                Continue For
+                            End If
+
+                            If handle.GrantedAccess <> &H12019F AndAlso
                                 handle.GrantedAccess <> &H120189 AndAlso
                                 handle.GrantedAccess <> &H16019F AndAlso
                                 handle.GrantedAccess <> &H1A0089 AndAlso
@@ -1664,14 +1689,17 @@ Namespace IO
                                 Loop
 
                                 Dim name = buffer.Read(Of UNICODE_STRING)(0)
-                                If name.Length > 0 Then
-                                    object_name = name.ToString()
+
+                                If name.Length = 0 Then
+                                    Continue For
                                 End If
+
+                                object_name = name.ToString()
                             End If
 
                         End Using
 
-                        Yield New HandleTableEntryInformation(handle, object_type_info, object_name, processInfo)
+                        Yield New HandleTableEntryInformation(handle, object_type, object_name, processInfo)
 
                     Catch
 
@@ -1686,7 +1714,7 @@ Namespace IO
             Dim paths = Array.ConvertAll(nativeFullPaths, Function(path) New With {path, .dir_path = String.Concat(path, "\")})
 
             Return _
-                From handle In EnumerateHandleTableHandleInformation()
+                From handle In EnumerateHandleTableHandleInformation("File")
                 Where
                     Not String.IsNullOrWhiteSpace(handle.ObjectName) AndAlso
                     paths.Any(Function(path) handle.ObjectName.Equals(path.path, StringComparison.OrdinalIgnoreCase) OrElse
@@ -5615,19 +5643,31 @@ Namespace IO
 
         End Structure
 
+        ''' <summary>
+        ''' Structure for counted Unicode strings used in NT API calls
+        ''' </summary>
         <StructLayout(LayoutKind.Sequential)>
         Public Structure UNICODE_STRING
+            ''' <summary>
+            ''' Length in bytes of Unicode string pointed to by Buffer
+            ''' </summary>
             Public ReadOnly Property Length As UInt16
 
-            Private ReadOnly _maximumLength As UInt16
+            ''' <summary>
+            ''' Maximum length in bytes of string memory pointed to by Buffer
+            ''' </summary>
+            Public ReadOnly Property MaximumLength As UInt16
 
-            Private ReadOnly _buffer As IntPtr
+            ''' <summary>
+            ''' Unicode character buffer in unmanaged memory
+            ''' </summary>
+            Public ReadOnly Property Buffer As IntPtr
 
             Public Sub New(str As IntPtr, byte_count As UInt16)
 
                 _Length = byte_count
-                _maximumLength = byte_count
-                _buffer = str
+                _MaximumLength = byte_count
+                _Buffer = str
 
             End Sub
 
@@ -5639,7 +5679,7 @@ Namespace IO
                 If _Length = 0 Then
                     Return String.Empty
                 Else
-                    Return Marshal.PtrToStringUni(_buffer, _Length >> 1)
+                    Return Marshal.PtrToStringUni(_Buffer, _Length >> 1)
                 End If
             End Function
 

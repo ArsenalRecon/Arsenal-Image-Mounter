@@ -400,7 +400,10 @@ Public NotInheritable Class API
         Else
             Dim apps = String.Join(", ", in_use_apps)
 
-            Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the disk device open. Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open: {apps}")
+            Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the disk device open.
+
+Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open:
+{apps}")
         End If
 
         Throw New FileNotFoundException("Error adding write overlay: Device not found.")
@@ -469,7 +472,10 @@ Public NotInheritable Class API
                 Throw New NotSupportedException("Write filter driver not attached to device")
             Else
                 Dim apps = String.Join(", ", in_use_apps)
-                Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the virtual disk device open. Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open: {apps}")
+                Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the virtual disk device open.
+
+Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open:
+{apps}")
             End If
         Next
 
