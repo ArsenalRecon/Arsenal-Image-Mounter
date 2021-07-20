@@ -144,13 +144,29 @@ Public Class ScsiAdapter
 
     End Function
 
+    Private NotInheritable Class AdapterDeviceInstance
+
+        Public ReadOnly Property DevInstName As String
+
+        Public ReadOnly Property DevInst As UInteger
+
+        Public ReadOnly Property SafeHandle As SafeFileHandle
+
+        Public Sub New(devInstName As String, devInst As UInteger, safeHhandle As SafeFileHandle)
+            _DevInstName = devInstName
+            _DevInst = devInst
+            _SafeHandle = safeHhandle
+        End Sub
+
+    End Class
+
     ''' <summary>
     ''' Retrieves a handle to first found adapter, or null if error occurs.
     ''' </summary>
     ''' <remarks>Arsenal Image Mounter does not currently support more than one adapter.</remarks>
-    ''' <returns>A structure containing SCSI port number and an open handle to first found
+    ''' <returns>An object containing devinst value and an open handle to first found
     ''' compatible adapter.</returns>
-    Private Shared Function OpenAdapter() As Tuple(Of String, UInteger, SafeFileHandle)
+    Private Shared Function OpenAdapter() As AdapterDeviceInstance
 
         Dim devinstNames = API.EnumerateAdapterDeviceInstanceNames()
 
@@ -166,6 +182,8 @@ Public Class ScsiAdapter
                     Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinst.Value)
                     Where path IsNot Nothing
                     Let handle = OpenAdapterHandle(path, devinst.Value)
+                    Where handle IsNot Nothing
+                    Select New AdapterDeviceInstance(devInstName, devinst.Value, handle)
                     Into FirstOrDefault()
 
         If found Is Nothing Then
@@ -174,7 +192,7 @@ Public Class ScsiAdapter
 
         End If
 
-        Return Tuple.Create(found.devInstName, found.devinst.Value, found.handle)
+        Return found
 
     End Function
 
@@ -186,13 +204,13 @@ Public Class ScsiAdapter
 
     End Sub
 
-    Private Sub New(OpenAdapterHandle As Tuple(Of String, UInteger, SafeFileHandle))
-        MyBase.New(OpenAdapterHandle.Item3, FileAccess.ReadWrite)
+    Private Sub New(OpenAdapterHandle As AdapterDeviceInstance)
+        MyBase.New(OpenAdapterHandle.SafeHandle, FileAccess.ReadWrite)
 
-        _DeviceInstance = OpenAdapterHandle.Item2
-        _DeviceInstanceName = OpenAdapterHandle.Item1
+        _DeviceInstance = OpenAdapterHandle.DevInst
+        _DeviceInstanceName = OpenAdapterHandle.DevInstName
 
-        Trace.WriteLine($"Successfully opened SCSI adapter '{OpenAdapterHandle.Item1}'.")
+        Trace.WriteLine($"Successfully opened SCSI adapter '{OpenAdapterHandle.DevInstName}'.")
     End Sub
 
     ''' <summary>
@@ -942,6 +960,30 @@ Public Class ScsiAdapter
             End If
 
             Return New DiskDevice($"\\?\{device_name}", AccessMode)
+
+        Catch ex As Exception
+            Throw New DriveNotFoundException($"Device {DeviceNumber:X6} is not ready", ex)
+
+        End Try
+
+    End Function
+
+    ''' <summary>
+    ''' Opens a DiskDevice object for specified device number. Device numbers are created when
+    ''' a new virtual disk is created and returned in a reference parameter to CreateDevice
+    ''' method. This overload requests a DiskDevice object without read or write access, that
+    ''' can only be used to query metadata such as size, geometry, SCSI address etc.
+    ''' </summary>
+    Public Function OpenDevice(DeviceNumber As UInteger) As DiskDevice
+
+        Try
+            Dim device_name = GetDeviceName(DeviceNumber)
+
+            If device_name Is Nothing Then
+                Throw New DriveNotFoundException($"No drive found for device number {DeviceNumber:X6}")
+            End If
+
+            Return New DiskDevice($"\\?\{device_name}")
 
         Catch ex As Exception
             Throw New DriveNotFoundException($"Device {DeviceNumber:X6} is not ready", ex)
