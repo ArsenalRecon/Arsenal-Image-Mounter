@@ -1,1 +1,0 @@
-Experimental libewf.dll with several bugs and open issues, but with Ex01 support.

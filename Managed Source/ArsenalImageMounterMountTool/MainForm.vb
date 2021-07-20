@@ -479,7 +479,7 @@ Public Class MainForm
               Select(Function(row) row.DataBoundItem).
               OfType(Of DiskStateView)()
 
-                Task.Factory.StartNew(
+                Dim item = Task.Factory.StartNew(
                     Function()
 
                         Dim pdo_path = API.EnumeratePhysicalDeviceObjectPaths(Adapter.DeviceInstance, DeviceItem.DeviceProperties.DeviceNumber).FirstOrDefault()
@@ -502,6 +502,25 @@ Public Class MainForm
                             MessageBoxIcon.Information)
 
                     End Sub, TaskScheduler.FromCurrentSynchronizationContext())
+
+                ThreadPool.QueueUserWorkItem(
+                    Sub()
+                        While Not item.Wait(TimeSpan.FromSeconds(2))
+
+                            Dim time = NativeFileIO.LastObjectNameQuueryTime
+
+                            If time = 0 OrElse NativeFileIO.SafeNativeMethods.GetTickCount64() - time < 4000 Then
+                                Continue While
+                            End If
+
+                            Invoke(Sub()
+                                       MessageBox.Show(Me, $"Handle enumeration hung. Last checked object access was 0x{NativeFileIO.LastObjectNameQueryGrantedAccess:X}", "Process list failed", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                                   End Sub)
+
+                            Exit While
+
+                        End While
+                    End Sub)
 
             Next
 

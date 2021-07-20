@@ -190,6 +190,8 @@ Namespace IO
               dwFileAttributes As FileAttributes
               ) As Boolean
 
+            Public Declare Auto Function GetTickCount64 Lib "kernel32.dll" () As Long
+
         End Class
 
         Public NotInheritable Class UnsafeNativeMethods
@@ -1559,6 +1561,19 @@ Namespace IO
 
         End Class
 
+        ''' <summary>
+        ''' System uptime
+        ''' </summary>
+        ''' <returns>Time elapsed since system startup</returns>
+        Public Shared ReadOnly Property SystemUptime As TimeSpan
+            Get
+                Return TimeSpan.FromMilliseconds(SafeNativeMethods.GetTickCount64())
+            End Get
+        End Property
+
+        Public Shared ReadOnly Property LastObjectNameQuueryTime As Long
+        Public Shared ReadOnly Property LastObjectNameQueryGrantedAccess As UInteger
+
         Public Shared Function EnumerateHandleTableHandleInformation() As IEnumerable(Of HandleTableEntryInformation)
 
             Return EnumerateHandleTableHandleInformation(GetSystemHandleTable())
@@ -1622,15 +1637,24 @@ Namespace IO
 
                             object_type_info = buffer.Read(Of ObjectTypeInformation)(0)
 
-                            If handle.GrantedAccess <> &H12019F AndAlso
-                                handle.GrantedAccess <> &H120089 AndAlso
+                            If object_type_info.Name.Length = 8 AndAlso
+                                "File".Equals(object_type_info.Name.ToString(), StringComparison.Ordinal) AndAlso
+                                handle.GrantedAccess <> &H12019F AndAlso
                                 handle.GrantedAccess <> &H120189 AndAlso
                                 handle.GrantedAccess <> &H16019F AndAlso
                                 handle.GrantedAccess <> &H1A0089 AndAlso
-                                handle.GrantedAccess <> &H1A019F Then
+                                handle.GrantedAccess <> &H1A019F AndAlso
+                                handle.GrantedAccess <> &H120089 AndAlso
+                                handle.GrantedAccess <> &H100000 Then
 
                                 Do
+                                    _LastObjectNameQueryGrantedAccess = handle.GrantedAccess
+                                    _LastObjectNameQuueryTime = SafeNativeMethods.GetTickCount64()
+
                                     status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+
+                                    _LastObjectNameQuueryTime = 0
+
                                     If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
                                         buffer.Resize(newbuffersize)
                                         Continue Do
@@ -4895,36 +4919,10 @@ Namespace IO
             ObjectHandleInformation '' 4 Y Y 
         End Enum
 
-        Public Enum ObType As Byte
-            OB_TYPE_TYPE = 1
-            OB_TYPE_DIRECTORY = 2
-            OB_TYPE_SYMBOLIC_LINK = 3
-            OB_TYPE_TOKEN = 4
-            OB_TYPE_PROCESS = 5
-            OB_TYPE_THREAD = 6
-            OB_TYPE_EVENT = 7
-            OB_TYPE_EVENT_PAIR = 8
-            OB_TYPE_MUTANT = 9
-            OB_TYPE_SEMAPHORE = 10
-            OB_TYPE_TIMER = 11
-            OB_TYPE_PROFILE = 12
-            OB_TYPE_WINDOW_STATION = 13
-            OB_TYPE_DESKTOP = 14
-            OB_TYPE_SECTION = 15
-            OB_TYPE_KEY = 16
-            OB_TYPE_PORT = 17
-            OB_TYPE_ADAPTER = 18
-            OB_TYPE_CONTROLLER = 19
-            OB_TYPE_DEVICE = 20
-            OB_TYPE_DRIVER = 21
-            OB_TYPE_IO_COMPLETION = 22
-            OB_TYPE_FILE = 23
-        End Enum
-
         <StructLayout(LayoutKind.Sequential)>
         Public Structure SystemHandleTableEntryInformation
             Public ReadOnly Property ProcessId As Integer
-            Public ReadOnly Property ObjectType As ObType     '' OB_TYPE_* (OB_TYPE_TYPE, etc.) 
+            Public ReadOnly Property ObjectType As Byte     '' OB_TYPE_* (OB_TYPE_TYPE, etc.) 
             Public ReadOnly Property Flags As Byte      '' HANDLE_FLAG_* (HANDLE_FLAG_INHERIT, etc.) 
             Public ReadOnly Property Handle As UShort
             Public ReadOnly Property ObjectPtr As IntPtr
@@ -5622,15 +5620,15 @@ Namespace IO
         Public Structure UNICODE_STRING
             Public ReadOnly Property Length As UInt16
 
-            Private ReadOnly MaximumLength As UInt16
+            Private ReadOnly _maximumLength As UInt16
 
-            Private ReadOnly Buffer As IntPtr
+            Private ReadOnly _buffer As IntPtr
 
             Public Sub New(str As IntPtr, byte_count As UInt16)
 
                 _Length = byte_count
-                MaximumLength = byte_count
-                Buffer = str
+                _maximumLength = byte_count
+                _buffer = str
 
             End Sub
 
@@ -5642,7 +5640,7 @@ Namespace IO
                 If _Length = 0 Then
                     Return String.Empty
                 Else
-                    Return Marshal.PtrToStringUni(Buffer, _Length >> 1)
+                    Return Marshal.PtrToStringUni(_buffer, _Length >> 1)
                 End If
             End Function
 
