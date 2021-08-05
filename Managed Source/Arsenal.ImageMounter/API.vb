@@ -2,13 +2,13 @@
 ''''' API for manipulating flag values, issuing SCSI bus rescans and similar
 ''''' tasks.
 ''''' 
-''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
 ''''' Please see LICENSE.txt for full license terms, including the availability of
 ''''' proprietary exceptions.
-''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
 Imports Arsenal.ImageMounter.Extensions
@@ -152,6 +152,8 @@ Public NotInheritable Class API
         Return rc
 
     End Function
+
+    Private Const NonRemovableSuffix As String = ":$NonRemovable"
 
     Private Shared ReadOnly KnownFormats As New Dictionary(Of String, Long)(StringComparer.OrdinalIgnoreCase) From
       {
@@ -314,10 +316,14 @@ Public NotInheritable Class API
     End Function
 
     Public Shared Sub UnregisterWriteOverlayImage(devInst As UInteger)
-        RegisterWriteOverlayImage(devInst, Nothing)
+        RegisterWriteOverlayImage(devInst, OverlayImagePath:=Nothing, FakeNonRemovable:=False)
     End Sub
 
     Public Shared Sub RegisterWriteOverlayImage(devInst As UInteger, OverlayImagePath As String)
+        RegisterWriteOverlayImage(devInst, OverlayImagePath, FakeNonRemovable:=False)
+    End Sub
+
+    Public Shared Sub RegisterWriteOverlayImage(devInst As UInteger, OverlayImagePath As String, FakeNonRemovable As Boolean)
 
         Dim nativepath As String
 
@@ -336,6 +342,8 @@ Public NotInheritable Class API
         Using regkey = Registry.LocalMachine.CreateSubKey("SYSTEM\CurrentControlSet\Services\aimwrfltr\Parameters")
             If nativepath Is Nothing Then
                 regkey.DeleteValue(pdo_path, throwOnMissingValue:=False)
+            ElseIf FakeNonRemovable Then
+                regkey.SetValue(pdo_path, $"{nativepath}{NonRemovableSuffix}", RegistryValueKind.String)
             Else
                 regkey.SetValue(pdo_path, nativepath, RegistryValueKind.String)
             End If
@@ -380,7 +388,7 @@ Public NotInheritable Class API
 
                 Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception(last_error))
 
-            ElseIf (nativepath IsNot Nothing AndAlso statistics.Initialized = 1) OrElse
+            ElseIf (nativepath IsNot Nothing AndAlso statistics.Initialized) OrElse
                 nativepath Is Nothing Then
 
                 Return
@@ -456,7 +464,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
                     Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
                 End If
 
-                If statistics.Initialized = 1 Then
+                If statistics.Initialized Then
                     Return
                 End If
 

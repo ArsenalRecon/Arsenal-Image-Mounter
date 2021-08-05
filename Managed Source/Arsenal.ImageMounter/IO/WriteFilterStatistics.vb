@@ -25,16 +25,26 @@ Namespace IO
         ''
         Public ReadOnly Property Version As UInteger
 
+        Private ReadOnly Flags As UInteger
+
         ''
         '' TRUE if volume is protected by filter driver, FALSE otherwise.
         ''
-        Public ReadOnly Property IsProtected As Byte
+        Public ReadOnly Property IsProtected As Boolean
+            Get
+                Return (Flags And &H1UI) = &H1UI
+            End Get
+        End Property
 
         ''
         '' TRUE if all initialization is complete for protection of this
         '' device
         ''
-        Public ReadOnly Property Initialized As Byte
+        Public ReadOnly Property Initialized As Boolean
+            Get
+                Return (Flags And &H100UI) = &H100UI
+            End Get
+        End Property
 
         ''
         '' TRUE if all IRP_MJ_FLUSH_BUFFERS requests are silently ignored
@@ -43,7 +53,22 @@ Namespace IO
         '' temporary And contents of it does Not need to be reliably
         '' maintained for another session.
         ''
-        Public ReadOnly Property IgnoreFlushBuffers As Byte
+        Public ReadOnly Property IgnoreFlushBuffers As Boolean
+            Get
+                Return (Flags And &H10000UI) = &H10000UI
+            End Get
+        End Property
+
+        ''
+        '' TRUE if filter driver reports non-removable storage device
+        '' properties even if underlying physical disk reports removable
+        '' media.
+        ''
+        Public ReadOnly Property FakeNonRemovable As Boolean
+            Get
+                Return (Flags And &H1000000UI) = &H1000000UI
+            End Get
+        End Property
 
         ''
         '' Last NTSTATUS error code if failed to attach a diff device.

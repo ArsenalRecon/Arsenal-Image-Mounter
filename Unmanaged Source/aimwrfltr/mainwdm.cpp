@@ -1439,6 +1439,23 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
     }
     else
     {
+        UNICODE_STRING non_removable_suffix;
+        RtlInitUnicodeString(&non_removable_suffix, L":$NonRemovable");
+
+        if (diff_device_path.Length > non_removable_suffix.Length)
+        {
+            UNICODE_STRING suffix;
+            suffix.MaximumLength = suffix.Length = non_removable_suffix.Length;
+            suffix.Buffer = (PWSTR)((PUCHAR)diff_device_path.Buffer + diff_device_path.Length - suffix.Length);
+
+            if (RtlEqualUnicodeString(&suffix, &non_removable_suffix, FALSE))
+            {
+                KdPrint(("aimwrfltr: Request to fake non-removable properties.\n"));
+                diff_device_path.Length -= suffix.Length;
+                device_extension->Statistics.FakeNonRemovable = TRUE;
+            }
+        }
+
         status = AIMWrFltrOpenDiffDevice(device_extension, &diff_device_path);
 
         buffer.Free();

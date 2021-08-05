@@ -179,8 +179,8 @@ Namespace Server.Services
         Public Overridable Function StartServiceThread() As Boolean
 
             Using _
-                ServiceReadyEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset),
-                ServiceInitFailedEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.ManualReset)
+                ServiceReadyEvent As New ManualResetEvent(initialState:=False),
+                ServiceInitFailedEvent As New ManualResetEvent(initialState:=False)
 
                 Dim ServiceReadyHandler As New EventHandler(Sub() ServiceReadyEvent.Set())
                 AddHandler ServiceReady, ServiceReadyHandler

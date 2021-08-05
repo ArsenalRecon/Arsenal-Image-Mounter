@@ -87,16 +87,16 @@ Namespace IO
         ''' position.
         ''' </summary>
         ''' <param name="instance">Existing object to pin in memory.</param>
-        ''' <param name="toalObjectSize">Total number of bytes used by obj in unmanaged memory</param>
+        ''' <param name="totalObjectSize">Total number of bytes used by obj in unmanaged memory</param>
         ''' <param name="byteOffset">Byte offset into unmanaged memory where this instance should start</param>
-        Public Sub New(instance As Object, toalObjectSize As Integer, byteOffset As Integer)
+        Public Sub New(instance As Object, totalObjectSize As Integer, byteOffset As Integer)
             MyClass.New()
 
-            If byteOffset > toalObjectSize Then
+            If byteOffset > totalObjectSize Then
                 Throw New ArgumentOutOfRangeException(NameOf(byteOffset), "Argument byteOffset must be within total object size")
             End If
 
-            Initialize(CULng(toalObjectSize - byteOffset))
+            Initialize(CULng(totalObjectSize - byteOffset))
 
             _GCHandle = GCHandle.Alloc(instance, GCHandleType.Pinned)
 

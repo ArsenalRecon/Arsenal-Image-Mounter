@@ -1,4 +1,4 @@
-﻿Imports System.Diagnostics.CodeAnalysis
+﻿#Disable Warning IDE0079 ' Remove unnecessary suppression
 
 Namespace IO
 

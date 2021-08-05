@@ -1,13 +1,13 @@
 ﻿''''' DeviceObject.vb
 ''''' Base class for Arsenal Image Mounter SCSI Miniport objects.
 ''''' 
-''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
 ''''' Please see LICENSE.txt for full license terms, including the availability of
 ''''' proprietary exceptions.
-''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
 Imports Arsenal.ImageMounter.IO

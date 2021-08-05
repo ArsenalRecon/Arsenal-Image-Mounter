@@ -175,7 +175,9 @@
     <Compile Include="Server\Interaction\AsyncMessageBox.Designer.vb">
       <DependentUpon>AsyncMessageBox.vb</DependentUpon>
     </Compile>
-    <Compile Include="Server\Interaction\AsyncMessageBox.vb" />
+    <Compile Include="Server\Interaction\AsyncMessageBox.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Server\Interaction\DiscUtilsInteraction.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderFromStream.vb" />
     <Compile Include="Server\GenericProviders\DevioProviderManagedBase.vb" />

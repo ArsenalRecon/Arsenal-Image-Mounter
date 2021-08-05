@@ -9,20 +9,6 @@ typedef LONG NTSTATUS, *PNTSTATUS;
 #endif
 
 //
-// Partition type used by default for diff devices.
-//
-
-#define AIMWRFLTR_PARTITION_TYPE     0x82
-
-//
-// Tags used for kernel mode allocations and locks.
-// Useful with tools like poolmon etc.
-//
-
-#define POOL_TAG                    'FrWA'
-#define LOCK_TAG                    'FrWA'
-
-//
 // Basic name of diff device full event.
 //
 
@@ -41,6 +27,8 @@ typedef LONG NTSTATUS, *PNTSTATUS;
 #define AIMWRFLTR_SERVICE_NAME L"aimwrfltr"
 #define AIMWRFLTR_SERVICE_PATH L"system32\\drivers\\" AIMWRFLTR_SERVICE_NAME L".sys"
 
+#define IOCTL_AIMWRFLTR_BASE                    0x8844UL
+
 //
 // IOCTL_AIMWRFLTR_GET_DEVICE_DATA
 //
@@ -51,7 +39,17 @@ typedef LONG NTSTATUS, *PNTSTATUS;
 // sizeof(AIMWRFLTR_DEVICE_STATISTICS).
 //
 
-#define IOCTL_AIMWRFLTR_GET_DEVICE_DATA         CTL_CODE(0x8844UL, 0xD01UL, METHOD_BUFFERED, 0)
+#define IOCTL_AIMWRFLTR_GET_DEVICE_DATA         CTL_CODE(IOCTL_AIMWRFLTR_BASE, 0xD01UL, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+//
+// IOCTL_AIMWRFLTR_DELETE_ON_CLOSE
+//
+// Deletes the write overlay image file after use. Also sets this filter driver to
+// silently ignore flush requests to improve performance when integrity of the write
+// overlay image is not needed for future sessions.
+//
+
+#define IOCTL_AIMWRFLTR_DELETE_ON_CLOSE         CTL_CODE(IOCTL_AIMWRFLTR_BASE, 0xD01UL, METHOD_NEITHER, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
 
 //
 // IOCTL_AIMWRFLTR_READ_PRIVATE_DATA
@@ -72,7 +70,7 @@ typedef LONG NTSTATUS, *PNTSTATUS;
 // placed in output buffer.
 //
 
-#define IOCTL_AIMWRFLTR_READ_PRIVATE_DATA       CTL_CODE(0x8844UL, 0xD02UL, METHOD_OUT_DIRECT, FILE_READ_ACCESS)
+#define IOCTL_AIMWRFLTR_READ_PRIVATE_DATA       CTL_CODE(IOCTL_AIMWRFLTR_BASE, 0xD02UL, METHOD_OUT_DIRECT, FILE_READ_ACCESS)
 
 //
 // IOCTL_AIMWRFLTR_WRITE_PRIVATE_DATA
@@ -94,7 +92,7 @@ typedef LONG NTSTATUS, *PNTSTATUS;
 // Bytes returned: Upon return, the number of bytes actually written.
 //
 
-#define IOCTL_AIMWRFLTR_WRITE_PRIVATE_DATA      CTL_CODE(0x8844UL, 0xD03UL, METHOD_IN_DIRECT, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
+#define IOCTL_AIMWRFLTR_WRITE_PRIVATE_DATA      CTL_CODE(IOCTL_AIMWRFLTR_BASE, 0xD03UL, METHOD_IN_DIRECT, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
 
 //
 // IOCTL_AIMWRFLTR_READ_LOG_DATA
@@ -115,7 +113,7 @@ typedef LONG NTSTATUS, *PNTSTATUS;
 // placed in output buffer.
 //
 
-#define IOCTL_AIMWRFLTR_READ_LOG_DATA           CTL_CODE(0x8844UL, 0xD04UL, METHOD_OUT_DIRECT, FILE_READ_ACCESS)
+#define IOCTL_AIMWRFLTR_READ_LOG_DATA           CTL_CODE(IOCTL_AIMWRFLTR_BASE, 0xD04UL, METHOD_OUT_DIRECT, FILE_READ_ACCESS)
 
 //
 // IOCTL_AIMWRFLTR_WRITE_LOG_DATA
@@ -137,7 +135,7 @@ typedef LONG NTSTATUS, *PNTSTATUS;
 // Bytes returned: Upon return, the number of bytes actually written.
 //
 
-#define IOCTL_AIMWRFLTR_WRITE_LOG_DATA          CTL_CODE(0x8844UL, 0xD05UL, METHOD_IN_DIRECT, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
+#define IOCTL_AIMWRFLTR_WRITE_LOG_DATA          CTL_CODE(IOCTL_AIMWRFLTR_BASE, 0xD05UL, METHOD_IN_DIRECT, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
 
 //
 // Fields at the beginning of diff volume 512 byte VBR
@@ -245,13 +243,37 @@ typedef struct _AIMWRFLTR_DEVICE_STATISTICS
     //
     // TRUE if volume is protected by filter driver, FALSE otherwise.
     //
-    BOOLEAN IsProtected;
+    ULONG IsProtected : 1;
+
+    ULONG Reserved1 : 7;
 
     //
     // TRUE if all initialization is complete for protection of this
     // device
     //
-    BOOLEAN Initialized;
+    ULONG Initialized : 1;
+
+    ULONG Reserved2 : 7;
+
+    //
+    // TRUE if all IRP_MJ_FLUSH_BUFFERS requests are silently ignored
+    // and returned as successful by this filter driver. This is useful
+    // to gain performance in cases where the write overlay image is
+    // temporary and contents of it does not need to be reliably
+    // maintained for another session.
+    //
+    ULONG IgnoreFlushBuffers : 1;
+
+    ULONG Reserved3 : 7;
+
+    //
+    // TRUE if filter driver reports non-removable storage device
+    // properties even if underlying physical disk reports removable
+    // media.
+    //
+    ULONG FakeNonRemovable : 1;
+
+    ULONG Reserved4 : 7;
 
     //
     // Last NTSTATUS error code if failed to attach a diff device.
@@ -344,6 +366,17 @@ typedef struct _AIMWRFLTR_DEVICE_STATISTICS
     LONGLONG ReadBytesFromDiff;
 
     //
+    // Number of read requests deferred to worker thread due
+    // to call at raised IRQL.
+    //
+    LONGLONG DeferredReadRequests;
+
+    //
+    // Total number of bytes in DeferredReadRequests.
+    //
+    LONGLONG DeferredReadBytes;
+
+    //
     // Number of write requests.
     //
     LONGLONG WriteRequests;
@@ -378,7 +411,8 @@ typedef struct _AIMWRFLTR_DEVICE_STATISTICS
 
     //
     // Number of write requests deferred to worker thread due
-    // to needs to allocate new blocks.
+    // to needs to allocate new blocks or called at raised
+    // IRQL.
     //
     LONGLONG DeferredWriteRequests;
 
@@ -429,6 +463,16 @@ typedef struct _AIMWRFLTR_DEVICE_STATISTICS
     // filtered device.
     //
     LONG PagingPathCount;
+
+    //
+    // Number of requests read from cache queue.
+    //
+    LONGLONG ReadRequestsFromCache;
+
+    //
+    // Number of bytes read from cache queue.
+    //
+    LONGLONG ReadBytesFromCache;
 
     //
     // Copy of diff device volume boot record. This structure holds

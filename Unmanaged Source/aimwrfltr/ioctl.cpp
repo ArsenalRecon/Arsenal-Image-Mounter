@@ -740,8 +740,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
         }
         else
         {
-            KdPrint(("AIMWrFltr:DeviceControl: Bad formatted IOCTL_SCSI_PASS_THROUGH_DIRECT sent to protected disk.\n",
-                io_stack->Parameters.DeviceIoControl.IoControlCode));
+            KdPrint(("AIMWrFltr:DeviceControl: Bad formatted IOCTL_SCSI_PASS_THROUGH_DIRECT sent to protected disk.\n"));
         }
 
         status = STATUS_INVALID_DEVICE_REQUEST;
@@ -778,30 +777,44 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             return status;
         }
 
-        if (IOCTL_STORAGE_QUERY_PROPERTY ==
-            io_stack->Parameters.DeviceIoControl.IoControlCode)
+        if (device_extension->Statistics.FakeNonRemovable &&
+            io_stack->Parameters.DeviceIoControl.IoControlCode == IOCTL_STORAGE_QUERY_PROPERTY &&
+            io_stack->Parameters.DeviceIoControl.InputBufferLength >= sizeof(STORAGE_PROPERTY_QUERY))
         {
-#if 0
             PSTORAGE_PROPERTY_QUERY query = (PSTORAGE_PROPERTY_QUERY)
                 Irp->AssociatedIrp.SystemBuffer;
 
             KdPrint(("AIMWrFltr:DeviceControl: IOCTL_STORAGE_QUERY_PROPERTY QueryType=%i, PropertyId=%i.\n",
                 query->QueryType, query->PropertyId));
 
-            if (query->PropertyId > StorageDeviceWriteAggregationProperty)
+            if (query->PropertyId == StorageDeviceProperty)
             {
-                KdPrint(("AIMWrFltr:DeviceControl: Too high IOCTL_STORAGE_QUERY_PROPERTY id requested. Requested %i, max supported %i.\n",
-                    (int)query->PropertyId,
-                    (int)StorageDeviceWriteAggregationProperty));
+                KdPrint(("AIMWrFltr:DeviceControl: StorageDeviceProperty, requesting physical properties.\n"));
+                
+                status = AIMWrFltrForwardIrpSynchronous(DeviceObject, Irp);
 
-                status = STATUS_INVALID_DEVICE_REQUEST;
+                if (!NT_SUCCESS(status))
+                {
+                    KdPrint(("AIMWrFltr:DeviceControl: StorageDeviceProperty, physical properties request failed: 0x%X.\n", status));
 
-                Irp->IoStatus.Status = status;
+                    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+                    return status;
+                }
+
+                if (Irp->IoStatus.Information > FIELD_OFFSET(STORAGE_DEVICE_DESCRIPTOR, RemovableMedia))
+                {
+                    PSTORAGE_DEVICE_DESCRIPTOR descriptor = (PSTORAGE_DEVICE_DESCRIPTOR)Irp->AssociatedIrp.SystemBuffer;
+
+                    if (descriptor->RemovableMedia)
+                    {
+                        KdPrint(("AIMWrFltr:DeviceControl: StorageDeviceProperty, reporting non-removable.\n"));
+                        descriptor->RemovableMedia = FALSE;
+                    }
+                }
+
                 IoCompleteRequest(Irp, IO_NO_INCREMENT);
                 return status;
             }
-#endif
-
             return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
         }
 

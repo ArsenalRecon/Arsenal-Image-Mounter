@@ -38,7 +38,7 @@ Public Class MainForm
     Private IsClosing As Boolean
     Private LastCreatedDevice As UInteger?
 
-    Private ReadOnly DeviceListRefreshEvent As New EventWaitHandle(initialState:=False, mode:=EventResetMode.AutoReset)
+    Private ReadOnly DeviceListRefreshEvent As New AutoResetEvent(initialState:=False)
 
     Protected Overrides Sub OnLoad(e As EventArgs)
 

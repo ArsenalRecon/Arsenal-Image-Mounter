@@ -24,6 +24,39 @@ Namespace IO
             NativeFileIO.UnsafeNativeMethods.WritePrivateProfileString(Nothing, Nothing, Nothing, Nothing)
         End Sub
 
+        Public Shared Function EnumerateFileSectionNames(filename As String) As IEnumerable(Of String)
+
+            Dim sectionnames(0 To 32766) As Char
+
+            Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionNames(sectionnames, sectionnames.Length, filename)
+
+            Return NativeFileIO.ParseDoubleTerminatedString(sectionnames, size)
+
+        End Function
+
+        Public Shared Iterator Function EnumerateFileSectionValuePairs(filename As String, section As String) As IEnumerable(Of KeyValuePair(Of String, String))
+
+            Dim valuepairs(0 To 32766) As Char
+
+            Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSection(section, valuepairs, valuepairs.Length, filename)
+
+            For Each valuepair In NativeFileIO.ParseDoubleTerminatedString(valuepairs, size)
+
+                Dim pos = valuepair.IndexOf("="c)
+
+                If pos < 0 Then
+                    Continue For
+                End If
+
+                Dim key = valuepair.Remove(pos)
+                Dim value = valuepair.Substring(pos + 1)
+
+                Yield New KeyValuePair(Of String, String)(key, value)
+
+            Next
+
+        End Function
+
         ''' <summary>
         ''' Saves a value to an INI file by calling Win32 API function WritePrivateProfileString. If call fails and exception
         ''' is thrown.

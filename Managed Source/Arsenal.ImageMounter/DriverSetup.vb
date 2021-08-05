@@ -314,8 +314,6 @@ Public NotInheritable Class DriverSetup
         '' Create device node and install driver
         Dim infPath = Path.Combine(setupsource, _Kernel, "phdskmnt.inf")
 
-        Dim cachedInf = New CachedIniFile(infPath)
-
         NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, "root\phdskmnt", ForceReplaceExistingDrivers:=False, reboot_required)
 
         If Not reboot_required Then
@@ -324,14 +322,26 @@ Public NotInheritable Class DriverSetup
 
             If pending_renames IsNot Nothing Then
 
-                reboot_required = cachedInf("PhysicalDiskMounterDevice.Services").
-                    OfType(Of KeyValuePair(Of String, String)).
-                    Where(Function(item) "AddService".Equals(item.Key, StringComparison.OrdinalIgnoreCase)).
-                    Select(Function(item) $"\system32\drivers\{item.Value.Split(","c)(0)}.sys").
-                    Any(Function(path) Array.FindIndex(pending_renames,
-                                                       Function(rename) rename.EndsWith(path, StringComparison.OrdinalIgnoreCase)) >= 0)
+                pending_renames = Aggregate p In pending_renames
+                                  Where p IsNot Nothing AndAlso p.Length > 4
+                                  Select p = p.Substring(4)
+                                  Where File.Exists(p)
+                                  Select If(FileVersionInfo.GetVersionInfo(p)?.OriginalFilename, Path.GetFileName(p))
+                                  Into ToArray()
 
-                Trace.WriteLine("Detected pending file replace operation for a driver file. Requesting reboot.")
+                Trace.WriteLine($"Pending file replace operations: '{String.Join("', '", pending_renames)}'")
+
+                Dim installed_driver_files = CachedIniFile.EnumerateFileSectionValuePairs(infPath, "PhysicalDiskMounterDevice.Services")
+
+                Dim pending_install_file = Aggregate item In installed_driver_files
+                    Where "AddService".Equals(item.Key, StringComparison.OrdinalIgnoreCase)
+                    Select installfile = $"{item.Value.Split(","c)(0)}.sys"
+                    Into FirstOrDefault(pending_renames.Contains(installfile, StringComparer.OrdinalIgnoreCase))
+
+                If pending_install_file IsNot Nothing Then
+                    Trace.WriteLine($"Detected pending file replace operation for '{pending_install_file}'. Requesting reboot.")
+                    reboot_required = True
+                End If
 
             End If
 

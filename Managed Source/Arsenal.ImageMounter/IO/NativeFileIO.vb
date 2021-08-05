@@ -1,4 +1,5 @@
-﻿Imports System.Diagnostics.CodeAnalysis
+﻿Imports System.Collections.Concurrent
+Imports System.Diagnostics.CodeAnalysis
 Imports System.Globalization
 Imports System.Security
 Imports System.Security.Permissions
@@ -9,19 +10,21 @@ Imports Microsoft.Win32
 ''''' Routines for accessing some useful Win32 API functions to access features not
 ''''' directly accessible through .NET Framework.
 ''''' 
-''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
 ''''' Please see LICENSE.txt for full license terms, including the availability of
 ''''' proprietary exceptions.
-''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
+#Disable Warning IDE0079 ' Remove unnecessary suppression
 #Disable Warning CA1308 ' Normalize strings to uppercase
 #Disable Warning CA1060 ' Move pinvokes to native methods class
 
 Namespace IO
+#Enable Warning IDE0079 ' Remove unnecessary suppression
 
     ''' <summary>
     ''' Provides wrappers for Win32 file API. This makes it possible to open everything that
@@ -135,13 +138,13 @@ Namespace IO
             Public Const CR_NO_SUCH_VALUE As UInt32 = &H25
             Public Const CR_NO_SUCH_REGISTRY_KEY As UInt32 = &H2E
 
-            Public Shared ReadOnly SerenumBusEnumeratorGuid As New Guid("{4D36E97B-E325-11CE-BFC1-08002BE10318}")
-            Public Shared ReadOnly DiskDriveGuid As New Guid("{4D36E967-E325-11CE-BFC1-08002BE10318}")
+            Public Shared ReadOnly Property SerenumBusEnumeratorGuid As New Guid("{4D36E97B-E325-11CE-BFC1-08002BE10318}")
+            Public Shared ReadOnly Property DiskDriveGuid As New Guid("{4D36E967-E325-11CE-BFC1-08002BE10318}")
 
-            Public Shared ReadOnly DiskClassGuid As New Guid("{53F56307-B6BF-11D0-94F2-00A0C91EFB8B}")
-            Public Shared ReadOnly CdRomClassGuid As New Guid("{53F56308-B6BF-11D0-94F2-00A0C91EFB8B}")
-            Public Shared ReadOnly StoragePortClassGuid As New Guid("{2ACCFE60-C130-11D2-B082-00A0C91EFB8B}")
-            Public Shared ReadOnly ComPortClassGuid As New Guid("{86E0D1E0-8089-11D0-9CE4-08003E301F73}")
+            Public Shared ReadOnly Property DiskClassGuid As New Guid("{53F56307-B6BF-11D0-94F2-00A0C91EFB8B}")
+            Public Shared ReadOnly Property CdRomClassGuid As New Guid("{53F56308-B6BF-11D0-94F2-00A0C91EFB8B}")
+            Public Shared ReadOnly Property StoragePortClassGuid As New Guid("{2ACCFE60-C130-11D2-B082-00A0C91EFB8B}")
+            Public Shared ReadOnly Property ComPortClassGuid As New Guid("{86E0D1E0-8089-11D0-9CE4-08003E301F73}")
 
             Public Const SE_BACKUP_NAME = "SeBackupPrivilege"
             Public Const SE_RESTORE_NAME = "SeRestorePrivilege"
@@ -161,6 +164,11 @@ Namespace IO
 
             Public Const STATUS_INFO_LENGTH_MISMATCH As Integer = &HC0000004
             Public Const STATUS_OBJECT_NAME_NOT_FOUND As Integer = &HC0000034
+            Public Const STATUS_BAD_COMPRESSION_BUFFER As Integer = &HC0000242
+
+            Public Const FILE_BEGIN As Integer = 1
+            Public Const FILE_CURRENT As Integer = 1
+            Public Const FILE_END As Integer = 2
 
             Private Sub New()
             End Sub
@@ -299,6 +307,17 @@ Namespace IO
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeMountPoint As String,
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String) As Boolean
 
+            Friend Declare Function SetFilePointerEx Lib "kernel32" (
+              hFile As SafeFileHandle,
+              distance_to_move As Long,
+              <Out> ByRef new_file_pointer As Long,
+              move_method As UInt32) As Boolean
+
+            Friend Declare Function SetFilePointerEx Lib "kernel32" (
+              hFile As SafeFileHandle,
+              distance_to_move As Long,
+              ptr_new_file_pointer As IntPtr,
+              move_method As UInt32) As Boolean
 
             Friend Declare Auto Function OpenSCManager Lib "advapi32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpMachineName As String,
@@ -375,7 +394,7 @@ Namespace IO
 
             Friend Declare Auto Function GetVolumeNameForVolumeMountPoint Lib "kernel32.dll" (
               <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In](), Out> DestinationInfFileName As StringBuilder,
+              <MarshalAs(UnmanagedType.LPTStr), [In], Out> DestinationInfFileName As StringBuilder,
               DestinationInfFileNameSize As Int32) As Boolean
 
             Friend Declare Auto Function GetCommTimeouts Lib "kernel32" (
@@ -589,7 +608,7 @@ Namespace IO
 
             Friend Declare Ansi Function GetProcAddress Lib "kernel32" (
               hModule As IntPtr,
-              <[In](), MarshalAs(UnmanagedType.LPStr)> lpEntryName As String) As IntPtr
+              <[In], MarshalAs(UnmanagedType.LPStr)> lpEntryName As String) As IntPtr
 
             Friend Declare Ansi Function GetProcAddress Lib "kernel32" (
               hModule As IntPtr,
@@ -607,11 +626,22 @@ Namespace IO
             Friend Declare Function RtlNtStatusToDosError Lib "ntdll.dll" (
               NtStatus As Int32) As Int32
 
-            Friend Declare Auto Function WritePrivateProfileString Lib "kernel32" (
-              <[In](), MarshalAs(UnmanagedType.LPTStr)> SectionName As String,
-              <[In](), MarshalAs(UnmanagedType.LPTStr)> SettingName As String,
-              <[In](), MarshalAs(UnmanagedType.LPTStr)> Value As String,
-              <[In](), MarshalAs(UnmanagedType.LPTStr)> FileName As String) As Boolean
+            Friend Declare Auto Function GetPrivateProfileSectionNames Lib "kernel32.dll" (
+              <Out, MarshalAs(UnmanagedType.LPArray)> Names As Char(),
+              NamesSize As Integer,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> FileName As String) As Integer
+
+            Friend Declare Auto Function GetPrivateProfileSection Lib "kernel32.dll" (
+              <[In], MarshalAs(UnmanagedType.LPTStr)> SectionName As String,
+              <[In], MarshalAs(UnmanagedType.LPArray)> Values As Char(),
+              ValuesSize As Integer,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> FileName As String) As Integer
+
+            Friend Declare Auto Function WritePrivateProfileString Lib "kernel32.dll" (
+              <[In], MarshalAs(UnmanagedType.LPTStr)> SectionName As String,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> SettingName As String,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> Value As String,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> FileName As String) As Boolean
 
             Friend Declare Auto Sub InstallHinfSection Lib "setupapi.dll" (
               hwndOwner As IntPtr,
@@ -624,7 +654,7 @@ Namespace IO
               <MarshalAs(UnmanagedType.LPTStr), [In]> OEMSourceMediaLocation As String,
               OEMSourceMediaType As UInt32,
               CopyStyle As UInt32,
-              <MarshalAs(UnmanagedType.LPTStr), [In](), Out> DestinationInfFileName As StringBuilder,
+              <MarshalAs(UnmanagedType.LPTStr), [In], Out> DestinationInfFileName As StringBuilder,
               DestinationInfFileNameSize As Int32,
               <Out> ByRef RequiredSize As UInt32,
               DestinationInfFileNameComponent As IntPtr) As Boolean
@@ -768,7 +798,7 @@ Namespace IO
 
             Friend Declare Auto Function SetupDiOpenDeviceInfo Lib "setupapi.dll" (
               DevInfoSet As SafeDeviceInfoSetHandle,
-              <[In](), MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
               hWndParent As IntPtr,
               Flags As UInt32,
               DeviceInfoData As IntPtr) As Boolean
@@ -782,13 +812,13 @@ Namespace IO
 
             Friend Declare Auto Function SetupDiGetClassDevs Lib "setupapi.dll" (
               <[In]> ByRef ClassGuid As Guid,
-              <[In](), MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
               hWndParent As IntPtr,
               Flags As UInt32) As SafeDeviceInfoSetHandle
 
             Friend Declare Auto Function SetupDiGetClassDevs Lib "setupapi.dll" (
               ClassGuid As IntPtr,
-              <[In](), MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
+              <[In], MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
               hWndParent As IntPtr,
               Flags As UInt32) As SafeDeviceInfoSetHandle
 
@@ -919,7 +949,7 @@ Namespace IO
               hDevInfo As SafeDeviceInfoSetHandle,
               ByRef DeviceInfoData As SP_DEVINFO_DATA,
               [Property] As UInt32,
-              <[In](), MarshalAs(UnmanagedType.LPArray)> PropertyBuffer As Byte(),
+              <[In], MarshalAs(UnmanagedType.LPArray)> PropertyBuffer As Byte(),
               PropertyBufferSize As UInt32) As Boolean
 
             Friend Declare Auto Function SetupDiCallClassInstaller Lib "setupapi.dll" (
@@ -1152,8 +1182,9 @@ Namespace IO
 
 #End Region
 
-        Public Shared ReadOnly SystemArchitecture As String = GetSystemArchitecture()
-        Public Shared ReadOnly ProcessArchitecture As String = GetProcessArchitecture()
+        Public Shared ReadOnly Property SystemArchitecture As String = GetSystemArchitecture()
+
+        Public Shared ReadOnly Property ProcessArchitecture As String = GetProcessArchitecture()
 
         Private Shared Function GetSystemArchitecture() As String
 
@@ -1592,9 +1623,15 @@ Currently, the following application has files open on this volume:
 
         End Function
 
+        Private Shared ReadOnly _objectTypes As New ConcurrentDictionary(Of Byte, String)
+
         Private Shared Iterator Function EnumerateHandleTableHandleInformation(handleTable As IEnumerable(Of SystemHandleTableEntryInformation), filterObjectType As String) As IEnumerable(Of HandleTableEntryInformation)
 
             handleTable.NullCheck(NameOf(handleTable))
+
+            If filterObjectType IsNot Nothing Then
+                filterObjectType = String.Intern(filterObjectType)
+            End If
 
             Using buffer As New HGlobalBuffer(65536),
                 processHandleList = New DisposableDictionary(Of Integer, SafeFileHandle),
@@ -1604,12 +1641,17 @@ Currently, the following application has files open on this volume:
                               Sub(p) processInfoList.Add(p.Id, p))
 
                 For Each handle In handleTable
-                    If handle.ProcessId = 0 Then
-                        Continue For
-                    End If
 
+                    Dim object_type As String = Nothing
+                    Dim object_name As String = Nothing
                     Dim processInfo As Process = Nothing
-                    If Not processInfoList.TryGetValue(handle.ProcessId, processInfo) Then
+
+                    If handle.ProcessId = 0 OrElse
+                        (filterObjectType IsNot Nothing AndAlso
+                        _objectTypes.TryGetValue(handle.ObjectType, object_type) AndAlso
+                        Not ReferenceEquals(object_type, filterObjectType)) OrElse
+                        Not processInfoList.TryGetValue(handle.ProcessId, processInfo) Then
+
                         Continue For
                     End If
 
@@ -1624,6 +1666,7 @@ Currently, the following application has files open on this volume:
                     If processHandle Is Nothing Then
                         Continue For
                     End If
+
                     Dim duphandle As New SafeFileHandle(Nothing, True)
                     Dim status = UnsafeNativeMethods.NtDuplicateObject(processHandle, New IntPtr(handle.Handle), UnsafeNativeMethods.GetCurrentProcess(), duphandle, 0, 0, 0)
                     If status < 0 Then
@@ -1631,13 +1674,51 @@ Currently, the following application has files open on this volume:
                     End If
 
                     Try
-                        Dim object_type As String = Nothing
-                        Dim object_name As String = Nothing
+                        Dim newbuffersize As Integer
 
-                        Using duphandle
-                            Dim newbuffersize As Integer
+                        If object_type Is Nothing Then
+
+                            object_type = _objectTypes.GetOrAdd(
+                                handle.ObjectType,
+                                Function()
+                                    Do
+                                        Dim rc = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectTypeInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+                                        If rc < 0 AndAlso newbuffersize > buffer.ByteLength Then
+                                            buffer.Resize(newbuffersize)
+                                            Continue Do
+                                        ElseIf rc < 0 Then
+                                            Return Nothing
+                                        End If
+                                        Exit Do
+                                    Loop
+
+                                    Return String.Intern(buffer.Read(Of UNICODE_STRING)(0).ToString())
+                                End Function)
+
+                        End If
+
+                        If object_type Is Nothing OrElse (filterObjectType IsNot Nothing AndAlso
+                            Not ReferenceEquals(filterObjectType, object_type)) Then
+
+                            Continue For
+                        End If
+
+                        If handle.GrantedAccess <> &H12019F AndAlso
+                            handle.GrantedAccess <> &H120189 AndAlso
+                            handle.GrantedAccess <> &H16019F AndAlso
+                            handle.GrantedAccess <> &H1A0089 AndAlso
+                            handle.GrantedAccess <> &H1A019F AndAlso
+                            handle.GrantedAccess <> &H120089 AndAlso
+                            handle.GrantedAccess <> &H100000 Then
+
                             Do
-                                status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectTypeInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+                                _LastObjectNameQueryGrantedAccess = handle.GrantedAccess
+                                _LastObjectNameQuueryTime = SafeNativeMethods.GetTickCount64()
+
+                                status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
+
+                                _LastObjectNameQuueryTime = 0
+
                                 If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
                                     buffer.Resize(newbuffersize)
                                     Continue Do
@@ -1647,63 +1728,23 @@ Currently, the following application has files open on this volume:
                                 Exit Do
                             Loop
 
-                            Dim object_type_str = buffer.Read(Of UNICODE_STRING)(0)
+                            Dim name = buffer.Read(Of UNICODE_STRING)(0)
 
-                            If filterObjectType IsNot Nothing AndAlso
-                                object_type_str.Length <> (filterObjectType.Length << 1) Then
-
+                            If name.Length = 0 Then
                                 Continue For
                             End If
 
-                            object_type = object_type_str.ToString()
-
-                            If filterObjectType IsNot Nothing AndAlso
-                                Not filterObjectType.Equals(object_type, StringComparison.Ordinal) Then
-
-                                Continue For
-                            End If
-
-                            If handle.GrantedAccess <> &H12019F AndAlso
-                                handle.GrantedAccess <> &H120189 AndAlso
-                                handle.GrantedAccess <> &H16019F AndAlso
-                                handle.GrantedAccess <> &H1A0089 AndAlso
-                                handle.GrantedAccess <> &H1A019F AndAlso
-                                handle.GrantedAccess <> &H120089 AndAlso
-                                handle.GrantedAccess <> &H100000 Then
-
-                                Do
-                                    _LastObjectNameQueryGrantedAccess = handle.GrantedAccess
-                                    _LastObjectNameQuueryTime = SafeNativeMethods.GetTickCount64()
-
-                                    status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectNameInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
-
-                                    _LastObjectNameQuueryTime = 0
-
-                                    If status < 0 AndAlso newbuffersize > buffer.ByteLength Then
-                                        buffer.Resize(newbuffersize)
-                                        Continue Do
-                                    ElseIf status < 0 Then
-                                        Continue For
-                                    End If
-                                    Exit Do
-                                Loop
-
-                                Dim name = buffer.Read(Of UNICODE_STRING)(0)
-
-                                If name.Length = 0 Then
-                                    Continue For
-                                End If
-
-                                object_name = name.ToString()
-                            End If
-
-                        End Using
-
-                        Yield New HandleTableEntryInformation(handle, object_type, object_name, processInfo)
+                            object_name = name.ToString()
+                        End If
 
                     Catch
 
+                    Finally
+                        duphandle.Dispose()
+
                     End Try
+
+                    Yield New HandleTableEntryInformation(handle, object_type, object_name, processInfo)
                 Next
             End Using
 
@@ -2310,6 +2351,18 @@ Currently, the following application has files open on this volume:
             Win32Try(UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
 
         End Sub
+
+        Public Shared Function GetLongFullPath(path As String) As String
+
+            path = GetNtPath(path)
+
+            If path.StartsWith("\??\", StringComparison.Ordinal) Then
+                path = $"\\?\{path.Substring(4)}"
+            End If
+
+            Return path
+
+        End Function
 
         ''' <summary>
         ''' Adds a semicolon separated list of paths to the PATH environment variable of
@@ -3313,8 +3366,8 @@ Currently, the following application has files open on this volume:
 
                     Case PARTITION_STYLE.PARTITION_STYLE_MBR
                         Dim mbr As New CREATE_DISK_MBR With {
-                        .PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_MBR
-                    }
+                            .PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_MBR
+                        }
 
                         UnsafeNativeMethods.RtlGenRandom(mbr.DiskSignature, 4)
 
@@ -3325,10 +3378,10 @@ Currently, the following application has files open on this volume:
 
                     Case PARTITION_STYLE.PARTITION_STYLE_GPT
                         Dim gpt As New CREATE_DISK_GPT With {
-                        .PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_GPT,
-                        .DiskId = Guid.NewGuid(),
-                        .MaxPartitionCount = 128
-                    }
+                            .PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_GPT,
+                            .DiskId = Guid.NewGuid(),
+                            .MaxPartitionCount = 128
+                        }
 
                         buffer.Write(0, gpt)
 
@@ -3363,6 +3416,24 @@ Currently, the following application has files open on this volume:
             Else
                 Return Nothing
             End If
+
+        End Function
+
+        Public Shared Function TryParseFileTimeUtc(filetime As Long) As Date?
+
+            Static MaxFileTime As Long = Date.MaxValue.ToFileTimeUtc()
+
+            If filetime > 0 AndAlso filetime <= MaxFileTime Then
+                Return Date.FromFileTimeUtc(filetime)
+            Else
+                Return Nothing
+            End If
+
+        End Function
+
+        Public Shared Function SetFilePointer(file As SafeFileHandle, distance_to_move As Long, <Out> ByRef new_file_pointer As Long, move_method As UInteger) As Boolean
+
+            Return UnsafeNativeMethods.SetFilePointerEx(file, distance_to_move, new_file_pointer, move_method)
 
         End Function
 
@@ -6184,6 +6255,14 @@ Currently, the following application has files open on this volume:
             Public Property PartitionNumber As Int32
             Public Property BytesToGrow As Int64
         End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Public Class OVERLAPPED
+            Public ReadOnly Property Status As UIntPtr
+            Public ReadOnly Property BytesTransferred As UIntPtr
+            Public Property StartOffset As Long
+            Public Property EventHandle As SafeWaitHandle
+        End Class
 
         <StructLayout(LayoutKind.Sequential)>
         Public Structure FILE_FS_FULL_SIZE_INFORMATION
