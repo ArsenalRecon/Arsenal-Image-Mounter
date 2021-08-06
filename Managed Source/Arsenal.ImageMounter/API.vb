@@ -337,7 +337,7 @@ Public NotInheritable Class API
         Dim pdo_path = NativeFileIO.GetPhysicalDeviceObjectName(devInst)
         Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDrivePathForNtDevice(pdo_path)).FirstOrDefault()
 
-        Trace.WriteLine($"Device {pdo_path} devinst {devInst}. Registering write overlay '{nativepath}'")
+        Trace.WriteLine($"Device {pdo_path} devinst {devInst}. Registering write overlay '{nativepath}', FakeNonRemovable={FakeNonRemovable}")
 
         Using regkey = Registry.LocalMachine.CreateSubKey("SYSTEM\CurrentControlSet\Services\aimwrfltr\Parameters")
             If nativepath Is Nothing Then
@@ -357,7 +357,7 @@ Public NotInheritable Class API
 
         Dim last_error = 0
 
-        For r = 1 To 2
+        For r = 1 To 4
 
             NativeFileIO.RestartDevice(NativeFileIO.NativeConstants.DiskClassGuid, devInst)
 
@@ -370,7 +370,7 @@ Public NotInheritable Class API
             If nativepath Is Nothing AndAlso last_error = NativeFileIO.NativeConstants.NO_ERROR Then
 
                 Trace.WriteLine("Filter driver not yet unloaded, retrying...")
-                Thread.Sleep(200)
+                Thread.Sleep(300)
                 Continue For
 
             ElseIf nativepath IsNot Nothing AndAlso (last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION OrElse
@@ -378,7 +378,7 @@ Public NotInheritable Class API
                 last_error = NativeFileIO.NativeConstants.ERROR_NOT_SUPPORTED) Then
 
                 Trace.WriteLine("Filter driver not yet loaded, retrying...")
-                Thread.Sleep(200)
+                Thread.Sleep(300)
                 Continue For
 
             ElseIf (nativepath IsNot Nothing AndAlso last_error <> NativeFileIO.NativeConstants.NO_ERROR) OrElse
