@@ -179,7 +179,7 @@ Public Class ScsiAdapter
         Dim found = Aggregate devInstName In devinstNames
                     Let devinst = NativeFileIO.GetDevInst(devInstName)
                     Where devinst.HasValue
-                    Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinst.Value)
+                    Let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinst.Value)
                     Where path IsNot Nothing
                     Let handle = OpenAdapterHandle(path, devinst.Value)
                     Where handle IsNot Nothing
@@ -1005,7 +1005,7 @@ Public Class ScsiAdapter
             Return Nothing
         End If
 
-        Return NativeFileIO.GetPhysicalDrivePathForNtDevice(raw_device)
+        Return NativeFileIO.GetPhysicalDriveNameForNtDevice(raw_device)
 
     End Function
 

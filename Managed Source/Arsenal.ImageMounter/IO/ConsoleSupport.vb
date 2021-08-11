@@ -4,6 +4,9 @@ Namespace IO
 
     Public Module ConsoleSupport
 
+        Friend ReadOnly ConsoleSync As New Object
+
+        <Extension>
         Public Function LineFormat(message As String, Optional IndentWidth As Integer = 0, Optional LineWidth As Integer? = Nothing, Optional WordDelimiter As Char = " "c, Optional FillChar As Char = " "c) As String
 
             Dim Width As Integer
@@ -57,6 +60,47 @@ Namespace IO
             Return String.Join(Environment.NewLine, resultLines)
 
         End Function
+
+        Public Property WriteMsgTraceLevel As TraceLevel = TraceLevel.Info
+
+        Public Sub WriteMsg(level As TraceLevel, msg As String)
+
+            Dim color As ConsoleColor
+
+            Select Case level
+
+                Case <= TraceLevel.Off
+                    color = ConsoleColor.Cyan
+
+                Case TraceLevel.Error
+                    color = ConsoleColor.Red
+
+                Case TraceLevel.Warning
+                    color = ConsoleColor.Yellow
+
+                Case TraceLevel.Info
+                    color = ConsoleColor.Gray
+
+                Case >= TraceLevel.Verbose
+                    color = ConsoleColor.DarkGray
+
+            End Select
+
+            If level <= _WriteMsgTraceLevel Then
+
+                SyncLock ConsoleSync
+
+                    Console.ForegroundColor = color
+
+                    Console.WriteLine(msg.LineFormat())
+
+                    Console.ResetColor()
+
+                End SyncLock
+
+            End If
+
+        End Sub
 
     End Module
 

@@ -105,8 +105,10 @@
       <HintPath>DLL\Ionic.Zip.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Data" />
     <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Import Include="Microsoft.Win32.SafeHandles" />
@@ -131,10 +133,14 @@
     <Compile Include="IO\CachedIniFile.vb" />
     <Compile Include="DriverSetup.vb" />
     <Compile Include="Extensions\Extensions.vb" />
+    <Compile Include="IO\ConsoleProgressBar.vb" />
+    <Compile Include="IO\ConsoleSpinProgress.vb" />
     <Compile Include="IO\ConsoleSupport.vb" />
+    <Compile Include="IO\CsvReader.vb" />
     <Compile Include="IO\DisposableDictionary.vb" />
     <Compile Include="IO\DisposableList.vb" />
     <Compile Include="IO\FileStreamsEnumerator.vb" />
+    <Compile Include="Reflection\ExpressionSupport.vb" />
     <Compile Include="Reflection\MembersStringParser.vb" />
     <Compile Include="IO\PinnedBuffer.vb" />
     <Compile Include="IO\SystemNotificationEvent.vb" />
@@ -146,6 +152,8 @@
     <Compile Include="Flags.vb" />
     <Compile Include="API.vb" />
     <Compile Include="IO\NullSafeDictionary.vb" />
+    <Compile Include="Reflection\MembersStringSetter.vb" />
+    <Compile Include="Reflection\SequenceComparer.vb" />
     <Compile Include="ScsiAdapter.vb" />
     <Compile Include="DiskStream.vb" />
     <Compile Include="DiskDevice.vb" />

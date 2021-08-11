@@ -1,5 +1,6 @@
 ﻿Imports System.Reflection
 Imports System.Runtime.CompilerServices
+Imports System.Windows.Forms
 Imports Microsoft.Win32
 
 Namespace Extensions
@@ -218,6 +219,17 @@ Namespace Extensions
             Next
 
             Return valuestr.ToString()
+
+        End Function
+
+        <Extension>
+        Public Function GetTopMostOwner(form As Form) As Form
+
+            While form?.Owner IsNot Nothing
+                form = form.Owner
+            End While
+
+            Return form
 
         End Function
 

@@ -130,7 +130,7 @@ Namespace PSDisk
                     Return Nothing
                 End If
 
-                Return API.FormatFileSize(size.Value)
+                Return API.FormatBytes(size.Value)
             End Get
         End Property
 

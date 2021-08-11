@@ -11,13 +11,13 @@ Namespace Reflection
 
         Public Overloads Shared Function ToString(obj As T) As String
             Dim values =
-                From accessor In Accessors
+                From accessor In _accessors
                 Select $"{accessor.Key} = {TryCall(accessor.Value, obj, Function(ex) $"{{{ex.GetType()}: {ex.Message}}}")}"
 
             Return $"{{{String.Join(", ", values)}}}"
         End Function
 
-        Private Shared ReadOnly Accessors As KeyValuePair(Of String, Func(Of T, String))() = GetAccessors()
+        Private Shared ReadOnly _accessors As KeyValuePair(Of String, Func(Of T, String))() = GetAccessors()
 
         Private Shared Function TryCall(method As Func(Of T, String), param As T, handler As Func(Of Exception, String)) As String
 

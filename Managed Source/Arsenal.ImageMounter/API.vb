@@ -206,7 +206,7 @@ Public NotInheritable Class API
              {1UL << 10, " KB"},
              {2UL, " bytes"}}
 
-    Public Shared Function FormatFileSize(size As ULong) As String
+    Public Shared Function FormatBytes(size As ULong) As String
 
         For Each m In multipliers
             If size >= m.Key Then
@@ -218,11 +218,35 @@ Public NotInheritable Class API
 
     End Function
 
-    Public Shared Function FormatFileSize(size As Long) As String
+    Public Shared Function FormatBytes(size As ULong, precision As Integer) As String
+
+        For Each m In multipliers
+            If size >= m.Key Then
+                Return $"{(size / m.Key).ToString("0." & New String("0"c, precision - 1))}{m.Value}"
+            End If
+        Next
+
+        Return $"{size} byte"
+
+    End Function
+
+    Public Shared Function FormatBytes(size As Long) As String
 
         For Each m In multipliers
             If Math.Abs(size) >= m.Key Then
                 Return $"{size / m.Key:0.000}{m.Value}"
+            End If
+        Next
+
+        Return $"{size} byte"
+
+    End Function
+
+    Public Shared Function FormatBytes(size As Long, precision As Integer) As String
+
+        For Each m In multipliers
+            If size >= m.Key Then
+                Return $"{(size / m.Key).ToString("0." & New String("0"c, precision - 1))}{m.Value}"
             End If
         Next
 
@@ -294,7 +318,7 @@ Public NotInheritable Class API
 
         Return _
             From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
-            Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
+            Let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
             Where Not String.IsNullOrWhiteSpace(path)
             Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
             Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)
@@ -306,7 +330,7 @@ Public NotInheritable Class API
 
         Return _
             From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
-            Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
+            Let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
             Where Not String.IsNullOrWhiteSpace(path)
             Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
             Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)
@@ -334,8 +358,8 @@ Public NotInheritable Class API
             nativepath = Nothing
         End If
 
-        Dim pdo_path = NativeFileIO.GetPhysicalDeviceObjectName(devInst)
-        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDrivePathForNtDevice(pdo_path)).FirstOrDefault()
+        Dim pdo_path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devInst)
+        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDriveNameForNtDevice(pdo_path)).FirstOrDefault()
 
         Trace.WriteLine($"Device {pdo_path} devinst {devInst}. Registering write overlay '{nativepath}', FakeNonRemovable={FakeNonRemovable}")
 
@@ -427,7 +451,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
         For Each dev In
             From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
-            Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
+            Let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
             Where Not String.IsNullOrWhiteSpace(path)
             Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
             Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)

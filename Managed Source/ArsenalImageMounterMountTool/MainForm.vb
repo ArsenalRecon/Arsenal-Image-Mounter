@@ -483,7 +483,7 @@ Public Class MainForm
                     Function()
 
                         Dim pdo_path = API.EnumeratePhysicalDeviceObjectPaths(Adapter.DeviceInstance, DeviceItem.DeviceProperties.DeviceNumber).FirstOrDefault()
-                        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDrivePathForNtDevice(pdo_path)).FirstOrDefault()
+                        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDriveNameForNtDevice(pdo_path)).FirstOrDefault()
 
                         Dim processes = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Select(AddressOf NativeFileIO.FormatProcessName)
 

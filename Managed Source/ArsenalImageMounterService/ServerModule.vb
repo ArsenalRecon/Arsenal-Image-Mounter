@@ -686,10 +686,10 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             For Each dev In
                 From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter.Value)
-                Let path = NativeFileIO.GetPhysicalDeviceObjectName(devinstChild)
+                Let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
                 Where Not String.IsNullOrWhiteSpace(path)
                 Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
-                Let physical_drive_path = NativeFileIO.GetPhysicalDrivePathForNtDevice(path)
+                Let physical_drive_path = NativeFileIO.GetPhysicalDriveNameForNtDevice(path)
 
                 Console.WriteLine($"SCSI address {dev.address} found at {dev.path} devinst {dev.devinstChild} ({dev.physical_drive_path}).")
 

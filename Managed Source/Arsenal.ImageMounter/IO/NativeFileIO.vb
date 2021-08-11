@@ -1843,6 +1843,35 @@ Currently, the following application has files open on this volume:
         ''' <param name="DesiredAccess">File access to request.</param>
         ''' <param name="ShareMode">Share mode to request.</param>
         ''' <param name="CreationDisposition">Open/creation mode.</param>
+        ''' <param name="SecurityAttributes"></param>
+        ''' <param name="FlagsAndAttributes"></param>
+        ''' <param name="TemplateFile"></param>
+        Public Shared Function CreateFile(
+              FileName As String,
+              DesiredAccess As UInt32,
+              ShareMode As FileShare,
+              SecurityAttributes As IntPtr,
+              CreationDisposition As UInt32,
+              FlagsAndAttributes As Int32,
+              TemplateFile As IntPtr) As SafeFileHandle
+
+            Dim handle = UnsafeNativeMethods.CreateFile(FileName, DesiredAccess, ShareMode, SecurityAttributes, CreationDisposition, FlagsAndAttributes, TemplateFile)
+
+            If handle.IsInvalid Then
+                Throw New IOException($"Cannot open {FileName}", New Win32Exception)
+            End If
+
+            Return handle
+
+        End Function
+
+        ''' <summary>
+        ''' Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
+        ''' </summary>
+        ''' <param name="FileName">Name of file to open.</param>
+        ''' <param name="DesiredAccess">File access to request.</param>
+        ''' <param name="ShareMode">Share mode to request.</param>
+        ''' <param name="CreationDisposition">Open/creation mode.</param>
         ''' <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
         Public Shared Function OpenFileHandle(
           FileName As String,
@@ -2594,7 +2623,7 @@ Currently, the following application has files open on this volume:
         ''' Retrieves PhysicalDrive or CdRom path for NT raw device path
         ''' </summary>
         ''' <param name="ntdevice">NT device path, such as \Device\00000001.</param>
-        Public Shared Function GetPhysicalDrivePathForNtDevice(ntdevice As String) As String
+        Public Shared Function GetPhysicalDriveNameForNtDevice(ntdevice As String) As String
 
             Using hDevice = NtCreateFile(ntdevice, 0, 0, FileShare.ReadWrite, NtCreateDisposition.Open, 0, 0, Nothing, Nothing)
 
@@ -2740,7 +2769,7 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Public Shared Function GetProcAddressNoThrow(moduleName As String, procedureName As String, delegateType As Type) As [Delegate]
+        Public Shared Function GetProcAddressNoThrow(moduleName As String, procedureName As String) As IntPtr
 
             Dim hModule = UnsafeNativeMethods.LoadLibrary(moduleName)
 
@@ -2748,7 +2777,13 @@ Currently, the following application has files open on this volume:
                 Return Nothing
             End If
 
-            Dim fptr = UnsafeNativeMethods.GetProcAddress(hModule, procedureName)
+            Return UnsafeNativeMethods.GetProcAddress(hModule, procedureName)
+
+        End Function
+
+        Public Shared Function GetProcAddressNoThrow(moduleName As String, procedureName As String, delegateType As Type) As [Delegate]
+
+            Dim fptr = GetProcAddressNoThrow(moduleName, procedureName)
 
             If fptr = Nothing Then
                 Return Nothing
@@ -4106,7 +4141,7 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Public Shared Function GetPhysicalDeviceObjectName(devInstName As String) As String
+        Public Shared Function GetPhysicalDeviceObjectNtPath(devInstName As String) As String
 
             Dim devinst = GetDevInst(devInstName)
 
@@ -4114,11 +4149,11 @@ Currently, the following application has files open on this volume:
                 Return Nothing
             End If
 
-            Return GetPhysicalDeviceObjectName(devinst.Value)
+            Return GetPhysicalDeviceObjectNtPath(devinst.Value)
 
         End Function
 
-        Public Shared Function GetPhysicalDeviceObjectName(devInst As UInt32) As String
+        Public Shared Function GetPhysicalDeviceObjectNtPath(devInst As UInt32) As String
 
             Dim regtype As RegistryValueKind = Nothing
 
