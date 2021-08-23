@@ -472,6 +472,18 @@ Namespace Server.Services
         End Function
 
         ''' <summary>
+        ''' Deletes the write overlay image file after use. Also sets this filter driver to
+        ''' silently ignore flush requests to improve performance when integrity of the write
+        ''' overlay image is not needed for future sessions.
+        ''' </summary>
+        ''' <returns>Returns 0 on success or Win32 error code on failure</returns>
+        Public Function SetWriteOverlayDeleteOnClose() As Integer
+            Using disk = OpenDiskDevice(FileAccess.ReadWrite)
+                Return API.SetWriteOverlayDeleteOnClose(disk.SafeFileHandle)
+            End Using
+        End Function
+
+        ''' <summary>
         ''' Indicates whether Arsenal Image Mounter Disk Device created by this instance will be automatically
         ''' forcefully removed if a crash occurs in service thread of this instance. Default is True.
         ''' </summary>

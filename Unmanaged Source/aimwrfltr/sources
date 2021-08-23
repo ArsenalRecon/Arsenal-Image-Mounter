@@ -35,26 +35,27 @@ C_DEFINES=$(C_DEFINES) -D_NT_TARGET_VERSION=$(_NT_TARGET_VERSION)
 ##_NT_TARGET_VERSION_WIN7 =0x601
 ##!endif
 
-TARGETLIBS=$(TARGETLIBS)                                                                    \
-           $(DDK_LIB_PATH)\hal.lib                                                          \
-           $(DDK_LIB_PATH)\ntoskrnl.lib                                                     \
+TARGETLIBS=$(TARGETLIBS)                	\
+           $(DDK_LIB_PATH)\hal.lib          \
+           $(DDK_LIB_PATH)\ntoskrnl.lib     \
            $(DDK_LIB_PATH)\wdm.lib
 
-INCLUDES=.\inc;                 \
-	   $(PUBLIC_ROOT)\ddk\inc; \
-	   ..\inc;              \
+INCLUDES=.\inc;               	\
+	   $(PUBLIC_ROOT)\ddk\inc; 	\
+	   ..\inc;              	\
 	   ..\phdskmnt\inc
 
 
 DRIVERTYPE=WDM
 
 SOURCES = mainwdm.cpp		\
-          ioctl.cpp		\
+          ioctl.cpp			\
           ioctldbg.cpp		\
           partialirp.cpp	\
           aimwrfltr.rc		\
-          read.cpp		\
-	  write.cpp
+          read.cpp			\
+		  write.cpp			\
+		  workerthread.cpp
 
 !IF "$(NTDEBUG)" == "ntsd"
 #SOURCES = $(SOURCES) debug.cpp

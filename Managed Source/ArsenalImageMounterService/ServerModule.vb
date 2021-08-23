@@ -11,10 +11,12 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.ComponentModel
 Imports System.Globalization
 Imports System.Reflection
 Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
+Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.Devio.Server.Services
@@ -229,79 +231,115 @@ Please see EULA.txt for license information.")
         Dim force_dismount As Boolean
         Dim detach_event As SafeWaitHandle = Nothing
         Dim fake_mbr As Boolean
+        Dim auto_delete As Boolean
 
-        For Each arg In args
-            If arg.Equals("/trace", StringComparison.OrdinalIgnoreCase) Then
-                Trace.Listeners.Add(New ConsoleTraceListener(True))
+        Dim commands = ParseCommandLine(args, StringComparer.OrdinalIgnoreCase)
+
+        For Each command In commands
+
+            Dim arg = command.Key
+
+            If arg.Equals("trace", StringComparison.OrdinalIgnoreCase) Then
+                If command.Value.Length = 0 Then
+                    If commands.ContainsKey("detach") Then
+                        Console.WriteLine("Switches /trace and /background cannot be combined")
+                        Return -1
+                    End If
+                    Trace.Listeners.Add(New ConsoleTraceListener(True))
+                Else
+                    For Each tracefilename In command.Value
+                        Dim tracefile = New StreamWriter(tracefilename, append:=True) With {.AutoFlush = True}
+                        Trace.Listeners.Add(New TextWriterTraceListener(tracefile))
+                    Next
+                End If
                 verbose = True
-                'ElseIf arg.StartsWith("/filever=", StringComparison.OrdinalIgnoreCase) Then
-                '    Dim fileverpath = arg.Substring("/filever=".Length)
-                '    Console.WriteLine(NativeFileIO.GetFileVersion(fileverpath).ToString())
-            ElseIf arg.StartsWith("/trace=", StringComparison.OrdinalIgnoreCase) Then
-                Dim tracefile = New StreamWriter(arg.Substring("/trace=".Length), append:=True) With {.AutoFlush = True}
-                Trace.Listeners.Add(New TextWriterTraceListener(tracefile))
-                verbose = True
-            ElseIf arg.StartsWith("/name=", StringComparison.OrdinalIgnoreCase) Then
-                ObjectName = arg.Substring("/name=".Length)
-            ElseIf arg.StartsWith("/ipaddress=", StringComparison.OrdinalIgnoreCase) Then
-                listen_address = IPAddress.Parse(arg.Substring("/ipaddress=".Length))
-            ElseIf arg.StartsWith("/port=", StringComparison.OrdinalIgnoreCase) Then
-                listen_port = Integer.Parse(arg.Substring("/port=".Length))
-            ElseIf arg.StartsWith("/buffersize=", StringComparison.OrdinalIgnoreCase) Then
-                buffer_size = Long.Parse(arg.Substring("/buffersize=".Length))
-            ElseIf arg.StartsWith("/filename=", StringComparison.OrdinalIgnoreCase) Then
-                image_path = arg.Substring("/filename=".Length)
-            ElseIf arg.StartsWith("/provider=", StringComparison.OrdinalIgnoreCase) Then
-                provider_name = arg.Substring("/provider=".Length)
-            ElseIf arg.Equals("/readonly", StringComparison.OrdinalIgnoreCase) Then
+            ElseIf arg.Equals("name", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                ObjectName = command.Value(0)
+            ElseIf arg.Equals("ipaddress", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                listen_address = IPAddress.Parse(command.Value(0))
+            ElseIf arg.Equals("port", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                listen_port = Integer.Parse(command.Value(0))
+            ElseIf arg.Equals("buffersize", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                buffer_size = Long.Parse(command.Value(0))
+            ElseIf arg.Equals("filename", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                image_path = command.Value(0)
+            ElseIf arg.Equals("provider", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                provider_name = command.Value(0)
+            ElseIf arg.Equals("readonly", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
                 disk_access = FileAccess.Read
-            ElseIf arg.Equals("/fakesig", StringComparison.OrdinalIgnoreCase) Then
+            ElseIf arg.Equals("fakesig", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
                 device_flags = device_flags Or DeviceFlags.FakeDiskSignatureIfZero
-            ElseIf arg.Equals("/fakembr", StringComparison.OrdinalIgnoreCase) Then
+            ElseIf arg.Equals("fakembr", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
                 fake_mbr = True
-            ElseIf arg.StartsWith("/writeoverlay=", StringComparison.OrdinalIgnoreCase) Then
-                write_overlay_image_file = arg.Substring("/writeoverlay=".Length)
+            ElseIf arg.Equals("writeoverlay", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                write_overlay_image_file = command.Value(0)
                 disk_access = FileAccess.Read
                 device_flags = device_flags Or DeviceFlags.ReadOnly Or DeviceFlags.WriteOverlay
-            ElseIf arg.Equals("/mount", StringComparison.OrdinalIgnoreCase) Then
+            ElseIf arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
+                If Not commands.ContainsKey("writeoverlay") Then
+                    show_help = True
+                    Exit For
+                End If
+                auto_delete = True
+            ElseIf arg.Equals("mount", StringComparison.OrdinalIgnoreCase) Then
                 mount = True
-            ElseIf arg.Equals("/mount:removable", StringComparison.OrdinalIgnoreCase) Then
-                mount = True
-                device_flags = device_flags Or DeviceFlags.Removable
-            ElseIf arg.Equals("/mount:cdrom", StringComparison.OrdinalIgnoreCase) Then
-                mount = True
-                device_flags = device_flags Or DeviceFlags.DeviceTypeCD
-            ElseIf arg.StartsWith("/convert=", StringComparison.OrdinalIgnoreCase) Then
-                output_image = arg.Substring("/convert=".Length)
+                For Each opt In command.Value
+                    If opt.Equals("removable", StringComparison.OrdinalIgnoreCase) Then
+                        device_flags = device_flags Or DeviceFlags.Removable
+                    ElseIf opt.Equals("cdrom", StringComparison.OrdinalIgnoreCase) Then
+                        device_flags = device_flags Or DeviceFlags.DeviceTypeCD
+                    Else
+                        Console.WriteLine($"Invalid mount option: '{opt}'")
+                        Return -1
+                    End If
+                Next
+            ElseIf arg.Equals("convert", StringComparison.OrdinalIgnoreCase) OrElse
+                arg.Equals("saveas", StringComparison.OrdinalIgnoreCase) Then
+
+                Dim targetcount = If(commands.ContainsKey("convert"), commands("convert").Length, 0) +
+                    If(commands.ContainsKey("saveas"), commands("saveas").Length, 0)
+
+                If targetcount <> 1 Then
+                    show_help = True
+                    Exit For
+                End If
+
+                output_image = command.Value(0)
                 disk_access = FileAccess.Read
-            ElseIf arg.StartsWith("/saveas=", StringComparison.OrdinalIgnoreCase) Then
-                output_image = arg.Substring("/saveas=".Length)
-                disk_access = FileAccess.Read
-            ElseIf arg.StartsWith("/variant=", StringComparison.OrdinalIgnoreCase) Then
-                output_image_variant = arg.Substring("/variant=".Length)
-            ElseIf arg.StartsWith("/libewfoutput=", StringComparison.OrdinalIgnoreCase) Then
-                libewf_debug_output = arg.Substring("/libewfoutput=".Length)
-            ElseIf arg.StartsWith("/debugcompare=", StringComparison.OrdinalIgnoreCase) Then
-                debug_compare = arg.Substring("/debugcompare=".Length)
-            ElseIf arg.Equals("/dismount", StringComparison.OrdinalIgnoreCase) Then
-                dismount = "*"
-            ElseIf arg.StartsWith("/dismount=", StringComparison.OrdinalIgnoreCase) Then
-                dismount = arg.Substring("/dismount=".Length)
-            ElseIf arg.Equals("/force", StringComparison.OrdinalIgnoreCase) Then
+            ElseIf arg.Equals("variant", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                output_image_variant = command.Value(0)
+            ElseIf arg.Equals("libewfoutput", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                libewf_debug_output = command.Value(0)
+            ElseIf arg.Equals("debugcompare", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                debug_compare = command.Value(0)
+            ElseIf arg.Equals("dismount", StringComparison.OrdinalIgnoreCase) Then
+                If command.Value.Length = 0 Then
+                    dismount = "*"
+                ElseIf command.Value.Length = 1 Then
+                    dismount = command.Value(0)
+                Else
+                    show_help = True
+                    Exit For
+                End If
+            ElseIf arg.Equals("force", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
                 force_dismount = True
-            ElseIf arg.StartsWith("/detach=", StringComparison.OrdinalIgnoreCase) Then
-                detach_event = New SafeWaitHandle(New IntPtr(Integer.Parse(arg.Substring("/detach=".Length), NumberFormatInfo.InvariantInfo)), ownsHandle:=True)
-            ElseIf arg = "/?" OrElse arg.Equals("/help", StringComparison.OrdinalIgnoreCase) Then
+            ElseIf arg.Equals("detach", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
+                detach_event = New SafeWaitHandle(New IntPtr(Long.Parse(command.Value(0), NumberFormatInfo.InvariantInfo)), ownsHandle:=True)
+            ElseIf arg.Length = 0 OrElse arg.Equals("?", StringComparison.Ordinal) OrElse arg.Equals("help", StringComparison.OrdinalIgnoreCase) Then
                 show_help = True
                 Exit For
-            ElseIf arg.Equals("/version", StringComparison.OrdinalIgnoreCase) Then
+            ElseIf arg.Equals("version", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
                 ShowVersionInfo()
                 Return 0
-            ElseIf arg.Equals("/list", StringComparison.OrdinalIgnoreCase) Then
+            ElseIf arg.Equals("list", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
                 ListDevices()
                 Return 0
+            ElseIf arg.Length = 0 Then
+                Console.WriteLine($"Unsupported command line argument: {command.Value.FirstOrDefault()}")
+                show_help = True
+                Exit For
             Else
-                Console.WriteLine($"Unsupported switch: {arg}")
+                Console.WriteLine($"Unsupported command line switch: /{arg}")
                 show_help = True
                 Exit For
             End If
@@ -315,7 +353,7 @@ Please see EULA.txt for license information.")
 
             Dim providers = String.Join("|", DevioServiceFactory.InstalledProvidersByNameAndFileAccess.Keys)
 
-            Dim msg = "aim_cli.
+            Dim msg = $"{asmname}.
 
 Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to the Arsenal 
 Image Mounter virtual SCSI miniport driver.
@@ -325,22 +363,22 @@ Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User L
 Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01) or AFF4 forensic disk images, you must make the Libewf (libewf.dll) and LibAFF4 (libaff4.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-original mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
-aim_cli.exe /mount[:removable|:cdrom] [/buffersize=bytes] [/readonly] [/fakesig] [/fakembr] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/writeoverlay=differencingimagefile] [/background]
+aim_cli.exe /mount[=removable|cdrom] [/buffersize=bytes] [/readonly] [/fakesig] [/fakembr] /filename=imagefilename /provider={providers} [/writeoverlay=differencingimagefile [/autodelete]] [/background]
 
 Syntax to start shared memory service mode, for mounting from other applications:
-aim_cli.exe /name=objectname [/buffersize=bytes] [/readonly] [/fakembr] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/background]
+aim_cli.exe /name=objectname [/buffersize=bytes] [/readonly] [/fakembr] /filename=imagefilename /provider={providers} [/background]
 
 Syntax to start TCP/IP service mode, for mounting from other computers:
-aim_cli.exe [/ipaddress=listenaddress] /port=tcpport [/readonly] [/fakembr] /filename=imagefilename /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None [/background]
+aim_cli.exe [/ipaddress=listenaddress] /port=tcpport [/readonly] [/fakembr] /filename=imagefilename /provider={providers} [/background]
 
 Syntax to convert a disk image without mounting:
-aim_cli.exe /filename=imagefilename [/fakembr] /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
+aim_cli.exe /filename=imagefilename [/fakembr] /provider={providers} /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
 
-Syntax to save a new disk image after mounting:
+Syntax to save as a new disk image after mounting:
 aim_cli.exe /device=devicenumber /saveas=outputimagefilename [/variant=fixed|dynamic] [/background]
 
 Syntax to save a physical disk as an image file:
-aim_cli.exe /device=\\?\PhysicalDriveN /provider=DiscUtils|LibEWF|LibAFF4|MultipartRaw|None /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
+aim_cli.exe /device=\\?\PhysicalDriveN /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
 
 Syntax to dismount a mounted device:
 aim_cli.exe /dismount[=devicenumber] [/force]
@@ -514,11 +552,19 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
                 adapter = New ScsiAdapter
 
             Catch ex As Exception
+                Trace.WriteLine($"Failed to open SCSI adapter: {ex.JoinMessages()}")
                 Throw New IOException("Cannot access Arsenal Image Mounter driver. Check that the driver is installed and that you are running this application with administrative privileges.")
 
             End Try
 
             service.StartServiceThreadAndMount(adapter, device_flags)
+
+            If auto_delete Then
+                Dim rc = service.SetWriteOverlayDeleteOnClose()
+                If rc <> NativeFileIO.NativeConstants.NO_ERROR Then
+                    Console.WriteLine($"Failed to set auto-delete for write overlay image ({rc}): {New Win32Exception(rc).Message}")
+                End If
+            End If
 
             Try
                 Dim device_name = $"\\?\{service.GetDiskDeviceName()}"
@@ -616,11 +662,15 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                 Console.WriteLine($"Converting to new image file '{outputImage}'...")
 
+                Dim completionPosition As CompletionPosition = Nothing
+
                 If detachEvent IsNot Nothing Then
 
                     CloseConsole(detachEvent)
 
                 Else
+
+                    completionPosition = New CompletionPosition
 
                     AddHandler Console.CancelKeyPress,
                         Sub(sender, e)
@@ -641,20 +691,48 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                 Dim image_type = Path.GetExtension(outputImage).TrimStart("."c).ToUpperInvariant()
 
-                Select Case image_type
+                Dim t = Task.Factory.StartNew(
+                    Sub()
 
-                    Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN", "001"
-                        provider.ConvertToRawImage(outputImage, OutputImageVariant, cancel.Token)
+                        Select Case image_type
 
-                    Case "E01"
-                        provider.ConvertToLibEwfImage(outputImage, cancel.Token)
+                            Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN", "001"
+                                provider.ConvertToRawImage(outputImage, OutputImageVariant, completionPosition, cancel.Token)
 
-                    Case Else
-                        provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, cancel.Token)
+                            Case "E01"
+                                provider.ConvertToLibEwfImage(outputImage, completionPosition, cancel.Token)
 
-                End Select
+                            Case Else
+                                provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, completionPosition, cancel.Token)
 
-                Console.WriteLine($"Image converted successfully.")
+                        End Select
+
+                    End Sub, cancel.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default)
+
+                If completionPosition Is Nothing Then
+
+                    t.Wait()
+
+                Else
+
+                    Dim update_time = TimeSpan.FromMilliseconds(400)
+
+                    Try
+                        Do Until t.Wait(update_time)
+
+                            Dim percent = 100D * completionPosition.LengthComplete / provider.Length
+                            Console.Write($"Converting ({percent:0.0}%)...{Microsoft.VisualBasic.vbCr}")
+
+                        Loop
+
+                    Finally
+                        Console.WriteLine()
+
+                    End Try
+
+                    Console.WriteLine("Image converted successfully.")
+
+                End If
 
             End Using
 

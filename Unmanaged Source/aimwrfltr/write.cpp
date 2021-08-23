@@ -173,10 +173,6 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         return status;
     }
 
-    Irp->IoStatus.Information = io_stack->Parameters.Write.Length;
-    Irp->IoStatus.Status = STATUS_SUCCESS;
-    IoCompleteRequest(Irp, IO_DISK_INCREMENT);
-
     AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
         current_irql);
 
@@ -186,6 +182,10 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     AIMWrFltrReleaseLock(&lock_handle, &current_irql);
 
     KeSetEvent(&device_extension->ListEvent, 0, FALSE);
+
+    Irp->IoStatus.Information = io_stack->Parameters.Write.Length;
+    Irp->IoStatus.Status = STATUS_SUCCESS;
+    IoCompleteRequest(Irp, IO_DISK_INCREMENT);
 
     return STATUS_SUCCESS;
 #endif
@@ -252,7 +252,7 @@ PUCHAR BlockBuffer)
         ULONG bytes_this_iter = io_stack->Parameters.Write.Length -
             length_done;
 
-        if ((page_offset_this_iter + bytes_this_iter) > DIFF_BLOCK_SIZE)
+        if ((page_offset_this_iter + bytes_this_iter) > (ULONG)DIFF_BLOCK_SIZE)
         {
             bytes_this_iter = DIFF_BLOCK_SIZE - page_offset_this_iter;
         }
@@ -504,10 +504,10 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         AIMWrFltrReleaseLock(&lock_handle, &current_irql);
 
-        IoReleaseRemoveLock(&device_extension->RemoveLock, cached_irp);
-
         Irp->IoStatus.Status = STATUS_SUCCESS;
         IoCompleteRequest(Irp, IO_DISK_INCREMENT);
+
+        IoReleaseRemoveLock(&device_extension->RemoveLock, cached_irp);
 
         delete cached_irp;
 

@@ -16,7 +16,7 @@ Namespace Server.Interaction
         Private Sub New()
         End Sub
 
-        Friend Shared ReadOnly Property DiscUtilsInitialized As Boolean = DevioServiceFactory.DiscUtilsInitialized
+        Public Shared ReadOnly Property DiscUtilsInitialized As Boolean = DevioServiceFactory.DiscUtilsInitialized
 
         Public Shared Sub InitializeVirtualDisk(disk As VirtualDisk, discutils_geometry As Geometry, partition_style As NativeFileIO.PARTITION_STYLE, file_system As InitializeFileSystem, label As String)
 

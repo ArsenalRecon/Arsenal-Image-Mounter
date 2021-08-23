@@ -51,13 +51,16 @@ Namespace Server.GenericProviders
                 End If
 
                 Try
-                    foundfiles =
-                        Directory.GetFiles(dir_name, dir_pattern)
+                    foundfiles = Directory.GetFiles(dir_name, dir_pattern)
 
                 Catch ex As Exception
                     Throw New Exception($"Failed enumerating files '{dir_pattern}' in directory '{dir_name}'", ex)
 
                 End Try
+
+                For i = 0 To foundfiles.Length - 1
+                    foundfiles(i) = Path.GetFullPath(foundfiles(i))
+                Next
 
                 Array.Sort(foundfiles, StringComparer.Ordinal)
 
@@ -78,18 +81,18 @@ Namespace Server.GenericProviders
         End Function
 
         <Extension>
-        Public Sub ConvertToDiscUtilsImage(provider As IDevioProvider, outputImage As String, type As String, OutputImageVariant As String, cancel As CancellationToken)
+        Public Sub ConvertToDiscUtilsImage(provider As IDevioProvider, outputImage As String, type As String, OutputImageVariant As String, completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Using builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize)), Nothing)
 
-                provider.WriteToSkipEmptyBlocks(builder.Content, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=Nothing, cancel:=cancel)
+                provider.WriteToSkipEmptyBlocks(builder.Content, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=Nothing, completionPosition:=completionPosition, cancel:=cancel)
 
             End Using
 
         End Sub
 
         <Extension>
-        Public Sub ConvertToRawImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, cancel As CancellationToken)
+        Public Sub ConvertToRawImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Using target As New FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageConversionIoBufferSize)
 
@@ -105,14 +108,14 @@ Namespace Server.GenericProviders
 
                 End If
 
-                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=Nothing, cancel:=cancel)
+                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=Nothing, completionPosition:=completionPosition, cancel:=cancel)
 
             End Using
 
         End Sub
 
         <Extension>
-        Public Sub ConvertToLibEwfImage(provider As IDevioProvider, outputImage As String, cancel As CancellationToken)
+        Public Sub ConvertToLibEwfImage(provider As IDevioProvider, outputImage As String, completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Dim imaging_parameters As New DevioProviderLibEwf.ImagingParameters With {
                 .MediaSize = CULng(provider.Length),
@@ -145,7 +148,7 @@ Namespace Server.GenericProviders
 
                 Using stream As New Client.DevioDirectStream(target, ownsProvider:=False)
 
-                    provider.WriteToSkipEmptyBlocks(stream, ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=hashes, cancel:=cancel)
+                    provider.WriteToSkipEmptyBlocks(stream, ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=hashes, completionPosition:=completionPosition, cancel:=cancel)
 
                 End Using
 
@@ -158,7 +161,7 @@ Namespace Server.GenericProviders
         End Sub
 
         <Extension>
-        Public Sub WriteToSkipEmptyBlocks(source As IDevioProvider, target As Stream, buffersize As Integer, skipWriteZeroBlocks As Boolean, hashResults As Dictionary(Of String, Byte()), cancel As CancellationToken)
+        Public Sub WriteToSkipEmptyBlocks(source As IDevioProvider, target As Stream, buffersize As Integer, skipWriteZeroBlocks As Boolean, hashResults As Dictionary(Of String, Byte()), completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Using hashProviders As New DisposableDictionary(Of String, HashAlgorithm)(StringComparer.OrdinalIgnoreCase)
 
@@ -203,6 +206,10 @@ Namespace Server.GenericProviders
                     Parallel.ForEach(hashProviders.Values, Function(hashProvider) hashProvider.TransformBlock(buffer, 0, count, Nothing, 0))
 
                     source_position += count
+
+                    If completionPosition IsNot Nothing Then
+                        completionPosition.LengthComplete = source_position
+                    End If
 
                     If skipWriteZeroBlocks AndAlso Array.TrueForAll(buffer, is_zero_byte) Then
 

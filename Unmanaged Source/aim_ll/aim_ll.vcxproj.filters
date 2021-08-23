@@ -24,13 +24,13 @@
     <ClInclude Include="..\aimapi\aimapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\aimwrfltr\fltstats.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\imdisk\inc\imdisk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\aimapi\winstrct.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\aimwrfltr\inc\fltstats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

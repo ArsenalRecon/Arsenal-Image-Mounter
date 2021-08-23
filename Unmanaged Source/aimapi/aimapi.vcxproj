@@ -311,7 +311,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\imdisk\inc\imdisk.h" />
-    <ClInclude Include="..\aimwrfltr\fltstats.h" />
+    <ClInclude Include="..\aimwrfltr\inc\fltstats.h" />
     <ClInclude Include="..\phdskmnt\inc\phdskmntver.h" />
     <ClInclude Include="aimapi.h" />
     <ClInclude Include="stdafx.h" />

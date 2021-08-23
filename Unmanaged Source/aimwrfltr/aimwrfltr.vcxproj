@@ -552,12 +552,13 @@
     <ClCompile Include="mainwdm.cpp" />
     <ClCompile Include="partialirp.cpp" />
     <ClCompile Include="read.cpp" />
+    <ClCompile Include="workerthread.cpp" />
     <ClCompile Include="write.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\phdskmnt\inc\phdskmntver.h" />
-    <ClInclude Include="fltstats.h" />
     <ClInclude Include="aimwrfltr.h" />
+    <ClInclude Include="inc\fltstats.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="aimwrfltr.rc" />

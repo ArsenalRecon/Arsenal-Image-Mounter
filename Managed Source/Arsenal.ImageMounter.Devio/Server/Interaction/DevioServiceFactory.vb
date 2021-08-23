@@ -429,14 +429,16 @@ Namespace Server.Interaction
             GetType(Raw.Disk).Assembly
         }
 
-        Friend Shared ReadOnly Property DiscUtilsInitialized As Boolean = InitializeDiscUtils()
+        Public Shared ReadOnly Property DiscUtilsInitialized As Boolean = InitializeDiscUtils()
 
         Private Shared Function InitializeDiscUtils() As Boolean
+            Dim done = False
             For Each asm In DiscUtilsAssemblies.Distinct()
                 Trace.WriteLine($"Registering DiscUtils assembly '{asm.FullName}'...")
                 Setup.SetupHelper.RegisterAssembly(asm)
+                done = True
             Next
-            Return True
+            Return done
         End Function
 
         ''' <summary>
