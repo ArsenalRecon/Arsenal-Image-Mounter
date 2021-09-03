@@ -160,9 +160,14 @@ Namespace IO
             Public Const TOKEN_QUERY As UInteger = &H8
             Public Const TOKEN_ADJUST_PRIVILEGES = &H20
 
+            Public Const KEY_READ As Integer = &H20019
+            Public Const REG_OPTION_BACKUP_RESTORE As Integer = &H4
+
             Public Const SE_PRIVILEGE_ENABLED As Integer = &H2
 
             Public Const STATUS_INFO_LENGTH_MISMATCH As Integer = &HC0000004
+            Public Const STATUS_BUFFER_TOO_SMALL As Integer = &HC0000023
+            Public Const STATUS_BUFFER_OVERFLOW As Integer = &H80000005
             Public Const STATUS_OBJECT_NAME_NOT_FOUND As Integer = &HC0000034
             Public Const STATUS_BAD_COMPRESSION_BUFFER As Integer = &HC0000242
 
@@ -175,7 +180,6 @@ Namespace IO
 
         End Class
 
-        <SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")>
         Public NotInheritable Class SafeNativeMethods
 
             Public Declare Auto Function AllocConsole Lib "kernel32.dll" (
@@ -1023,6 +1027,12 @@ Namespace IO
               <[In], MarshalAs(UnmanagedType.LPTStr)> lpName As String,
               <Out> ByRef lpLuid As Int64) As Boolean
 
+            Friend Declare Auto Function OpenThreadToken Lib "advapi32.dll" (
+              <[In]> hThread As IntPtr,
+              <[In]> dwAccess As UInteger,
+              <[In]> openAsSelf As Boolean,
+              <Out> ByRef lpTokenHandle As SafeFileHandle) As Boolean
+
             Friend Declare Auto Function OpenProcessToken Lib "advapi32.dll" (
               <[In]> hProcess As IntPtr,
               <[In]> dwAccess As UInteger,
@@ -1067,6 +1077,8 @@ Namespace IO
 
             Friend Declare Unicode Function GetCurrentProcess Lib "kernel32.dll" () As IntPtr
 
+            Friend Declare Unicode Function GetCurrentThread Lib "kernel32.dll" () As IntPtr
+
             Friend Declare Unicode Function OpenProcess Lib "kernel32.dll" (
               <[In]> DesiredAccess As UInteger,
               <[In]> InheritHandle As Boolean,
@@ -1076,6 +1088,7 @@ Namespace IO
 
             Friend Declare Auto Function MoveFile Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPTStr), [In]> existing As String, <MarshalAs(UnmanagedType.LPTStr), [In]> newname As String) As Boolean
 
+            Friend Declare Auto Function RtlCompareMemoryUlong Lib "ntdll.dll" (<MarshalAs(UnmanagedType.LPArray), [In]> buffer As Byte(), length As IntPtr, v As Integer) As IntPtr
         End Class
 #End Region
 
@@ -1382,7 +1395,9 @@ Currently, the following application has files open on this volume:
         Public Shared Function EnablePrivileges(ParamArray privileges As String()) As String()
 
             Dim token As SafeFileHandle = Nothing
-            Win32Try(UnsafeNativeMethods.OpenProcessToken(UnsafeNativeMethods.GetCurrentProcess(), NativeConstants.TOKEN_ADJUST_PRIVILEGES Or NativeConstants.TOKEN_QUERY, token))
+            If Not UnsafeNativeMethods.OpenThreadToken(UnsafeNativeMethods.GetCurrentThread(), NativeConstants.TOKEN_ADJUST_PRIVILEGES Or NativeConstants.TOKEN_QUERY, openAsSelf:=True, token) Then
+                Win32Try(UnsafeNativeMethods.OpenProcessToken(UnsafeNativeMethods.GetCurrentProcess(), NativeConstants.TOKEN_ADJUST_PRIVILEGES Or NativeConstants.TOKEN_QUERY, token))
+            End If
 
             Using token
 
@@ -1583,7 +1598,7 @@ Currently, the following application has files open on this volume:
             Public ReadOnly Property ProcessStartTime As Date
             Public ReadOnly Property SessionId As Integer
 
-            Friend Sub New(HandleTableEntry As SystemHandleTableEntryInformation,
+            Friend Sub New(<[In]> ByRef HandleTableEntry As SystemHandleTableEntryInformation,
                                      ObjectType As String,
                                      ObjectName As String,
                                      Process As Process)
@@ -1683,7 +1698,7 @@ Currently, the following application has files open on this volume:
                                 Function()
                                     Do
                                         Dim rc = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectTypeInformation, buffer, CInt(buffer.ByteLength), newbuffersize)
-                                        If rc < 0 AndAlso newbuffersize > buffer.ByteLength Then
+                                        If rc = NativeConstants.STATUS_BUFFER_TOO_SMALL OrElse rc = NativeConstants.STATUS_BUFFER_OVERFLOW Then
                                             buffer.Resize(newbuffersize)
                                             Continue Do
                                         ElseIf rc < 0 Then

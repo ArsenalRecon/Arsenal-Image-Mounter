@@ -78,117 +78,122 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     KIRQL current_irql = PASSIVE_LEVEL;
     KLOCK_QUEUE_HANDLE lock_handle;
 
-//#define QUEUE_WITHOUT_CACHE
-
-#ifdef QUEUE_WITHOUT_CACHE
-
-    PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
-
-    if (cached_irp == NULL)
+    // Detect possible risk of stack overflow. Defer to worker thread if we are
+    // called in the completion routine for the same IRP
+    if (device_extension->CompletingIrp == Irp)
     {
-        KdBreakPoint();
+        PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
-        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        return STATUS_INSUFFICIENT_RESOURCES;
+        if (cached_irp == NULL)
+        {
+            KdBreakPoint();
+
+            Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+            IoCompleteRequest(Irp, IO_NO_INCREMENT);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        InterlockedIncrement64(
+            &device_extension->Statistics.DeferredWriteRequests);
+
+        InterlockedExchangeAdd64(&device_extension->Statistics.DeferredWrittenBytes,
+            io_stack->Parameters.Write.Length);
+
+        //
+        // Acquire the remove lock so that device will not be removed while
+        // processing this irp.
+        //
+        status = IoAcquireRemoveLock(&device_extension->RemoveLock, cached_irp);
+
+        if (!NT_SUCCESS(status))
+        {
+            DbgPrint(
+                "AIMWrFltrRead: Remove lock failed read type Irp: 0x%X\n",
+                status);
+
+            KdBreakPoint();
+
+            delete cached_irp;
+
+            Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+            IoCompleteRequest(Irp, IO_NO_INCREMENT);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        IoMarkIrpPending(Irp);
+
+        AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+            current_irql);
+
+        InsertTailList(&device_extension->ListHead,
+            &cached_irp->ListEntry);
+
+        AIMWrFltrReleaseLock(&lock_handle, &current_irql);
+
+        KeSetEvent(&device_extension->ListEvent, 0, FALSE);
+
+        return STATUS_PENDING;
     }
-
-    InterlockedIncrement64(
-        &device_extension->Statistics.DeferredWriteRequests);
-
-    InterlockedExchangeAdd64(&device_extension->Statistics.DeferredWrittenBytes,
-        io_stack->Parameters.Write.Length);
-
-    //
-    // Acquire the remove lock so that device will not be removed while
-    // processing this irp.
-    //
-    status = IoAcquireRemoveLock(&device_extension->RemoveLock, cached_irp);
-
-    if (!NT_SUCCESS(status))
+    else
     {
-        DbgPrint(
-            "AIMWrFltrRead: Remove lock failed read type Irp: 0x%X\n",
-            status);
+        PCACHED_IRP cached_irp = CACHED_IRP::CreateFromWriteIrp(device_extension->DeviceObject, Irp);
 
-        KdBreakPoint();
+        if (cached_irp == NULL)
+        {
+            KdBreakPoint();
 
-        delete cached_irp;
+            Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+            IoCompleteRequest(Irp, IO_NO_INCREMENT);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
 
-        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        return STATUS_INSUFFICIENT_RESOURCES;
+        InterlockedIncrement64(
+            &device_extension->Statistics.DeferredWriteRequests);
+
+        InterlockedExchangeAdd64(&device_extension->Statistics.DeferredWrittenBytes,
+            io_stack->Parameters.Write.Length);
+
+        //
+        // Acquire the remove lock so that device will not be removed while
+        // processing this irp.
+        //
+        status = IoAcquireRemoveLock(&device_extension->RemoveLock, cached_irp);
+
+        if (!NT_SUCCESS(status))
+        {
+            DbgPrint(
+                "AIMWrFltrWrite: Remove lock failed write type Irp: 0x%X\n",
+                status);
+
+            Irp->IoStatus.Status = status;
+            IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
+            KdBreakPoint();
+
+            return status;
+        }
+
+        AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+            current_irql);
+
+        InsertTailList(&device_extension->ListHead,
+            &cached_irp->ListEntry);
+
+        AIMWrFltrReleaseLock(&lock_handle, &current_irql);
+
+        KeSetEvent(&device_extension->ListEvent, 0, FALSE);
+
+        Irp->IoStatus.Information = io_stack->Parameters.Write.Length;
+        Irp->IoStatus.Status = STATUS_SUCCESS;
+        device_extension->CompletingIrp = Irp;
+        IoCompleteRequest(Irp, IO_DISK_INCREMENT);
+        if (device_extension->CompletingIrp == Irp)
+        {
+            device_extension->CompletingIrp = NULL;
+        }
+
+        return STATUS_SUCCESS;
     }
-
-    IoMarkIrpPending(Irp);
-
-    AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
-        current_irql);
-
-    InsertTailList(&device_extension->ListHead,
-        &cached_irp->ListEntry);
-
-    AIMWrFltrReleaseLock(&lock_handle, &current_irql);
-
-    KeSetEvent(&device_extension->ListEvent, 0, FALSE);
-
-    return STATUS_PENDING;
-
-#else
-
-    PCACHED_IRP cached_irp = CACHED_IRP::CreateFromWriteIrp(device_extension->DeviceObject, Irp);
-
-    if (cached_irp == NULL)
-    {
-        KdBreakPoint();
-
-        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    InterlockedIncrement64(
-        &device_extension->Statistics.DeferredWriteRequests);
-
-    InterlockedExchangeAdd64(&device_extension->Statistics.DeferredWrittenBytes,
-        io_stack->Parameters.Write.Length);
-
-    //
-    // Acquire the remove lock so that device will not be removed while
-    // processing this irp.
-    //
-    status = IoAcquireRemoveLock(&device_extension->RemoveLock, cached_irp);
-
-    if (!NT_SUCCESS(status))
-    {
-        DbgPrint(
-            "AIMWrFltrWrite: Remove lock failed write type Irp: 0x%X\n",
-            status);
-
-        Irp->IoStatus.Status = status;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-
-        KdBreakPoint();
-
-        return status;
-    }
-
-    AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
-        current_irql);
-
-    InsertTailList(&device_extension->ListHead,
-        &cached_irp->ListEntry);
-
-    AIMWrFltrReleaseLock(&lock_handle, &current_irql);
-
-    KeSetEvent(&device_extension->ListEvent, 0, FALSE);
-
-    Irp->IoStatus.Information = io_stack->Parameters.Write.Length;
-    Irp->IoStatus.Status = STATUS_SUCCESS;
-    IoCompleteRequest(Irp, IO_DISK_INCREMENT);
-
-    return STATUS_SUCCESS;
-#endif
 }
 
 NTSTATUS

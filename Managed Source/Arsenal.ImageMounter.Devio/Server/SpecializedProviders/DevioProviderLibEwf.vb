@@ -360,7 +360,6 @@ Namespace Server.SpecializedProviders
             Return pipe
         End Function
 
-        <SuppressMessage("Design", "CA1044:Properties should not be write only")>
         Public Shared WriteOnly Property NotificationVerbose As Boolean
             Set
                 libewf_notify_set_verbose(If(Value, 1, 0))

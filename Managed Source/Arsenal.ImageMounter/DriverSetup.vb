@@ -357,6 +357,7 @@ Public NotInheritable Class DriverSetup
 
             Try
                 NativeFileIO.ShutdownSystem(NativeFileIO.ShutdownFlags.Reboot, NativeFileIO.ShutdownReasons.ReasonFlagPlanned)
+                Environment.Exit(0)
 
             Catch ex2 As Exception
                 Trace.WriteLine(ex2.ToString())

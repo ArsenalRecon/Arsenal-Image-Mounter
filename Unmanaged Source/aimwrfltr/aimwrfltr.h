@@ -400,6 +400,11 @@ typedef struct _DEVICE_EXTENSION
     //
     KGUARDED_MUTEX PagingPathCountMutex;
 
+    //
+    //
+    //
+    PIRP CompletingIrp;
+
 } DEVICE_EXTENSION, *PDEVICE_EXTENSION;
 
 typedef struct _CACHED_IRP

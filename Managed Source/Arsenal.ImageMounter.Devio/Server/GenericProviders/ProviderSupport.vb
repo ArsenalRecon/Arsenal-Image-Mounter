@@ -14,6 +14,7 @@ Imports System.Runtime.CompilerServices
 Imports System.Security.Cryptography
 Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 
 Namespace Server.GenericProviders
@@ -179,10 +180,6 @@ Namespace Server.GenericProviders
 
                 Dim source_position = 0L
 
-                Const zero As Byte = 0
-
-                Dim is_zero_byte As New Predicate(Of Byte)(AddressOf zero.Equals)
-
                 Do
 
                     cancel.ThrowIfCancellationRequested()
@@ -211,7 +208,7 @@ Namespace Server.GenericProviders
                         completionPosition.LengthComplete = source_position
                     End If
 
-                    If skipWriteZeroBlocks AndAlso Array.TrueForAll(buffer, is_zero_byte) Then
+                    If skipWriteZeroBlocks AndAlso buffer.IsBufferZero() Then
 
                         target.Seek(count, SeekOrigin.Current)
 

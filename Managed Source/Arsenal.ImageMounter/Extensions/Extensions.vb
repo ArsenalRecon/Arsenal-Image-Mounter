@@ -1,6 +1,8 @@
-﻿Imports System.Reflection
+﻿Imports System.Globalization
+Imports System.Reflection
 Imports System.Runtime.CompilerServices
 Imports System.Windows.Forms
+Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32
 
 Namespace Extensions
@@ -207,18 +209,96 @@ Namespace Extensions
         End Function
 
         <Extension>
-        Public Function ToHexString(bytes As Byte()) As String
+        Public Function ToHexString(bytes As ICollection(Of Byte)) As String
 
             If bytes Is Nothing Then
                 Return Nothing
             End If
 
-            Dim valuestr As New StringBuilder(bytes.Length << 1)
+            Dim valuestr As New StringBuilder(bytes.Count << 1)
             For Each b In bytes
                 valuestr.Append(b.ToString("x2"))
             Next
 
             Return valuestr.ToString()
+
+        End Function
+
+        <Extension>
+        Public Function ToHexString(bytes As ICollection(Of Byte), offset As Integer, count As Integer) As String
+
+            If bytes Is Nothing OrElse offset > bytes.Count OrElse offset + count > bytes.Count Then
+                Return Nothing
+            End If
+
+            Dim valuestr As New StringBuilder(count << 1)
+            For i = offset To offset + count - 1
+                valuestr.Append(bytes(i).ToString("x2"))
+            Next
+
+            Return valuestr.ToString()
+
+        End Function
+
+        <Extension>
+        Public Function ToHexString(bytes As IEnumerable(Of Byte)) As String
+
+            If bytes Is Nothing Then
+                Return Nothing
+            End If
+
+            Dim valuestr As New StringBuilder
+            For Each b In bytes
+                valuestr.Append(b.ToString("x2"))
+            Next
+
+            Return valuestr.ToString()
+
+        End Function
+
+        Public Function ParseHexString(str As String) As Byte()
+
+            Dim bytes = New Byte(0 To (str.Length >> 1) - 1) {}
+
+            For i = 0 To bytes.Length - 1
+
+                bytes(i) = Byte.Parse(str.Substring(i << 1, 2), NumberStyles.HexNumber)
+
+            Next
+
+            Return bytes
+
+        End Function
+
+        Public Iterator Function ParseHexString(str As IEnumerable(Of Char)) As IEnumerable(Of Byte)
+
+            Dim buffer(0 To 1) As Char
+
+            For Each c In str
+
+                If buffer(0) = Nothing Then
+                    buffer(0) = c
+                Else
+                    buffer(1) = c
+                    Yield Byte.Parse(New String(buffer), NumberStyles.HexNumber)
+                    Array.Clear(buffer, 0, 2)
+                End If
+
+            Next
+
+        End Function
+
+        Public Function ParseHexString(str As String, offset As Integer, count As Integer) As Byte()
+
+            Dim bytes = New Byte(0 To (count >> 1) - 1) {}
+
+            For i = 0 To count - 1
+
+                bytes(i) = Byte.Parse(str.Substring((i + offset) << 1, 2), NumberStyles.HexNumber)
+
+            Next
+
+            Return bytes
 
         End Function
 
@@ -231,6 +311,11 @@ Namespace Extensions
 
             Return form
 
+        End Function
+
+        <Extension>
+        Public Function IsBufferZero(buffer As Byte()) As Boolean
+            Return NativeFileIO.UnsafeNativeMethods.RtlCompareMemoryUlong(buffer, New IntPtr(buffer.LongLength), 0).ToInt64() = buffer.LongLength
         End Function
 
     End Module
