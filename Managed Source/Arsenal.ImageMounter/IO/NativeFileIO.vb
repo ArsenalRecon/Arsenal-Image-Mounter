@@ -1,5 +1,4 @@
 ﻿Imports System.Collections.Concurrent
-Imports System.Diagnostics.CodeAnalysis
 Imports System.Globalization
 Imports System.Security
 Imports System.Security.Permissions
@@ -65,6 +64,7 @@ Namespace IO
             Public Const ERROR_NO_MORE_FILES As UInt32 = 18UI
             Public Const ERROR_HANDLE_EOF As UInt32 = 38UI
             Public Const ERROR_NOT_SUPPORTED As UInt32 = 50UI
+            Public Const ERROR_DEV_NOT_EXIST As UInt32 = 55UI
             Public Const ERROR_INVALID_PARAMETER As UInt32 = 87UI
             Public Const ERROR_MORE_DATA As UInt32 = &H234UI
             Public Const ERROR_NOT_ALL_ASSIGNED As UInt32 = 1300UI
@@ -1293,8 +1293,17 @@ Namespace IO
                 Try
                     Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
                         If device.IsDiskWritable AndAlso Not device.DiskPolicyReadOnly.GetValueOrDefault() Then
-                            device.FlushBuffers()
-                            device.DismountVolumeFilesystem(Force:=False)
+                            Try
+                                device.FlushBuffers()
+                                device.DismountVolumeFilesystem(Force:=False)
+
+                            Catch ex As Win32Exception When (
+                                ex.NativeErrorCode = NativeConstants.ERROR_WRITE_PROTECT OrElse
+                                ex.NativeErrorCode = NativeConstants.ERROR_NOT_READY OrElse
+                                ex.NativeErrorCode = NativeConstants.ERROR_DEV_NOT_EXIST)
+
+                                device.DismountVolumeFilesystem(Force:=True)
+                            End Try
                         Else
                             device.DismountVolumeFilesystem(Force:=True)
                         End If
