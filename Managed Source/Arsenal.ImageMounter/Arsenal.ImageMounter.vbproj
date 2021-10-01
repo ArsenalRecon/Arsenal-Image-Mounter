@@ -148,6 +148,7 @@
     <Compile Include="API.vb" />
     <Compile Include="IO\NullSafeDictionary.vb" />
     <Compile Include="Reflection\MembersStringSetter.vb" />
+    <Compile Include="Reflection\EquatableBox.vb" />
     <Compile Include="Reflection\SequenceComparer.vb" />
     <Compile Include="ScsiAdapter.vb" />
     <Compile Include="DiskStream.vb" />

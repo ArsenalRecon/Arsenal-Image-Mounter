@@ -23,7 +23,6 @@ Imports Microsoft.Win32
 #Disable Warning CA1060 ' Move pinvokes to native methods class
 
 Namespace IO
-#Enable Warning IDE0079 ' Remove unnecessary suppression
 
     ''' <summary>
     ''' Provides wrappers for Win32 file API. This makes it possible to open everything that
@@ -894,6 +893,16 @@ Namespace IO
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               <[In], [Out]> ByRef DeviceInterfaceData As SP_DEVINFO_DATA) As Boolean
 
+            Friend Declare Auto Function SetupDiSetClassInstallParams Lib "setupapi.dll" (
+              DeviceInfoSet As SafeDeviceInfoSetHandle,
+              <[In], Out> ByRef DeviceInfoData As SP_DEVINFO_DATA,
+              <[In]> ByRef ClassInstallParams As SP_PROPCHANGE_PARAMS,
+              ClassInstallParamsSize As Integer) As Boolean
+
+            Public Const DIF_PROPERTYCHANGE As UInt32 = &H12
+            Public Const DICS_FLAG_CONFIGSPECIFIC As UInt32 = &H2  '' make change in specified profile only
+            Public Const DICS_PROPCHANGE As UInt32 = &H3
+
             Friend Declare Auto Function SetupDiEnumDeviceInterfaces Lib "setupapi.dll" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               DeviceInfoData As IntPtr,
@@ -955,6 +964,18 @@ Namespace IO
               [Property] As UInt32,
               <[In], MarshalAs(UnmanagedType.LPArray)> PropertyBuffer As Byte(),
               PropertyBufferSize As UInt32) As Boolean
+
+            Public Structure SP_CLASSINSTALL_HEADER
+                Public Property cbSize As UInt32
+                Public Property InstallFunction As UInt32
+            End Structure
+
+            Public Structure SP_PROPCHANGE_PARAMS
+                Public Property ClassInstallHeader As SP_CLASSINSTALL_HEADER
+                Public Property StateChange As UInt32
+                Public Property Scope As UInt32
+                Public Property HwProfile As UInt32
+            End Structure
 
             Friend Declare Auto Function SetupDiCallClassInstaller Lib "setupapi.dll" (
               InstallFunction As UInt32,
@@ -2211,10 +2232,10 @@ Currently, the following application has files open on this volume:
         ''' <param name="ShareMode">Share mode to request.</param>
         ''' <param name="CreationDisposition">Open/creation mode.</param>
         Public Shared Function OpenFileStream(
-      FileName As String,
-      CreationDisposition As FileMode,
-      DesiredAccess As FileAccess,
-      ShareMode As FileShare) As FileStream
+          FileName As String,
+          CreationDisposition As FileMode,
+          DesiredAccess As FileAccess,
+          ShareMode As FileShare) As FileStream
 
             Return New FileStream(OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped:=False), GetFileStreamLegalAccessValue(DesiredAccess))
 
@@ -2229,11 +2250,11 @@ Currently, the following application has files open on this volume:
         ''' <param name="CreationDisposition">Open/creation mode.</param>
         ''' <param name="BufferSize">Buffer size to specify in constructor call to FileStream class.</param>
         Public Shared Function OpenFileStream(
-      FileName As String,
-      CreationDisposition As FileMode,
-      DesiredAccess As FileAccess,
-      ShareMode As FileShare,
-      BufferSize As Integer) As FileStream
+          FileName As String,
+          CreationDisposition As FileMode,
+          DesiredAccess As FileAccess,
+          ShareMode As FileShare,
+          BufferSize As Integer) As FileStream
 
             Return New FileStream(OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped:=False), GetFileStreamLegalAccessValue(DesiredAccess), BufferSize)
 
@@ -2565,11 +2586,18 @@ Currently, the following application has files open on this volume:
         ''' <param name="NtDevicePath">Path to device.</param>
         Public Shared Function GetScsiAddressForNtDevice(NtDevicePath As String) As SCSI_ADDRESS?
 
-            Using hDevice = NtCreateFile(NtDevicePath, 0, 0, FileShare.ReadWrite, NtCreateDisposition.Open, NtCreateOptions.NonDirectoryFile, 0, Nothing, Nothing)
+            Try
+                Using hDevice = NtCreateFile(NtDevicePath, 0, 0, FileShare.ReadWrite, NtCreateDisposition.Open, NtCreateOptions.NonDirectoryFile, 0, Nothing, Nothing)
 
-                Return GetScsiAddress(hDevice)
+                    Return GetScsiAddress(hDevice)
 
-            End Using
+                End Using
+
+            Catch ex As Exception
+                Trace.WriteLine($"Error getting SCSI address for device '{NtDevicePath}': {ex.JoinMessages()}")
+                Return Nothing
+
+            End Try
 
         End Function
 
@@ -3959,11 +3987,11 @@ Currently, the following application has files open on this volume:
 
             '' get a list of devices which support the given interface
             Using devinfo = UnsafeNativeMethods.SetupDiGetClassDevs(devclass,
-            Nothing,
-            Nothing,
-            UnsafeNativeMethods.DIGCF_PROFILE Or
-            UnsafeNativeMethods.DIGCF_DEVICEINTERFACE Or
-            UnsafeNativeMethods.DIGCF_PRESENT)
+                Nothing,
+                Nothing,
+                UnsafeNativeMethods.DIGCF_PROFILE Or
+                UnsafeNativeMethods.DIGCF_DEVICEINTERFACE Or
+                UnsafeNativeMethods.DIGCF_PRESENT)
 
                 If devinfo.IsInvalid Then
                     Throw New Exception("Device not found")
@@ -3979,15 +4007,29 @@ Currently, the following application has files open on this volume:
                 Dim deviceIndex = 0UI
 
                 While UnsafeNativeMethods.SetupDiEnumDeviceInfo(devinfo, deviceIndex, devInfoData)
+
                     If devInfoData.DevInst.Equals(devinst) Then
-                        If UnsafeNativeMethods.SetupDiRestartDevices(devinfo, devInfoData) Then
+                        Dim pcp As New UnsafeNativeMethods.SP_PROPCHANGE_PARAMS With {
+                            .ClassInstallHeader = New UnsafeNativeMethods.SP_CLASSINSTALL_HEADER With {
+                                .cbSize = CUInt(Marshal.SizeOf(GetType(UnsafeNativeMethods.SP_CLASSINSTALL_HEADER))),
+                                .InstallFunction = UnsafeNativeMethods.DIF_PROPERTYCHANGE
+                            },
+                            .HwProfile = 0,
+                            .Scope = UnsafeNativeMethods.DICS_FLAG_CONFIGSPECIFIC,
+                            .StateChange = UnsafeNativeMethods.DICS_PROPCHANGE
+                        }
+
+                        If UnsafeNativeMethods.SetupDiSetClassInstallParams(devinfo, devInfoData, pcp, Marshal.SizeOf(pcp)) AndAlso
+                            UnsafeNativeMethods.SetupDiCallClassInstaller(UnsafeNativeMethods.DIF_PROPERTYCHANGE, devinfo, devInfoData) Then
+
                             Return
                         End If
 
-                        Throw New Exception("Device restart failed", New Win32Exception)
+                        Throw New Exception($"Device restart failed", New Win32Exception)
                     End If
 
                     deviceIndex += 1UI
+
                 End While
 
             End Using
@@ -4711,51 +4753,51 @@ Currently, the following application has files open on this volume:
                 device.StartsWith("CdRom", StringComparison.OrdinalIgnoreCase)
 
             Dim volumedevices =
-            From device In dosdevs
-            Where
-                device.Length = 2 AndAlso device(1).Equals(":"c)
+                From device In dosdevs
+                Where
+                    device.Length = 2 AndAlso device(1).Equals(":"c)
 
             Dim filter =
-            Function(diskdevice As String) As KeyValuePair(Of String, SafeFileHandle)
-
-                Try
-                    Dim devicehandle = OpenFileHandle(diskdevice, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
+                Function(diskdevice As String) As KeyValuePair(Of String, SafeFileHandle)
 
                     Try
-                        Dim Address = GetScsiAddress(devicehandle)
+                        Dim devicehandle = OpenFileHandle(diskdevice, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped:=False)
 
-                        If Not Address.HasValue OrElse Not Address.Value.Equals(ScsiAddress) Then
+                        Try
+                            Dim Address = GetScsiAddress(devicehandle)
+
+                            If Not Address.HasValue OrElse Not Address.Value.Equals(ScsiAddress) Then
+
+                                devicehandle.Dispose()
+
+                                Return Nothing
+
+                            End If
+
+                            Trace.WriteLine($"Found {diskdevice} with SCSI address {Address}")
+
+                            Return New KeyValuePair(Of String, SafeFileHandle)(diskdevice, devicehandle)
+
+                        Catch ex As Exception
+                            Trace.WriteLine($"Exception while querying SCSI address for {diskdevice}: {ex.JoinMessages()}")
 
                             devicehandle.Dispose()
 
-                            Return Nothing
-
-                        End If
-
-                        Trace.WriteLine($"Found {diskdevice} with SCSI address {Address}")
-
-                        Return New KeyValuePair(Of String, SafeFileHandle)(diskdevice, devicehandle)
+                        End Try
 
                     Catch ex As Exception
-                        Trace.WriteLine($"Exception while querying SCSI address for {diskdevice}: {ex.JoinMessages()}")
-
-                        devicehandle.Dispose()
+                        Trace.WriteLine($"Exception while opening {diskdevice}: {ex.JoinMessages()}")
 
                     End Try
 
-                Catch ex As Exception
-                    Trace.WriteLine($"Exception while opening {diskdevice}: {ex.JoinMessages()}")
+                    Return Nothing
 
-                End Try
-
-                Return Nothing
-
-            End Function
+                End Function
 
             Dim dev =
-            Aggregate anydevice In rawdevices.Concat(volumedevices)
-                Select seldevice = filter($"\\?\{anydevice}")
-                    Into FirstOrDefault(seldevice.Key IsNot Nothing)
+                Aggregate anydevice In rawdevices.Concat(volumedevices)
+                    Select seldevice = filter($"\\?\{anydevice}")
+                        Into FirstOrDefault(seldevice.Key IsNot Nothing)
 
             If dev.Key Is Nothing Then
                 Throw New DriveNotFoundException($"No physical drive found with SCSI address: {ScsiAddress}")

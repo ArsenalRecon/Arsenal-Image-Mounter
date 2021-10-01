@@ -26,8 +26,8 @@ Public Class DiskStream
     ''' </summary>
     ''' <param name="SafeFileHandle">Open file handle for disk device.</param>
     ''' <param name="AccessMode">Access to request for stream.</param>
-    Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess)
-        MyBase.New(SafeFileHandle, AccessMode)
+    Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess, bufferSize As Integer)
+        MyBase.New(SafeFileHandle, AccessMode, bufferSize)
     End Sub
 
     Private _CachedLength As Long?
@@ -38,8 +38,8 @@ Public Class DiskStream
     ''' <param name="SafeFileHandle">Open file handle for disk device.</param>
     ''' <param name="AccessMode">Access to request for stream.</param>
     ''' <param name="DiskSize">Size that should be returned by Length property</param>
-    Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess, DiskSize As Long)
-        MyBase.New(SafeFileHandle, AccessMode)
+    Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess, bufferSize As Integer, DiskSize As Long)
+        MyBase.New(SafeFileHandle, AccessMode, bufferSize)
 
         _CachedLength = DiskSize
     End Sub

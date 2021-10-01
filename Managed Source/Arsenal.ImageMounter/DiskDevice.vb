@@ -22,7 +22,7 @@ Public Class DiskDevice
     Private _RawDiskStream As DiskStream
 
     Private _CachedAddress As NativeFileIO.SCSI_ADDRESS?
-    '
+
     ''' <summary>
     ''' Returns the device path used to open this device object, if opened by name.
     ''' If the object was opened in any other way, such as by supplying an already
@@ -31,7 +31,14 @@ Public Class DiskDevice
     Public ReadOnly Property DevicePath As String
 
     Private Sub AllowExtendedDasdIo()
-        NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeFileIO.NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero)
+        If Not NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeFileIO.NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero) Then
+            Dim errcode = Marshal.GetLastWin32Error()
+            If errcode <> NativeFileIO.NativeConstants.ERROR_INVALID_PARAMETER AndAlso
+                errcode <> NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
+
+                Trace.WriteLine($"FSCTL_ALLOW_EXTENDED_DASD_IO failed for '{_DevicePath}': {errcode}")
+            End If
+        End If
     End Sub
 
     Protected Friend Sub New(DeviceNameAndHandle As KeyValuePair(Of String, SafeFileHandle), AccessMode As FileAccess)
@@ -570,7 +577,8 @@ Public Class DiskDevice
         If _RawDiskStream Is Nothing Then
 
             _RawDiskStream = New DiskStream(SafeFileHandle,
-                                            If(AccessMode = 0, FileAccess.Read, AccessMode))
+                                            If(AccessMode = 0, FileAccess.Read, AccessMode),
+                                            bufferSize:=If(Geometry?.BytesPerSector, 512))
 
         End If
 

@@ -999,13 +999,20 @@ Public Class ScsiAdapter
     ''' </summary>
     Public Function GetDeviceName(DeviceNumber As UInteger) As String
 
-        Dim raw_device = GetRawDeviceName(DeviceNumber)
+        Try
+            Dim raw_device = GetRawDeviceName(DeviceNumber)
 
-        If raw_device Is Nothing Then
+            If raw_device Is Nothing Then
+                Return Nothing
+            End If
+
+            Return NativeFileIO.GetPhysicalDriveNameForNtDevice(raw_device)
+
+        Catch ex As Exception
+            Trace.WriteLine($"Error getting device name for device number {DeviceNumber}: {ex.JoinMessages()}")
             Return Nothing
-        End If
 
-        Return NativeFileIO.GetPhysicalDriveNameForNtDevice(raw_device)
+        End Try
 
     End Function
 
