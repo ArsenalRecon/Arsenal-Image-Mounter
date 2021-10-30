@@ -1,4 +1,5 @@
 ﻿Imports System.Runtime.CompilerServices
+Imports System.Text
 
 Namespace IO
 
@@ -50,7 +51,11 @@ Namespace IO
                 Next
 
                 If line.Length > 0 Then
+#If NETSTANDARD OrElse NETCOREAPP Then
+                    result.Append(line)
+#Else
                     result.Append(line.ToString())
+#End If
                 End If
 
                 resultLines.Add(result.ToString())

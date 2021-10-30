@@ -9,6 +9,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 
 Namespace Server.SpecializedProviders

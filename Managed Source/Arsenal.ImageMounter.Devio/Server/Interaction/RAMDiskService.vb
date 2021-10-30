@@ -1,8 +1,12 @@
-﻿Imports System.Security.AccessControl
+﻿Imports System.IO
+Imports System.Security.AccessControl
+Imports System.Threading
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.IO
+Imports DiscUtils
 Imports DiscUtils.Partitions
 Imports DiscUtils.Raw
+Imports DiscUtils.Streams
 Imports Buffer = System.Buffer
 
 Namespace Server.Interaction

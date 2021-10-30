@@ -4,6 +4,7 @@ Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.PSDisk
 Imports Arsenal.ImageMounter.IO
 Imports Arsenal.ImageMounter.Extensions
+Imports System.IO
 
 Namespace PSDisk
 

@@ -1,0 +1,33 @@
+<Project>
+
+  <PropertyGroup>
+
+    <RootNamespace>Arsenal.ImageMounter</RootNamespace>
+    <OutputPath>..\bin\$(Configuration)\</OutputPath>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <LangVersion Condition="'$(MSBuildProjectExtension)' == '.csproj'">9.0</LangVersion>
+    <OptionStrict Condition="'$(MSBuildProjectExtension)' == '.vbproj'">On</OptionStrict>
+    <DebugType>portable</DebugType>
+    <Deterministic>false</Deterministic>
+    <TargetFrameworks>net40;net5.0-windows</TargetFrameworks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DiscUtilsPath Condition="'$(TargetFramework)' == 'net40'">$(SolutionDir)..\..\3rdparty\DiscUtils\net40</DiscUtilsPath>
+    <DiscUtilsPath Condition="'$(TargetFramework)' == 'net5.0-windows'">$(SolutionDir)..\..\3rdparty\DiscUtils\netstandard2.0</DiscUtilsPath>
+
+  </PropertyGroup>
+
+  <PropertyGroup>
+
+    <Title>Arsenal Image Mounter</Title>
+    <Company>Arsenal Recon</Company>
+    <Product>Arsenal Image Mounter</Product>
+    <Copyright>Copyright © Arsenal Recon, 2015 - 2021</Copyright>
+    <Trademark />
+    <FileVersion>3.6.173.0</FileVersion>
+    <ProductVersion>3.6.173.0</ProductVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+
+  </PropertyGroup>
+
+</Project>

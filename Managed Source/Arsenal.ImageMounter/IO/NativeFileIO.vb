@@ -1,9 +1,17 @@
 ﻿Imports System.Collections.Concurrent
+Imports System.Collections.ObjectModel
+Imports System.Collections.Specialized
+Imports System.ComponentModel
 Imports System.Globalization
+Imports System.IO
+Imports System.Runtime.InteropServices
 Imports System.Security
 Imports System.Security.Permissions
+Imports System.Text
+Imports System.Threading
 Imports Arsenal.ImageMounter.Extensions
 Imports Microsoft.Win32
+Imports Microsoft.Win32.SafeHandles
 
 ''''' NativeFileIO.vb
 ''''' Routines for accessing some useful Win32 API functions to access features not
@@ -21,6 +29,8 @@ Imports Microsoft.Win32
 #Disable Warning IDE0079 ' Remove unnecessary suppression
 #Disable Warning CA1308 ' Normalize strings to uppercase
 #Disable Warning CA1060 ' Move pinvokes to native methods class
+#Disable Warning SYSLIB0003 ' Type or member is obsolete
+
 
 Namespace IO
 
@@ -181,6 +191,7 @@ Namespace IO
 
         Public NotInheritable Class SafeNativeMethods
 
+#Disable Warning CA1401 ' P/Invokes should not be visible
             Public Declare Auto Function AllocConsole Lib "kernel32.dll" (
               ) As Boolean
 
@@ -193,15 +204,16 @@ Namespace IO
               ) As UInteger
 
             Public Declare Auto Function GetFileAttributes Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpFileName As String
               ) As FileAttributes
 
             Public Declare Auto Function SetFileAttributes Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpFileName As String,
               dwFileAttributes As FileAttributes
               ) As Boolean
 
             Public Declare Auto Function GetTickCount64 Lib "kernel32.dll" () As Long
+#Enable Warning CA1401 ' P/Invokes should not be visible
 
         End Class
 
@@ -228,7 +240,7 @@ Namespace IO
                 h As SafeHandle,
                 <Out> ByRef flags As UInteger) As Boolean
 
-            Friend Declare Unicode Function NtCreateFile Lib "ntdll.dll" (
+            Friend Declare Auto Function NtCreateFile Lib "ntdll.dll" (
                 <Out> ByRef hFile As SafeFileHandle,
                 AccessMask As UInt32,
                 <[In]> ByRef ObjectAttributes As ObjectAttributes,
@@ -241,7 +253,7 @@ Namespace IO
                 EaBuffer As IntPtr,
                 EaLength As UInt32) As Int32
 
-            Friend Declare Unicode Function NtOpenEvent Lib "ntdll.dll" (
+            Friend Declare Auto Function NtOpenEvent Lib "ntdll.dll" (
                 <Out> ByRef hEvent As SafeWaitHandle,
                 AccessMask As UInt32,
                 <[In]> ByRef ObjectAttributes As ObjectAttributes) As Int32
@@ -285,30 +297,30 @@ Namespace IO
               <[Out]> ByRef lpszVolumeMountPoint As FindStreamData) As Boolean
 
             Friend Declare Auto Function FindFirstVolumeMountPoint Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszRootPathName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeMountPoint As StringBuilder,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpszRootPathName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [Out]> lpszVolumeMountPoint As StringBuilder,
               cchBufferLength As Integer) As SafeFindVolumeMountPointHandle
 
             Friend Declare Auto Function FindNextVolumeMountPoint Lib "kernel32.dll" (
               hFindVolumeMountPoint As SafeFindVolumeMountPointHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeMountPoint As StringBuilder,
+              <MarshalAs(UnmanagedType.LPWStr), [Out]> lpszVolumeMountPoint As StringBuilder,
               cchBufferLength As Integer) As Boolean
 
             Friend Declare Auto Function FindFirstVolume Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeName As StringBuilder,
+              <MarshalAs(UnmanagedType.LPWStr), [Out]> lpszVolumeName As StringBuilder,
               cchBufferLength As Integer) As SafeFindVolumeHandle
 
             Friend Declare Auto Function FindNextVolume Lib "kernel32.dll" (
               hFindVolumeMountPoint As SafeFindVolumeHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [Out]> lpszVolumeName As StringBuilder,
+              <MarshalAs(UnmanagedType.LPWStr), [Out]> lpszVolumeName As StringBuilder,
               cchBufferLength As Integer) As Boolean
 
             Friend Declare Auto Function DeleteVolumeMountPoint Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeMountPoint As String) As Boolean
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpszVolumeMountPoint As String) As Boolean
 
             Friend Declare Auto Function SetVolumeMountPoint Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeMountPoint As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String) As Boolean
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpszVolumeMountPoint As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpszVolumeName As String) As Boolean
 
             Friend Declare Function SetFilePointerEx Lib "kernel32" (
               hFile As SafeFileHandle,
@@ -323,28 +335,28 @@ Namespace IO
               move_method As UInt32) As Boolean
 
             Friend Declare Auto Function OpenSCManager Lib "advapi32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpMachineName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpDatabaseName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpMachineName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpDatabaseName As String,
               dwDesiredAccess As Integer) As SafeServiceHandle
 
             Friend Declare Auto Function CreateService Lib "advapi32.dll" (
               hSCManager As SafeServiceHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpServiceName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpDisplayName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpServiceName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpDisplayName As String,
               dwDesiredAccess As Integer,
               dwServiceType As Integer,
               dwStartType As Integer,
               dwErrorControl As Integer,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpBinaryPathName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpLoadOrderGroup As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpBinaryPathName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpLoadOrderGroup As String,
               lpdwTagId As IntPtr,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpDependencies As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lp As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpPassword As String) As SafeServiceHandle
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpDependencies As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lp As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpPassword As String) As SafeServiceHandle
 
             Friend Declare Auto Function OpenService Lib "advapi32.dll" (
               hSCManager As SafeServiceHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpServiceName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpServiceName As String,
               dwDesiredAccess As Integer) As SafeServiceHandle
 
             Friend Declare Auto Function ControlService Lib "advapi32.dll" (
@@ -361,10 +373,10 @@ Namespace IO
               lpServiceArgVectors As IntPtr) As Boolean
 
             Friend Declare Auto Function GetModuleHandle Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> ModuleName As String) As IntPtr
+              <MarshalAs(UnmanagedType.LPWStr), [In]> ModuleName As String) As IntPtr
 
             Friend Declare Auto Function LoadLibrary Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String) As IntPtr
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpFileName As String) As IntPtr
 
             Friend Declare Auto Function FreeLibrary Lib "kernel32.dll" (
               hModule As IntPtr) As Boolean
@@ -381,23 +393,23 @@ Namespace IO
 
             Friend Declare Auto Function DefineDosDevice Lib "kernel32.dll" (
               dwFlags As DEFINE_DOS_DEVICE_FLAGS,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpDeviceName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpTargetPath As String) As Boolean
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpDeviceName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpTargetPath As String) As Boolean
 
             Friend Declare Auto Function QueryDosDevice Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpDeviceName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpDeviceName As String,
               <Out, MarshalAs(UnmanagedType.LPArray)> lpTargetPath As Char(),
               ucchMax As Int32) As Int32
 
             Friend Declare Auto Function GetVolumePathNamesForVolumeName Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpszVolumeName As String,
               <Out, MarshalAs(UnmanagedType.LPArray)> lpszVolumePathNames As Char(),
               cchBufferLength As Int32,
               <Out> ByRef lpcchReturnLength As Int32) As Boolean
 
             Friend Declare Auto Function GetVolumeNameForVolumeMountPoint Lib "kernel32.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpszVolumeName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In], Out> DestinationInfFileName As StringBuilder,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpszVolumeName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In], Out> DestinationInfFileName As StringBuilder,
               DestinationInfFileNameSize As Int32) As Boolean
 
             Friend Declare Auto Function GetCommTimeouts Lib "kernel32" (
@@ -409,7 +421,7 @@ Namespace IO
               <[In]> ByRef lpCommTimeouts As COMMTIMEOUTS) As Boolean
 
             Friend Declare Auto Function CreateFile Lib "kernel32" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpFileName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpFileName As String,
               dwDesiredAccess As UInt32,
               dwShareMode As FileShare,
               lpSecurityAttributes As IntPtr,
@@ -606,9 +618,10 @@ Namespace IO
 
             Friend Declare Auto Function GetModuleFileName Lib "kernel32" (
               hModule As IntPtr,
-              <Out, MarshalAs(UnmanagedType.LPTStr)> lpFilename As String,
+              <MarshalAs(UnmanagedType.LPWStr)> lpFilename As StringBuilder,
               nSize As Int32) As Int32
 
+            <CodeAnalysis.SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification:="Special Ansi only function")>
             Friend Declare Ansi Function GetProcAddress Lib "kernel32" (
               hModule As IntPtr,
               <[In], MarshalAs(UnmanagedType.LPStr)> lpEntryName As String) As IntPtr
@@ -617,8 +630,8 @@ Namespace IO
               hModule As IntPtr,
               ordinal As IntPtr) As IntPtr
 
-            Friend Declare Unicode Function RtlDosPathNameToNtPathName_U Lib "ntdll.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> DosName As String,
+            Friend Declare Auto Function RtlDosPathNameToNtPathName_U Lib "ntdll.dll" (
+              <MarshalAs(UnmanagedType.LPWStr), [In]> DosName As String,
               <Out> ByRef NtName As UNICODE_STRING,
               DosFilePath As IntPtr,
               NtFilePath As IntPtr) As Boolean
@@ -632,32 +645,32 @@ Namespace IO
             Friend Declare Auto Function GetPrivateProfileSectionNames Lib "kernel32.dll" (
               <Out, MarshalAs(UnmanagedType.LPArray)> Names As Char(),
               NamesSize As Integer,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> FileName As String) As Integer
+              <[In], MarshalAs(UnmanagedType.LPWStr)> FileName As String) As Integer
 
             Friend Declare Auto Function GetPrivateProfileSection Lib "kernel32.dll" (
-              <[In], MarshalAs(UnmanagedType.LPTStr)> SectionName As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> SectionName As String,
               <[In], MarshalAs(UnmanagedType.LPArray)> Values As Char(),
               ValuesSize As Integer,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> FileName As String) As Integer
+              <[In], MarshalAs(UnmanagedType.LPWStr)> FileName As String) As Integer
 
             Friend Declare Auto Function WritePrivateProfileString Lib "kernel32.dll" (
-              <[In], MarshalAs(UnmanagedType.LPTStr)> SectionName As String,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> SettingName As String,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> Value As String,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> FileName As String) As Boolean
+              <[In], MarshalAs(UnmanagedType.LPWStr)> SectionName As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> SettingName As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> Value As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> FileName As String) As Boolean
 
             Friend Declare Auto Sub InstallHinfSection Lib "setupapi.dll" (
               hwndOwner As IntPtr,
               hModule As IntPtr,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> lpCmdLine As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpCmdLine As String,
               nCmdShow As Int32)
 
             Friend Declare Auto Function SetupCopyOEMInf Lib "setupapi.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> SourceInfFileName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> OEMSourceMediaLocation As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> SourceInfFileName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> OEMSourceMediaLocation As String,
               OEMSourceMediaType As UInt32,
               CopyStyle As UInt32,
-              <MarshalAs(UnmanagedType.LPTStr), [In], Out> DestinationInfFileName As StringBuilder,
+              <MarshalAs(UnmanagedType.LPWStr), [In], Out> DestinationInfFileName As StringBuilder,
               DestinationInfFileNameSize As Int32,
               <Out> ByRef RequiredSize As UInt32,
               DestinationInfFileNameComponent As IntPtr) As Boolean
@@ -667,24 +680,24 @@ Namespace IO
             Public Const DRIVER_PACKAGE_SILENT = &H2UI
 
             Friend Declare Auto Function DriverPackagePreinstall Lib "difxapi.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> SourceInfFileName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> SourceInfFileName As String,
               Options As UInt32) As Integer
 
             Friend Declare Auto Function DriverPackageInstall Lib "difxapi.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> SourceInfFileName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> SourceInfFileName As String,
               Options As UInt32,
               pInstallerInfo As IntPtr,
               <Out> ByRef pNeedReboot As Boolean) As Integer
 
             Friend Declare Auto Function DriverPackageUninstall Lib "difxapi.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> SourceInfFileName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> SourceInfFileName As String,
               Options As UInt32,
               pInstallerInfo As IntPtr,
               <Out> ByRef pNeedReboot As Boolean) As Integer
 
             Friend Declare Auto Function CM_Locate_DevNode Lib "setupapi.dll" (
               ByRef devInst As UInt32,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> rootid As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> rootid As String,
               Flags As UInt32) As UInt32
 
             Friend Declare Auto Function CM_Get_DevNode_Registry_Property Lib "setupapi.dll" (
@@ -737,11 +750,11 @@ Namespace IO
 
             Friend Declare Auto Function CM_Get_Device_ID_List_Size Lib "setupapi.dll" (
               ByRef Length As Int32,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> filter As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> filter As String,
               Flags As UInt32) As UInt32
 
             Friend Declare Auto Function CM_Get_Device_ID_List Lib "setupapi.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> filter As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> filter As String,
               <Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=2)> Buffer As Char(),
               BufferLength As UInt32,
               Flags As UInt32) As UInt32
@@ -750,8 +763,8 @@ Namespace IO
               state As Boolean) As Boolean
 
             Friend Declare Auto Function SetupOpenInfFile Lib "setupapi.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> FileName As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> InfClass As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> FileName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> InfClass As String,
               InfStyle As UInt32,
               ByRef ErrorLine As UInt32) As SafeInfHandle
 
@@ -763,10 +776,10 @@ Namespace IO
             Friend Declare Auto Function SetupInstallFromInfSection Lib "setupapi.dll" (
               hWnd As IntPtr,
               InfHandle As SafeInfHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> SectionName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> SectionName As String,
               Flags As UInt32,
               RelativeKeyRoot As IntPtr,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> SourceRootPath As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> SourceRootPath As String,
               CopyFlags As UInt32,
               MsgHandler As SetupFileCallback,
               Context As IntPtr,
@@ -776,10 +789,10 @@ Namespace IO
             Friend Declare Auto Function SetupInstallFromInfSection Lib "setupapi.dll" (
               hWnd As IntPtr,
               InfHandle As SafeInfHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> SectionName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> SectionName As String,
               Flags As UInt32,
               RelativeKeyRoot As SafeRegistryHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> SourceRootPath As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> SourceRootPath As String,
               CopyFlags As UInt32,
               MsgHandler As SetupFileCallback,
               Context As IntPtr,
@@ -793,7 +806,7 @@ Namespace IO
             Public Const DIGCF_DEVICEINTERFACE As UInt32 = &H10
 
             Friend Declare Auto Function SetupDiGetINFClass Lib "setupapi.dll" (
-              <MarshalAs(UnmanagedType.LPTStr), [In]> InfPath As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> InfPath As String,
               <Out> ByRef ClassGuid As Guid,
               <Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex:=3)> ClassName As Char(),
               ClassNameSize As UInt32,
@@ -801,7 +814,7 @@ Namespace IO
 
             Friend Declare Auto Function SetupDiOpenDeviceInfo Lib "setupapi.dll" (
               DevInfoSet As SafeDeviceInfoSetHandle,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> Enumerator As String,
               hWndParent As IntPtr,
               Flags As UInt32,
               DeviceInfoData As IntPtr) As Boolean
@@ -815,32 +828,32 @@ Namespace IO
 
             Friend Declare Auto Function SetupDiGetClassDevs Lib "setupapi.dll" (
               <[In]> ByRef ClassGuid As Guid,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> Enumerator As String,
               hWndParent As IntPtr,
               Flags As UInt32) As SafeDeviceInfoSetHandle
 
             Friend Declare Auto Function SetupDiGetClassDevs Lib "setupapi.dll" (
               ClassGuid As IntPtr,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> Enumerator As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> Enumerator As String,
               hWndParent As IntPtr,
               Flags As UInt32) As SafeDeviceInfoSetHandle
 
             <StructLayout(LayoutKind.Sequential)>
             Public Structure SP_DEVICE_INTERFACE_DATA
-                Public ReadOnly Property cbSize As UInt32
+                Public ReadOnly Property Size As UInt32
                 Public ReadOnly Property InterfaceClassGuid As Guid
                 Public ReadOnly Property Flags As UInt32
                 Public ReadOnly Property Reserved As IntPtr
 
                 Public Sub Initialize()
-                    _cbSize = CUInt(Marshal.SizeOf(Me))
+                    _Size = CUInt(Marshal.SizeOf(Me))
                 End Sub
             End Structure
 
             <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
             Public Structure SP_DEVICE_INTERFACE_DETAIL_DATA
 
-                Public ReadOnly Property cbSize As UInt32
+                Public ReadOnly Property Size As UInt32
 
                 Public ReadOnly Property DevicePath As String
                     Get
@@ -852,7 +865,7 @@ Namespace IO
                 Private ReadOnly _devicePath As String
 
                 Public Sub Initialize()
-                    _cbSize = CUInt(Marshal.SizeOf(Me))
+                    _Size = CUInt(Marshal.SizeOf(Me))
                 End Sub
             End Structure
 
@@ -861,7 +874,7 @@ Namespace IO
 
                 Public Const SP_MAX_MACHINENAME_LENGTH = 263
 
-                Public ReadOnly Property cbSize As UInt32
+                Public ReadOnly Property Size As UInt32
 
                 Public ReadOnly Property ClassGUID As Guid
 
@@ -880,7 +893,7 @@ Namespace IO
                 Private _remoteMachineName As String
 
                 Public Sub Initialize()
-                    _cbSize = CUInt(Marshal.SizeOf(Me))
+                    _Size = CUInt(Marshal.SizeOf(Me))
                 End Sub
             End Structure
 
@@ -920,13 +933,13 @@ Namespace IO
             Friend Declare Auto Function SetupDiCreateDeviceInfoListEx Lib "setupapi.dll" (
               <[In]> ByRef ClassGuid As Guid,
               hwndParent As IntPtr,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> MachineName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> MachineName As String,
               Reserved As IntPtr) As SafeDeviceInfoSetHandle
 
             Friend Declare Auto Function SetupDiCreateDeviceInfoListEx Lib "setupapi.dll" (
               ClassGuid As IntPtr,
               hwndParent As IntPtr,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> MachineName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> MachineName As String,
               Reserved As IntPtr) As SafeDeviceInfoSetHandle
 
             Friend Declare Auto Function SetupDiCreateDeviceInfoList Lib "setupapi.dll" (
@@ -951,9 +964,9 @@ Namespace IO
 
             Friend Declare Auto Function SetupDiCreateDeviceInfo Lib "setupapi.dll" (
               hDevInfo As SafeDeviceInfoSetHandle,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> DeviceName As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> DeviceName As String,
               <[In]> ByRef ClassGuid As Guid,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> DeviceDescription As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> DeviceDescription As String,
               owner As IntPtr,
               CreationFlags As UInt32,
               <Out> ByRef DeviceInfoData As SP_DEVINFO_DATA) As Boolean
@@ -966,7 +979,7 @@ Namespace IO
               PropertyBufferSize As UInt32) As Boolean
 
             Public Structure SP_CLASSINSTALL_HEADER
-                Public Property cbSize As UInt32
+                Public Property Size As UInt32
                 Public Property InstallFunction As UInt32
             End Structure
 
@@ -984,8 +997,8 @@ Namespace IO
 
             Friend Declare Auto Function UpdateDriverForPlugAndPlayDevices Lib "newdev.dll" (
               owner As IntPtr,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> HardwareId As String,
-              <MarshalAs(UnmanagedType.LPTStr), [In]> InfPath As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> HardwareId As String,
+              <MarshalAs(UnmanagedType.LPWStr), [In]> InfPath As String,
               InstallFlags As UInt32,
               <MarshalAs(UnmanagedType.Bool), Out> ByRef RebootRequired As Boolean) As Boolean
 
@@ -1037,15 +1050,15 @@ Namespace IO
               <Out> ByRef buffer As Guid,
               length As Int32) As Byte
 
-            Friend Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
+            Friend Declare Auto Function RtlGetVersion Lib "ntdll.dll" (
               <[In], Out> ByRef os_version As OSVERSIONINFO) As Integer
 
-            Friend Declare Unicode Function RtlGetVersion Lib "ntdll.dll" (
+            Friend Declare Auto Function RtlGetVersion Lib "ntdll.dll" (
               <[In], Out> ByRef os_version As OSVERSIONINFOEX) As Integer
 
             Friend Declare Auto Function LookupPrivilegeValue Lib "advapi32.dll" (
-              <[In], MarshalAs(UnmanagedType.LPTStr)> lpSystemName As String,
-              <[In], MarshalAs(UnmanagedType.LPTStr)> lpName As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> lpSystemName As String,
+              <[In], MarshalAs(UnmanagedType.LPWStr)> lpName As String,
               <Out> ByRef lpLuid As Int64) As Boolean
 
             Friend Declare Auto Function OpenThreadToken Lib "advapi32.dll" (
@@ -1067,27 +1080,27 @@ Namespace IO
               <[In]> PreviousState As SafeBuffer,
               <Out> ByRef ReturnLength As Integer) As Boolean
 
-            Friend Declare Unicode Function NtQuerySystemInformation Lib "ntdll.dll" (
+            Friend Declare Auto Function NtQuerySystemInformation Lib "ntdll.dll" (
               <[In]> SystemInformationClass As SystemInformationClass,
               <[In]> pSystemInformation As SafeBuffer,
               <[In]> uSystemInformationLength As Integer,
               <Out> ByRef puReturnLength As Integer) As Integer
 
-            Friend Declare Unicode Function NtQueryObject Lib "ntdll.dll" (
+            Friend Declare Auto Function NtQueryObject Lib "ntdll.dll" (
               <[In]> ObjectHandle As SafeFileHandle,
               <[In]> ObjectInformationClass As ObjectInformationClass,
               <[In]> ObjectInformation As SafeBuffer,
               <[In]> ObjectInformationLength As Integer,
               <Out> ByRef puReturnLength As Integer) As Integer
 
-            Friend Declare Unicode Function NtQueryVolumeInformationFile Lib "ntdll.dll" (
+            Friend Declare Auto Function NtQueryVolumeInformationFile Lib "ntdll.dll" (
               <[In]> FileHandle As SafeFileHandle,
               <[In], Out> IoStatusBlock As IoStatusBlock,
               <[In]> FsInformation As SafeBuffer,
               <[In]> FsInformationLength As Integer,
               <[In]> FsInformationClass As FsInformationClass) As Integer
 
-            Friend Declare Unicode Function NtDuplicateObject Lib "ntdll.dll" (
+            Friend Declare Auto Function NtDuplicateObject Lib "ntdll.dll" (
               <[In]> SourceProcessHandle As SafeHandle,
               <[In]> SourceHandle As IntPtr,
               <[In]> TargetProcessHandle As IntPtr,
@@ -1096,18 +1109,18 @@ Namespace IO
               <[In]> HandleAttributes As UInteger,
               <[In]> Options As UInteger) As Integer
 
-            Friend Declare Unicode Function GetCurrentProcess Lib "kernel32.dll" () As IntPtr
+            Friend Declare Auto Function GetCurrentProcess Lib "kernel32.dll" () As IntPtr
 
-            Friend Declare Unicode Function GetCurrentThread Lib "kernel32.dll" () As IntPtr
+            Friend Declare Auto Function GetCurrentThread Lib "kernel32.dll" () As IntPtr
 
-            Friend Declare Unicode Function OpenProcess Lib "kernel32.dll" (
+            Friend Declare Auto Function OpenProcess Lib "kernel32.dll" (
               <[In]> DesiredAccess As UInteger,
               <[In]> InheritHandle As Boolean,
               <[In]> ProcessId As Integer) As SafeFileHandle
 
-            Friend Declare Auto Function CreateHardLink Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPTStr), [In]> newlink As String, <MarshalAs(UnmanagedType.LPTStr), [In]> existing As String, security As IntPtr) As Boolean
+            Friend Declare Auto Function CreateHardLink Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPWStr), [In]> newlink As String, <MarshalAs(UnmanagedType.LPWStr), [In]> existing As String, security As IntPtr) As Boolean
 
-            Friend Declare Auto Function MoveFile Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPTStr), [In]> existing As String, <MarshalAs(UnmanagedType.LPTStr), [In]> newname As String) As Boolean
+            Friend Declare Auto Function MoveFile Lib "kernel32.dll" (<MarshalAs(UnmanagedType.LPWStr), [In]> existing As String, <MarshalAs(UnmanagedType.LPWStr), [In]> newname As String) As Boolean
 
             Friend Declare Auto Function RtlCompareMemoryUlong Lib "ntdll.dll" (<MarshalAs(UnmanagedType.LPArray), [In]> buffer As Byte(), length As IntPtr, v As Integer) As IntPtr
         End Class
@@ -2942,183 +2955,9 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function GetFileVersion(exe As Byte()) As Version
 
-            Dim exe_signature = Encoding.ASCII.GetString(exe, 0, 2)
-            If Not exe_signature.Equals("MZ", StringComparison.Ordinal) Then
-                Throw New BadImageFormatException("Invalid executable header signature")
-            End If
+            Dim filever As New NativeFileVersion(exe)
 
-            Dim pe = BitConverter.ToInt32(exe, &H3C)
-
-            Dim pe_signature = Encoding.ASCII.GetChars(exe, pe, 4)
-
-            Static expected_pe_signature As String = $"PE{New Char}{New Char}"
-
-            If Not pe_signature.SequenceEqual(expected_pe_signature) Then
-                Throw New BadImageFormatException("Invalid PE header signature")
-            End If
-
-            Dim coff = pe + 4
-
-            Dim num_sections = BitConverter.ToUInt16(exe, coff + 2)
-            Dim opt_header_size = BitConverter.ToUInt16(exe, coff + 16)
-
-            If num_sections = 0 OrElse opt_header_size = 0 Then
-                Throw New BadImageFormatException("Invalid PE file")
-            End If
-
-            Dim opt_header = coff + 20
-
-            Dim opt_header_signature = BitConverter.ToUInt16(exe, opt_header)
-
-            Dim data_dir = opt_header + 96
-
-            Dim va_res = BitConverter.ToInt32(exe, data_dir + 8 * 2)
-
-            Dim sec_table = opt_header + opt_header_size
-
-            Static expected_section_name As String = $".rsrc{New Char}"
-
-            For i = 0 To num_sections - 1
-                Dim sec = sec_table + 40 * i
-                Dim sec_name = Encoding.ASCII.GetChars(exe, sec, expected_section_name.Length)
-
-                If Not sec_name.SequenceEqual(expected_section_name) Then
-                    Continue For
-                End If
-
-                Dim va_sec = BitConverter.ToInt32(exe, sec + 12)
-                Dim raw = BitConverter.ToInt32(exe, sec + 20)
-                Dim res_sec = raw + (va_res - va_sec)
-
-                Dim num_named = BitConverter.ToUInt16(exe, res_sec + 12)
-                Dim num_id = BitConverter.ToUInt16(exe, res_sec + 14)
-                Dim num = CInt(num_named) + num_id
-
-                If num = 0 Then
-                    Exit For
-                End If
-
-                For j = 0 To num - 1
-
-                    Dim res = res_sec + 16 + 8 * j
-                    Dim name = BitConverter.ToUInt32(exe, res)
-
-                    If name <> 16 Then
-                        Continue For
-                    End If
-
-                    Dim offs = BitConverter.ToUInt32(exe, res + 4)
-
-                    If (offs And &H80000000UI) = 0 Then
-                        Exit For
-                    End If
-
-                    Dim ver_dir = res_sec + CInt(offs And &H7FFFFFFFUI)
-
-                    num_named = BitConverter.ToUInt16(exe, ver_dir + 12)
-                    num_id = BitConverter.ToUInt16(exe, ver_dir + 14)
-                    num = CInt(num_named) + num_id
-
-                    If num = 0 Then
-                        Exit For
-                    End If
-
-                    res = ver_dir + 16
-
-                    offs = BitConverter.ToUInt32(exe, res + 4)
-
-                    If (offs And &H80000000UI) = 0 Then
-                        Exit For
-                    End If
-
-                    ver_dir = res_sec + CInt(offs And &H7FFFFFFFUI)
-
-                    num_named = BitConverter.ToUInt16(exe, ver_dir + 12)
-                    num_id = BitConverter.ToUInt16(exe, ver_dir + 14)
-                    num = CInt(num_named) + num_id
-
-                    If num = 0 Then
-                        Exit For
-                    End If
-
-                    res = ver_dir + 16
-
-                    offs = BitConverter.ToUInt32(exe, res + 4)
-
-                    If (offs And &H80000000UI) <> 0 Then
-                        Exit For
-                    End If
-
-                    ver_dir = res_sec + CInt(offs)
-
-                    Dim ver_va = BitConverter.ToInt32(exe, ver_dir)
-
-                    Dim version = raw + (ver_va - va_sec)
-
-                    Dim off As Integer
-
-                    Dim len = BitConverter.ToUInt16(exe, version)
-                    Dim val_len = BitConverter.ToUInt16(exe, version + 2)
-                    'Dim type = BitConverter.ToUInt16(exe, version + 4)
-
-                    off = version + 6
-
-                    Dim info = ReadNullTerminatedString(exe, off)
-
-                    off = PadValue(off, 4)
-
-                    If info.Equals("VS_VERSION_INFO", StringComparison.Ordinal) Then
-
-                        Dim fixed = off
-
-                        Dim fileA = BitConverter.ToUInt16(exe, fixed + 10)
-                        Dim fileB = BitConverter.ToUInt16(exe, fixed + 8)
-                        Dim fileC = BitConverter.ToUInt16(exe, fixed + 14)
-                        Dim fileD = BitConverter.ToUInt16(exe, fixed + 12)
-
-                        Dim file_version As New Version(fileA, fileB, fileC, fileD)
-
-                        'Dim prodA = BitConverter.ToUInt16(exe, fixed + 18)
-                        'Dim prodB = BitConverter.ToUInt16(exe, fixed + 16)
-                        'Dim prodC = BitConverter.ToUInt16(exe, fixed + 22)
-                        'Dim prodD = BitConverter.ToUInt16(exe, fixed + 20)
-                        'Dim prod_version As New Version(prodA, prodB, prodC, prodD)
-
-                        'off += val_len
-
-                        'off = PadValue(off, 4)
-
-                        'Do
-
-                        '    len = BitConverter.ToUInt16(exe, off)
-                        '    val_len = BitConverter.ToUInt16(exe, off + 2)
-                        '    type = BitConverter.ToUInt16(exe, off + 4)
-
-                        '    off += 6
-
-                        '    info = ReadNullTerminatedString(exe, off)
-
-                        '    off = PadValue(off, 4)
-
-                        '    If type = 1 AndAlso info.Equals("StringFileInfo", StringComparison.Ordinal) Then
-
-                        '    End If
-
-                        '    off += val_len
-
-                        '    off = PadValue(off, 4)
-
-                        'Loop
-
-                        Return file_version
-
-                    End If
-
-                Next
-
-            Next
-
-            Throw New KeyNotFoundException("No version resource exists in file")
+            Return filever.FileVersion
 
         End Function
 
@@ -3206,7 +3045,7 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Private Shared Function PadValue(value As Integer, align As Integer) As Integer
+        Public Shared Function PadValue(value As Integer, align As Integer) As Integer
             Return (value + align - 1) And -align
         End Function
 
@@ -3590,14 +3429,14 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function GetModuleFullPath(hModule As IntPtr) As String
 
-            Dim str As New String(Nothing, 32768)
+            Dim str As New StringBuilder(32768)
 
-            Dim PathLength = UnsafeNativeMethods.GetModuleFileName(hModule, str, str.Length)
+            Dim PathLength = UnsafeNativeMethods.GetModuleFileName(hModule, str, str.Capacity)
             If PathLength = 0 Then
                 Throw New Win32Exception
             End If
 
-            Return str.Substring(0, PathLength)
+            Return str.ToString(0, PathLength)
 
         End Function
 
@@ -4011,7 +3850,7 @@ Currently, the following application has files open on this volume:
                     If devInfoData.DevInst.Equals(devinst) Then
                         Dim pcp As New UnsafeNativeMethods.SP_PROPCHANGE_PARAMS With {
                             .ClassInstallHeader = New UnsafeNativeMethods.SP_CLASSINSTALL_HEADER With {
-                                .cbSize = CUInt(Marshal.SizeOf(GetType(UnsafeNativeMethods.SP_CLASSINSTALL_HEADER))),
+                                .Size = CUInt(Marshal.SizeOf(GetType(UnsafeNativeMethods.SP_CLASSINSTALL_HEADER))),
                                 .InstallFunction = UnsafeNativeMethods.DIF_PROPERTYCHANGE
                             },
                             .HwProfile = 0,
@@ -4389,7 +4228,11 @@ Currently, the following application has files open on this volume:
 
             If filters Is Nothing Then
 
+#If NETFRAMEWORK AndAlso Not NET46_OR_GREATER Then
                 filters = {}
+#Else
+                filters = Array.Empty(Of String)()
+#End If
 
             ElseIf addfirst AndAlso
             driver.Equals(filters.FirstOrDefault(), StringComparison.OrdinalIgnoreCase) Then
@@ -4984,13 +4827,13 @@ Currently, the following application has files open on this volume:
 
         <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
         Public Structure SP_DEVINFO_DATA
-            Public ReadOnly Property cbSize As UInt32
+            Public ReadOnly Property Size As UInt32
             Public ReadOnly Property ClassGuid As Guid
             Public ReadOnly Property DevInst As UInt32
             Public ReadOnly Property Reserved As UIntPtr
 
             Public Sub Initialize()
-                _cbSize = CUInt(Marshal.SizeOf(Me))
+                _Size = CUInt(Marshal.SizeOf(Me))
             End Sub
         End Structure
 
@@ -5197,22 +5040,22 @@ Currently, the following application has files open on this volume:
 
         <StructLayout(LayoutKind.Sequential)>
         Public Structure CONSOLE_SCREEN_BUFFER_INFO
-            Public ReadOnly Property dwSize As COORD
-            Public ReadOnly Property dwCursorPosition As COORD
-            Public ReadOnly Property wAttributes As Short
-            Public ReadOnly Property srWindow As SMALL_RECT
-            Public ReadOnly Property dwMaximumWindowSize As COORD
+            Public ReadOnly Property Size As COORD
+            Public ReadOnly Property CursorPosition As COORD
+            Public ReadOnly Property Attributes As Short
+            Public ReadOnly Property Window As SMALL_RECT
+            Public ReadOnly Property MaximumWindowSize As COORD
         End Structure
 
         <StructLayout(LayoutKind.Sequential)>
         Public Structure SERVICE_STATUS
-            Public ReadOnly Property dwServiceType As Integer
-            Public ReadOnly Property dwCurrentState As Integer
-            Public ReadOnly Property dwControlsAccepted As Integer
-            Public ReadOnly Property dwWin32ExitCode As Integer
-            Public ReadOnly Property dwServiceSpecificExitCode As Integer
-            Public ReadOnly Property dwCheckPoint As Integer
-            Public ReadOnly Property dwWaitHint As Integer
+            Public ReadOnly Property ServiceType As Integer
+            Public ReadOnly Property CurrentState As Integer
+            Public ReadOnly Property ControlsAccepted As Integer
+            Public ReadOnly Property Win32ExitCode As Integer
+            Public ReadOnly Property ServiceSpecificExitCode As Integer
+            Public ReadOnly Property CheckPoint As Integer
+            Public ReadOnly Property WaitHint As Integer
         End Structure
 
         <Flags>
@@ -5248,7 +5091,7 @@ Currently, the following application has files open on this volume:
             ''' Creates a new empty instance. This constructor is used by native to managed
             ''' handle marshaller.
             ''' </summary>
-            Protected Sub New()
+            Private Sub New()
                 MyBase.New(ownsHandle:=True)
 
             End Sub
@@ -5287,7 +5130,7 @@ Currently, the following application has files open on this volume:
             ''' Creates a new empty instance. This constructor is used by native to managed
             ''' handle marshaller.
             ''' </summary>
-            Protected Sub New()
+            Private Sub New()
                 MyBase.New(ownsHandle:=True)
 
             End Sub
@@ -5326,7 +5169,7 @@ Currently, the following application has files open on this volume:
             ''' Creates a new empty instance. This constructor is used by native to managed
             ''' handle marshaller.
             ''' </summary>
-            Protected Sub New()
+            Private Sub New()
                 MyBase.New(ownsHandle:=True)
 
             End Sub
@@ -5365,7 +5208,7 @@ Currently, the following application has files open on this volume:
             ''' Creates a new empty instance. This constructor is used by native to managed
             ''' handle marshaller.
             ''' </summary>
-            Protected Sub New()
+            Private Sub New()
                 MyBase.New(ownsHandle:=True)
 
             End Sub
@@ -5405,7 +5248,7 @@ Currently, the following application has files open on this volume:
             ''' Creates a new empty instance. This constructor is used by native to managed
             ''' handle marshaller.
             ''' </summary>
-            Protected Sub New()
+            Private Sub New()
                 MyBase.New(ownsHandle:=True)
 
             End Sub
@@ -5527,7 +5370,7 @@ Currently, the following application has files open on this volume:
             ''' handle marshaller.
             ''' </summary>
             <SecurityCritical>
-            Protected Sub New()
+            Private Sub New()
                 MyBase.New(ownsHandle:=True)
 
             End Sub
@@ -6065,6 +5908,7 @@ Currently, the following application has files open on this volume:
         <StructLayout(LayoutKind.Sequential, Pack:=8)>
         Public Structure PARTITION_INFORMATION
 
+            <Flags>
             Public Enum PARTITION_TYPE As Byte
                 PARTITION_ENTRY_UNUSED = &H0      ' Entry unused
                 PARTITION_FAT_12 = &H1      ' 12-bit FAT entries

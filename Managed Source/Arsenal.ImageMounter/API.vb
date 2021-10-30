@@ -11,9 +11,14 @@
 ''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
+Imports System.ComponentModel
+Imports System.IO
+Imports System.Runtime.InteropServices
+Imports System.Threading
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32
+Imports Microsoft.Win32.SafeHandles
 
 ''' <summary>
 ''' API for manipulating flag values, issuing SCSI bus rescans, manage write filter driver and similar tasks.

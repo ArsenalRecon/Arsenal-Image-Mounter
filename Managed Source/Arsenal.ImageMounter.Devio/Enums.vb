@@ -12,6 +12,7 @@
 '''''
 
 Imports System.Diagnostics.CodeAnalysis
+Imports System.Runtime.InteropServices
 
 #Disable Warning CA1712
 
@@ -58,6 +59,8 @@ Public MustInherit Class IMDPROXY_CONSTANTS
     Public Const RESERVATION_KEY_ANY As ULong = ULong.MaxValue
 
 End Class
+
+#Disable Warning IDE1006 ' Naming Styles
 
 <StructLayout(LayoutKind.Sequential)>
 Public Structure IMDPROXY_CONNECT_REQ
@@ -134,7 +137,6 @@ Public Structure IMDPROXY_SCSI_REQ
     Private _cdb As Byte() 'byte[16]
     Public Property length As ULong
 
-    <SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification:="<Pending>")>
     Public Property Cdb As Byte()
         Get
             Return _cdb

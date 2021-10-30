@@ -11,12 +11,17 @@
 ''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Collections.ObjectModel
 Imports System.Globalization
+Imports System.IO
+Imports System.Reflection
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
+Imports DiscUtils
+Imports DiscUtils.Streams
 
 Namespace Server.Interaction
 

@@ -15,6 +15,9 @@ Imports Arsenal.ImageMounter.DriverSetup
 Imports Arsenal.ImageMounter.API
 Imports Arsenal.ImageMounter.IO
 Imports System.Windows.Forms
+Imports System.ComponentModel
+Imports System.Reflection
+Imports Arsenal.ImageMounter
 
 Module MainModule
 

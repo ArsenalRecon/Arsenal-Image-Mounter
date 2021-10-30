@@ -1,4 +1,7 @@
 ﻿Imports System.Diagnostics.CodeAnalysis
+Imports System.IO
+Imports System.Runtime.InteropServices
+Imports System.Text
 
 Namespace IO
 
@@ -6,7 +9,6 @@ Namespace IO
     ''' Class that caches a text INI file
     ''' </summary>
     <ComVisible(False)>
-    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification:="<Pending>")>
     Public Class CachedIniFile
         Inherits NullSafeDictionary(Of String, NullSafeDictionary(Of String, String))
 

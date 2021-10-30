@@ -12,6 +12,7 @@
 Imports System.IO
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
+Imports Microsoft.Win32.SafeHandles
 
 Module Module1
 

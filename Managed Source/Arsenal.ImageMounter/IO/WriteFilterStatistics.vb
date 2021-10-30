@@ -10,6 +10,8 @@
 ''''' Questions, comments, or requests for clarification: http:''ArsenalRecon.com/contact/
 '''''
 
+Imports System.Runtime.InteropServices
+
 Namespace IO
     <StructLayout(LayoutKind.Sequential)>
     Public Structure WriteFilterStatistics

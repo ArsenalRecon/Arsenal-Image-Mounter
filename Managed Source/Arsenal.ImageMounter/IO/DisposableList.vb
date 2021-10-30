@@ -1,4 +1,5 @@
 Imports System.Diagnostics.CodeAnalysis
+Imports System.Runtime.InteropServices
 
 Namespace IO
 
@@ -7,7 +8,6 @@ Namespace IO
     ''' object in the list when the list is disposed.
     ''' </summary>
     <ComVisible(False)>
-    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix")>
     Public Class DisposableList
         Inherits DisposableList(Of IDisposable)
 
@@ -34,7 +34,6 @@ Namespace IO
     ''' </summary>
     ''' <typeparam name="T">Type of elements in list. Type needs to implement IDisposable interface.</typeparam>
     <ComVisible(False)>
-    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix")>
     Public Class DisposableList(Of T As IDisposable)
         Inherits List(Of T)
 

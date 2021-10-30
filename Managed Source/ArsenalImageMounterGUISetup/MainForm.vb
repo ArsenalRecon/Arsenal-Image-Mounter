@@ -10,7 +10,14 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.ComponentModel
+Imports System.Configuration
+Imports System.IO
+Imports System.Windows.Forms
+Imports Arsenal.ImageMounter
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
+Imports Microsoft.Win32
 
 Public Class MainForm
 
@@ -46,10 +53,9 @@ Public Class MainForm
     Protected Overrides Sub OnLoad(e As EventArgs)
         MyBase.OnLoad(e)
 
-        My.Settings.Reload()
+        Dim eulaconfirmed = Registry.GetValue("HKEY_CURRENT_USER\Software\Arsenal Recon\Image Mounter", "EULAConfirmed", 0)
 
-        If Not My.Settings.EULAConfirmed Then
-
+        If TypeOf eulaconfirmed IsNot Integer OrElse CType(eulaconfirmed, Integer) < 1 Then
             If MessageBox.Show(Me,
                                GetEULA(),
                                "Arsenal Image Mounter",
@@ -61,9 +67,7 @@ Public Class MainForm
 
         End If
 
-        My.Settings.EULAConfirmed = True
-
-        My.Settings.Save()
+        Registry.SetValue("HKEY_CURRENT_USER\Software\Arsenal Recon\Image Mounter", "EULAConfirmed", 1)
 
         Try
             tbOSType.Text = $"{DriverSetup.Kernel} ({If(DriverSetup.HasStorPort, "storport", "scsiport")})"
@@ -74,13 +78,6 @@ Public Class MainForm
         End Try
 
         RefreshStatus()
-
-    End Sub
-
-    Protected Overrides Sub OnClosed(e As EventArgs)
-        MyBase.OnClosed(e)
-
-        My.Settings.Save()
 
     End Sub
 

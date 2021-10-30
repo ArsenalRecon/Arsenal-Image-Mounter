@@ -10,8 +10,10 @@
 ''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
+Imports DiscUtils
 Imports DiscUtils.Partitions
 Imports Buffer = System.Buffer
 

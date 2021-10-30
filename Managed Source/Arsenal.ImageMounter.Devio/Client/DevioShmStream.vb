@@ -14,6 +14,10 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
+Imports System.IO.MemoryMappedFiles
+Imports System.Runtime.InteropServices
+Imports System.Threading
 Imports Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS
 
 Namespace Client

@@ -1,4 +1,5 @@
-﻿Imports Arsenal.ImageMounter.IO
+﻿Imports System.Windows.Forms
+Imports Arsenal.ImageMounter.IO
 
 Public MustInherit Class LibewfVerify
 

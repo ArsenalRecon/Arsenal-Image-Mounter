@@ -10,6 +10,10 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
+Imports System.IO.MemoryMappedFiles
+Imports System.Runtime.InteropServices
+Imports System.Threading
 Imports Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.IO
@@ -119,9 +123,9 @@ Namespace Server.Services
 
             Using DisposableObjects As New DisposableList
 
-                Dim RequestEvent As WaitHandle
+                Dim RequestEvent As EventWaitHandle
 
-                Dim ResponseEvent As WaitHandle
+                Dim ResponseEvent As EventWaitHandle
 
                 Dim Mapping As MemoryMappedFile
 
@@ -160,12 +164,20 @@ Namespace Server.Services
                 End Try
 
                 Try
+#If NETFRAMEWORK AndAlso Not NET46_OR_GREATER Then
                     Mapping = MemoryMappedFile.CreateNew($"Global\{_ObjectName}",
                                                          _BufferSize,
                                                          MemoryMappedFileAccess.ReadWrite,
                                                          MemoryMappedFileOptions.None,
                                                          Nothing,
                                                          HandleInheritability.None)
+#Else
+                    Mapping = MemoryMappedFile.CreateNew($"Global\{_ObjectName}",
+                                                         _BufferSize,
+                                                         MemoryMappedFileAccess.ReadWrite,
+                                                         MemoryMappedFileOptions.None,
+                                                         HandleInheritability.None)
+#End If
 
                     DisposableObjects.Add(Mapping)
 
@@ -216,11 +228,14 @@ Namespace Server.Services
 
                     Trace.WriteLine("Client connected, waiting for request.")
 
+                    Dim request_shutdown As Boolean
+
                     InternalShutdownRequestAction =
                         Sub()
                             Try
                                 Trace.WriteLine("Emergency service thread shutdown requested, injecting close request...")
-                                ServiceThread.Abort()
+                                request_shutdown = True
+                                RequestEvent.Set()
 
                             Catch
 
@@ -228,6 +243,11 @@ Namespace Server.Services
                         End Sub
 
                     Do
+                        If request_shutdown Then
+                            Trace.WriteLine("Emergency shutdown. Closing connection.")
+                            Return
+                        End If
+
                         Dim RequestCode = MapView.SafeMemoryMappedViewHandle.Read(Of IMDPROXY_REQ)(&H0)
 
                         'Trace.WriteLine("Got client request: " & RequestCode.ToString())

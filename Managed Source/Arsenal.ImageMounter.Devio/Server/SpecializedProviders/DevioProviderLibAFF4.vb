@@ -11,7 +11,11 @@
 '''''
 
 Imports System.Diagnostics.CodeAnalysis
+Imports System.IO
+Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+
+#Disable Warning CA2101 ' Specify marshaling for P/Invoke string arguments
 
 Namespace Server.SpecializedProviders
 

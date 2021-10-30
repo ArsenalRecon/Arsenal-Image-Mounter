@@ -1,15 +1,19 @@
 ﻿Imports Arsenal.ImageMounter.IO.NativeFileIO
 Imports Arsenal.ImageMounter.IO.NativeFileIO.NativeConstants
 Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
+Imports System.ComponentModel
 Imports System.Diagnostics.CodeAnalysis
+Imports System.Runtime.InteropServices
 Imports System.Security
 Imports System.Security.Permissions
+
+#Disable Warning IDE0079 ' Remove unnecessary suppression
+#Disable Warning SYSLIB0003 ' Type or member is obsolete
 
 Namespace IO
 
     <SecurityCritical>
     <SecurityPermission(SecurityAction.Demand, Flags:=SecurityPermissionFlag.AllFlags)>
-    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix")>
     Public Class FileStreamsEnumerator
         Implements IEnumerable(Of FindStreamData)
 
@@ -97,7 +101,7 @@ Namespace IO
             Private disposedValue As Boolean ' To detect redundant calls
 
             ' IDisposable
-            Protected Sub Dispose(disposing As Boolean)
+            Private Sub Dispose(disposing As Boolean)
                 If Not Me.disposedValue Then
                     If disposing Then
                         ' TODO: dispose managed state (managed objects).

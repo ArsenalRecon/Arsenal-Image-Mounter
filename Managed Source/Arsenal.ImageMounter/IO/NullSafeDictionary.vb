@@ -1,5 +1,7 @@
 ﻿#Disable Warning IDE0079 ' Remove unnecessary suppression
 
+Imports System.Runtime.InteropServices
+
 Namespace IO
 
     ''' <summary>

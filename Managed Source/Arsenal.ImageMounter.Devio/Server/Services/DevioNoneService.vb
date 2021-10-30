@@ -9,9 +9,11 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.IO
+Imports DiscUtils
 
 Namespace Server.Services
 
@@ -124,6 +126,7 @@ Namespace Server.Services
         ''' </summary>
         ''' <returns>Fixed value of True.</returns>
         Public Overrides Function StartServiceThread() As Boolean
+            RunService()
             Return True
         End Function
 

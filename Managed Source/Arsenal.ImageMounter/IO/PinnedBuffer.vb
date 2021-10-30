@@ -1,4 +1,5 @@
 Imports System.Diagnostics.CodeAnalysis
+Imports System.Runtime.InteropServices
 Imports System.Runtime.InteropServices.Marshal
 Imports Arsenal.ImageMounter.Extensions
 
@@ -268,7 +269,6 @@ Namespace IO
         ''' <summary>
         ''' Returns associated object of this instance.
         ''' </summary>
-        <SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification:="<Pending>")>
         Public Overloads ReadOnly Property Target As T()
             Get
                 Return DirectCast(GCHandle.Target, T())

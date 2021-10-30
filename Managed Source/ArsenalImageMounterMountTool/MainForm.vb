@@ -15,12 +15,20 @@ Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports System.Threading
 Imports System.Threading.Tasks
+Imports System.IO
 Imports System.Text
 Imports System.Runtime.InteropServices
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.PSDisk
 Imports Arsenal.ImageMounter.IO
 Imports Arsenal.ImageMounter.Devio
 Imports System.Diagnostics.CodeAnalysis
+Imports Arsenal.ImageMounter
+Imports System.ComponentModel
+Imports System.Windows.Forms
+Imports System.Drawing
+
+#Disable Warning IDE1006 ' Naming Styles
 
 Public Class MainForm
 
@@ -779,7 +787,7 @@ Public Class MainForm
 
     End Sub
 
-    Private Function GetEmbeddedDriverVersion() As Version
+    Private Shared Function GetEmbeddedDriverVersion() As Version
 
         Using zipStream = GetType(MainForm).Assembly.GetManifestResourceStream(GetType(MainForm), "DriverFiles.zip")
 

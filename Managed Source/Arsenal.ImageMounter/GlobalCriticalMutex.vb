@@ -11,6 +11,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Threading
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32
 
@@ -49,7 +50,7 @@ Public NotInheritable Class GlobalCriticalMutex
     Private disposedValue As Boolean ' To detect redundant calls
 
     ' IDisposable
-    Protected Sub Dispose(disposing As Boolean)
+    Private Sub Dispose(disposing As Boolean)
         If Not disposedValue Then
             If disposing Then
                 mutex.ReleaseMutex()

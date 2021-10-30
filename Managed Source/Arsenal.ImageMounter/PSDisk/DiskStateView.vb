@@ -1,4 +1,5 @@
-﻿Imports System.Diagnostics.CodeAnalysis
+﻿Imports System.ComponentModel
+Imports System.Diagnostics.CodeAnalysis
 Imports Arsenal.ImageMounter.PSDisk
 
 Namespace PSDisk
@@ -140,7 +141,6 @@ Namespace PSDisk
 
         Public Property FakeMBR As Boolean
 
-        <SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification:="<Pending>")>
         Public Property Volumes As String()
 
         Public ReadOnly Property VolumesString As String
@@ -152,7 +152,6 @@ Namespace PSDisk
             End Get
         End Property
 
-        <SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification:="<Pending>")>
         Public Property MountPoints As String()
 
         Public ReadOnly Property MountPointsString As String

@@ -1,5 +1,10 @@
 ﻿Imports System.Security
 Imports System.Security.Permissions
+Imports System.Text
+Imports System.Threading
+
+#Disable Warning IDE0079 ' Remove unnecessary suppression
+#Disable Warning SYSLIB0003 ' Type or member is obsolete
 
 Namespace IO
 
@@ -62,7 +67,7 @@ Namespace IO
 
             row.Append("]"c)
 
-            row.Append(Microsoft.VisualBasic.vbCr)
+            row.Append(vbCr(0))
 
             SyncLock ConsoleSync
 
@@ -114,7 +119,7 @@ Namespace IO
 
             row.Append("]"c)
 
-            row.Append(Microsoft.VisualBasic.vbCr)
+            row.Append(vbCr(0))
 
             SyncLock ConsoleSync
 

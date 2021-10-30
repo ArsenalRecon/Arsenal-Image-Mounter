@@ -10,8 +10,11 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.ComponentModel
+Imports System.IO
+Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.IO
-
+Imports Microsoft.Win32.SafeHandles
 
 ''' <summary>
 ''' Represents disk objects, attached to a virtual or physical SCSI adapter.

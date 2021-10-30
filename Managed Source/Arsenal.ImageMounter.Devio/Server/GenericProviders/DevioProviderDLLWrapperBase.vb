@@ -12,7 +12,11 @@
 ''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
+Imports System.ComponentModel
 Imports System.Diagnostics.CodeAnalysis
+Imports System.IO
+Imports System.Runtime.InteropServices
+Imports Microsoft.Win32.SafeHandles
 
 Namespace Server.GenericProviders
 

@@ -12,6 +12,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
+
 Namespace Server.GenericProviders
 
     ''' <summary>

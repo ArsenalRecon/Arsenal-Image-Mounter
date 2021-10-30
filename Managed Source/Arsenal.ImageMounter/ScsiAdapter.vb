@@ -10,11 +10,16 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.ComponentModel
 Imports System.Diagnostics.CodeAnalysis
+Imports System.IO
+Imports System.Runtime.InteropServices
+Imports System.Text
+Imports System.Threading
 Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
-
+Imports Microsoft.Win32.SafeHandles
 
 ''' <summary>
 ''' Represents Arsenal Image Mounter objects.

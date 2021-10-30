@@ -1,4 +1,5 @@
-﻿Imports System.Linq.Expressions
+﻿Imports System.ComponentModel
+Imports System.Linq.Expressions
 Imports System.Reflection
 
 Namespace Reflection

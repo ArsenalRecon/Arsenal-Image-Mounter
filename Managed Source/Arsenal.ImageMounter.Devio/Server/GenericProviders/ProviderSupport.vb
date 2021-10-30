@@ -10,12 +10,15 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
 Imports System.Runtime.CompilerServices
 Imports System.Security.Cryptography
+Imports System.Threading
 Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
+Imports DiscUtils
 
 Namespace Server.GenericProviders
 

@@ -10,6 +10,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Runtime.InteropServices
+
 Namespace Server.GenericProviders
 
     ''' <summary>
@@ -68,9 +70,9 @@ Namespace Server.GenericProviders
         ''' <returns>Returns number of bytes read from device that were stored in byte array.</returns>
         Public MustOverride Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
 
-        Private Function GetByteBuffer(size As Integer) As Byte()
+        Private ReadOnly _buffers As New List(Of WeakReference)
 
-            Static buffers As New List(Of WeakReference)
+        Private Function GetByteBuffer(size As Integer) As Byte()
 
 #If TRACE_PERFORMANCE Then
             Static tid As String = Thread.CurrentThread.ManagedThreadId.ToString()
@@ -81,7 +83,7 @@ Namespace Server.GenericProviders
             counter += 1
 #End If
 
-            Dim buffer = buffers.
+            Dim buffer = _buffers.
                 Select(Function(ref) TryCast(ref.Target, Byte())).
                 FirstOrDefault(Function(buf) buf IsNot Nothing AndAlso buf.Length >= size)
 
@@ -93,11 +95,11 @@ Namespace Server.GenericProviders
 
                 buffer = New Byte(0 To size - 1) {}
 
-                Dim wr = buffers.FirstOrDefault(Function(ref) Not ref.IsAlive)
+                Dim wr = _buffers.FirstOrDefault(Function(ref) Not ref.IsAlive)
 
                 If wr Is Nothing Then
 
-                    buffers.Add(New WeakReference(buffer))
+                    _buffers.Add(New WeakReference(buffer))
 
                 Else
 

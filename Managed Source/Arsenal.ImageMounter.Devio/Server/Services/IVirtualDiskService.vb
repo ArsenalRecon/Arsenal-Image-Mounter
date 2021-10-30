@@ -9,6 +9,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Threading
+
 Namespace Server.Services
 
     Public Interface IVirtualDiskService

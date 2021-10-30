@@ -17,6 +17,8 @@ Imports System.IO
 Imports System.Reflection
 Imports Arsenal.ImageMounter.IO
 Imports System.Diagnostics.CodeAnalysis
+Imports Arsenal.ImageMounter
+Imports Arsenal.ImageMounter.Extensions
 
 Enum OpMode
     None
@@ -45,7 +47,6 @@ Module MainModule
 
     End Sub
 
-    <SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification:="<Pending>")>
     Sub SafeMain(args As String())
 
         Dim FileName As String = Nothing

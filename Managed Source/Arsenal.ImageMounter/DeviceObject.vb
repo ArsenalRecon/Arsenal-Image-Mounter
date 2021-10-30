@@ -10,8 +10,9 @@
 ''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
 Imports Arsenal.ImageMounter.IO
-
+Imports Microsoft.Win32.SafeHandles
 
 ''' <summary>
 ''' Base class that represents Arsenal Image Mounter SCSI miniport created device objects.

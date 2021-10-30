@@ -12,17 +12,23 @@
 '''''
 
 Imports System.ComponentModel
+Imports System.Collections.Generic
+Imports System.IO
+Imports System.Text
 Imports System.Globalization
 Imports System.Reflection
 Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
+Imports System.Threading
 Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.IO
+Imports Arsenal.ImageMounter.Extensions
 Imports Microsoft.Win32.SafeHandles
+Imports System.Net
 
 Public Module ServerModule
 
@@ -235,47 +241,47 @@ Please see EULA.txt for license information.")
 
         Dim commands = ParseCommandLine(args, StringComparer.OrdinalIgnoreCase)
 
-        For Each command In commands
+        For Each cmd In commands
 
-            Dim arg = command.Key
+            Dim arg = cmd.Key
 
             If arg.Equals("trace", StringComparison.OrdinalIgnoreCase) Then
-                If command.Value.Length = 0 Then
+                If cmd.Value.Length = 0 Then
                     If commands.ContainsKey("detach") Then
                         Console.WriteLine("Switches /trace and /background cannot be combined")
                         Return -1
                     End If
                     Trace.Listeners.Add(New ConsoleTraceListener(True))
                 Else
-                    For Each tracefilename In command.Value
+                    For Each tracefilename In cmd.Value
                         Dim tracefile = New StreamWriter(tracefilename, append:=True) With {.AutoFlush = True}
                         Trace.Listeners.Add(New TextWriterTraceListener(tracefile))
                     Next
                 End If
                 verbose = True
-            ElseIf arg.Equals("name", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                ObjectName = command.Value(0)
-            ElseIf arg.Equals("ipaddress", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                listen_address = IPAddress.Parse(command.Value(0))
-            ElseIf arg.Equals("port", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                listen_port = Integer.Parse(command.Value(0))
-            ElseIf arg.Equals("buffersize", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                buffer_size = Long.Parse(command.Value(0))
-            ElseIf arg.Equals("filename", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                image_path = command.Value(0)
-            ElseIf arg.Equals("provider", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                provider_name = command.Value(0)
-            ElseIf arg.Equals("readonly", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
+            ElseIf arg.Equals("name", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                ObjectName = cmd.Value(0)
+            ElseIf arg.Equals("ipaddress", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                listen_address = IPAddress.Parse(cmd.Value(0))
+            ElseIf arg.Equals("port", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                listen_port = Integer.Parse(cmd.Value(0))
+            ElseIf arg.Equals("buffersize", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                buffer_size = Long.Parse(cmd.Value(0))
+            ElseIf arg.Equals("filename", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                image_path = cmd.Value(0)
+            ElseIf arg.Equals("provider", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                provider_name = cmd.Value(0)
+            ElseIf arg.Equals("readonly", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 0 Then
                 disk_access = FileAccess.Read
-            ElseIf arg.Equals("fakesig", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
+            ElseIf arg.Equals("fakesig", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 0 Then
                 device_flags = device_flags Or DeviceFlags.FakeDiskSignatureIfZero
-            ElseIf arg.Equals("fakembr", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
+            ElseIf arg.Equals("fakembr", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 0 Then
                 fake_mbr = True
-            ElseIf arg.Equals("writeoverlay", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                write_overlay_image_file = command.Value(0)
+            ElseIf arg.Equals("writeoverlay", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                write_overlay_image_file = cmd.Value(0)
                 disk_access = FileAccess.Read
                 device_flags = device_flags Or DeviceFlags.ReadOnly Or DeviceFlags.WriteOverlay
-            ElseIf arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
+            ElseIf arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 0 Then
                 If Not commands.ContainsKey("writeoverlay") Then
                     show_help = True
                     Exit For
@@ -283,7 +289,7 @@ Please see EULA.txt for license information.")
                 auto_delete = True
             ElseIf arg.Equals("mount", StringComparison.OrdinalIgnoreCase) Then
                 mount = True
-                For Each opt In command.Value
+                For Each opt In cmd.Value
                     If opt.Equals("removable", StringComparison.OrdinalIgnoreCase) Then
                         device_flags = device_flags Or DeviceFlags.Removable
                     ElseIf opt.Equals("cdrom", StringComparison.OrdinalIgnoreCase) Then
@@ -304,38 +310,38 @@ Please see EULA.txt for license information.")
                     Exit For
                 End If
 
-                output_image = command.Value(0)
+                output_image = cmd.Value(0)
                 disk_access = FileAccess.Read
-            ElseIf arg.Equals("variant", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                output_image_variant = command.Value(0)
-            ElseIf arg.Equals("libewfoutput", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                libewf_debug_output = command.Value(0)
-            ElseIf arg.Equals("debugcompare", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                debug_compare = command.Value(0)
+            ElseIf arg.Equals("variant", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                output_image_variant = cmd.Value(0)
+            ElseIf arg.Equals("libewfoutput", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                libewf_debug_output = cmd.Value(0)
+            ElseIf arg.Equals("debugcompare", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                debug_compare = cmd.Value(0)
             ElseIf arg.Equals("dismount", StringComparison.OrdinalIgnoreCase) Then
-                If command.Value.Length = 0 Then
+                If cmd.Value.Length = 0 Then
                     dismount = "*"
-                ElseIf command.Value.Length = 1 Then
-                    dismount = command.Value(0)
+                ElseIf cmd.Value.Length = 1 Then
+                    dismount = cmd.Value(0)
                 Else
                     show_help = True
                     Exit For
                 End If
-            ElseIf arg.Equals("force", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
+            ElseIf arg.Equals("force", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 0 Then
                 force_dismount = True
-            ElseIf arg.Equals("detach", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 1 Then
-                detach_event = New SafeWaitHandle(New IntPtr(Long.Parse(command.Value(0), NumberFormatInfo.InvariantInfo)), ownsHandle:=True)
+            ElseIf arg.Equals("detach", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                detach_event = New SafeWaitHandle(New IntPtr(Long.Parse(cmd.Value(0), NumberFormatInfo.InvariantInfo)), ownsHandle:=True)
             ElseIf arg.Length = 0 OrElse arg.Equals("?", StringComparison.Ordinal) OrElse arg.Equals("help", StringComparison.OrdinalIgnoreCase) Then
                 show_help = True
                 Exit For
-            ElseIf arg.Equals("version", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
+            ElseIf arg.Equals("version", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 0 Then
                 ShowVersionInfo()
                 Return 0
-            ElseIf arg.Equals("list", StringComparison.OrdinalIgnoreCase) AndAlso command.Value.Length = 0 Then
+            ElseIf arg.Equals("list", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 0 Then
                 ListDevices()
                 Return 0
             ElseIf arg.Length = 0 Then
-                Console.WriteLine($"Unsupported command line argument: {command.Value.FirstOrDefault()}")
+                Console.WriteLine($"Unsupported command line argument: {cmd.Value.FirstOrDefault()}")
                 show_help = True
                 Exit For
             Else

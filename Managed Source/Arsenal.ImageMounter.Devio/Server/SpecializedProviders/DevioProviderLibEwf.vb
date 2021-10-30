@@ -11,10 +11,16 @@
 '''''
 
 Imports System.Diagnostics.CodeAnalysis
+Imports System.IO
 Imports System.IO.Pipes
+Imports System.Runtime.InteropServices
+Imports System.Text
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
+Imports Microsoft.Win32.SafeHandles
+
+#Disable Warning CA2101 ' Specify marshaling for P/Invoke string arguments
 
 Namespace Server.SpecializedProviders
 
@@ -38,7 +44,7 @@ Namespace Server.SpecializedProviders
                 SetHandle(handle)
             End Sub
 
-            Protected Sub New()
+            Private Sub New()
                 MyBase.New(True)
 
             End Sub
@@ -72,7 +78,7 @@ Namespace Server.SpecializedProviders
                 SetHandle(handle)
             End Sub
 
-            Protected Sub New()
+            Private Sub New()
                 MyBase.New(True)
 
             End Sub
@@ -317,7 +323,7 @@ Namespace Server.SpecializedProviders
         Private Shared Function libewf_handle_get_utf16_header_value(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                      <[In], MarshalAs(UnmanagedType.LPStr, SizeParamIndex:=2)> identifier As String,
                                                                      identifier_length As IntPtr,
-                                                                     <Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex:=4)> utf16_string As String,
+                                                                     <MarshalAs(UnmanagedType.LPWStr, SizeParamIndex:=4)> utf16_string As String,
                                                                      utf16_string_length As IntPtr,
                                                                      <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function

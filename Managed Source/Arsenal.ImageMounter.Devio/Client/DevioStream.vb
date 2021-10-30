@@ -14,6 +14,8 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
+
 Namespace Client
 
     ''' <summary>
@@ -102,7 +104,7 @@ Namespace Client
         ''' </summary>
         Protected Overrides Sub Dispose(disposing As Boolean)
 
-            RaiseEvent Disposing(Me, EventArgs.Empty)
+            RaiseEvent disposing(Me, EventArgs.Empty)
 
             MyBase.Dispose(disposing)
 

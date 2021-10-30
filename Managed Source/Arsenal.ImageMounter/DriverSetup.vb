@@ -6,6 +6,10 @@ Imports Ionic.Crc
 Imports Arsenal.ImageMounter.Extensions
 Imports System.Diagnostics.CodeAnalysis
 Imports Microsoft.Win32
+Imports System.IO
+Imports System.Threading
+Imports System.Text
+Imports System.ComponentModel
 
 ''' <summary>
 ''' Routines for installing or uninstalling Arsenal Image Mounter kernel level
@@ -298,7 +302,7 @@ Public NotInheritable Class DriverSetup
     ''' at this path needs to be like in DriverSetup.7z found in DriverSetup
     ''' directory in repository, that is, one subdirectory for each kernel
     ''' version followed by one subdirectory for each architecture.</param>
-    Protected Shared Sub InstallStorPortDriver(ownerWindow As IWin32Window, setupsource As String)
+    Friend Shared Sub InstallStorPortDriver(ownerWindow As IWin32Window, setupsource As String)
 
         '' First, check if device nodes already exist.
         Try
@@ -382,7 +386,7 @@ Public NotInheritable Class DriverSetup
     ''' console Applications, you could call
     ''' NativeFileIO.Win32API.GetConsoleWindow() to get a window handle to the
     ''' console window.</param>
-    Protected Shared Sub RemoveDevices(ownerWindow As IWin32Window)
+    Friend Shared Sub RemoveDevices(ownerWindow As IWin32Window)
 
         Dim hwinstances As IEnumerable(Of String) = Nothing
 
@@ -399,7 +403,7 @@ Public NotInheritable Class DriverSetup
     ''' <summary>
     ''' Installs Arsenal Image Mounter driver components from specified source
     ''' path. This routine installs the ScsiPort version of the driver, for use
-    ''' on Windwos XP or earlier.
+    ''' on Windows XP or earlier.
     ''' </summary>
     ''' <param name="ownerWindow">This needs to be a valid handle to a Win32
     ''' window that will be parent to dialog boxes etc shown by setup API. In
@@ -410,7 +414,7 @@ Public NotInheritable Class DriverSetup
     ''' at this path needs to be like in DriverSetup.7z found in DriverSetup
     ''' directory in repository, that is, one subdirectory for each kernel
     ''' version followed by one subdirectory for each architecture.</param>
-    Protected Shared Sub InstallScsiPortDriver(ownerWindow As IWin32Window, setupsource As String)
+    Friend Shared Sub InstallScsiPortDriver(ownerWindow As IWin32Window, setupsource As String)
 
         ''
         '' Install null device .inf for control unit
@@ -444,7 +448,7 @@ Public NotInheritable Class DriverSetup
     ''' <summary>
     ''' Removes Arsenal Image Mounter driver components.
     ''' </summary>
-    Protected Shared Sub RemoveDriver()
+    Friend Shared Sub RemoveDriver()
 
         Using scm = NativeFileIO.UnsafeNativeMethods.OpenSCManager(Nothing, Nothing, NativeFileIO.NativeConstants.SC_MANAGER_ALL_ACCESS)
 

@@ -1,4 +1,6 @@
-﻿Namespace IO
+﻿Imports System.Threading
+
+Namespace IO
 
     Public Class ConsoleSpinProgress
         Implements IDisposable

@@ -1,7 +1,9 @@
-﻿Imports System.Data
+﻿Imports System.Collections.ObjectModel
+Imports System.Data
 Imports System.Diagnostics.CodeAnalysis
 Imports System.Linq.Expressions
 Imports System.Reflection
+Imports System.Runtime.InteropServices
 Imports System.Xml.Serialization
 
 Namespace Reflection
@@ -487,7 +489,6 @@ Namespace Reflection
 
         End Function
 
-        <SuppressMessage("Naming", "CA1720:Identifier contains type name")>
         Public Shared Function RecordToEntityObject(Of T)(record As IDataRecord, obj As T) As T
 
             Dim props = PropertiesAssigners(Of T).Setters

@@ -1,4 +1,6 @@
 ﻿Imports System.Diagnostics.CodeAnalysis
+Imports System.IO
+Imports System.Text
 
 Namespace IO
 
@@ -13,7 +15,6 @@ Namespace IO
         ''' Creates a new instance of BufferedBinaryWriter.
         ''' </summary>
         ''' <param name="encoding">Specifies which text encoding to use.</param>
-        <SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")>
         Public Sub New(encoding As Encoding)
             MyBase.New(New MemoryStream, encoding)
         End Sub
@@ -21,7 +22,6 @@ Namespace IO
         ''' <summary>
         ''' Creates a new instance of BufferedBinaryWriter using System.Text.Encoding.Unicode text encoding.
         ''' </summary>
-        <SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")>
         Public Sub New()
             MyBase.New(New MemoryStream, Encoding.Unicode)
         End Sub

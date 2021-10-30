@@ -1,6 +1,12 @@
 ﻿Imports System.Runtime.InteropServices
+Imports System.IO
 Imports System.Threading
+Imports System.Windows.Forms
 Imports Arsenal.ImageMounter.IO
+Imports Arsenal.ImageMounter.Extensions
+Imports System.Reflection
+Imports System.Configuration
+Imports Microsoft.Win32
 
 Public Module MainModule
 
@@ -22,8 +28,6 @@ Public Module MainModule
             UsingDebugConsole = True
         End If
 
-        My.Settings.Reload()
-
         Dim privileges_enabled = NativeFileIO.EnablePrivileges(
             NativeFileIO.NativeConstants.SE_BACKUP_NAME,
             NativeFileIO.NativeConstants.SE_RESTORE_NAME,
@@ -38,26 +42,24 @@ Public Module MainModule
             Trace.WriteLine($"Error enabling privileges: {Marshal.GetLastWin32Error()}")
         End If
 
-        If Not My.Settings.EULAConfirmed Then
+        Dim eulaconfirmed = Registry.GetValue("HKEY_CURRENT_USER\Software\Arsenal Recon\Image Mounter", "EULAConfirmed", 0)
 
+        If TypeOf eulaconfirmed IsNot Integer OrElse CType(eulaconfirmed, Integer) < 1 Then
             If MessageBox.Show(GetEULA(),
                                "Arsenal Image Mounter",
                                MessageBoxButtons.OKCancel,
                                MessageBoxIcon.Information) <> DialogResult.OK Then
+                Application.Exit()
                 Return
             End If
 
-            My.Settings.EULAConfirmed = True
-
-            My.Settings.Save()
-
         End If
+
+        Registry.SetValue("HKEY_CURRENT_USER\Software\Arsenal Recon\Image Mounter", "EULAConfirmed", 1)
 
         AddHandler Application.ThreadException, AddressOf Application_ThreadException
 
         Application.Run(New MainForm)
-
-        My.Settings.Save()
 
     End Sub
 

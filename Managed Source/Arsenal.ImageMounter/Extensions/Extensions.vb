@@ -1,6 +1,9 @@
-﻿Imports System.Globalization
+﻿Imports System.ComponentModel
+Imports System.Globalization
 Imports System.Reflection
 Imports System.Runtime.CompilerServices
+Imports System.Text
+Imports System.Threading
 Imports System.Windows.Forms
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32

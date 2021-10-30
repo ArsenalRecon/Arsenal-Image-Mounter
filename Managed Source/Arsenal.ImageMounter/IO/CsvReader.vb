@@ -1,5 +1,8 @@
-﻿Imports System.Linq.Expressions
+﻿Imports System.Collections.ObjectModel
+Imports System.IO
+Imports System.Linq.Expressions
 Imports System.Reflection
+Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.Reflection
 
 #Disable Warning CA1051 ' Do not declare visible instance fields

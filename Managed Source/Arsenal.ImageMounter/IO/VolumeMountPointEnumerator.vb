@@ -2,10 +2,12 @@
 Imports Arsenal.ImageMounter.IO.NativeFileIO
 Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
 Imports Arsenal.ImageMounter.IO.NativeFileIO.NativeConstants
+Imports System.Text
+Imports System.Runtime.InteropServices
+Imports System.ComponentModel
 
 Namespace IO
 
-    <SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix")>
     Public Class VolumeMountPointEnumerator
         Implements IEnumerable(Of String)
 

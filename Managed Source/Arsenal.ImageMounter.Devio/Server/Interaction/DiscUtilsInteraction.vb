@@ -1,7 +1,9 @@
-﻿Imports System.Security.AccessControl
+﻿Imports System.IO
+Imports System.Security.AccessControl
 Imports System.Windows.Forms
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
+Imports DiscUtils
 Imports DiscUtils.Partitions
 Imports Buffer = System.Buffer
 
@@ -111,7 +113,7 @@ Namespace Server.Interaction
 
             If ramdisk.MountPoint IsNot Nothing Then
                 Try
-                    Process.Start(ramdisk.MountPoint)
+                    Process.Start(New ProcessStartInfo() With {.FileName = ramdisk.MountPoint, .UseShellExecute = True})
 
                 Catch ex As Exception
                     MessageBox.Show($"Failed to open Explorer window for created RAM disk: {ex.JoinMessages()}")

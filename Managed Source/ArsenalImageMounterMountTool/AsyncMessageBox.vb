@@ -1,4 +1,5 @@
 ﻿Imports System.Drawing
+Imports System.Windows.Forms
 
 Public Class AsyncMessageBox
 
@@ -94,7 +95,7 @@ Public Class AsyncMessageBox
 
                 CurrentFont = FindLargestFont(g, MaxFont.FontFamily, MaxFont.Size, MaxFont.Style, MaxFont.Unit, TextRectangle, m_Text)
 
-                g.DrawString(m_Text, CurrentFont, m_ForegroundBrush, TextRectangle, sftCentered)
+                g.DrawString(m_Text, CurrentFont, m_ForegroundBrush, TextRectangle, StringFormatCentered)
 
             End Using
 
@@ -103,7 +104,7 @@ Public Class AsyncMessageBox
         End Try
     End Sub
 
-    Public Shared ReadOnly Property sftCentered As New StringFormat With {.LineAlignment = StringAlignment.Center, .Alignment = StringAlignment.Center}
+    Public Shared ReadOnly Property StringFormatCentered As New StringFormat With {.LineAlignment = StringAlignment.Center, .Alignment = StringAlignment.Center}
 
     Private Shared Function FindLargestFont(Graphics As Graphics, _
                                            FontFamily As FontFamily, _

@@ -9,6 +9,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.IO
 Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.IO
 
@@ -66,10 +67,10 @@ Namespace Server.SpecializedProviders
 
             'INSTANT VB TODO TASK: There is no equivalent to a 'checked' block in VB:
             '			checked
-            _length += stream.Length
+            _Length += stream.Length
             'INSTANT VB TODO TASK: End of the original C# 'checked' block.
 
-            _streams.Add(_length, stream)
+            _streams.Add(_Length, stream)
         End Sub
 
         Public Overrides Function Read(ByVal buffer() As Byte, ByVal index As Integer, ByVal count As Integer) As Integer

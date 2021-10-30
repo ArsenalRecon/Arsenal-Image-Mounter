@@ -8,8 +8,6 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("Arsenal Image Mounter Device I/O Backend")>
-
 <Assembly: ObfuscateAssembly(False)>
 
 <Assembly: ComVisible(True)>

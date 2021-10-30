@@ -1,4 +1,6 @@
-﻿Namespace Reflection
+﻿Imports System.Runtime.InteropServices
+
+Namespace Reflection
 
     <ComVisible(False)>
     Public NotInheritable Class SequenceEqualityComparer(Of T)
