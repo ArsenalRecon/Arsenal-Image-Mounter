@@ -113,7 +113,7 @@ Namespace Server.Interaction
 
             If ramdisk.MountPoint IsNot Nothing Then
                 Try
-                    Process.Start(New ProcessStartInfo() With {.FileName = ramdisk.MountPoint, .UseShellExecute = True})
+                    NativeFileIO.BrowseTo(ramdisk.MountPoint)
 
                 Catch ex As Exception
                     MessageBox.Show($"Failed to open Explorer window for created RAM disk: {ex.JoinMessages()}")

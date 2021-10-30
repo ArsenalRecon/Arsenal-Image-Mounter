@@ -189,6 +189,12 @@ Namespace IO
 
         End Class
 
+        Public Shared Sub BrowseTo(target As String)
+
+            Process.Start(New ProcessStartInfo() With {.FileName = target, .UseShellExecute = True})?.Dispose()
+
+        End Sub
+
         Public NotInheritable Class SafeNativeMethods
 
 #Disable Warning CA1401 ' P/Invokes should not be visible
