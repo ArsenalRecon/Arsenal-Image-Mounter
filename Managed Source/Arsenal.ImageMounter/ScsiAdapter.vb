@@ -790,8 +790,8 @@ Public Class ScsiAdapter
     ''' </summary>
     ''' <param name="DeviceNumber">Device number of virtual disk to modify.</param>
     ''' <param name="ExtendSize">Number of bytes to extend.</param>
-    Public Sub ChangeFlags(DeviceNumber As UInt32,
-                           ExtendSize As Int64)
+    Public Sub ExtendSize(DeviceNumber As UInt32,
+                          ExtendSize As Int64)
 
         Dim Request As New BufferedBinaryWriter
         Request.Write(DeviceNumber)

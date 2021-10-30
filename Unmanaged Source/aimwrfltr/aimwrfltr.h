@@ -900,6 +900,7 @@ extern "C"
     extern PKEVENT AIMWrFltrDiffFullEvent;
     extern PDRIVER_OBJECT AIMWrFltrDriverObject;
     extern bool AIMWrFltrLinksCreated;
+    extern bool QueueWithoutCache;
 
 #if _NT_TARGET_VERSION >= 0x501
 

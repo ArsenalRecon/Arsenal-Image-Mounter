@@ -3,21 +3,21 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29926.136
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Arsenal.ImageMounter.Devio", "Arsenal.ImageMounter.Devio\Arsenal.ImageMounter.Devio.vbproj", "{C8131F7E-E240-4A1B-8D3D-FC4E5DBED050}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "Arsenal.ImageMounter.Devio", "Arsenal.ImageMounter.Devio\Arsenal.ImageMounter.Devio.vbproj", "{C8131F7E-E240-4A1B-8D3D-FC4E5DBED050}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ArsenalImageMounterControl", "ArsenalImageMounterControl\ArsenalImageMounterControl.vbproj", "{1C5D3D2F-8DD4-47F9-99E6-E7746F4A3404}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ArsenalImageMounterControl", "ArsenalImageMounterControl\ArsenalImageMounterControl.vbproj", "{1C5D3D2F-8DD4-47F9-99E6-E7746F4A3404}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ArsenalImageMounterMountTool", "ArsenalImageMounterMountTool\ArsenalImageMounterMountTool.vbproj", "{778126B8-F616-456A-B38D-6B80D3D96CAA}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ArsenalImageMounterMountTool", "ArsenalImageMounterMountTool\ArsenalImageMounterMountTool.vbproj", "{778126B8-F616-456A-B38D-6B80D3D96CAA}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ArsenalImageMounterService", "ArsenalImageMounterService\ArsenalImageMounterService.vbproj", "{0E6ECB44-49AE-4732-AA27-4566258F1B96}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ArsenalImageMounterService", "ArsenalImageMounterService\ArsenalImageMounterService.vbproj", "{0E6ECB44-49AE-4732-AA27-4566258F1B96}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Arsenal.ImageMounter", "Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj", "{3EFCB6F8-EF7E-4F60-A0DE-BB197240FCC9}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "Arsenal.ImageMounter", "Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj", "{3EFCB6F8-EF7E-4F60-A0DE-BB197240FCC9}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ArsenalImageMounterAnalyze", "ArsenalImageMounterAnalyze\ArsenalImageMounterAnalyze.vbproj", "{000DC49E-C729-4605-8DE8-B5AA7EA35A8C}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ArsenalImageMounterAnalyze", "ArsenalImageMounterAnalyze\ArsenalImageMounterAnalyze.vbproj", "{000DC49E-C729-4605-8DE8-B5AA7EA35A8C}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ArsenalImageMounterCLISetup", "ArsenalImageMounterCLISetup\ArsenalImageMounterCLISetup.vbproj", "{A8A9616B-FE44-4C05-BD44-FFC32D305452}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ArsenalImageMounterCLISetup", "ArsenalImageMounterCLISetup\ArsenalImageMounterCLISetup.vbproj", "{A8A9616B-FE44-4C05-BD44-FFC32D305452}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ArsenalImageMounterGUISetup", "ArsenalImageMounterGUISetup\ArsenalImageMounterGUISetup.vbproj", "{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ArsenalImageMounterGUISetup", "ArsenalImageMounterGUISetup\ArsenalImageMounterGUISetup.vbproj", "{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CCDE959C-C0CA-4F98-B379-64931C7C91D0}"
 	ProjectSection(SolutionItems) = preProject
@@ -35,10 +35,11 @@ EndProject
 Project("{7CF6DF6D-3B04-46F8-A40B-537D21BCA0B4}") = "ArsenalImageMounterHelpBuilder", "ArsenalImageMounterHelpBuilder.shfbproj", "{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C8131F7E-E240-4A1B-8D3D-FC4E5DBED050} = {C8131F7E-E240-4A1B-8D3D-FC4E5DBED050}
+		{26596AEF-9F3A-4744-9A3D-5708ED535F06} = {26596AEF-9F3A-4744-9A3D-5708ED535F06}
 		{3EFCB6F8-EF7E-4F60-A0DE-BB197240FCC9} = {3EFCB6F8-EF7E-4F60-A0DE-BB197240FCC9}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Arsenal.ImageMounter.Interop", "Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj", "{26596AEF-9F3A-4744-9A3D-5708ED535F06}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arsenal.ImageMounter.Interop", "Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj", "{26596AEF-9F3A-4744-9A3D-5708ED535F06}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

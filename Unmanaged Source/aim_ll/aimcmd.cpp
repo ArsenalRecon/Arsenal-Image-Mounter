@@ -852,6 +852,8 @@ LPWSTR FormatOptions)
         return IMSCSI_CLI_SUCCESS;
     }
 
+    printf("Device is %ws\n", (LPCWSTR)dev_path);
+
     if (!dev_path)
     {
         return IMSCSI_CLI_ERROR_NOT_ENOUGH_MEMORY;

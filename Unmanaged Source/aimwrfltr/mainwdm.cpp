@@ -19,6 +19,7 @@ HANDLE AIMWrFltrParametersKey = NULL;
 PKEVENT AIMWrFltrDiffFullEvent = NULL;
 PDRIVER_OBJECT AIMWrFltrDriverObject = NULL;
 bool AIMWrFltrLinksCreated = false;
+bool QueueWithoutCache = false;
 
 //
 // Define the sections that allow for discarding (i.e. paging) some of
@@ -30,10 +31,12 @@ bool AIMWrFltrLinksCreated = false;
 #pragma alloc_text (PAGE, AIMWrFltrCreate)
 #pragma alloc_text (PAGE, AIMWrFltrAddDevice)
 #pragma alloc_text (PAGE, AIMWrFltrGetDiffDevicePath)
-#pragma alloc_text (PAGE, AIMWrFltrPnp)
 #pragma alloc_text (PAGE, AIMWrFltrStartDevice)
 #pragma alloc_text (PAGE, AIMWrFltrRemoveDevice)
+#ifndef DBG
+#pragma alloc_text (PAGE, AIMWrFltrPnp)
 #pragma alloc_text (PAGE, AIMWrFltrCleanupDevice)
+#endif
 #pragma alloc_text (PAGE, AIMWrFltrTrim)
 #pragma alloc_text (PAGE, AIMWrFltrDeviceUsageNotification)
 #pragma alloc_text (PAGE, AIMWrFltrForwardIrpSynchronous)
@@ -195,6 +198,23 @@ STATUS_SUCCESS if successful
 
         return STATUS_SUCCESS;
     }
+    
+    UNICODE_STRING queue_without_cache_str;
+    RtlInitUnicodeString(&queue_without_cache_str, L"QueueWithoutCache");
+    union
+    {
+        KEY_VALUE_PARTIAL_INFORMATION queue_without_cache_value;
+        UCHAR buffer[FIELD_OFFSET(KEY_VALUE_PARTIAL_INFORMATION, Data) + sizeof(ULONG)];
+    };
+    ULONG length;
+    status = ZwQueryValueKey(AIMWrFltrParametersKey, &queue_without_cache_str,
+        KeyValuePartialInformation, &queue_without_cache_value, sizeof(queue_without_cache_value), &length);
+
+    if (NT_SUCCESS(status))
+    {
+        QueueWithoutCache = *(bool*)queue_without_cache_value.Data;
+        DbgPrint("AIMWrFltr: QueueWithoutCache = 0x%X\n", QueueWithoutCache);
+    }
 
     //
     // Create dispatch points
@@ -247,7 +267,7 @@ AIMWrFltrSyncFilterWithTarget(IN PDEVICE_OBJECT FilterDevice,
     PAGED_CODE();
 
     //
-    // Propogate all useful flags from target to AIMWrFltr. MountMgr will look
+    // Propagate all useful flags from target to AIMWrFltr. MountMgr will look
     // at the AIMWrFltr object capabilities to figure out if the disk is
     // a removable and perhaps other things.
     //
@@ -312,7 +332,9 @@ AIMWrFltSaveDiffHeader(IN PDEVICE_EXTENSION DeviceExtension)
 VOID
 AIMWrFltrCleanupDevice(IN PDEVICE_EXTENSION DeviceExtension)
 {
+#ifndef DBG
     PAGED_CODE();
+#endif
 
     if (DeviceExtension->WorkerThread != NULL)
     {
@@ -1580,7 +1602,9 @@ NTSTATUS
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
     bool lockHeld = false;
 
+#ifndef DBG
     PAGED_CODE();
+#endif
 
     //KdPrint(("AIMWrFltrPnp: DeviceObject 0x%p Irp 0x%p\n",
     //    DeviceObject, Irp));

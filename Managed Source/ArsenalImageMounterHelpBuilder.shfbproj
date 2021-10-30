@@ -15,7 +15,7 @@
     <RootNamespace>Documentation</RootNamespace>
     <Name>Documentation</Name>
     <!-- SHFB properties -->
-    <OutputPath>.\Help\</OutputPath>
+    <OutputPath>Help\</OutputPath>
     <HtmlHelpName>Arsenal Image Mounter API</HtmlHelpName>
     <Language>en-US</Language>
     <HelpFileFormat>HtmlHelp1, MSHelpViewer, Website</HelpFileFormat>
@@ -23,10 +23,12 @@
     <MissingTags>None</MissingTags>
     <VisibleItems>Attributes, ExplicitInterfaceImplementations, InheritedMembers, InheritedFrameworkMembers, Protected, EditorBrowsableNever, NonBrowsable</VisibleItems>
     <DocumentationSources>
-      <DocumentationSource sourceFile="Arsenal.ImageMounter.Devio\bin\Release\Arsenal.ImageMounter.Devio.dll" />
-      <DocumentationSource sourceFile="Arsenal.ImageMounter.Devio\bin\Release\Arsenal.ImageMounter.Devio.xml" />
-      <DocumentationSource sourceFile="Arsenal.ImageMounter.Devio\bin\Release\Arsenal.ImageMounter.dll" />
-      <DocumentationSource sourceFile="Arsenal.ImageMounter.Devio\bin\Release\Arsenal.ImageMounter.xml" />
+      <DocumentationSource sourceFile="bin\Release\net5.0-windows\Arsenal.ImageMounter.Devio.dll" />
+      <DocumentationSource sourceFile="bin\Release\net5.0-windows\Arsenal.ImageMounter.Devio.xml" />
+      <DocumentationSource sourceFile="bin\Release\net5.0-windows\Arsenal.ImageMounter.Interop.dll" />
+      <DocumentationSource sourceFile="bin\Release\net5.0-windows\Arsenal.ImageMounter.Interop.xml" />
+      <DocumentationSource sourceFile="bin\Release\net5.0-windows\Arsenal.ImageMounter.dll" />
+      <DocumentationSource sourceFile="bin\Release\net5.0-windows\Arsenal.ImageMounter.xml" />
     </DocumentationSources>
     <ApiFilter>
     </ApiFilter>

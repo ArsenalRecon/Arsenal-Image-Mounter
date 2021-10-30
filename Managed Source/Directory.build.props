@@ -3,11 +3,15 @@
   <PropertyGroup>
 
     <RootNamespace>Arsenal.ImageMounter</RootNamespace>
-    <OutputPath>..\bin\$(Configuration)\</OutputPath>
+    <OutputPath Condition="'$(MSBuildProjectExtension)' != '.shfbproj'">..\bin\$(Configuration)\</OutputPath>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <LangVersion Condition="'$(MSBuildProjectExtension)' == '.csproj'">9.0</LangVersion>
-    <OptionStrict Condition="'$(MSBuildProjectExtension)' == '.vbproj'">On</OptionStrict>
+    <OptionInfer>On</OptionInfer>
+    <OptionStrict>On</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
     <DebugType>portable</DebugType>
     <Deterministic>false</Deterministic>
     <TargetFrameworks>net40;net5.0-windows</TargetFrameworks>
@@ -24,8 +28,8 @@
     <Product>Arsenal Image Mounter</Product>
     <Copyright>Copyright © Arsenal Recon, 2015 - 2021</Copyright>
     <Trademark />
-    <FileVersion>3.6.173.0</FileVersion>
-    <ProductVersion>3.6.173.0</ProductVersion>
+    <FileVersion>3.6.174.0</FileVersion>
+    <ProductVersion>3.6.174.0</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
 
   </PropertyGroup>

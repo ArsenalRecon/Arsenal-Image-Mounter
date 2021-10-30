@@ -189,12 +189,6 @@ Namespace IO
 
         End Class
 
-        Public Shared Sub BrowseTo(target As String)
-
-            Process.Start(New ProcessStartInfo() With {.FileName = target, .UseShellExecute = True})?.Dispose()
-
-        End Sub
-
         Public NotInheritable Class SafeNativeMethods
 
 #Disable Warning CA1401 ' P/Invokes should not be visible
@@ -1269,6 +1263,27 @@ Namespace IO
             Return ProcessArchitecture
 
         End Function
+
+        Public Shared Sub BrowseTo(target As String)
+
+            Process.Start(New ProcessStartInfo With {.FileName = target, .UseShellExecute = True})?.Dispose()
+
+        End Sub
+
+        Public Structure NativeWindowHandle
+            Implements Windows.Forms.IWin32Window
+
+            Public ReadOnly Property Handle As IntPtr Implements Windows.Forms.IWin32Window.Handle
+
+            Public Sub New(handle As IntPtr)
+                _Handle = handle
+            End Sub
+
+            Public Overrides Function ToString() As String
+                Return _Handle.ToString()
+            End Function
+
+        End Structure
 
         Private Sub New()
 

@@ -1,6 +1,6 @@
 #include "aimwrfltr.h"
 
-#define AIMWRFLTR_DEFER_ALL_READS
+//#define QUEUE_ALL_MODIFIED_READS
 
 NTSTATUS
 AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
@@ -14,7 +14,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     if ((!device_extension->Statistics.IsProtected) ||
         (!device_extension->Statistics.Initialized &&
-        !NT_SUCCESS(AIMWrFltrInitializeDiffDevice(device_extension))))
+            !NT_SUCCESS(AIMWrFltrInitializeDiffDevice(device_extension))))
     {
         return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
     }
@@ -69,9 +69,246 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     KLOCK_QUEUE_HANDLE lock_handle;
 
-//#define QUEUE_WITHOUT_CACHE
+    // For testing purposes, builds a driver that always queues read requests so that they appear
+    // in worker thread queue in correct order vs queued write requests. Useful to troubleshoot
+    // flaws in the read cache logic.
 
-#ifdef QUEUE_WITHOUT_CACHE
+    if (QueueWithoutCache)
+    {
+        PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
+
+        if (cached_irp == NULL)
+        {
+            KdBreakPoint();
+
+            Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+            IoCompleteRequest(Irp, IO_NO_INCREMENT);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        InterlockedIncrement64(
+            &device_extension->Statistics.DeferredReadRequests);
+
+        InterlockedExchangeAdd64(&device_extension->Statistics.DeferredReadBytes,
+            io_stack->Parameters.Write.Length);
+
+        //
+        // Acquire the remove lock so that device will not be removed while
+        // processing this irp.
+        //
+        status = IoAcquireRemoveLock(&device_extension->RemoveLock, cached_irp);
+
+        if (!NT_SUCCESS(status))
+        {
+            DbgPrint(
+                "AIMWrFltrRead: Remove lock failed read type Irp: 0x%X\n",
+                status);
+
+            KdBreakPoint();
+
+            delete cached_irp;
+
+            Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+            IoCompleteRequest(Irp, IO_NO_INCREMENT);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        IoMarkIrpPending(Irp);
+
+        AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+            current_irql);
+
+        InsertTailList(&device_extension->ListHead,
+            &cached_irp->ListEntry);
+
+        AIMWrFltrReleaseLock(&lock_handle, &current_irql);
+
+        KeSetEvent(&device_extension->ListEvent, 0, FALSE);
+
+        return STATUS_PENDING;
+    }
+
+    PUCHAR system_buffer = NULL;
+
+    if (device_extension->DeviceObject->Flags & DO_BUFFERED_IO)
+    {
+        system_buffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
+    }
+    else
+    {
+        system_buffer = (PUCHAR)MmGetSystemAddressForMdlSafe(Irp->MdlAddress, NormalPagePriority);
+    }
+
+    if (system_buffer == NULL)
+    {
+        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
+        KdBreakPoint();
+
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    RTL_BITMAP bitmap;
+
+    WNonPagedPoolMem<ULONG> bitmap_buffer((io_stack->Parameters.Read.Length >> 9) + sizeof(ULONG) - 1);
+
+    if (!bitmap_buffer)
+    {
+        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
+        KdBreakPoint();
+
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    bitmap_buffer.Clear();
+
+    RtlInitializeBitMap(&bitmap, bitmap_buffer, io_stack->Parameters.Read.Length >> 9);
+
+    ULONG bytes_from_cache = 0;
+
+    ULONG items_in_queue = 0;
+
+    // First check whether we have queued write or trim requests that
+    // match region covered by this read request
+
+    AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
+        current_irql);
+
+    for (PLIST_ENTRY entry = device_extension->ListHead.Flink;
+        entry != &device_extension->ListHead;
+        entry = entry->Flink)
+    {
+        items_in_queue++;
+
+        PCACHED_IRP cached_irp = CONTAINING_RECORD(entry, CACHED_IRP, ListEntry);
+
+        PIO_STACK_LOCATION item = &cached_irp->IoStack;
+
+        if (item->MajorFunction == IRP_MJ_WRITE && cached_irp->Irp == NULL &&
+            (item->Parameters.Write.ByteOffset.QuadPart < (io_stack->Parameters.Read.ByteOffset.QuadPart + io_stack->Parameters.Read.Length)) &&
+            ((item->Parameters.Write.ByteOffset.QuadPart + item->Parameters.Write.Length) > io_stack->Parameters.Read.ByteOffset.QuadPart))
+        {
+            LONGLONG start_pos = max(item->Parameters.Write.ByteOffset.QuadPart,
+                io_stack->Parameters.Read.ByteOffset.QuadPart);
+
+            LONGLONG end_pos = min(item->Parameters.Write.ByteOffset.QuadPart + item->Parameters.Write.Length,
+                io_stack->Parameters.Read.ByteOffset.QuadPart + io_stack->Parameters.Read.Length);
+
+            RtlCopyMemory(system_buffer + start_pos - io_stack->Parameters.Read.ByteOffset.QuadPart,
+                cached_irp->Buffer + start_pos - item->Parameters.Write.ByteOffset.QuadPart,
+                (SIZE_T)(end_pos - start_pos));
+
+            RtlSetBits(&bitmap,
+                (ULONG)((start_pos - io_stack->Parameters.Read.ByteOffset.QuadPart) >> 9),
+                (ULONG)((end_pos - start_pos) >> 9));
+
+            bytes_from_cache += (ULONG)(end_pos - start_pos);
+
+            ++device_extension->Statistics.ReadRequestsFromCache;
+            device_extension->Statistics.ReadBytesFromCache +=
+                end_pos - start_pos;
+        }
+        else if (item->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+            item->Parameters.DeviceIoControl.IoControlCode == IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES &&
+            ((PDEVICE_MANAGE_DATA_SET_ATTRIBUTES)cached_irp->Buffer)->Action == DeviceDsmAction_Trim)
+        {
+            PDEVICE_MANAGE_DATA_SET_ATTRIBUTES attrs = (PDEVICE_MANAGE_DATA_SET_ATTRIBUTES)cached_irp->Buffer;
+
+            ULONG items = attrs->DataSetRangesLength / sizeof(DEVICE_DATA_SET_RANGE);
+
+            PDEVICE_DATA_SET_RANGE range = (PDEVICE_DATA_SET_RANGE)((PUCHAR)attrs + attrs->DataSetRangesOffset);
+
+            for (ULONG i = 0; i < items; i++)
+            {
+                if (range[i].StartingOffset < (io_stack->Parameters.Read.ByteOffset.QuadPart + io_stack->Parameters.Read.Length) &&
+                    ((range[i].StartingOffset + (LONGLONG)range[i].LengthInBytes) > io_stack->Parameters.Read.ByteOffset.QuadPart))
+                {
+                    LONGLONG start_pos = max(range[i].StartingOffset,
+                        io_stack->Parameters.Read.ByteOffset.QuadPart);
+
+                    LONGLONG end_pos = min(range[i].StartingOffset + (LONGLONG)range[i].LengthInBytes,
+                        io_stack->Parameters.Read.ByteOffset.QuadPart + io_stack->Parameters.Read.Length);
+
+                    RtlZeroMemory(system_buffer + start_pos - io_stack->Parameters.Read.ByteOffset.QuadPart,
+                        (SIZE_T)(end_pos - start_pos));
+
+                    RtlSetBits(&bitmap,
+                        (ULONG)((start_pos - io_stack->Parameters.Read.ByteOffset.QuadPart) >> 9),
+                        (ULONG)((end_pos - start_pos) >> 9));
+
+                    bytes_from_cache += (ULONG)(end_pos - start_pos);
+
+                    ++device_extension->Statistics.ReadRequestsFromCache;
+                    device_extension->Statistics.ReadBytesFromCache +=
+                        end_pos - start_pos;
+                }
+            }
+        }
+    }
+
+    AIMWrFltrReleaseLock(&lock_handle, &current_irql);
+
+    if (bytes_from_cache == 0)
+    {
+        bool any_block_modified = false;
+
+        if ((device_extension->AllocationTable != NULL) &&
+            (device_extension->DiffDeviceObject != NULL))
+        {
+            LONG first = (LONG)DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Read.ByteOffset.QuadPart);
+            LONG last = (LONG)DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Read.ByteOffset.QuadPart +
+                io_stack->Parameters.Read.Length - 1);
+
+            for (LONG i = first; i <= last; i++)
+            {
+                if (device_extension->AllocationTable[i] != DIFF_BLOCK_UNALLOCATED)
+                {
+                    any_block_modified = true;
+                    break;
+                }
+            }
+        }
+
+        if (!any_block_modified)
+        {
+            InterlockedIncrement64(
+                &device_extension->Statistics.ReadRequestsReroutedToOriginal);
+
+            InterlockedExchangeAdd64(
+                &device_extension->Statistics.ReadBytesReroutedToOriginal,
+                io_stack->Parameters.Read.Length);
+
+            IoSkipCurrentIrpStackLocation(Irp);
+            return IoCallDriver(device_extension->TargetDeviceObject, Irp);
+        }
+    }
+    else if (bytes_from_cache >= io_stack->Parameters.Read.Length &&
+        RtlAreBitsSet(&bitmap, 0, io_stack->Parameters.Read.Length >> 9))
+    {
+        // If entire buffer filled by write queue
+#if 1
+        KdPrint(("AIMWrFltrRead: Read %u bytes at 0x%I64X completed from write queue. Items in queue: %u\n",
+            io_stack->Parameters.Read.Length, io_stack->Parameters.Read.ByteOffset.QuadPart,
+            items_in_queue));
+#endif
+
+        Irp->IoStatus.Status = STATUS_SUCCESS;
+        Irp->IoStatus.Information = io_stack->Parameters.Read.Length;
+        IoCompleteRequest(Irp, IO_DISK_INCREMENT);
+
+        return STATUS_SUCCESS;
+    }
+    else
+    {
+        KdPrint(("AIMWrFltrRead: Read %u bytes of %u requested at 0x%I64X from write queue. Items in queue: %u\n",
+            bytes_from_cache, io_stack->Parameters.Read.Length, io_stack->Parameters.Read.ByteOffset.QuadPart,
+            items_in_queue));
+    }
+
+#ifdef QUEUE_ALL_MODIFIED_READS
 
     PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
@@ -127,196 +364,6 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
 #else
 
-    PUCHAR system_buffer = NULL;
-
-    if (device_extension->DeviceObject->Flags & DO_BUFFERED_IO)
-    {
-        system_buffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
-    }
-    else
-    {
-        system_buffer = (PUCHAR)MmGetSystemAddressForMdlSafe(
-            Irp->MdlAddress, NormalPagePriority);
-    }
-
-    if (system_buffer == NULL)
-    {
-        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-
-        KdBreakPoint();
-
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    RTL_BITMAP bitmap;
-
-    WNonPagedPoolMem<ULONG> bitmap_buffer(
-        (io_stack->Parameters.Read.Length >> 9) + sizeof(ULONG) - 1);
-
-    if (!bitmap_buffer)
-    {
-        Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-
-        KdBreakPoint();
-
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    bitmap_buffer.Clear();
-
-    RtlInitializeBitMap(&bitmap, bitmap_buffer,
-        io_stack->Parameters.Read.Length >> 9);
-
-    ULONG bytes_from_cache = 0;
-    ULONG bytes_from_orig = 0;
-    ULONG bytes_from_diff = 0;
-
-    ULONG items_in_queue = 0;
-
-    AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
-        current_irql);
-
-    for (PLIST_ENTRY entry = device_extension->ListHead.Flink;
-        entry != &device_extension->ListHead;
-        entry = entry->Flink)
-    {
-        items_in_queue++;
-
-        PCACHED_IRP cached_irp = CONTAINING_RECORD(entry, CACHED_IRP, ListEntry);
-
-        PIO_STACK_LOCATION item = &cached_irp->IoStack;
-
-        if ((item->MajorFunction == IRP_MJ_WRITE) &&
-            cached_irp->Irp == NULL &&
-            (item->Parameters.Write.ByteOffset.QuadPart <
-                (io_stack->Parameters.Read.ByteOffset.QuadPart +
-                    io_stack->Parameters.Read.Length)) &&
-            ((item->Parameters.Write.ByteOffset.QuadPart + item->Parameters.Write.Length) >
-                io_stack->Parameters.Read.ByteOffset.QuadPart))
-        {
-            LONGLONG start_pos = max(item->Parameters.Write.ByteOffset.QuadPart,
-                io_stack->Parameters.Read.ByteOffset.QuadPart);
-
-            LONGLONG end_pos = min(item->Parameters.Write.ByteOffset.QuadPart + item->Parameters.Write.Length,
-                io_stack->Parameters.Read.ByteOffset.QuadPart + io_stack->Parameters.Read.Length);
-
-            RtlCopyMemory(system_buffer + start_pos - io_stack->Parameters.Read.ByteOffset.QuadPart,
-                cached_irp->Buffer + start_pos - item->Parameters.Write.ByteOffset.QuadPart,
-                (SIZE_T)(end_pos - start_pos));
-
-            RtlSetBits(&bitmap,
-                (ULONG)((start_pos - io_stack->Parameters.Read.ByteOffset.QuadPart) >> 9),
-                (ULONG)((end_pos - start_pos) >> 9));
-
-            bytes_from_cache += (ULONG)(end_pos - start_pos);
-
-            ++device_extension->Statistics.ReadRequestsFromCache;
-            device_extension->Statistics.ReadBytesFromCache +=
-                end_pos - start_pos;
-        }
-        else if (item->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
-            item->Parameters.DeviceIoControl.IoControlCode == IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES &&
-            ((PDEVICE_MANAGE_DATA_SET_ATTRIBUTES)cached_irp->Buffer)->Action == DeviceDsmAction_Trim)
-        {
-            PDEVICE_MANAGE_DATA_SET_ATTRIBUTES attrs =
-                (PDEVICE_MANAGE_DATA_SET_ATTRIBUTES)cached_irp->Buffer;
-
-            ULONG items = attrs->DataSetRangesLength /
-                sizeof(DEVICE_DATA_SET_RANGE);
-
-            PDEVICE_DATA_SET_RANGE range = (PDEVICE_DATA_SET_RANGE)
-                ((PUCHAR)attrs + attrs->DataSetRangesOffset);
-
-            for (ULONG i = 0; i < items; i++)
-            {
-                if (range[i].StartingOffset < (io_stack->Parameters.Read.ByteOffset.QuadPart + io_stack->Parameters.Read.Length) &&
-                    ((range[i].StartingOffset + (LONGLONG)range[i].LengthInBytes) > io_stack->Parameters.Read.ByteOffset.QuadPart))
-                {
-                    LONGLONG start_pos = max(range[i].StartingOffset,
-                        io_stack->Parameters.Read.ByteOffset.QuadPart);
-
-                    LONGLONG end_pos = min(range[i].StartingOffset + (LONGLONG)range[i].LengthInBytes,
-                        io_stack->Parameters.Read.ByteOffset.QuadPart + io_stack->Parameters.Read.Length);
-
-                    RtlZeroMemory(system_buffer + start_pos - io_stack->Parameters.Read.ByteOffset.QuadPart,
-                        (SIZE_T)(end_pos - start_pos));
-
-                    RtlSetBits(&bitmap,
-                        (ULONG)((start_pos - io_stack->Parameters.Read.ByteOffset.QuadPart) >> 9),
-                        (ULONG)((end_pos - start_pos) >> 9));
-
-                    bytes_from_cache += (ULONG)(end_pos - start_pos);
-
-                    ++device_extension->Statistics.ReadRequestsFromCache;
-                    device_extension->Statistics.ReadBytesFromCache +=
-                        end_pos - start_pos;
-                }
-            }
-        }
-    }
-
-    AIMWrFltrReleaseLock(&lock_handle, &current_irql);
-
-    if (bytes_from_cache == 0)
-    {
-        bool any_block_modified = false;
-
-        if ((device_extension->AllocationTable != NULL) &&
-            (device_extension->DiffDeviceObject != NULL))
-        {
-            LONG first = (LONG)DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Read.ByteOffset.QuadPart);
-            LONG last = (LONG)DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Read.ByteOffset.QuadPart +
-                io_stack->Parameters.Read.Length - 1);
-
-            for (LONG i = first; i <= last; i++)
-            {
-                if (device_extension->AllocationTable[i] !=
-                    DIFF_BLOCK_UNALLOCATED)
-                {
-                    any_block_modified = true;
-                    break;
-                }
-            }
-        }
-
-        if (!any_block_modified)
-        {
-            InterlockedIncrement64(
-                &device_extension->Statistics.ReadRequestsReroutedToOriginal);
-
-            InterlockedExchangeAdd64(
-                &device_extension->Statistics.ReadBytesReroutedToOriginal,
-                io_stack->Parameters.Read.Length);
-
-            IoSkipCurrentIrpStackLocation(Irp);
-            return IoCallDriver(device_extension->TargetDeviceObject, Irp);
-        }
-    }
-    else if (bytes_from_cache >= io_stack->Parameters.Read.Length &&
-        RtlAreBitsSet(&bitmap, 0, io_stack->Parameters.Read.Length >> 9))
-    {
-        // If entire buffer filled by write queue
-#if 1
-        KdPrint(("AIMWrFltrRead: Read %u bytes at 0x%I64X completed from write queue. Items in queue: %u\n",
-            io_stack->Parameters.Read.Length, io_stack->Parameters.Read.ByteOffset.QuadPart,
-            items_in_queue));
-#endif
-
-        Irp->IoStatus.Status = STATUS_SUCCESS;
-        Irp->IoStatus.Information = io_stack->Parameters.Read.Length;
-        IoCompleteRequest(Irp, IO_DISK_INCREMENT);
-
-        return STATUS_SUCCESS;
-    }
-    else
-    {
-        KdPrint(("AIMWrFltrRead: Read %u bytes of %u requested at 0x%I64X from write queue. Items in queue: %u\n",
-            bytes_from_cache, io_stack->Parameters.Read.Length, io_stack->Parameters.Read.ByteOffset.QuadPart,
-            items_in_queue));
-    }
-
     ULONG clear_index;
     auto clear_bits = RtlFindFirstRunClear(&bitmap, &clear_index);
 
@@ -341,6 +388,8 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         return status;
     }
 
+    ULONG bytes_from_orig = 0;
+    ULONG bytes_from_diff = 0;
     ULONG splits = 0;
 
     while (clear_bits > 0)
@@ -450,15 +499,18 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
             ASSERT(IoGetNextIrpStackLocation(lower_irp)->FileObject == lower_file);
 
-            ASSERT((lower_device == device_extension->TargetDeviceObject &&
-                lower_file == NULL) ||
+            ASSERT((lower_device == device_extension->TargetDeviceObject && lower_file == NULL) ||
                 (lower_file == device_extension->DiffFileObject &&
                     lower_device == device_extension->DiffDeviceObject &&
                     lower_device == IoGetRelatedDeviceObject(lower_file)));
 
-            if (lower_file != NULL && current_irql > PASSIVE_LEVEL)
+            // Defer all reads from actual files to worker thread, just to keep safe
+            if (lower_file != NULL)
             {
-                //KdPrint(("AIMWrFltrRead: Read from diff at IRQL=%i. Deferring to worker thread.\n", current_irql));
+                if (current_irql > PASSIVE_LEVEL)
+                {
+                    KdPrint(("AIMWrFltrRead: Read from diff at IRQL=%i. Deferring to worker thread.\n", current_irql));
+                }
 
                 PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedForwardIrp(lower_device, lower_irp);
 
@@ -667,7 +719,6 @@ AIMWrFltrDeferredRead(
                 Irp->Tail.Overlay.Thread,
                 &io_status);
 
-#pragma warning(suppress: 6102)
             if (NT_SUCCESS(status) &&
                 io_status.Information != bytes_this_iter)
             {

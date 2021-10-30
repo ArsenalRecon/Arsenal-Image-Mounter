@@ -19,17 +19,13 @@ Imports System.ComponentModel
 Imports System.Reflection
 Imports Arsenal.ImageMounter
 
-Module MainModule
+Public Module MainModule
 
-    Private ReadOnly ownerWindow As NativeWindow = NativeWindow.FromHandle(NativeFileIO.SafeNativeMethods.GetConsoleWindow())
+    Private ReadOnly ownerWindow As NativeFileIO.NativeWindowHandle = New NativeFileIO.NativeWindowHandle(NativeFileIO.SafeNativeMethods.GetConsoleWindow())
 
-    Sub New()
+    Public Function Main(ParamArray args As String()) As Integer
 
         Trace.Listeners.Add(New ConsoleTraceListener)
-
-    End Sub
-
-    Function Main(args As String()) As Integer
 
         Dim opMode As OpMode = OpMode.Status
 
@@ -59,7 +55,7 @@ Module MainModule
 
     End Function
 
-    Function SetupOperation(opMode As OpMode) As Integer
+    Public Function SetupOperation(opMode As OpMode) As Integer
 
         Trace.WriteLine($"Kernel type: {Kernel}")
         Trace.WriteLine($"Kernel supports StorPort: {HasStorPort}")
@@ -126,7 +122,7 @@ Module MainModule
 
 End Module
 
-Enum OpMode
+Public Enum OpMode
     Install
     Uninstall
     Status
