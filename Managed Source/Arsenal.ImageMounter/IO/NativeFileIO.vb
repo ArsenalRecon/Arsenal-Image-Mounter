@@ -1,6 +1,5 @@
 ﻿Imports System.Collections.Concurrent
 Imports System.Collections.ObjectModel
-Imports System.Collections.Specialized
 Imports System.ComponentModel
 Imports System.Globalization
 Imports System.IO
@@ -2976,7 +2975,7 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function GetFileVersion(exe As Byte()) As Version
 
-            Dim filever As New NativeFileVersion(exe)
+            Dim filever = NativeFileVersion.GetNativeFileVersion(exe)
 
             Return filever.FileVersion
 
@@ -2999,24 +2998,7 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Public Enum IMAGE_FILE_MACHINE As UShort
-            I386 = &H14C '// x86
-            IA64 = &H200 '// Intel Itanium
-            AMD64 = &H8664 '// x64
-        End Enum
-
-        <StructLayout(LayoutKind.Sequential)>
-        Public Structure ImageFileHeader
-            Public ReadOnly Property Machine As IMAGE_FILE_MACHINE
-            Public ReadOnly Property NumberOfSections As UShort
-            Public ReadOnly Property TimeDateStamp As UInteger
-            Public ReadOnly Property PointerToSymbolTable As UInteger
-            Public ReadOnly Property NumberOfSymbols As UInteger
-            Public ReadOnly Property SizeOfOptionalHeader As UShort
-            Public ReadOnly Property Characteristics As UShort
-        End Structure
-
-        Public Shared Function GetExeFileHeader(exe As Stream) As ImageFileHeader
+        Public Shared Function GetExeFileHeader(exe As Stream) As IMAGE_NT_HEADERS
 
             Dim buffer = New Byte(0 To CInt(exe.Length - 1)) {}
             exe.Read(buffer, 0, buffer.Length)
@@ -3025,7 +3007,7 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Public Shared Function GetExeFileHeader(exepath As String) As ImageFileHeader
+        Public Shared Function GetExeFileHeader(exepath As String) As IMAGE_NT_HEADERS
 
             Dim buffer As Byte()
 
@@ -3038,31 +3020,9 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Public Shared Function GetExeFileHeader(exe As Byte()) As ImageFileHeader
+        Public Shared Function GetExeFileHeader(exe As Byte()) As IMAGE_NT_HEADERS
 
-            Dim exe_signature = Encoding.ASCII.GetString(exe, 0, 2)
-
-            If Not exe_signature.Equals("MZ", StringComparison.Ordinal) Then
-                Throw New BadImageFormatException("Invalid executable header signature")
-            End If
-
-            Dim pe = BitConverter.ToInt32(exe, &H3C)
-
-            Dim pe_signature = Encoding.ASCII.GetChars(exe, pe, 4)
-
-            Static expected_pe_signature As String = $"PE{New Char}{New Char}"
-
-            If Not pe_signature.SequenceEqual(expected_pe_signature) Then
-                Throw New BadImageFormatException("Invalid PE header signature")
-            End If
-
-            Dim coff = pe + 4
-
-            Using mem = PinnedBuffer.Create(exe)
-
-                Return mem.Read(Of ImageFileHeader)(CULng(coff))
-
-            End Using
+            Return NativePE.GetImageNtHeaders(exe)
 
         End Function
 
