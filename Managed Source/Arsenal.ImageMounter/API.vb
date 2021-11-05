@@ -447,11 +447,6 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
     End Sub
 
-    Public Enum RegisterWriteFilterOperation
-        Register
-        Unregister
-    End Enum
-
     Public Shared Sub RegisterWriteFilter(devinstAdapter As UInt32, DeviceNumber As UInt32, operation As RegisterWriteFilterOperation)
 
         For Each dev In
@@ -519,6 +514,177 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
         Throw New FileNotFoundException("Error adding write overlay: Device not found.")
 
     End Sub
+
+#If NET45_OR_GREATER OrElse NETCOREAPP OrElse NETSTANDARD Then
+    Public Shared Async Function RegisterWriteOverlayImageAsync(devInst As UInteger, OverlayImagePath As String, FakeNonRemovable As Boolean, cancel As CancellationToken) As Task
+
+        Dim nativepath As String
+
+        If Not String.IsNullOrWhiteSpace(OverlayImagePath) Then
+            nativepath = NativeFileIO.GetNtPath(OverlayImagePath)
+        Else
+            OverlayImagePath = Nothing
+            nativepath = Nothing
+        End If
+
+        Dim pdo_path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devInst)
+        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDriveNameForNtDevice(pdo_path)).FirstOrDefault()
+
+        Trace.WriteLine($"Device {pdo_path} devinst {devInst}. Registering write overlay '{nativepath}', FakeNonRemovable={FakeNonRemovable}")
+
+        Using regkey = Registry.LocalMachine.CreateSubKey("SYSTEM\CurrentControlSet\Services\aimwrfltr\Parameters")
+            If nativepath Is Nothing Then
+                regkey.DeleteValue(pdo_path, throwOnMissingValue:=False)
+            ElseIf FakeNonRemovable Then
+                regkey.SetValue(pdo_path, $"{nativepath}{NonRemovableSuffix}", RegistryValueKind.String)
+            Else
+                regkey.SetValue(pdo_path, nativepath, RegistryValueKind.String)
+            End If
+        End Using
+
+        If nativepath Is Nothing Then
+            NativeFileIO.RemoveFilter(devInst, "aimwrfltr")
+        Else
+            NativeFileIO.AddFilter(devInst, "aimwrfltr")
+        End If
+
+        Dim last_error = 0
+
+        For r = 1 To 4
+
+            NativeFileIO.RestartDevice(NativeFileIO.NativeConstants.DiskClassGuid, devInst)
+
+            Dim statistics As New WriteFilterStatistics
+
+            last_error = GetWriteOverlayStatus(pdo_path, statistics)
+
+            Trace.WriteLine($"Overlay path '{nativepath}', I/O error code: {last_error}, aimwrfltr error code: 0x{statistics.LastErrorCode:X}, protection: {statistics.IsProtected}, initialized: {statistics.Initialized}")
+
+            If nativepath Is Nothing AndAlso last_error = NativeFileIO.NativeConstants.NO_ERROR Then
+
+                Trace.WriteLine("Filter driver not yet unloaded, retrying...")
+                Await Task.Delay(300, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+                Continue For
+
+            ElseIf nativepath IsNot Nothing AndAlso (last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION OrElse
+                last_error = NativeFileIO.NativeConstants.ERROR_INVALID_PARAMETER OrElse
+                last_error = NativeFileIO.NativeConstants.ERROR_NOT_SUPPORTED) Then
+
+                Trace.WriteLine("Filter driver not yet loaded, retrying...")
+                Await Task.Delay(300, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+                Continue For
+
+            ElseIf (nativepath IsNot Nothing AndAlso last_error <> NativeFileIO.NativeConstants.NO_ERROR) OrElse
+                (nativepath Is Nothing AndAlso last_error <> NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION AndAlso
+                last_error <> NativeFileIO.NativeConstants.ERROR_INVALID_PARAMETER AndAlso
+                last_error <> NativeFileIO.NativeConstants.ERROR_NOT_SUPPORTED) Then
+
+                Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception(last_error))
+
+            ElseIf (nativepath IsNot Nothing AndAlso statistics.Initialized) OrElse
+                nativepath Is Nothing Then
+
+                Return
+
+            End If
+
+            Throw New IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode))
+
+        Next
+
+        Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(AddressOf NativeFileIO.FormatProcessName).ToArray()
+
+        If in_use_apps.Length = 0 AndAlso last_error <> 0 Then
+            Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
+        ElseIf in_use_apps.Length = 0 Then
+            Throw New NotSupportedException("Write filter driver not attached to device")
+        Else
+            Dim apps = String.Join(", ", in_use_apps)
+
+            Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the disk device open.
+
+Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open:
+{apps}")
+        End If
+
+        Throw New FileNotFoundException("Error adding write overlay: Device not found.")
+
+    End Function
+
+    Public Shared Async Function RegisterWriteFilterAsync(devinstAdapter As UInt32, DeviceNumber As UInt32, operation As RegisterWriteFilterOperation, cancel As CancellationToken) As Task
+
+        For Each dev In
+            From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
+            Let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
+            Where Not String.IsNullOrWhiteSpace(path)
+            Let address = NativeFileIO.GetScsiAddressForNtDevice(path)
+            Where address.HasValue AndAlso address.Value.DWordDeviceNumber.Equals(DeviceNumber)
+
+            Trace.WriteLine($"Device number {DeviceNumber:X6}  found at {dev.path} devinst {dev.devinstChild}. Registering write filter driver.")
+
+            If operation = RegisterWriteFilterOperation.Unregister Then
+
+                If NativeFileIO.RemoveFilter(dev.devinstChild, "aimwrfltr") Then
+                    NativeFileIO.RestartDevice(NativeFileIO.NativeConstants.DiskClassGuid, dev.devinstChild)
+                End If
+
+                Return
+
+            End If
+
+            Dim last_error = 0
+
+            For r = 1 To 2
+
+                If NativeFileIO.AddFilter(dev.devinstChild, "aimwrfltr") Then
+                    NativeFileIO.RestartDevice(NativeFileIO.NativeConstants.DiskClassGuid, dev.devinstChild)
+                End If
+
+                Dim statistics As New WriteFilterStatistics
+
+                last_error = GetWriteOverlayStatus(dev.path, statistics)
+
+                If last_error = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
+                    Trace.WriteLine("Filter driver not loaded, retrying...")
+                    Await Task.Delay(200, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+                    Continue For
+                ElseIf last_error <> NativeFileIO.NativeConstants.NO_ERROR Then
+                    Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
+                End If
+
+                If statistics.Initialized Then
+                    Return
+                End If
+
+                Throw New IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode))
+
+            Next
+
+            Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).Take(10).Select(AddressOf NativeFileIO.FormatProcessName).ToArray()
+
+            If in_use_apps.Length = 0 AndAlso last_error > 0 Then
+                Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
+            ElseIf in_use_apps.Length = 0 Then
+                Throw New NotSupportedException("Write filter driver not attached to device")
+            Else
+                Dim apps = String.Join(", ", in_use_apps)
+                Throw New UnauthorizedAccessException($"Write filter driver cannot be attached while applications hold the virtual disk device open.
+
+Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{If(in_use_apps.Length = 1, "s", "")} the disk device open:
+{apps}")
+            End If
+        Next
+
+        Throw New FileNotFoundException("Error adding write overlay: Device not found.")
+
+    End Function
+
+#End If
+
+    Public Enum RegisterWriteFilterOperation
+        Register
+        Unregister
+    End Enum
 
     ''' <summary>
     ''' Retrieves status of write overlay for mounted device.

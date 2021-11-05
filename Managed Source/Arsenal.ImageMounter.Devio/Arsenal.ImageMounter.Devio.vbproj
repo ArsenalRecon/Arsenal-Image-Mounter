@@ -18,47 +18,47 @@
 
   <ItemGroup>
     <Reference Include="DiscUtils.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Core.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Dmg, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Dmg.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Fat, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Fat.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Ntfs, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Ntfs.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.OpticalDisk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.OpticalDisk.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Streams, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Streams.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Vdi, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Vdi.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Vhd, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Vhd.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Vhdx, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Vhdx.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Vmdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Vmdk.dll</HintPath>
     </Reference>
     <Reference Include="DiscUtils.Xva, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+      
       <HintPath>$(DiscUtilsPath)\DiscUtils.Xva.dll</HintPath>
     </Reference>
   </ItemGroup>

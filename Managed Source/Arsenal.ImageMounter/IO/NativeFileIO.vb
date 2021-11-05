@@ -1340,13 +1340,23 @@ Namespace IO
 
         Public Shared Function OfflineDiskVolumes(device_path As String, force As Boolean) As Boolean
 
+            Return OfflineDiskVolumes(device_path, force, CancellationToken.None)
+
+        End Function
+
+        Public Shared Function OfflineDiskVolumes(device_path As String, force As Boolean, cancel As CancellationToken) As Boolean
+
             Dim refresh = False
 
             For Each volume In EnumerateDiskVolumes(device_path)
 
+                cancel.ThrowIfCancellationRequested()
+
                 Try
                     Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
+
                         If device.IsDiskWritable AndAlso Not device.DiskPolicyReadOnly.GetValueOrDefault() Then
+
                             Try
                                 device.FlushBuffers()
                                 device.DismountVolumeFilesystem(Force:=False)
@@ -1358,10 +1368,15 @@ Namespace IO
 
                                 device.DismountVolumeFilesystem(Force:=True)
                             End Try
+
                         Else
+
                             device.DismountVolumeFilesystem(Force:=True)
+
                         End If
+
                         device.SetVolumeOffline(True)
+
                     End Using
 
                     refresh = True
@@ -1372,8 +1387,8 @@ Namespace IO
                     Trace.WriteLine($"Failed to safely dismount volume '{volume}': {ex.JoinMessages()}")
 
                     If Not force Then
-                        Dim dev_path = QueryDosDevice(volume.Substring(4, 44)).ToArray()
-                        Dim in_use_apps = EnumerateProcessesHoldingFileHandle(dev_path).Take(10).Select(AddressOf FormatProcessName).ToArray()
+                        Dim dev_paths = QueryDosDevice(volume.Substring(4, 44)).ToArray()
+                        Dim in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths).Take(10).Select(AddressOf FormatProcessName).ToArray()
 
                         If in_use_apps.Length > 1 Then
                             Throw New IOException($"Failed to safely dismount volume '{volume}'.
@@ -1393,6 +1408,8 @@ Currently, the following application has files open on this volume:
 
                 End Try
 
+                cancel.ThrowIfCancellationRequested()
+
                 Try
                     Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
                         device.FlushBuffers()
@@ -1409,6 +1426,8 @@ Currently, the following application has files open on this volume:
                 End Try
 
                 Return False
+
+                cancel.ThrowIfCancellationRequested()
 
                 Try
                     Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
@@ -1428,6 +1447,143 @@ Currently, the following application has files open on this volume:
             Return refresh
 
         End Function
+
+#If NET45_OR_GREATER OrElse NETCOREAPP OrElse NETSTANDARD Then
+
+        Public Shared Async Function OfflineDiskVolumesAsync(device_path As String, force As Boolean, cancel As CancellationToken) As Task(Of Boolean)
+
+            Dim refresh = False
+
+            For Each volume In EnumerateDiskVolumes(device_path)
+
+                cancel.ThrowIfCancellationRequested()
+
+                Try
+                    Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
+
+                        If device.IsDiskWritable AndAlso Not device.DiskPolicyReadOnly.GetValueOrDefault() Then
+
+                            Dim t As Task = Nothing
+
+                            Try
+                                device.FlushBuffers()
+                                Await device.DismountVolumeFilesystemAsync(Force:=False, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+
+                            Catch ex As Win32Exception When (
+                                ex.NativeErrorCode = NativeConstants.ERROR_WRITE_PROTECT OrElse
+                                ex.NativeErrorCode = NativeConstants.ERROR_NOT_READY OrElse
+                                ex.NativeErrorCode = NativeConstants.ERROR_DEV_NOT_EXIST)
+
+                                t = device.DismountVolumeFilesystemAsync(Force:=True, cancel)
+
+                            End Try
+
+                            If t IsNot Nothing Then
+                                Await t.ConfigureAwait(continueOnCapturedContext:=False)
+                            End If
+
+                        Else
+
+                            Await device.DismountVolumeFilesystemAsync(Force:=True, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+
+                        End If
+
+                        device.SetVolumeOffline(True)
+
+                    End Using
+
+                    refresh = True
+
+                    Continue For
+
+                Catch ex As Exception
+                    Trace.WriteLine($"Failed to safely dismount volume '{volume}': {ex.JoinMessages()}")
+
+                    If Not force Then
+                        Dim dev_paths = QueryDosDevice(volume.Substring(4, 44)).ToArray()
+                        Dim in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths).Take(10).Select(AddressOf FormatProcessName).ToArray()
+
+                        If in_use_apps.Length > 1 Then
+                            Throw New IOException($"Failed to safely dismount volume '{volume}'.
+
+Currently, the following applications have files open on this volume:
+{String.Join(", ", in_use_apps)}", ex)
+                        ElseIf in_use_apps.Length = 1 Then
+                            Throw New IOException($"Failed to safely dismount volume '{volume}'.
+
+Currently, the following application has files open on this volume:
+{in_use_apps(0)}", ex)
+                        Else
+                            Throw New IOException($"Failed to safely dismount volume '{volume}'", ex)
+                        End If
+
+                    End If
+
+                End Try
+
+                cancel.ThrowIfCancellationRequested()
+
+                Try
+                    Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
+                        device.FlushBuffers()
+                        Await device.DismountVolumeFilesystemAsync(True, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+                        device.SetVolumeOffline(True)
+                    End Using
+
+                    refresh = True
+                    Continue For
+
+                Catch ex As Exception
+                    Trace.WriteLine($"Failed to forcefully dismount volume '{volume}': {ex.JoinMessages()}")
+
+                End Try
+
+                Return False
+
+                cancel.ThrowIfCancellationRequested()
+
+                Try
+                    Using device As New DiskDevice(volume.TrimEnd("\"c), FileAccess.ReadWrite)
+                        device.SetVolumeOffline(True)
+                    End Using
+
+                    refresh = True
+                    Continue For
+
+                Catch ex As Exception
+                    Trace.WriteLine($"Failed to offline volume '{volume}': {ex.JoinMessages()}")
+
+                End Try
+
+            Next
+
+            Return refresh
+
+        End Function
+
+        Public Shared Async Function WaitForDiskIoIdleAsync(device_path As String, iterations As Integer, waitTime As TimeSpan, cancel As CancellationToken) As Task
+
+            Dim volumes = EnumerateDiskVolumes(device_path).ToArray()
+
+            Dim dev_paths = volumes.SelectMany(Function(volume) QueryDosDevice(volume.Substring(4, 44))).ToArray()
+
+            Dim in_use_apps As String()
+
+            For i = 1 To iterations
+                cancel.ThrowIfCancellationRequested()
+
+                in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths).Take(10).Select(AddressOf FormatProcessName).ToArray()
+                If in_use_apps.Length = 0 Then
+                    Exit For
+                End If
+
+                Trace.WriteLine($"File systems still in use by process {String.Join(", ", in_use_apps)}")
+
+                Await Task.Delay(waitTime, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+            Next
+
+        End Function
+#End If
 
         Public Shared Sub EnableFileSecurityBypassPrivileges()
 
@@ -1782,6 +1938,7 @@ Currently, the following application has files open on this volume:
                         End If
 
                         If handle.GrantedAccess <> &H12019F AndAlso
+                            handle.GrantedAccess <> &H12008D AndAlso
                             handle.GrantedAccess <> &H120189 AndAlso
                             handle.GrantedAccess <> &H16019F AndAlso
                             handle.GrantedAccess <> &H1A0089 AndAlso
@@ -2546,7 +2703,7 @@ Currently, the following application has files open on this volume:
 
                 UnsafeNativeMethods.FlushFileBuffers(Device)
 
-                Thread.Sleep(200)
+                Thread.Sleep(300)
 
                 lock_result = UnsafeNativeMethods.DeviceIoControl(Device, NativeConstants.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing)
                 If lock_result OrElse Marshal.GetLastWin32Error() <> NativeConstants.ERROR_ACCESS_DENIED Then
@@ -2562,6 +2719,48 @@ Currently, the following application has files open on this volume:
             Return UnsafeNativeMethods.DeviceIoControl(Device, NativeConstants.FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing)
 
         End Function
+
+#If NET45_OR_GREATER OrElse NETCOREAPP OrElse NETSTANDARD Then
+        ''' <summary>
+        ''' Locks and dismounts filesystem on a volume. Upon successful return, further access to the device
+        ''' can only be done through the handle passed to this function until handle is closed or lock is
+        ''' released.
+        ''' </summary>
+        ''' <param name="Device">Handle to device to lock and dismount.</param>
+        ''' <param name="Force">Indicates if True that volume should be immediately dismounted even if it
+        ''' cannot be locked. This causes all open handles to files on the volume to become invalid. If False,
+        ''' successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
+        Public Shared Async Function DismountVolumeFilesystemAsync(Device As SafeFileHandle, Force As Boolean, cancel As CancellationToken) As Task(Of Boolean)
+
+            Dim lock_result As Boolean
+
+            For i = 0 To 10
+
+                If i > 0 Then
+
+                    Trace.WriteLine("Error locking volume, retrying...")
+
+                End If
+
+                UnsafeNativeMethods.FlushFileBuffers(Device)
+
+                Await Task.Delay(300, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+
+                lock_result = UnsafeNativeMethods.DeviceIoControl(Device, NativeConstants.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing)
+                If lock_result OrElse Marshal.GetLastWin32Error() <> NativeConstants.ERROR_ACCESS_DENIED Then
+                    Exit For
+                End If
+
+            Next
+
+            If Not lock_result AndAlso Not Force Then
+                Return False
+            End If
+
+            Return UnsafeNativeMethods.DeviceIoControl(Device, NativeConstants.FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, Nothing, Nothing)
+
+        End Function
+#End If
 
         ''' <summary>
         ''' Retrieves disk geometry.
@@ -3009,14 +3208,9 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function GetExeFileHeader(exepath As String) As IMAGE_NT_HEADERS
 
-            Dim buffer As Byte()
-
             Using exe = OpenFileStream(exepath, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete)
-                buffer = New Byte(0 To CInt(exe.Length - 1)) {}
-                exe.Read(buffer, 0, buffer.Length)
+                Return GetExeFileHeader(exe)
             End Using
-
-            Return GetExeFileHeader(buffer)
 
         End Function
 

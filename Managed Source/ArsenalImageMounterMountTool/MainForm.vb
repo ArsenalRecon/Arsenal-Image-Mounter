@@ -481,12 +481,11 @@ Public Class MainForm
     Private Sub btnShowOpened_Click(sender As Object, e As EventArgs) Handles btnShowOpened.Click
 
         Try
-            For Each DeviceItem In
-              lbDevices.
-              SelectedRows().
-              OfType(Of DataGridViewRow)().
-              Select(Function(row) row.DataBoundItem).
-              OfType(Of DiskStateView)()
+            For Each DeviceItem In lbDevices.
+                SelectedRows().
+                OfType(Of DataGridViewRow)().
+                Select(Function(row) row.DataBoundItem).
+                OfType(Of DiskStateView)()
 
                 Dim item = Task.Factory.StartNew(
                     Function()
@@ -523,7 +522,13 @@ Public Class MainForm
                             End If
 
                             Invoke(Sub()
-                                       MessageBox.Show(Me, $"Handle enumeration hung. Last checked object access was 0x{NativeFileIO.LastObjectNameQueryGrantedAccess:X}", "Process list failed", MessageBoxButtons.OK, MessageBoxIcon.Error)
+
+                                       MessageBox.Show(Me,
+                                                       $"Handle enumeration hung. Last checked object access was 0x{NativeFileIO.LastObjectNameQueryGrantedAccess:X}",
+                                                       "Process list failed",
+                                                       MessageBoxButtons.OK,
+                                                       MessageBoxIcon.Error)
+
                                    End Sub)
 
                             Exit While
@@ -548,12 +553,11 @@ Public Class MainForm
     Private Sub btnRemoveSelected_Click(sender As Object, e As EventArgs) Handles btnRemoveSelected.Click
 
         Try
-            For Each DeviceItem In
-              lbDevices.
-              SelectedRows().
-              OfType(Of DataGridViewRow)().
-              Select(Function(row) row.DataBoundItem).
-              OfType(Of DiskStateView)()
+            For Each DeviceItem In lbDevices.
+                SelectedRows().
+                OfType(Of DataGridViewRow)().
+                Select(Function(row) row.DataBoundItem).
+                OfType(Of DiskStateView)()
 
                 Adapter.RemoveDevice(DeviceItem.DeviceProperties.DeviceNumber)
             Next

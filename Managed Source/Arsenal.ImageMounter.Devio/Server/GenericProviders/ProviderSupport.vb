@@ -119,6 +119,17 @@ Namespace Server.GenericProviders
         End Sub
 
         <Extension>
+        Public Sub WriteToPhysicalDisk(provider As IDevioProvider, outputDevice As String, completionPosition As CompletionPosition, cancel As CancellationToken)
+
+            Using target = NativeFileIO.OpenFileStream(outputDevice, FileMode.Open, FileAccess.ReadWrite, FileShare.Delete, ImageConversionIoBufferSize)
+
+                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=Nothing, completionPosition:=completionPosition, cancel:=cancel)
+
+            End Using
+
+        End Sub
+
+        <Extension>
         Public Sub ConvertToLibEwfImage(provider As IDevioProvider, outputImage As String, completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Dim imaging_parameters As New DevioProviderLibEwf.ImagingParameters With {
@@ -232,7 +243,11 @@ Namespace Server.GenericProviders
                 End If
 
                 For Each hashProvider In hashProviders
+#If NET46_OR_GREATER OrElse NETCOREAPP OrElse NETSTANDARD Then
+                    hashProvider.Value.TransformFinalBlock(Array.Empty(Of Byte)(), 0, 0)
+#Else
                     hashProvider.Value.TransformFinalBlock({}, 0, 0)
+#End If
                     hashResults(hashProvider.Key) = hashProvider.Value.Hash
                 Next
 

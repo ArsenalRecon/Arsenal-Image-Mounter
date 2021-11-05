@@ -13,7 +13,7 @@
     <ProjectReference Include="..\Arsenal.ImageMounter.Devio\Arsenal.ImageMounter.Devio.vbproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net40'">
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
     <Reference Include="System.Configuration" />
   </ItemGroup>
 

@@ -15,11 +15,11 @@
     <ProjectReference Include="..\Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net40'">
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
     <Reference Include="System.ServiceProcess" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net5.0-windows'">
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' != 'net'">
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="5.0.0" />
   </ItemGroup>
 

@@ -13,6 +13,7 @@
 Imports System.ComponentModel
 Imports System.IO
 Imports System.Runtime.InteropServices
+Imports System.Threading
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32.SafeHandles
 
@@ -544,6 +545,22 @@ Public Class DiskDevice
         NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(SafeFileHandle, Force))
 
     End Sub
+
+#If NET45_OR_GREATER OrElse NETCOREAPP OrElse NETSTANDARD Then
+    ''' <summary>
+    ''' Locks and dismounts filesystem on a volume. Upon successful return, further access to the device
+    ''' can only be done through this device object instance until it is either closed (disposed) or lock is
+    ''' released on the underlying handle.
+    ''' </summary>
+    ''' <param name="Force">Indicates if True that volume should be immediately dismounted even if it
+    ''' cannot be locked. This causes all open handles to files on the volume to become invalid. If False,
+    ''' successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
+    Public Async Function DismountVolumeFilesystemAsync(Force As Boolean, cancel As CancellationToken) As Task
+
+        NativeFileIO.Win32Try(Await NativeFileIO.DismountVolumeFilesystemAsync(SafeFileHandle, Force, cancel).ConfigureAwait(continueOnCapturedContext:=False))
+
+    End Function
+#End If
 
     ''' <summary>
     ''' Get live statistics from write filter driver.

@@ -379,6 +379,7 @@ aim_cli.exe [/ipaddress=listenaddress] /port=tcpport [/readonly] [/fakembr] /fil
 
 Syntax to convert a disk image without mounting:
 aim_cli.exe /filename=imagefilename [/fakembr] /provider={providers} /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
+aim_cli.exe /filename=imagefilename [/fakembr] /provider={providers} /convert=\\?\PhysicalDriveN [/background]
 
 Syntax to save as a new disk image after mounting:
 aim_cli.exe /device=devicenumber /saveas=outputimagefilename [/variant=fixed|dynamic] [/background]
@@ -700,6 +701,16 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
                 Dim t = Task.Factory.StartNew(
                     Sub()
 
+                        If String.IsNullOrWhiteSpace(image_type) AndAlso
+                            (outputImage.StartsWith("\\?\", StringComparison.Ordinal) OrElse
+                            outputImage.StartsWith("\\.\", StringComparison.Ordinal)) Then
+
+                            provider.WriteToPhysicalDisk(outputImage, completionPosition, cancel.Token)
+
+                            Return
+
+                        End If
+
                         Select Case image_type
 
                             Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN", "001"
@@ -727,7 +738,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
                         Do Until t.Wait(update_time)
 
                             Dim percent = 100D * completionPosition.LengthComplete / provider.Length
-                            Console.Write($"Converting ({percent:0.0}%)...{Microsoft.VisualBasic.vbCr}")
+                            Console.Write($"Converting ({percent:0.0}%)...{vbCr}")
 
                         Loop
 
