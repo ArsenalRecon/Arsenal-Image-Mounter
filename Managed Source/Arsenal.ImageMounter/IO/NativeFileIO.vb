@@ -5,6 +5,7 @@ Imports System.Globalization
 Imports System.IO
 Imports System.Runtime.InteropServices
 Imports System.Security
+Imports System.Security.AccessControl
 Imports System.Security.Permissions
 Imports System.Text
 Imports System.Threading
@@ -43,11 +44,6 @@ Namespace IO
 
         Public NotInheritable Class NativeConstants
 
-            Public Const GENERIC_READ As UInt32 = &H80000000UI
-            Public Const GENERIC_WRITE As UInt32 = &H40000000UI
-            Public Const GENERIC_ALL As UInt32 = &H10000000
-            Public Const FILE_READ_ATTRIBUTES As UInt32 = &H80UI
-            Public Const SYNCHRONIZE As UInt32 = &H100000UI
             Public Const STANDARD_RIGHTS_REQUIRED As UInt32 = &HF0000UI
 
             Public Const FILE_ATTRIBUTE_NORMAL As UInt32 = &H80UI
@@ -61,7 +57,7 @@ Namespace IO
             Public Const TRUNCATE_EXISTING As UInt32 = 5UI
             Public Const EVENT_QUERY_STATE As UInt32 = 1UI
             Public Const EVENT_MODIFY_STATE As UInt32 = 2UI
-            Public Const EVENT_ALL_ACCESS As UInt32 = STANDARD_RIGHTS_REQUIRED Or SYNCHRONIZE Or 3UI
+            Public Const EVENT_ALL_ACCESS As UInt32 = STANDARD_RIGHTS_REQUIRED Or FileSystemRights.Synchronize Or FileSystemRights.ReadData Or FileSystemRights.WriteData
 
             Public Const NO_ERROR As UInt32 = 0UI
             Public Const ERROR_INVALID_FUNCTION As UInt32 = 1UI
@@ -241,7 +237,7 @@ Namespace IO
 
             Friend Declare Auto Function NtCreateFile Lib "ntdll.dll" (
                 <Out> ByRef hFile As SafeFileHandle,
-                AccessMask As UInt32,
+                AccessMask As FileSystemRights,
                 <[In]> ByRef ObjectAttributes As ObjectAttributes,
                 <Out> ByRef IoStatusBlock As IoStatusBlock,
                 <[In]> ByRef AllocationSize As Long,
@@ -421,7 +417,7 @@ Namespace IO
 
             Friend Declare Auto Function CreateFile Lib "kernel32" (
               <MarshalAs(UnmanagedType.LPWStr), [In]> lpFileName As String,
-              dwDesiredAccess As UInt32,
+              dwDesiredAccess As FileSystemRights,
               dwShareMode As FileShare,
               lpSecurityAttributes As IntPtr,
               dwCreationDisposition As UInt32,
@@ -2056,15 +2052,15 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Public Shared Function ConvertManagedFileAccess(DesiredAccess As FileAccess) As UInt32
+        Public Shared Function ConvertManagedFileAccess(DesiredAccess As FileAccess) As FileSystemRights
 
-            Dim NativeDesiredAccess As UInt32 = NativeConstants.FILE_READ_ATTRIBUTES
+            Dim NativeDesiredAccess = FileSystemRights.ReadAttributes
 
             If DesiredAccess.HasFlag(FileAccess.Read) Then
-                NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_READ
+                NativeDesiredAccess = NativeDesiredAccess Or FileSystemRights.Read
             End If
             If DesiredAccess.HasFlag(FileAccess.Write) Then
-                NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_WRITE
+                NativeDesiredAccess = NativeDesiredAccess Or FileSystemRights.Write
             End If
 
             Return NativeDesiredAccess
@@ -2083,7 +2079,7 @@ Currently, the following application has files open on this volume:
         ''' <param name="TemplateFile"></param>
         Public Shared Function CreateFile(
               FileName As String,
-              DesiredAccess As UInt32,
+              DesiredAccess As FileSystemRights,
               ShareMode As FileShare,
               SecurityAttributes As IntPtr,
               CreationDisposition As UInt32,
@@ -2259,7 +2255,7 @@ Currently, the following application has files open on this volume:
                 Throw New ArgumentNullException(NameOf(FileName))
             End If
 
-            Dim native_desired_access = ConvertManagedFileAccess(DesiredAccess) Or NativeConstants.SYNCHRONIZE
+            Dim native_desired_access = ConvertManagedFileAccess(DesiredAccess) Or FileSystemRights.Synchronize
 
             Dim handle_value As SafeFileHandle = Nothing
 
@@ -2360,12 +2356,12 @@ Currently, the following application has files open on this volume:
                 Throw New ArgumentNullException(NameOf(FilePath))
             End If
 
-            Dim NativeDesiredAccess As UInt32 = NativeConstants.FILE_READ_ATTRIBUTES
+            Dim NativeDesiredAccess = FileSystemRights.ReadAttributes
             If DesiredAccess.HasFlag(FileAccess.Read) Then
-                NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_READ
+                NativeDesiredAccess = NativeDesiredAccess Or FileSystemRights.Read
             End If
             If DesiredAccess.HasFlag(FileAccess.Write) Then
-                NativeDesiredAccess = NativeDesiredAccess Or NativeConstants.GENERIC_WRITE
+                NativeDesiredAccess = NativeDesiredAccess Or FileSystemRights.Write
             End If
 
             Dim NativeCreationDisposition As UInt32
@@ -4901,7 +4897,7 @@ Currently, the following application has files open on this volume:
         Public Shared Function TestFileOpen(path As String) As Boolean
 
             Using handle = UnsafeNativeMethods.CreateFile(path,
-                       NativeConstants.FILE_READ_ATTRIBUTES,
+                       FileSystemRights.ReadAttributes,
                        0,
                        IntPtr.Zero,
                        NativeConstants.OPEN_EXISTING,

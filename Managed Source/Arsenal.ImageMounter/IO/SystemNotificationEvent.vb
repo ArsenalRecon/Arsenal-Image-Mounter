@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Security.AccessControl
 Imports System.Threading
 
 Namespace IO
@@ -25,7 +26,7 @@ Namespace IO
         ''' <param name="EventName">NT name and path to event to open</param>
         Public Sub New(EventName As String)
 
-            SafeWaitHandle = NativeFileIO.NtOpenEvent(EventName, 0, NativeFileIO.NativeConstants.SYNCHRONIZE Or NativeFileIO.NativeConstants.EVENT_QUERY_STATE, Nothing)
+            SafeWaitHandle = NativeFileIO.NtOpenEvent(EventName, 0, FileSystemRights.Synchronize Or NativeFileIO.NativeConstants.EVENT_QUERY_STATE, Nothing)
 
         End Sub
 
