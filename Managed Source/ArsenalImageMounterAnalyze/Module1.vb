@@ -36,7 +36,7 @@ Module Module1
             Console.Write(dev)
             Console.Write(" => ")
             Try
-                Using NativeFileIO.OpenFileHandle("\\?\" & dev, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, False)
+                Using NativeFileIO.OpenFileHandle($"\\?\{dev}", FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, False)
                 End Using
                 Console.WriteLine("Successful.")
 

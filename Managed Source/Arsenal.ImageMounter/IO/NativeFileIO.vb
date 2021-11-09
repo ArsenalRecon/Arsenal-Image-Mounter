@@ -2398,6 +2398,7 @@ Currently, the following application has files open on this volume:
             Return Handle
         End Function
 
+#If NETFRAMEWORK AndAlso Not NET462_OR_GREATER Then
         ''' <summary>
         ''' Converts FileAccess flags to values legal in constructor call to FileStream class.
         ''' </summary>
@@ -2409,6 +2410,7 @@ Currently, the following application has files open on this volume:
                 Return Value
             End If
         End Function
+#End If
 
         ''' <summary>
         ''' Calls Win32 API CreateFile() function and encapsulates returned handle.
@@ -2423,7 +2425,11 @@ Currently, the following application has files open on this volume:
           DesiredAccess As FileAccess,
           ShareMode As FileShare) As FileStream
 
+#If NETFRAMEWORK AndAlso Not NET462_OR_GREATER Then
             Return New FileStream(OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped:=False), GetFileStreamLegalAccessValue(DesiredAccess))
+#Else
+            Return New FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode)
+#End If
 
         End Function
 
@@ -2442,7 +2448,11 @@ Currently, the following application has files open on this volume:
           ShareMode As FileShare,
           BufferSize As Integer) As FileStream
 
+#If NETFRAMEWORK AndAlso Not NET462_OR_GREATER Then
             Return New FileStream(OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped:=False), GetFileStreamLegalAccessValue(DesiredAccess), BufferSize)
+#Else
+            Return New FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode, BufferSize)
+#End If
 
         End Function
 
@@ -2463,7 +2473,11 @@ Currently, the following application has files open on this volume:
       BufferSize As Integer,
       Overlapped As Boolean) As FileStream
 
+#If NETFRAMEWORK AndAlso Not NET462_OR_GREATER Then
             Return New FileStream(OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped), GetFileStreamLegalAccessValue(DesiredAccess), BufferSize, Overlapped)
+#Else
+            Return New FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode, BufferSize, Overlapped)
+#End If
 
         End Function
 
@@ -2475,14 +2489,17 @@ Currently, the following application has files open on this volume:
         ''' <param name="ShareMode">Share mode to request.</param>
         ''' <param name="CreationDisposition">Open/creation mode.</param>
         ''' <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
-        Public Shared Function OpenFileStream(
-      FileName As String,
-      CreationDisposition As FileMode,
-      DesiredAccess As FileAccess,
-      ShareMode As FileShare,
-      Overlapped As Boolean) As FileStream
+        Public Shared Function OpenFileStream(FileName As String,
+                                              CreationDisposition As FileMode,
+                                              DesiredAccess As FileAccess,
+                                              ShareMode As FileShare,
+                                              Overlapped As Boolean) As FileStream
 
+#If NETFRAMEWORK AndAlso Not NET462_OR_GREATER Then
             Return New FileStream(OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped), GetFileStreamLegalAccessValue(DesiredAccess), 1, Overlapped)
+#Else
+            Return New FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode, 1, Overlapped)
+#End If
 
         End Function
 
@@ -3148,10 +3165,10 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function GetFileVersion(exe As Stream) As Version
 
-            Dim buffer = New Byte(0 To CInt(exe.NullCheck(NameOf(exe)).Length - 1)) {}
-            exe.Read(buffer, 0, buffer.Length)
+            Dim buffer As New MemoryStream
+            exe.CopyTo(buffer)
 
-            Return GetFileVersion(buffer)
+            Return GetFileVersion(buffer.GetBuffer())
 
         End Function
 

@@ -1,15 +1,17 @@
 ﻿Imports System.ServiceProcess
-Imports Ionic.Zip
 Imports Arsenal.ImageMounter.IO
 Imports System.Windows.Forms
-Imports Ionic.Crc
 Imports Arsenal.ImageMounter.Extensions
-Imports System.Diagnostics.CodeAnalysis
 Imports Microsoft.Win32
 Imports System.IO
 Imports System.Threading
 Imports System.Text
 Imports System.ComponentModel
+#If NETFRAMEWORK AndAlso Not NET45_OR_GREATER Then
+Imports Ionic.Zip
+#Else
+Imports System.IO.Compression
+#End If
 
 ''' <summary>
 ''' Routines for installing or uninstalling Arsenal Image Mounter kernel level
@@ -60,11 +62,12 @@ Public NotInheritable Class DriverSetup
 
     End Function
 
+#If NETFRAMEWORK AndAlso Not NET45_OR_GREATER Then
     ''' <summary>
     ''' Returns version of driver located inside a setup zip archive.
     ''' </summary>
     ''' <param name="zipFile">ZipFile object with setup files</param>
-    Public Shared Function GetArchiveDriverVersion(zipFile As ZipFile) As Version
+    Public Shared Function GetDriverVersionFromZipArchive(zipFile As ZipFile) As Version
 
         Dim infpath1 = $"{_Kernel}\x86\phdskmnt.sys"
         Dim infpath2 = $"{_Kernel}/x86/phdskmnt.sys"
@@ -90,6 +93,38 @@ Public NotInheritable Class DriverSetup
         End Using
 
     End Function
+#Else
+    ''' <summary>
+    ''' Returns version of driver located inside a setup zip archive.
+    ''' </summary>
+    ''' <param name="zipFile">ZipFile object with setup files</param>
+    Public Shared Function GetDriverVersionFromZipArchive(zipFile As ZipArchive) As Version
+
+        Dim infpath1 = $"{_Kernel}\x86\phdskmnt.sys"
+        Dim infpath2 = $"{_Kernel}/x86/phdskmnt.sys"
+
+        Dim entry =
+            Aggregate e In zipFile.Entries
+            Into FirstOrDefault(
+                e.FullName.Equals(
+                    infpath1, StringComparison.OrdinalIgnoreCase) OrElse
+                e.FullName.Equals(
+                    infpath2, StringComparison.OrdinalIgnoreCase))
+
+        If entry Is Nothing Then
+
+            Throw New KeyNotFoundException($"Driver file phdskmnt.sys for {_Kernel} missing in zip archive.")
+
+        End If
+
+        Using versionFile = entry.Open()
+
+            Return NativeFileIO.GetFileVersion(versionFile)
+
+        End Using
+
+    End Function
+#End If
 
     ''' <summary>
     ''' Returns version of driver located in setup files directory.
@@ -113,6 +148,7 @@ Public NotInheritable Class DriverSetup
 
     End Function
 
+#If NETFRAMEWORK AndAlso Not NET45_OR_GREATER Then
     ''' <summary>
     ''' Installs Arsenal Image Mounter driver components from a zip archive.
     ''' This routine automatically selects the correct driver version for
@@ -128,7 +164,7 @@ Public NotInheritable Class DriverSetup
     ''' like in DriverSetup.zip found in DriverSetup directory in repository,
     ''' that is, one subdirectory for each kernel version followed by one
     ''' subdirectory for each architecture.</param>
-    Public Shared Sub InstallFromZipFile(ownerWindow As IWin32Window, zipFile As ZipFile)
+    Public Shared Sub InstallFromZipArchive(ownerWindow As IWin32Window, zipFile As ZipFile)
 
         Dim origdir = Environment.CurrentDirectory
 
@@ -179,14 +215,90 @@ Public NotInheritable Class DriverSetup
         End If
 
     End Sub
+#Else
+    ''' <summary>
+    ''' Installs Arsenal Image Mounter driver components from a zip archive.
+    ''' This routine automatically selects the correct driver version for
+    ''' current version of Windows.
+    ''' </summary>
+    ''' <param name="ownerWindow">This needs to be a valid handle to a Win32
+    ''' window that will be parent to dialog boxes etc shown by setup API. In
+    ''' console Applications, you could call
+    ''' NativeFileIO.Win32API.GetConsoleWindow() to get a window handle to the
+    ''' console window.</param>
+    ''' <param name="zipFile">An System.IO.Compression.ZipArchive opened for reading that
+    ''' contains setup source files. Directory layout in zip file needs to be
+    ''' like in DriverSetup.zip found in DriverSetup directory in repository,
+    ''' that is, one subdirectory for each kernel version followed by one
+    ''' subdirectory for each architecture.</param>
+    Public Shared Sub InstallFromZipArchive(ownerWindow As IWin32Window, zipFile As ZipArchive)
+
+        Dim origdir = Environment.CurrentDirectory
+
+        Dim temppath = Path.Combine(Path.GetTempPath(), "ArsenalImageMounter-DriverSetup")
+
+        Trace.WriteLine($"Using temp path: {temppath}")
+
+        If Directory.Exists(temppath) Then
+            Directory.Delete(temppath, recursive:=True)
+        End If
+
+        Directory.CreateDirectory(temppath)
+
+        zipFile.ExtractToDirectory(temppath)
+
+        Install(ownerWindow, temppath)
+
+        Environment.CurrentDirectory = origdir
+
+        If _HasStorPort Then
+
+            Dim directoryRemover =
+                Sub()
+
+                    Try
+                        Dim start = Stopwatch.StartNew()
+
+                        While Directory.Exists(temppath)
+
+                            Try
+                                Directory.Delete(temppath, recursive:=True)
+
+                            Catch ex As IOException When start.Elapsed.TotalMinutes < 15
+                                Trace.WriteLine($"I/O Error removing temporary directory: {ex.JoinMessages()}")
+                                Thread.Sleep(TimeSpan.FromSeconds(10))
+
+                            End Try
+
+                        End While
+
+                    Catch ex As Exception
+                        Trace.WriteLine($"Error removing temporary directory: {ex.JoinMessages()}")
+
+                    End Try
+
+                End Sub
+
+            With New Thread(directoryRemover)
+                .Start()
+            End With
+
+        End If
+
+    End Sub
+#End If
 
     ''' <summary>
     ''' Returns version of driver located inside a setup zip archive.
     ''' </summary>
     ''' <param name="zipStream">Stream containing a zip archive with setup files</param>
-    Public Shared Function GetArchiveDriverVersion(zipStream As Stream) As Version
+    Public Shared Function GetDriverVersionFromZipStream(zipStream As Stream) As Version
 
-        Return GetArchiveDriverVersion(ZipFile.Read(zipStream))
+#If NETFRAMEWORK AndAlso Not NET45_OR_GREATER Then
+        Return GetDriverVersionFromZipArchive(ZipFile.Read(zipStream))
+#Else
+        Return GetDriverVersionFromZipArchive(New ZipArchive(zipStream, ZipArchiveMode.Read))
+#End If
 
     End Function
 
@@ -205,9 +317,13 @@ Public NotInheritable Class DriverSetup
     ''' like in DriverSetup.zip found in DriverSetup directory in repository,
     ''' that is, one subdirectory for each kernel version followed by one
     ''' subdirectory for each architecture.</param>
-    Public Shared Sub InstallFromZipFile(ownerWindow As IWin32Window, zipStream As Stream)
+    Public Shared Sub InstallFromZipStream(ownerWindow As IWin32Window, zipStream As Stream)
 
-        InstallFromZipFile(ownerWindow, ZipFile.Read(zipStream))
+#If NETFRAMEWORK AndAlso Not NET45_OR_GREATER Then
+        InstallFromZipArchive(ownerWindow, ZipFile.Read(zipStream))
+#Else
+        InstallFromZipArchive(ownerWindow, New ZipArchive(zipStream, ZipArchiveMode.Read))
+#End If
 
     End Sub
 

@@ -19,6 +19,8 @@ Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32
 
+#Disable Warning IDE1006 ' Naming Styles
+
 Public Class MainForm
 
     Private Shared ReadOnly UsingDebugConsole As Boolean
@@ -128,7 +130,7 @@ Public Class MainForm
                 Using zipStream = GetType(MainForm).Assembly.GetManifestResourceStream(
                     GetType(MainForm), "DriverFiles.zip")
 
-                    DriverSetup.InstallFromZipFile(Me, zipStream)
+                    DriverSetup.InstallFromZipStream(Me, zipStream)
 
                     Try
                         Using New ScsiAdapter

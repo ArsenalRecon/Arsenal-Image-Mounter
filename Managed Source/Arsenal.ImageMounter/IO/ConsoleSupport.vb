@@ -22,7 +22,7 @@ Namespace IO
                 End If
             End If
 
-            Dim origLines = message.Replace(Microsoft.VisualBasic.vbCr, "").Split({Microsoft.VisualBasic.vbLf(0)})
+            Dim origLines = message.Replace(vbCr, "").Split({vbLf(0)})
 
             Dim resultLines As New List(Of String)(origLines.Length)
 

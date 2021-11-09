@@ -45,7 +45,7 @@ Namespace IO
                 Console.ForegroundColor = ConsoleProgressBar.ConsoleProgressBarColor
 
                 Console.Write(chr)
-                Console.Write(Microsoft.VisualBasic.vbBack)
+                Console.Write(vbBack)
 
                 Console.ResetColor()
 

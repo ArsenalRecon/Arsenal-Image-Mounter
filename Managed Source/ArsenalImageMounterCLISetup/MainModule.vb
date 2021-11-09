@@ -21,7 +21,7 @@ Imports Arsenal.ImageMounter
 
 Public Module MainModule
 
-    Private ReadOnly ownerWindow As NativeFileIO.NativeWindowHandle = New NativeFileIO.NativeWindowHandle(NativeFileIO.SafeNativeMethods.GetConsoleWindow())
+    Private ReadOnly ownerWindow As New NativeFileIO.NativeWindowHandle(NativeFileIO.SafeNativeMethods.GetConsoleWindow())
 
     Public Function Main(ParamArray args As String()) As Integer
 
@@ -66,7 +66,7 @@ Public Module MainModule
                 Using zipStream = GetType(MainModule).Assembly.GetManifestResourceStream(
                         GetType(MainModule), "DriverFiles.zip")
 
-                    InstallFromZipFile(ownerWindow, zipStream)
+                    InstallFromZipStream(ownerWindow, zipStream)
 
                 End Using
 

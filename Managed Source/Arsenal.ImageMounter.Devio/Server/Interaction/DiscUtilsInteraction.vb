@@ -100,9 +100,7 @@ Namespace Server.Interaction
 
         Public Shared Function InteractiveCreateRAMDisk(adapter As ScsiAdapter) As RAMDiskService
 
-            Dim DeviceNumber As UInteger = ScsiAdapter.AutoDeviceNumber
-
-            Dim strsize = Microsoft.VisualBasic.InputBox("Enter size in MB", "RAM disk", "0")
+            Dim strsize = InputBox("Enter size in MB", "RAM disk", "0")
 
             Dim size_mb As Long
             If Not Long.TryParse(strsize, size_mb) Then

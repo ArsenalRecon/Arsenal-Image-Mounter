@@ -6,20 +6,24 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Description>Arsenal Image Mounter Low Level API Library</Description>
   </PropertyGroup>
-  
-  <ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &lt; 0">
     <PackageReference Include="DotNetZip" Version="1.15.0" />
   </ItemGroup>
-  
+
+  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &gt;= 0 And '$(TargetFramework.CompareTo(`net5`))' &lt; 0">
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+  <ItemGroup Condition="'$(TargetFramework.StartsWith(`net4`))'">
     <Reference Include="System.ServiceProcess" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' != 'net'">
+  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="5.0.0" />
   </ItemGroup>
 

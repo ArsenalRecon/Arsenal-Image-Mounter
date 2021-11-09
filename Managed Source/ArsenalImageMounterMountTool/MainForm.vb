@@ -795,7 +795,7 @@ Public Class MainForm
 
         Using zipStream = GetType(MainForm).Assembly.GetManifestResourceStream(GetType(MainForm), "DriverFiles.zip")
 
-            Return DriverSetup.GetArchiveDriverVersion(zipStream)
+            Return DriverSetup.GetDriverVersionFromZipStream(zipStream)
 
         End Using
 
@@ -808,7 +808,7 @@ Public Class MainForm
 
                 Using zipStream = GetType(MainForm).Assembly.GetManifestResourceStream(GetType(MainForm), "DriverFiles.zip")
 
-                    DriverSetup.InstallFromZipFile(msgbox, zipStream)
+                    DriverSetup.InstallFromZipStream(msgbox, zipStream)
 
                 End Using
 
