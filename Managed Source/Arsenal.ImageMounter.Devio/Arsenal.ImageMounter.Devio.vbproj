@@ -6,6 +6,7 @@
     <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
     <Description>Arsenal Image Mounter Device I/O Backend</Description>
+	  <TargetFrameworks>net40;net47;net5.0-windows</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

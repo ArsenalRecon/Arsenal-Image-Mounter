@@ -14,7 +14,6 @@
     <OptionExplicit>On</OptionExplicit>
     <DebugType>portable</DebugType>
     <Deterministic>false</Deterministic>
-    <TargetFrameworks>net47;net40;net5.0-windows</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DiscUtilsPath Condition="'$(TargetFramework)' == 'net40'">$(SolutionDir)..\..\3rdparty\DiscUtils\net40</DiscUtilsPath>
     <DiscUtilsPath Condition="'$(TargetFramework)' == 'net47'">$(SolutionDir)..\..\3rdparty\DiscUtils\net46</DiscUtilsPath>
@@ -29,8 +28,8 @@
     <Product>Arsenal Image Mounter</Product>
     <Copyright>Copyright © Arsenal Recon, 2015 - 2021</Copyright>
     <Trademark />
-    <FileVersion>3.6.181.0</FileVersion>
-    <ProductVersion>3.6.181.0</ProductVersion>
+    <FileVersion>3.6.183.0</FileVersion>
+    <ProductVersion>3.6.183.0</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
 
   </PropertyGroup>

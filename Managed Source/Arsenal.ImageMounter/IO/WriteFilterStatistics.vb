@@ -18,7 +18,7 @@ Namespace IO
 
         Public Shared Function Initialize() As WriteFilterStatistics
             Return New WriteFilterStatistics With {
-                ._Version = CUInt(Marshal.SizeOf(GetType(WriteFilterStatistics)))
+                ._Version = CUInt(PinnedBuffer(Of WriteFilterStatistics).TypeSize)
             }
         End Function
 

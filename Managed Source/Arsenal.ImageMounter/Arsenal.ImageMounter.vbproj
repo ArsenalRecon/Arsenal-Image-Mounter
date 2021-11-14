@@ -5,6 +5,7 @@
   <PropertyGroup>
     <UseWindowsForms>true</UseWindowsForms>
     <Description>Arsenal Image Mounter Low Level API Library</Description>
+	  <TargetFrameworks>net40;net47;net5.0-windows</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &lt; 0">

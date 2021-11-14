@@ -391,7 +391,7 @@ Namespace Server.Services
 
         End Sub
 
-        Private Shared ReadOnly SizeOfULong As Integer = Marshal.SizeOf(GetType(ULong))
+        Private Shared ReadOnly SizeOfULong As Integer = PinnedBuffer(Of ULong).TypeSize
 
         Private Sub SharedKeys(MapView As SafeBuffer)
 

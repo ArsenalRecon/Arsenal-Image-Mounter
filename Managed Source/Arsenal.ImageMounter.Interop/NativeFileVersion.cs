@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using WORD = System.UInt16;
 using DWORD = System.UInt32;
+using LONG = System.Int32;
 using BYTE = System.Byte;
 
 #pragma warning disable 0649
@@ -87,6 +88,29 @@ namespace Arsenal.ImageMounter.IO
         // Different fields follow depending on architecture
     }
 
+    internal unsafe struct IMAGE_DOS_HEADER
+    {      // DOS .EXE header
+        public readonly WORD e_magic;                     // Magic number
+        public readonly WORD e_cblp;                      // Bytes on last page of file
+        public readonly WORD e_cp;                        // Pages in file
+        public readonly WORD e_crlc;                      // Relocations
+        public readonly WORD e_cparhdr;                   // Size of header in paragraphs
+        public readonly WORD e_minalloc;                  // Minimum extra paragraphs needed
+        public readonly WORD e_maxalloc;                  // Maximum extra paragraphs needed
+        public readonly WORD e_ss;                        // Initial (relative) SS value
+        public readonly WORD e_sp;                        // Initial SP value
+        public readonly WORD e_csum;                      // Checksum
+        public readonly WORD e_ip;                        // Initial IP value
+        public readonly WORD e_cs;                        // Initial (relative) CS value
+        public readonly WORD e_lfarlc;                    // File address of relocation table
+        public readonly WORD e_ovno;                      // Overlay number
+        public fixed WORD e_res[4];                       // Reserved words
+        public readonly WORD e_oemid;                     // OEM identifier (for e_oeminfo)
+        public readonly WORD e_oeminfo;                   // OEM information; e_oemid specific
+        public fixed WORD e_res2[10];                     // Reserved words
+        public readonly LONG e_lfanew;                    // File address of new exe header
+    }
+
     /// <summary>
     /// Base of PE headers
     /// </summary>
@@ -137,9 +161,6 @@ namespace Arsenal.ImageMounter.IO
         [DllImport("kernel32.dll")]
         private extern static void SetLastError(int errcode);
 
-        [DllImport("dbghelp.dll")]
-        private extern unsafe static IMAGE_NT_HEADERS* ImageNtHeader(void* Base);
-
         [DllImport("version.dll", CharSet = CharSet.Unicode)]
         private extern unsafe static bool VerQueryValue(void* pBlock, string lpSubBlock, out char* lplpBuffer, out int puLen);
 
@@ -168,19 +189,19 @@ namespace Arsenal.ImageMounter.IO
         /// </summary>
         /// <param name="rawFile">Raw exe or dll data</param>
         /// <returns>IMAGE_NT_HEADERS structure</returns>
-        public unsafe static IMAGE_NT_HEADERS GetImageNtHeaders(byte[] rawFile)
+        public static IMAGE_NT_HEADERS GetImageNtHeaders(byte[] rawFile)
         {
-            fixed (byte* FileData = rawFile)
+            using var FileData = PinnedBuffer.Create(rawFile);
+            
+            var dos_header = FileData.Read<IMAGE_DOS_HEADER>(0);
+            var header = FileData.Read<IMAGE_NT_HEADERS>((ulong)dos_header.e_lfanew);
+
+            if (header.Signature != 0x4550 || header.FileHeader.SizeOfOptionalHeader == 0)
             {
-                var header = ImageNtHeader(FileData);
-
-                if (header == null || header->Signature != 0x4550 || header->FileHeader.SizeOfOptionalHeader == 0)
-                {
-                    throw new BadImageFormatException();
-                }
-
-                return *header;
+                throw new BadImageFormatException();
             }
+
+            return header;
         }
 
         /// <summary>
@@ -193,7 +214,9 @@ namespace Arsenal.ImageMounter.IO
         {
             ResourceSize = 0;
 
-            var header = ImageNtHeader(FileData);
+            var dos_header = (IMAGE_DOS_HEADER*)FileData;
+
+            var header = (IMAGE_NT_HEADERS*)((byte*)FileData + dos_header->e_lfanew);
 
             if (header == null || header->Signature != 0x4550 || header->FileHeader.SizeOfOptionalHeader == 0)
             {

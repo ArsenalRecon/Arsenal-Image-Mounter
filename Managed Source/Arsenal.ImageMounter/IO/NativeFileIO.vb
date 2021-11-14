@@ -1189,7 +1189,7 @@ Namespace IO
 
                 Using Request = PinnedBuffer.Create(indata)
 
-                    Request.Write(0, Marshal.SizeOf(GetType(SRB_IO_CONTROL)))
+                    Request.Write(0, PinnedBuffer(Of SRB_IO_CONTROL).TypeSize)
                     Request.WriteArray(4, SrbIoCtlSignature, 0, 8)
                     Request.Write(12, timeout)
                     Request.Write(16, ctrlcode)
@@ -1616,8 +1616,8 @@ Currently, the following application has files open on this volume:
 
             Using token
 
-                Dim intsize = CLng(Marshal.SizeOf(GetType(Integer)))
-                Dim structsize = Marshal.SizeOf(GetType(LUID_AND_ATTRIBUTES))
+                Dim intsize = CLng(PinnedBuffer(Of Integer).TypeSize)
+                Dim structsize = PinnedBuffer(Of LUID_AND_ATTRIBUTES).TypeSize
 
                 Dim luid_and_attribs_list As New Dictionary(Of String, LUID_AND_ATTRIBUTES)(privileges.Length)
 
@@ -2607,7 +2607,7 @@ Currently, the following application has files open on this volume:
             Dim DiskGrowPartition As DISK_GROW_PARTITION
             DiskGrowPartition.PartitionNumber = PartitionNumber
             DiskGrowPartition.BytesToGrow = BytesToGrow
-            Win32Try(UnsafeNativeMethods.DeviceIoControl(DiskHandle, NativeConstants.IOCTL_DISK_GROW_PARTITION, DiskGrowPartition, CUInt(Marshal.SizeOf(DiskGrowPartition.GetType())), IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
+            Win32Try(UnsafeNativeMethods.DeviceIoControl(DiskHandle, NativeConstants.IOCTL_DISK_GROW_PARTITION, DiskGrowPartition, CUInt(PinnedBuffer(Of DISK_GROW_PARTITION).TypeSize), IntPtr.Zero, 0UI, 0UI, IntPtr.Zero))
 
         End Sub
 
@@ -2783,7 +2783,7 @@ Currently, the following application has files open on this volume:
 
             Dim DiskGeometry As DISK_GEOMETRY
 
-            If UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_DISK_GET_DRIVE_GEOMETRY, IntPtr.Zero, 0, DiskGeometry, CUInt(Marshal.SizeOf(GetType(DISK_GEOMETRY))), Nothing, Nothing) Then
+            If UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_DISK_GET_DRIVE_GEOMETRY, IntPtr.Zero, 0, DiskGeometry, CUInt(PinnedBuffer(Of DISK_GEOMETRY).TypeSize), Nothing, Nothing) Then
 
                 Return DiskGeometry
 
@@ -2803,7 +2803,7 @@ Currently, the following application has files open on this volume:
 
             Dim ScsiAddress As SCSI_ADDRESS
 
-            If UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_SCSI_GET_ADDRESS, IntPtr.Zero, 0, ScsiAddress, CUInt(Marshal.SizeOf(GetType(SCSI_ADDRESS))), Nothing, Nothing) Then
+            If UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_SCSI_GET_ADDRESS, IntPtr.Zero, 0, ScsiAddress, CUInt(PinnedBuffer(Of SCSI_ADDRESS).TypeSize), Nothing, Nothing) Then
                 Return ScsiAddress
             Else
                 Return Nothing
@@ -2856,8 +2856,8 @@ Currently, the following application has files open on this volume:
             Dim StorageDescriptorHeader As New STORAGE_DESCRIPTOR_HEADER
 
             If Not UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_STORAGE_QUERY_PROPERTY,
-                                                   StoragePropertyQuery, CUInt(Marshal.SizeOf(GetType(STORAGE_PROPERTY_QUERY))),
-                                                   StorageDescriptorHeader, CUInt(Marshal.SizeOf(GetType(STORAGE_DESCRIPTOR_HEADER))),
+                                                   StoragePropertyQuery, CUInt(PinnedBuffer(Of STORAGE_PROPERTY_QUERY).TypeSize),
+                                                   StorageDescriptorHeader, CUInt(PinnedBuffer(Of STORAGE_DESCRIPTOR_HEADER).TypeSize),
                                                    Nothing, Nothing) Then
                 Return Nothing
             End If
@@ -2865,7 +2865,7 @@ Currently, the following application has files open on this volume:
             Using buffer As New PinnedBuffer(Of Byte)(New Byte(0 To CInt(StorageDescriptorHeader.Size - 1)) {})
 
                 If Not UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_STORAGE_QUERY_PROPERTY,
-                                                   StoragePropertyQuery, CUInt(Marshal.SizeOf(GetType(STORAGE_PROPERTY_QUERY))),
+                                                   StoragePropertyQuery, CUInt(PinnedBuffer(Of STORAGE_PROPERTY_QUERY).TypeSize),
                                                    buffer, CUInt(buffer.ByteLength),
                                                    Nothing, Nothing) Then
                     Return Nothing
@@ -2887,8 +2887,8 @@ Currently, the following application has files open on this volume:
             Dim DeviceTrimDescriptor As New DEVICE_TRIM_DESCRIPTOR
 
             If Not UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_STORAGE_QUERY_PROPERTY,
-                                               StoragePropertyQuery, CUInt(Marshal.SizeOf(GetType(STORAGE_PROPERTY_QUERY))),
-                                               DeviceTrimDescriptor, CUInt(Marshal.SizeOf(GetType(DEVICE_TRIM_DESCRIPTOR))),
+                                               StoragePropertyQuery, CUInt(PinnedBuffer(Of STORAGE_PROPERTY_QUERY).TypeSize),
+                                               DeviceTrimDescriptor, CUInt(PinnedBuffer(Of DEVICE_TRIM_DESCRIPTOR).TypeSize),
                                                Nothing, Nothing) Then
                 Return Nothing
             End If
@@ -2907,7 +2907,7 @@ Currently, the following application has files open on this volume:
 
             If UnsafeNativeMethods.DeviceIoControl(hDevice, NativeConstants.IOCTL_STORAGE_GET_DEVICE_NUMBER,
                                                    IntPtr.Zero, 0,
-                                                   StorageDeviceNumber, CUInt(Marshal.SizeOf(GetType(STORAGE_DEVICE_NUMBER))), Nothing, Nothing) Then
+                                                   StorageDeviceNumber, CUInt(PinnedBuffer(Of STORAGE_DEVICE_NUMBER).TypeSize), Nothing, Nothing) Then
 
                 Return StorageDeviceNumber
             Else
@@ -3360,15 +3360,13 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function GetDriveLayoutEx(disk As SafeFileHandle) As DriveLayoutInformation
 
-            Static partition_struct_size As Integer = Marshal.SizeOf(GetType(PARTITION_INFORMATION_EX))
-
             Dim max_partitions = 1
 
             Do
 
-                Dim size_needed = Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_EX)) +
-                Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_GPT)) +
-                max_partitions * partition_struct_size
+                Dim size_needed = PinnedBuffer(Of DRIVE_LAYOUT_INFORMATION_EX).TypeSize +
+                PinnedBuffer(Of DRIVE_LAYOUT_INFORMATION_GPT).TypeSize +
+                max_partitions * PinnedBuffer(Of PARTITION_INFORMATION_EX).TypeSize
 
                 Using buffer As New PinnedBuffer(Of Byte)(size_needed)
 
@@ -3394,7 +3392,7 @@ Currently, the following application has files open on this volume:
 
                     Dim partitions(0 To layout.PartitionCount - 1) As PARTITION_INFORMATION_EX
                     For i = 0 To layout.PartitionCount - 1
-                        partitions(i) = CType(Marshal.PtrToStructure(buffer.DangerousGetHandle() + 48 + i * partition_struct_size,
+                        partitions(i) = CType(Marshal.PtrToStructure(buffer.DangerousGetHandle() + 48 + i * PinnedBuffer(Of PARTITION_INFORMATION_EX).TypeSize,
                                                                        GetType(PARTITION_INFORMATION_EX)),
                                                                        PARTITION_INFORMATION_EX)
                     Next
@@ -3417,11 +3415,11 @@ Currently, the following application has files open on this volume:
 
         Public Shared Sub SetDriveLayoutEx(disk As SafeFileHandle, layout As DriveLayoutInformation)
 
-            Static partition_struct_size As Integer = Marshal.SizeOf(GetType(PARTITION_INFORMATION_EX))
+            Static partition_struct_size As Integer = PinnedBuffer(Of PARTITION_INFORMATION_EX).TypeSize
 
-            Static drive_layout_information_ex_size As Integer = Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_EX))
+            Static drive_layout_information_ex_size As Integer = PinnedBuffer(Of DRIVE_LAYOUT_INFORMATION_EX).TypeSize
 
-            Static drive_layout_information_record_size As Integer = Marshal.SizeOf(GetType(DRIVE_LAYOUT_INFORMATION_GPT))
+            Static drive_layout_information_record_size As Integer = PinnedBuffer(Of DRIVE_LAYOUT_INFORMATION_GPT).TypeSize
 
             layout.NullCheck(NameOf(layout))
 
@@ -3474,7 +3472,7 @@ Currently, the following application has files open on this volume:
 
         Public Shared Sub InitializeDisk(disk As SafeFileHandle, PartitionStyle As PARTITION_STYLE)
 
-            Using buffer As New PinnedBuffer(Of Byte)(Marshal.SizeOf(GetType(CREATE_DISK_GPT)))
+            Using buffer As New PinnedBuffer(Of CREATE_DISK_GPT)(1)
 
                 Select Case PartitionStyle
 
@@ -3718,8 +3716,8 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function GetScsiAddressAndLength(drv As String) As ScsiAddressAndLength?
 
-            Static SizeOfLong As UInt32 = CUInt(Marshal.SizeOf(GetType(Long)))
-            Static SizeOfScsiAddress As UInt32 = CUInt(Marshal.SizeOf(GetType(SCSI_ADDRESS)))
+            Static SizeOfLong As UInt32 = CUInt(PinnedBuffer(Of Long).TypeSize)
+            Static SizeOfScsiAddress As UInt32 = CUInt(PinnedBuffer(Of SCSI_ADDRESS).TypeSize)
 
             Try
                 Using disk As New DiskDevice(drv, FileAccess.Read)
@@ -4038,7 +4036,7 @@ Currently, the following application has files open on this volume:
                     If devInfoData.DevInst.Equals(devinst) Then
                         Dim pcp As New UnsafeNativeMethods.SP_PROPCHANGE_PARAMS With {
                             .ClassInstallHeader = New UnsafeNativeMethods.SP_CLASSINSTALL_HEADER With {
-                                .Size = CUInt(Marshal.SizeOf(GetType(UnsafeNativeMethods.SP_CLASSINSTALL_HEADER))),
+                                .Size = CUInt(PinnedBuffer(Of UnsafeNativeMethods.SP_CLASSINSTALL_HEADER).TypeSize),
                                 .InstallFunction = UnsafeNativeMethods.DIF_PROPERTYCHANGE
                             },
                             .HwProfile = 0,
@@ -4046,7 +4044,7 @@ Currently, the following application has files open on this volume:
                             .StateChange = UnsafeNativeMethods.DICS_PROPCHANGE
                         }
 
-                        If UnsafeNativeMethods.SetupDiSetClassInstallParams(devinfo, devInfoData, pcp, Marshal.SizeOf(pcp)) AndAlso
+                        If UnsafeNativeMethods.SetupDiSetClassInstallParams(devinfo, devInfoData, pcp, PinnedBuffer(Of UnsafeNativeMethods.SP_PROPCHANGE_PARAMS).TypeSize) AndAlso
                             UnsafeNativeMethods.SetupDiCallClassInstaller(UnsafeNativeMethods.DIF_PROPERTYCHANGE, devinfo, devInfoData) Then
 
                             Return
@@ -5772,7 +5770,7 @@ Currently, the following application has files open on this volume:
 
                 If _DeviceDescriptor.RawPropertiesLength <> 0 Then
                     Dim RawProperties(0 To _DeviceDescriptor.RawPropertiesLength - 1) As Byte
-                    Marshal.Copy(buffer.DangerousGetHandle() + Marshal.SizeOf(GetType(STORAGE_DEVICE_DESCRIPTOR)), RawProperties, 0, _DeviceDescriptor.RawPropertiesLength)
+                    Marshal.Copy(buffer.DangerousGetHandle() + PinnedBuffer(Of STORAGE_DEVICE_DESCRIPTOR).TypeSize, RawProperties, 0, _DeviceDescriptor.RawPropertiesLength)
                     _RawProperties = Array.AsReadOnly(RawProperties)
                 End If
 
@@ -5846,48 +5844,6 @@ Currently, the following application has files open on this volume:
 
         End Structure
 
-        ''' <summary>
-        ''' Structure for counted Unicode strings used in NT API calls
-        ''' </summary>
-        <StructLayout(LayoutKind.Sequential)>
-        Public Structure UNICODE_STRING
-            ''' <summary>
-            ''' Length in bytes of Unicode string pointed to by Buffer
-            ''' </summary>
-            Public ReadOnly Property Length As UInt16
-
-            ''' <summary>
-            ''' Maximum length in bytes of string memory pointed to by Buffer
-            ''' </summary>
-            Public ReadOnly Property MaximumLength As UInt16
-
-            ''' <summary>
-            ''' Unicode character buffer in unmanaged memory
-            ''' </summary>
-            Public ReadOnly Property Buffer As IntPtr
-
-            Public Sub New(str As IntPtr, byte_count As UInt16)
-
-                _Length = byte_count
-                _MaximumLength = byte_count
-                _Buffer = str
-
-            End Sub
-
-            ''' <summary>
-            ''' Creates a managed string object from UNICODE_STRING instance.
-            ''' </summary>
-            ''' <returns>Managed string</returns>
-            Public Overrides Function ToString() As String
-                If _Length = 0 Then
-                    Return String.Empty
-                Else
-                    Return Marshal.PtrToStringUni(_Buffer, _Length >> 1)
-                End If
-            End Function
-
-        End Structure
-
         <StructLayout(LayoutKind.Sequential)>
         Structure DISK_GEOMETRY
             Public Enum MEDIA_TYPE As Int32
@@ -5945,7 +5901,7 @@ Currently, the following application has files open on this volume:
 
             Public Shared Function Initalize() As OSVERSIONINFO
                 Return New OSVERSIONINFO() With {
-                ._OSVersionInfoSize = Marshal.SizeOf(GetType(OSVERSIONINFO))
+                ._OSVersionInfoSize = PinnedBuffer(Of OSVERSIONINFO).TypeSize
             }
             End Function
         End Structure
@@ -5979,7 +5935,7 @@ Currently, the following application has files open on this volume:
 
             Public Shared Function Initalize() As OSVERSIONINFOEX
                 Return New OSVERSIONINFOEX() With {
-                ._OSVersionInfoSize = Marshal.SizeOf(GetType(OSVERSIONINFOEX))
+                ._OSVersionInfoSize = PinnedBuffer(Of OSVERSIONINFOEX).TypeSize
             }
             End Function
         End Structure

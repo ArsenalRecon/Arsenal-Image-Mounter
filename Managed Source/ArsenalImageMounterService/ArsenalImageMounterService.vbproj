@@ -6,6 +6,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>aim_cli</AssemblyName>
     <Title>Arsenal Image Mounter Console Service</Title>
+	  <TargetFrameworks>net40;net5.0-windows</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

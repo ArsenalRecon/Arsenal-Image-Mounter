@@ -30,8 +30,8 @@ Partial Class AsyncMessageBox
     Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
     Me.ClientSize = New System.Drawing.Size(448, 171)
     Me.ControlBox = False
-    Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog
-    Me.MaximizeBox = False
+        Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle
+        Me.MaximizeBox = False
     Me.MinimizeBox = False
     Me.Name = "AsyncMessageBox"
     Me.ShowIcon = False
