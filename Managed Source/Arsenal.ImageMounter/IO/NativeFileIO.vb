@@ -3820,7 +3820,7 @@ Currently, the following application has files open on this volume:
                 Return Enumerable.Empty(Of String)()
             End If
 
-            VolumeName = QueryDosDevice(VolumeName).FirstOrDefault()
+            VolumeName = QueryDosDevice(VolumeName)?.FirstOrDefault()
 
             If String.IsNullOrWhiteSpace(VolumeName) Then
                 Return Enumerable.Empty(Of String)()

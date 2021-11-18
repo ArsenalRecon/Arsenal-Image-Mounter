@@ -72,7 +72,7 @@ Namespace PSDisk
 
                                 Try
                                     view.Volumes = NativeFileIO.EnumerateDiskVolumes(view.DevicePath).ToArray()
-                                    view.MountPoints = view.Volumes.SelectMany(AddressOf NativeFileIO.EnumerateVolumeMountPoints).ToArray()
+                                    view.MountPoints = view.Volumes?.SelectMany(AddressOf NativeFileIO.EnumerateVolumeMountPoints).ToArray()
 
                                 Catch ex As Exception
                                     Trace.WriteLine($"Error enumerating volumes for drive {view.DevicePath}: {ex.JoinMessages()}")
