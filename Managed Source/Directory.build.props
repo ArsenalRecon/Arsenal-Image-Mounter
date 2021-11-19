@@ -15,9 +15,9 @@
     <DebugType>portable</DebugType>
     <Deterministic>false</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DiscUtilsPath Condition="'$(TargetFramework)' == 'net40'">$(SolutionDir)..\..\3rdparty\DiscUtils\net40</DiscUtilsPath>
-    <DiscUtilsPath Condition="'$(TargetFramework)' == 'net47'">$(SolutionDir)..\..\3rdparty\DiscUtils\net46</DiscUtilsPath>
-    <DiscUtilsPath Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">$(SolutionDir)..\..\3rdparty\DiscUtils\netstandard2.0</DiscUtilsPath>
+    <DiscUtilsPath Condition="'$(TargetFramework)' == 'net40'">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\net40</DiscUtilsPath>
+    <DiscUtilsPath Condition="'$(TargetFramework)' == 'net47'">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\net46</DiscUtilsPath>
+    <DiscUtilsPath Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\netstandard2.0</DiscUtilsPath>
 
   </PropertyGroup>
 
@@ -28,8 +28,8 @@
     <Product>Arsenal Image Mounter</Product>
     <Copyright>Copyright © Arsenal Recon, 2015 - 2021</Copyright>
     <Trademark />
-    <FileVersion>3.6.187.0</FileVersion>
-    <ProductVersion>3.6.187.0</ProductVersion>
+    <FileVersion>3.6.188.0</FileVersion>
+    <ProductVersion>3.6.188.0</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
 
   </PropertyGroup>
