@@ -3,7 +3,7 @@ Arsenal-Image-Mounter
 
 Arsenal Image Mounter mounts the contents of disk images as complete disks in Microsoft Windows. Arsenal Image Mounter includes a virtual SCSI adapter (via a unique Storport miniport driver) which allows users to benefit from disk-specific features in Windows like integration with Disk Manager, access to Volume Shadow Copies, and more. As far as Windows is concerned, the contents of disk images mounted by Arsenal Image Mounter are “real” SCSI disks.
 
-<i>For developers</i>, Arsenal Image Mounter source code and APIs are available for royalty-free use by open source projects. <b>Commercial projects (and other projects not licensed under an AGPL v3 compatible license - see http://www.fsf.org/licensing/licenses/agpl-3.0.html) that would like to use Arsenal Image Mounter source code and/or APIs must contact us (https://ArsenalRecon.com/contact/) to obtain alternative licensing.</b>
+<i>For developers</i>, Arsenal Image Mounter source code and APIs are available for royalty-free use by open source projects. <b>Commercial projects (and other projects not licensed under an AGPL v3 compatible license - see https://www.gnu.org/licenses/agpl-3.0.html) that would like to use Arsenal Image Mounter source code and/or APIs must contact us (https://ArsenalRecon.com/contact/) to obtain alternative licensing.</b>
 
 <i>For end users</i>, Arsenal Image Mounter’s full functionality (along with all our other tools) is available as part of an affordable monthly subscription. If Arsenal Image Mounter is licensed, it runs in "Professional Mode.” If Arsenal Image Mounter is run without a license, it will run in "Free Mode" and provide core functionality.
 
