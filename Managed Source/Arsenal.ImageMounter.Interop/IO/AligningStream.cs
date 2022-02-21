@@ -95,7 +95,7 @@ public class AligningStream : Stream
         while (count > 0)
         {
             BaseStream.Position = Position;
-            var blockSize = await BaseStream.ReadAsync(buffer, offset, count, token).ConfigureAwait(continueOnCapturedContext: false);
+            var blockSize = await BaseStream.ReadAsync(buffer, offset, count, token).ConfigureAwait(false);
             Position = BaseStream.Position;
 
             if (blockSize == 0)
@@ -135,7 +135,7 @@ public class AligningStream : Stream
         while (count > 0)
         {
             BaseStream.Position = Position;
-            var blockSize = await BaseStream.ReadAsync(buffer.Slice(offset, count), cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+            var blockSize = await BaseStream.ReadAsync(buffer.Slice(offset, count), cancellationToken).ConfigureAwait(false);
             Position = BaseStream.Position;
 
             if (blockSize == 0)
@@ -236,12 +236,12 @@ public class AligningStream : Stream
 
         if (newsize == count)
         {
-            return await SafeBaseReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+            return await SafeBaseReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
         }
 
         var newbuffer = new byte[newsize];
         Position -= prefix;
-        var result = await SafeBaseReadAsync(newbuffer, 0, newsize, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+        var result = await SafeBaseReadAsync(newbuffer, 0, newsize, cancellationToken).ConfigureAwait(false);
         if (result < prefix)
         {
             return 0;
@@ -359,14 +359,14 @@ public class AligningStream : Stream
             {
                 Position = checked(original_position - prefix);
 
-                await SafeBaseReadAsync(new_buffer, 0, Alignment, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+                await SafeBaseReadAsync(new_buffer, 0, Alignment, cancellationToken).ConfigureAwait(false);
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                await SafeBaseReadAsync(new_buffer, new_array_size - Alignment, Alignment, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+                await SafeBaseReadAsync(new_buffer, new_array_size - Alignment, Alignment, cancellationToken).ConfigureAwait(false);
             }
 
             Buffer.BlockCopy(buffer, offset, new_buffer, prefix, count);
@@ -388,7 +388,7 @@ public class AligningStream : Stream
         }
 
         BaseStream.Position = Position;
-        await BaseStream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+        await BaseStream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
         Position = BaseStream.Position;
 
         if (suffix > 0)
@@ -400,7 +400,7 @@ public class AligningStream : Stream
     public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
     {
         BaseStream.Position = Position;
-        await BaseStream.CopyToAsync(destination, bufferSize, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+        await BaseStream.CopyToAsync(destination, bufferSize, cancellationToken).ConfigureAwait(false);
         Position = BaseStream.Position;
     }
 
@@ -441,14 +441,14 @@ public class AligningStream : Stream
             {
                 Position = checked(original_position - prefix);
 
-                await ReadAsync(new_buffer[..Alignment], cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+                await ReadAsync(new_buffer[..Alignment], cancellationToken).ConfigureAwait(false);
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                await ReadAsync(new_buffer[^Alignment..], cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+                await ReadAsync(new_buffer[^Alignment..], cancellationToken).ConfigureAwait(false);
             }
 
             buffer.CopyTo(new_buffer[prefix..]);
@@ -470,7 +470,7 @@ public class AligningStream : Stream
         }
 
         BaseStream.Position = Position;
-        await BaseStream.WriteAsync(buffer.Slice(offset, count), cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+        await BaseStream.WriteAsync(buffer.Slice(offset, count), cancellationToken).ConfigureAwait(false);
         Position = BaseStream.Position;
 
         if (suffix > 0)
