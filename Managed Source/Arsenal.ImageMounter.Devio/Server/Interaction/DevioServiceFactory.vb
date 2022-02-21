@@ -385,8 +385,14 @@ Namespace Server.Interaction
 
         Private Shared Function GetProviderRaw(Imagefile As String, DiskAccess As FileAccess) As DevioProviderFromStream
 
-            Return New DevioProviderFromStream(NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete), ownsStream:=True) With {
-                .CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)
+#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+            Dim stream As New FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete, FileOptions.Asynchronous)
+#Else
+            Dim stream = NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete, Overlapped:=True)
+#End If
+
+            Return New DevioProviderFromStream(stream, ownsStream:=True) With {
+                .CustomSectorSize = GetSectorSizeFromFileName(Imagefile)
             }
 
         End Function
@@ -473,10 +479,11 @@ Namespace Server.Interaction
                 Return New DevioNoneService(Imagefile, DiskAccess)
 
             ElseIf Proxy = ProxyType.DiscUtils AndAlso Not FakeMBR AndAlso
+                    (DiskAccess And Not FileAccess.ReadWrite) = 0 AndAlso
                     (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) OrElse
                     Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase)) Then
 
-                Return New DevioNoneService("\\?\vhdaccess" & NativeFileIO.GetNtPath(Imagefile), DiskAccess)
+                Return New DevioNoneService($"\\?\vhdaccess{NativeFileIO.GetNtPath(Imagefile)}", DiskAccess)
 
             End If
 
@@ -595,7 +602,7 @@ Namespace Server.Interaction
             Dim Disk = GetDiscUtilsVirtualDisk(Imagefile, FileAccess, ProxyType.DiscUtils)
 
             If Disk Is Nothing Then
-                Dim fs As New FileStream(Imagefile, FileMode.Open, FileAccess, FileShare.Read Or FileShare.Delete)
+                Dim fs As New FileStream(Imagefile, FileMode.Open, FileAccess, FileShare.Read Or FileShare.Delete, FileOptions.Asynchronous)
                 Try
                     Disk = New Dmg.Disk(fs, Ownership.Dispose)
                 Catch
@@ -617,11 +624,16 @@ Namespace Server.Interaction
             }
 
             Try
-
                 If Disk.IsPartitioned Then
                     Trace.WriteLine($"Partition table class: {Disk.Partitions.GetType()}")
                 End If
 
+            Catch ex As Exception
+                Trace.WriteLine($"Partition table error: {ex.JoinMessages()}")
+
+            End Try
+
+            Try
                 Trace.WriteLine($"Image virtual size is {Disk.Capacity} bytes")
 
                 Dim SectorSize As UInteger
@@ -765,7 +777,7 @@ Namespace Server.Interaction
             Dim DiskStream As New MultiPartFileStream(Imagefile, DiskAccess)
 
             Return New DevioProviderFromStream(DiskStream, ownsStream:=True) With {
-                .CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)
+                .CustomSectorSize = GetSectorSizeFromFileName(Imagefile)
             }
 
         End Function
@@ -781,7 +793,7 @@ Namespace Server.Interaction
             Dim DiskStream As New MultiPartFileStream(Imagefile, DiskAccess, ShareMode)
 
             Return New DevioProviderFromStream(DiskStream, ownsStream:=True) With {
-                .CustomSectorSize = API.GetSectorSizeFromFileName(Imagefile)
+                .CustomSectorSize = GetSectorSizeFromFileName(Imagefile)
             }
 
         End Function

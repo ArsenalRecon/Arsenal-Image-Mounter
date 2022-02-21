@@ -11,9 +11,12 @@
 '''''
 
 Imports System.Runtime.InteropServices
+Imports System.Runtime.Versioning
 
 Namespace IO
+
     <StructLayout(LayoutKind.Sequential)>
+    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
     Public Structure WriteFilterStatistics
 
         Public Shared Function Initialize() As WriteFilterStatistics

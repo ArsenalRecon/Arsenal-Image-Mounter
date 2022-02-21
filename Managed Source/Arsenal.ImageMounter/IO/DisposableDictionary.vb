@@ -70,7 +70,6 @@ Namespace IO
 
         End Sub
 
-#If Not NET_CORE Then
         Public Overrides Sub GetObjectData(info As SerializationInfo, context As StreamingContext)
             MyBase.GetObjectData(info, context)
         End Sub
@@ -78,7 +77,6 @@ Namespace IO
         Protected Sub New(si As SerializationInfo, context As StreamingContext)
             MyBase.New(si, context)
         End Sub
-#End If
 
     End Class
 

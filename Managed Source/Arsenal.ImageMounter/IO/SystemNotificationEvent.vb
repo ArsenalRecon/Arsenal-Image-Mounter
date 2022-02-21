@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Runtime.Versioning
 Imports System.Security.AccessControl
 Imports System.Threading
 
@@ -17,6 +18,7 @@ Namespace IO
     ''' <summary>
     ''' Represents a system notification event object. Well known paths are available as constants of SystemNotificationEvent class.
     ''' </summary>
+    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
     Public Class SystemNotificationEvent
         Inherits WaitHandle
 
@@ -26,7 +28,7 @@ Namespace IO
         ''' <param name="EventName">NT name and path to event to open</param>
         Public Sub New(EventName As String)
 
-            SafeWaitHandle = NativeFileIO.NtOpenEvent(EventName, 0, FileSystemRights.Synchronize Or NativeFileIO.NativeConstants.EVENT_QUERY_STATE, Nothing)
+            SafeWaitHandle = NativeFileIO.NtOpenEvent(EventName, 0, FileSystemRights.Synchronize Or NativeConstants.EVENT_QUERY_STATE, Nothing)
 
         End Sub
 

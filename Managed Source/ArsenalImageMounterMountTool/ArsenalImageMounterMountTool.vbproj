@@ -6,15 +6,17 @@
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <Title>Arsenal Image Mounter Mount Tool</Title>
-	  <TargetFrameworks>net40;net5.0-windows</TargetFrameworks>
+	<TargetFrameworks>net45;netcoreapp3.1</TargetFrameworks>
+    <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Interaction\Arsenal.ImageMounter.Interaction.vbproj" />
     <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
     <ProjectReference Include="..\Arsenal.ImageMounter.Devio\Arsenal.ImageMounter.Devio.vbproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5.0`))' &lt; 0">
     <Reference Include="System.Configuration" />
   </ItemGroup>
 
@@ -27,9 +29,9 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net40'">
+    <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net45'">
       echo Building "$(SolutionDir)..\MountTool\$(AssemblyName).exe"
-      ILMerge /wildcards /ndebug /copyattrs /keepfirst /out:"$(SolutionDir)..\MountTool\$(AssemblyName).exe" $(AssemblyName).exe *.dll || goto err
+      ILMerge /wildcards /out:"$(SolutionDir)..\MountTool\$(AssemblyName).exe" $(AssemblyName).exe *.dll || goto err
       TestAssembly "$(SolutionDir)..\MountTool\$(AssemblyName).exe" &gt; nul || goto err
       signtool sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /t "http://timestamp.comodoca.com/authenticode" "$(SolutionDir)..\MountTool\$(AssemblyName).exe" || goto err
       goto :eof

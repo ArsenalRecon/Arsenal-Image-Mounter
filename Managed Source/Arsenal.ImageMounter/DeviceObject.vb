@@ -11,12 +11,14 @@
 '''''
 
 Imports System.IO
+Imports System.Runtime.Versioning
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32.SafeHandles
 
 ''' <summary>
 ''' Base class that represents Arsenal Image Mounter SCSI miniport created device objects.
 ''' </summary>
+<SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
 Public MustInherit Class DeviceObject
     Implements IDisposable
 

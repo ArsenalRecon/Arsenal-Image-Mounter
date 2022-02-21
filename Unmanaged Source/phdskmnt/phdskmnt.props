@@ -7,6 +7,7 @@
     <ClCompile>
       <PreprocessorDefinitions>USE_STORPORT=1;_NT_TARGET_VERSION=$(WIN32_WINNT_VERSION);_MSC_PLATFORM_TOOLSET=$(PlatformToolsetVersion);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);storport.lib</AdditionalDependencies>

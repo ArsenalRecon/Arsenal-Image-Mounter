@@ -23,14 +23,11 @@ Imports Microsoft.Win32
 
 Public Class MainForm
 
-    Private Shared ReadOnly UsingDebugConsole As Boolean
-
     Shared Sub New()
 
         If ConfigurationManager.AppSettings!DebugConsole = Boolean.TrueString Then
             NativeFileIO.SafeNativeMethods.AllocConsole()
             Trace.Listeners.Add(New ConsoleTraceListener)
-            UsingDebugConsole = True
         End If
 
     End Sub
@@ -72,7 +69,7 @@ Public Class MainForm
         Registry.SetValue("HKEY_CURRENT_USER\Software\Arsenal Recon\Image Mounter", "EULAConfirmed", 1)
 
         Try
-            tbOSType.Text = $"{DriverSetup.Kernel} ({If(DriverSetup.HasStorPort, "storport", "scsiport")})"
+            tbOSType.Text = $"{API.Kernel} ({If(API.HasStorPort, "storport", "scsiport")})"
 
         Catch ex As Exception
             tbOSType.Text = $"Exception: {ex.JoinMessages()}"

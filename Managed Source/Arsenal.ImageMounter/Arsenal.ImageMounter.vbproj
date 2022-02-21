@@ -3,18 +3,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <UseWindowsForms>true</UseWindowsForms>
     <Description>Arsenal Image Mounter Low Level API Library</Description>
-	  <TargetFrameworks>net40;net47;net5.0-windows</TargetFrameworks>
+	<TargetFrameworks>net40;net45;net48;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
-
-  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &lt; 0">
-    <PackageReference Include="DotNetZip" Version="1.15.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &gt;= 0 And '$(TargetFramework.CompareTo(`net5`))' &lt; 0">
-    <Reference Include="System.IO.Compression" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj" />
@@ -26,6 +17,12 @@
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Win32.Registry">
+      <Version>5.0.0</Version>
+    </PackageReference>
+    <PackageReference Include="System.IO.FileSystem.AccessControl">
+      <Version>5.0.0</Version>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

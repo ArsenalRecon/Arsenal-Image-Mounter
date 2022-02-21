@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
+    <Description>Arsenal Image Mounter Device I/O Backend</Description>
+    <TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
+  </ItemGroup>
+
+</Project>

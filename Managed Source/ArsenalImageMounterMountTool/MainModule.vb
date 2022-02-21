@@ -29,12 +29,12 @@ Public Module MainModule
         End If
 
         Dim privileges_enabled = NativeFileIO.EnablePrivileges(
-            NativeFileIO.NativeConstants.SE_BACKUP_NAME,
-            NativeFileIO.NativeConstants.SE_RESTORE_NAME,
-            NativeFileIO.NativeConstants.SE_DEBUG_NAME,
-            NativeFileIO.NativeConstants.SE_MANAGE_VOLUME_NAME,
-            NativeFileIO.NativeConstants.SE_SECURITY_NAME,
-            NativeFileIO.NativeConstants.SE_TCB_NAME)
+            NativeConstants.SE_BACKUP_NAME,
+            NativeConstants.SE_RESTORE_NAME,
+            NativeConstants.SE_DEBUG_NAME,
+            NativeConstants.SE_MANAGE_VOLUME_NAME,
+            NativeConstants.SE_SECURITY_NAME,
+            NativeConstants.SE_TCB_NAME)
 
         If privileges_enabled IsNot Nothing Then
             Trace.WriteLine($"Enabled privileges: {String.Join(", ", privileges_enabled)}")

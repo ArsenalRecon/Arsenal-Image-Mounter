@@ -42,9 +42,9 @@ Namespace Server.Services
         ''' </summary>
         ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
         Public Sub New(Imagefile As String, DiskAccess As FileAccess)
-            MyBase.New(New DummyProvider(NativeFileIO.GetFileSize(Imagefile)), OwnsProvider:=True)
+            MyBase.New(New DummyProvider(New FileInfo(Imagefile).Length), OwnsProvider:=True)
 
-            Offset = API.GetOffsetByFileExt(Imagefile)
+            Offset = GetOffsetByFileExt(Imagefile)
 
             _DiskAccess = DiskAccess
 

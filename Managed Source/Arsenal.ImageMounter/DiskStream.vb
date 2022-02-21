@@ -11,6 +11,7 @@
 '''''
 
 Imports System.IO
+Imports System.Runtime.Versioning
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32.SafeHandles
 
@@ -19,16 +20,19 @@ Imports Microsoft.Win32.SafeHandles
 ''' where FileStream base implementation rely on file API not directly compatible with disk device
 ''' objects.
 ''' </summary>
+<SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
 Public Class DiskStream
-    Inherits FileStream
+    Inherits AligningStream
 
     ''' <summary>
     ''' Initializes an DiskStream object for an open disk device.
     ''' </summary>
     ''' <param name="SafeFileHandle">Open file handle for disk device.</param>
     ''' <param name="AccessMode">Access to request for stream.</param>
-    Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess, bufferSize As Integer)
-        MyBase.New(SafeFileHandle, AccessMode, bufferSize)
+    Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess)
+        MyBase.New(New FileStream(SafeFileHandle, AccessMode, bufferSize:=1),
+                   Alignment:=If(NativeFileIO.GetDiskGeometry(SafeFileHandle)?.BytesPerSector, 512),
+                   ownsBaseStream:=True)
     End Sub
 
     Private _CachedLength As Long?
@@ -39,11 +43,19 @@ Public Class DiskStream
     ''' <param name="SafeFileHandle">Open file handle for disk device.</param>
     ''' <param name="AccessMode">Access to request for stream.</param>
     ''' <param name="DiskSize">Size that should be returned by Length property</param>
-    Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess, bufferSize As Integer, DiskSize As Long)
-        MyBase.New(SafeFileHandle, AccessMode, bufferSize)
+    Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess, DiskSize As Long)
+        MyBase.New(New FileStream(SafeFileHandle, AccessMode, bufferSize:=1),
+                   Alignment:=If(NativeFileIO.GetDiskGeometry(SafeFileHandle)?.BytesPerSector, 512),
+                   ownsBaseStream:=True)
 
         _CachedLength = DiskSize
     End Sub
+
+    Public ReadOnly Property SafeFileHandle As SafeFileHandle
+        Get
+            Return DirectCast(BaseStream, FileStream).SafeFileHandle
+        End Get
+    End Property
 
     ''' <summary>
     ''' Retrieves raw disk size.

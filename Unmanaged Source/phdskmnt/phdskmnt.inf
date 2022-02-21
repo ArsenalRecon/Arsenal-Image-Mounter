@@ -26,7 +26,7 @@ aimwrfltr.sys = 1, x86
 vhdaccess.sys = 1, x86
 awealloc.sys = 1, x86
 deviodrv.sys = 1, x86
-dokan1.sys = 1, x86
+dokan2.sys = 1, x86
 
 [SourceDisksFiles.ia64]
 phdskmnt.sys = 1, 64
@@ -41,7 +41,7 @@ aimwrfltr.sys = 1, x64
 vhdaccess.sys = 1, x64
 awealloc.sys = 1, x64
 deviodrv.sys = 1, x64
-dokan1.sys = 1, x64
+dokan2.sys = 1, x64
 
 [SourceDisksFiles.arm]
 phdskmnt.sys = 1, arm
@@ -49,7 +49,7 @@ aimwrfltr.sys = 1, arm
 vhdaccess.sys = 1, arm
 awealloc.sys = 1, arm
 deviodrv.sys = 1, arm
-dokan1.sys = 1, arm
+dokan2.sys = 1, arm
 
 [SourceDisksFiles.arm64]
 phdskmnt.sys = 1, arm64
@@ -57,7 +57,7 @@ aimwrfltr.sys = 1, arm64
 vhdaccess.sys = 1, arm64
 awealloc.sys = 1, arm64
 deviodrv.sys = 1, arm64
-dokan1.sys = 1, arm64
+dokan2.sys = 1, arm64
 
 [DestinationDirs]
 DefaultDestDir = 12
@@ -101,7 +101,7 @@ awealloc.sys
 deviodrv.sys
 
 [DokanSysFiles]
-dokan1.sys
+dokan2.sys
 
 [PhysicalDiskMounterDevice.HW]
 AddReg = PhDskMnt_ScsiPort_AddReg
@@ -112,7 +112,7 @@ AddService = aimwrfltr, , AIMWrFltr_Service_Inst
 AddService = vhdaccess, , VhdAccess_Service_Inst
 AddService = awealloc, , AWEAlloc_Service_Inst
 AddService = deviodrv, , DevIoDrv_Service_Inst
-AddService = dokan1, , Dokan1_Service_Inst
+AddService = dokan2, , Dokan2_Service_Inst
 
 [PhDskMnt_ScsiPort_AddReg]
 HKR, "ScsiPort", "NeedsSystemShutdownNotification", 0x00010001, 1
@@ -173,13 +173,13 @@ StartType      = %SERVICE_AUTO_START%
 ErrorControl   = %SERVICE_ERROR_IGNORE%
 ServiceBinary  = %12%\deviodrv.sys
 
-[Dokan1_Service_Inst]
-DisplayName    = "dokan1"
-Description    = "dokan1 virtual file system driver"
+[Dokan2_Service_Inst]
+DisplayName    = "dokan2"
+Description    = "dokan2 virtual file system driver"
 ServiceType    = %SERVICE_FILESYS_DRIVER%
 StartType      = %SERVICE_AUTO_START%
 ErrorControl   = %SERVICE_ERROR_IGNORE%
-ServiceBinary  = %12%\dokan1.sys
+ServiceBinary  = %12%\dokan2.sys
 
 [Strings]
 ARSENALRECON     = "Arsenal Recon"

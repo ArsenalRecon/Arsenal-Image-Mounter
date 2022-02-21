@@ -8,16 +8,25 @@
     <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
-    <LangVersion Condition="'$(MSBuildProjectExtension)' == '.csproj'">9.0</LangVersion>
+    <LangVersion>Latest</LangVersion>
+    <Prefer32Bit>false</Prefer32Bit>
     <OptionInfer>On</OptionInfer>
     <OptionStrict>On</OptionStrict>
     <OptionExplicit>On</OptionExplicit>
     <DebugType>portable</DebugType>
     <Deterministic>false</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DiscUtilsPath Condition="'$(TargetFramework)' == 'net40'">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\net40</DiscUtilsPath>
-    <DiscUtilsPath Condition="'$(TargetFramework)' == 'net47'">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\net46</DiscUtilsPath>
-    <DiscUtilsPath Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\netstandard2.0</DiscUtilsPath>
+    <RollForward>LatestMajor</RollForward>
+    <DiscUtilsPath Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\netstandard2.1</DiscUtilsPath>
+    <DiscUtilsPath Condition="'$(TargetFramework.CompareTo(`net5`))' &lt; 0">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\$(TargetFramework)</DiscUtilsPath>
+
+  </PropertyGroup>
+
+  <PropertyGroup>
+
+    <DelaySign>false</DelaySign>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(SolutionDir)Arsenal.ImageMounter.snk</AssemblyOriginatorKeyFile>
 
   </PropertyGroup>
 
@@ -26,10 +35,10 @@
     <Title>Arsenal Image Mounter</Title>
     <Company>Arsenal Recon</Company>
     <Product>Arsenal Image Mounter</Product>
-    <Copyright>Copyright © Arsenal Recon, 2015 - 2021</Copyright>
+    <Copyright>Copyright © Arsenal Recon, 2015 - 2022</Copyright>
     <Trademark />
-    <FileVersion>3.6.188.0</FileVersion>
-    <ProductVersion>3.6.188.0</ProductVersion>
+    <FileVersion>3.7.189.0</FileVersion>
+    <ProductVersion>3.7.189.0</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
 
   </PropertyGroup>

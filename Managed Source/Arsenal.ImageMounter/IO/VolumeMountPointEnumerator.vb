@@ -1,13 +1,15 @@
 ﻿Imports System.Diagnostics.CodeAnalysis
 Imports Arsenal.ImageMounter.IO.NativeFileIO
 Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
-Imports Arsenal.ImageMounter.IO.NativeFileIO.NativeConstants
+Imports Arsenal.ImageMounter.IO.NativeConstants
 Imports System.Text
 Imports System.Runtime.InteropServices
 Imports System.ComponentModel
+Imports System.Runtime.Versioning
 
 Namespace IO
 
+    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
     Public Class VolumeMountPointEnumerator
         Implements IEnumerable(Of String)
 

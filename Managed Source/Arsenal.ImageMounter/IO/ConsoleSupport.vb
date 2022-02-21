@@ -1,9 +1,26 @@
-﻿Imports System.Runtime.CompilerServices
+﻿Imports System.IO
+Imports System.Runtime.CompilerServices
+Imports System.Runtime.InteropServices
 Imports System.Text
+Imports Arsenal.ImageMounter.Reflection
 
 Namespace IO
 
     Public Module ConsoleSupport
+
+        Public Function GetConsoleOutputDeviceName() As String
+
+#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+            If NativeLib.IsWindows Then
+                Return "CONOUT$"
+            Else
+                Return "/dev/tty"
+            End If
+#Else
+            Return "CONOUT$"
+#End If
+
+        End Function
 
         Friend ReadOnly ConsoleSync As New Object
 
@@ -15,7 +32,7 @@ Namespace IO
             If LineWidth.HasValue Then
                 Width = LineWidth.Value
             Else
-                If NativeFileIO.UnsafeNativeMethods.GetFileType(NativeFileIO.UnsafeNativeMethods.GetStdHandle(NativeFileIO.StdHandle.Output)) <> NativeFileIO.Win32FileType.Character Then
+                If IsConsoleOutputRedirected() Then
                     Width = 79
                 Else
                     Width = Console.WindowWidth - 1
@@ -51,7 +68,7 @@ Namespace IO
                 Next
 
                 If line.Length > 0 Then
-#If NETSTANDARD OrElse NETCOREAPP Then
+#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
                     result.Append(line)
 #Else
                     result.Append(line.ToString())
@@ -63,6 +80,16 @@ Namespace IO
             Next
 
             Return String.Join(Environment.NewLine, resultLines)
+
+        End Function
+
+        Public Function IsConsoleOutputRedirected() As Boolean
+
+#If NET45_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+            Return Console.IsOutputRedirected
+#Else
+            Return NativeFileIO.UnsafeNativeMethods.GetFileType(NativeFileIO.UnsafeNativeMethods.GetStdHandle(StdHandle.Output)) <> Win32FileType.Character
+#End If
 
         End Function
 
@@ -134,7 +161,8 @@ Namespace IO
                     switches_finished = True
                     Continue For
 
-                ElseIf arg.StartsWith("--", StringComparison.Ordinal) OrElse arg.StartsWith("/", StringComparison.Ordinal) Then
+                ElseIf arg.StartsWith("--", StringComparison.Ordinal) OrElse
+                    (Path.DirectorySeparatorChar <> "/"c AndAlso arg.StartsWith("/", StringComparison.Ordinal)) Then
 
                     Dim namestart = 1
                     If arg(0) = "-"c Then

@@ -280,7 +280,7 @@ PUCHAR BlockBuffer)
                 // Need to fill up beginning of block?
                 if (page_offset_this_iter > 0)
                 {
-                    LARGE_INTEGER offset;
+                    LARGE_INTEGER offset = { 0 };
                     offset.QuadPart =
                         DIFF_GET_BLOCK_BASE_FROM_ABS_OFFSET(abs_offset_this_iter);
 
@@ -321,7 +321,7 @@ PUCHAR BlockBuffer)
                 // Need to fill up end of block?
                 if (bytes_this_iter < DIFF_BLOCK_SIZE)
                 {
-                    LARGE_INTEGER offset;
+                    LARGE_INTEGER offset = { 0 };
                     offset.QuadPart =
                         DIFF_GET_BLOCK_BASE_FROM_ABS_OFFSET(abs_offset_this_iter) +
                         bytes_this_iter;

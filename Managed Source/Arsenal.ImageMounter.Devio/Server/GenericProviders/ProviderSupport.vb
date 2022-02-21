@@ -14,7 +14,6 @@ Imports System.IO
 Imports System.Runtime.CompilerServices
 Imports System.Security.Cryptography
 Imports System.Threading
-Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
@@ -104,7 +103,13 @@ Namespace Server.GenericProviders
 
                 ElseIf "dynamic".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase) Then
 
-                    NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, True)
+                    Try
+                        NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, True)
+
+                    Catch ex As Exception
+                        Throw New NotSupportedException("Sparse files not supported on target platform or OS", ex)
+
+                    End Try
 
                 Else
 

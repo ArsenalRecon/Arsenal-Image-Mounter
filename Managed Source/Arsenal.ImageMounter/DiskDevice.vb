@@ -13,6 +13,7 @@
 Imports System.ComponentModel
 Imports System.IO
 Imports System.Runtime.InteropServices
+Imports System.Runtime.Versioning
 Imports System.Threading
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32.SafeHandles
@@ -20,12 +21,13 @@ Imports Microsoft.Win32.SafeHandles
 ''' <summary>
 ''' Represents disk objects, attached to a virtual or physical SCSI adapter.
 ''' </summary>
+<SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
 Public Class DiskDevice
     Inherits DeviceObject
 
     Private _RawDiskStream As DiskStream
 
-    Private _CachedAddress As NativeFileIO.SCSI_ADDRESS?
+    Private _CachedAddress As SCSI_ADDRESS?
 
     ''' <summary>
     ''' Returns the device path used to open this device object, if opened by name.
@@ -35,10 +37,10 @@ Public Class DiskDevice
     Public ReadOnly Property DevicePath As String
 
     Private Sub AllowExtendedDasdIo()
-        If Not NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeFileIO.NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero) Then
+        If Not NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero) Then
             Dim errcode = Marshal.GetLastWin32Error()
-            If errcode <> NativeFileIO.NativeConstants.ERROR_INVALID_PARAMETER AndAlso
-                errcode <> NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION Then
+            If errcode <> NativeConstants.ERROR_INVALID_PARAMETER AndAlso
+                errcode <> NativeConstants.ERROR_INVALID_FUNCTION Then
 
                 Trace.WriteLine($"FSCTL_ALLOW_EXTENDED_DASD_IO failed for '{_DevicePath}': {errcode}")
             End If
@@ -85,7 +87,7 @@ Public Class DiskDevice
     ''' </summary>
     ''' <param name="ScsiAddress"></param>
     ''' <param name="AccessMode"></param>
-    Public Sub New(ScsiAddress As NativeFileIO.SCSI_ADDRESS, AccessMode As FileAccess)
+    Public Sub New(ScsiAddress As SCSI_ADDRESS, AccessMode As FileAccess)
         Me.New(NativeFileIO.OpenDiskByScsiAddress(ScsiAddress, AccessMode), AccessMode)
 
     End Sub
@@ -112,7 +114,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves SCSI address for this disk.
     ''' </summary>
-    Public ReadOnly Property ScsiAddress As NativeFileIO.SCSI_ADDRESS?
+    Public ReadOnly Property ScsiAddress As SCSI_ADDRESS?
         Get
             Return NativeFileIO.GetScsiAddress(SafeFileHandle)
         End Get
@@ -121,7 +123,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves storage device type and physical disk number information.
     ''' </summary>
-    Public ReadOnly Property StorageDeviceNumber As NativeFileIO.STORAGE_DEVICE_NUMBER?
+    Public ReadOnly Property StorageDeviceNumber As STORAGE_DEVICE_NUMBER?
         Get
             Return NativeFileIO.GetStorageDeviceNumber(SafeFileHandle)
         End Get
@@ -130,7 +132,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves StorageStandardProperties information.
     ''' </summary>
-    Public ReadOnly Property StorageStandardProperties As NativeFileIO.StorageStandardProperties?
+    Public ReadOnly Property StorageStandardProperties As StorageStandardProperties?
         Get
             Return NativeFileIO.GetStorageStandardProperties(SafeFileHandle)
         End Get
@@ -184,7 +186,7 @@ Public Class DiskDevice
     ''' Retrieves the physical location of a specified volume on one or more disks. 
     ''' </summary>
     ''' <returns></returns>
-    Public Function GetVolumeDiskExtents() As NativeFileIO.DiskExtent()
+    Public Function GetVolumeDiskExtents() As DiskExtent()
 
         Return NativeFileIO.GetVolumeDiskExtents(SafeFileHandle)
 
@@ -341,7 +343,7 @@ Public Class DiskDevice
     ''' partition layout. This property is not available for physical
     ''' disks, only disk partitions are supported.
     ''' </summary>
-    Public ReadOnly Property PartitionInformation As NativeFileIO.PARTITION_INFORMATION?
+    Public ReadOnly Property PartitionInformation As PARTITION_INFORMATION?
         Get
             Return NativeFileIO.GetPartitionInformation(SafeFileHandle)
         End Get
@@ -351,7 +353,7 @@ Public Class DiskDevice
     ''' Gets information about a disk partition. This property is not
     ''' available for physical disks, only disk partitions are supported.
     ''' </summary>
-    Public ReadOnly Property PartitionInformationEx As NativeFileIO.PARTITION_INFORMATION_EX?
+    Public ReadOnly Property PartitionInformationEx As PARTITION_INFORMATION_EX?
         Get
             Return NativeFileIO.GetPartitionInformationEx(SafeFileHandle)
         End Get
@@ -374,7 +376,7 @@ Public Class DiskDevice
     ''' Initialize a raw disk device for use with Windows. This method is available
     ''' for physical disks, not disk partitions.
     ''' </summary>
-    Public Sub InitializeDisk(PartitionStyle As NativeFileIO.PARTITION_STYLE)
+    Public Sub InitializeDisk(PartitionStyle As PARTITION_STYLE)
         NativeFileIO.InitializeDisk(SafeFileHandle, PartitionStyle)
     End Sub
 
@@ -467,7 +469,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves properties for an existing virtual disk.
     ''' </summary>
-    Public Function QueryDevice() As ScsiAdapter.DeviceProperties
+    Public Function QueryDevice() As DeviceProperties
 
         Dim scsi_address = ScsiAddress.Value
 
@@ -507,7 +509,7 @@ Public Class DiskDevice
     ''' Retrieves partition information.
     ''' </summary>
     ''' <returns></returns>
-    Public ReadOnly Property VolumeSizeInformation As NativeFileIO.FILE_FS_FULL_SIZE_INFORMATION?
+    Public ReadOnly Property VolumeSizeInformation As FILE_FS_FULL_SIZE_INFORMATION?
         Get
             Return NativeFileIO.GetVolumeSizeInformation(SafeFileHandle)
         End Get
@@ -526,7 +528,7 @@ Public Class DiskDevice
     ''' Returns logical disk geometry. Normally, only the BytesPerSector member
     ''' contains data of interest.
     ''' </summary>
-    Public ReadOnly Property Geometry As NativeFileIO.DISK_GEOMETRY?
+    Public ReadOnly Property Geometry As DISK_GEOMETRY?
         Get
             Return NativeFileIO.GetDiskGeometry(SafeFileHandle)
         End Get
@@ -569,7 +571,7 @@ Public Class DiskDevice
         Get
             Dim statistics As WriteFilterStatistics = Nothing
 
-            If API.GetWriteOverlayStatus(SafeFileHandle, statistics) <> NativeFileIO.NativeConstants.NO_ERROR Then
+            If API.GetWriteOverlayStatus(SafeFileHandle, statistics) <> NativeConstants.NO_ERROR Then
                 Return Nothing
             End If
 
@@ -584,21 +586,21 @@ Public Class DiskDevice
     ''' </summary>
     Public Sub SetWriteOverlayDeleteOnClose()
         Dim rc = API.SetWriteOverlayDeleteOnClose(SafeFileHandle)
-        If rc <> NativeFileIO.NativeConstants.NO_ERROR Then
+        If rc <> NativeConstants.NO_ERROR Then
             Throw New Win32Exception(rc)
         End If
     End Sub
 
     ''' <summary>
     ''' Returns an DiskStream object that can be used to directly access disk data.
+    ''' The returned stream automatically sector-aligns I/O.
     ''' </summary>
     Public Function GetRawDiskStream() As DiskStream
 
         If _RawDiskStream Is Nothing Then
 
             _RawDiskStream = New DiskStream(SafeFileHandle,
-                                            If(AccessMode = 0, FileAccess.Read, AccessMode),
-                                            bufferSize:=If(Geometry?.BytesPerSector, 512))
+                                            If(AccessMode = 0, FileAccess.Read, AccessMode))
 
         End If
 

@@ -14,6 +14,7 @@ Imports System.ComponentModel
 Imports System.Diagnostics.CodeAnalysis
 Imports System.IO
 Imports System.Runtime.InteropServices
+Imports System.Runtime.Versioning
 Imports System.Text
 Imports System.Threading
 Imports System.Threading.Tasks
@@ -21,9 +22,13 @@ Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
 Imports Microsoft.Win32.SafeHandles
 
+#Disable Warning IDE0079 ' Remove unnecessary suppression
+#Disable Warning CA1840 ' Use 'Environment.CurrentManagedThreadId'
+
 ''' <summary>
 ''' Represents Arsenal Image Mounter objects.
 ''' </summary>
+<SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
 Public Class ScsiAdapter
     Inherits DeviceObject
 
@@ -35,52 +40,6 @@ Public Class ScsiAdapter
 
     Public ReadOnly Property DeviceInstance As UInteger
 
-    ''' <summary>
-    ''' Object storing properties for a virtual disk device. Returned by
-    ''' QueryDevice() method.
-    ''' </summary>
-    Public NotInheritable Class DeviceProperties
-
-        Public Sub New(adapter As ScsiAdapter, device_number As UInt32)
-
-            _DeviceNumber = device_number
-
-            adapter.QueryDevice(_DeviceNumber,
-                                _DiskSize,
-                                _BytesPerSector,
-                                _ImageOffset,
-                                _Flags,
-                                _Filename,
-                                _WriteOverlayImageFile)
-
-        End Sub
-
-        ''' <summary>Device number of virtual disk.</summary>
-        Public ReadOnly Property DeviceNumber As UInt32
-
-        ''' <summary>Size of virtual disk.</summary>
-        Public ReadOnly Property DiskSize As Int64
-
-        ''' <summary>Number of bytes per sector for virtual disk geometry.</summary>
-        Public ReadOnly Property BytesPerSector As UInt32
-
-        ''' <summary>A skip offset if virtual disk data does not begin immediately at start of disk image file.
-        ''' Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter
-        ''' or Windows filesystem drivers.</summary>
-        Public ReadOnly Property ImageOffset As Int64
-
-        ''' <summary>Flags specifying properties for virtual disk. See comments for each flag value.</summary>
-        Public ReadOnly Property Flags As DeviceFlags
-
-        ''' <summary>Name of disk image file holding storage for file type virtual disk or used to create a
-        ''' virtual memory type virtual disk.</summary>
-        Public Property Filename As String
-
-        ''' <summary>Path to differencing file used in write-temporary mode.</summary>
-        Public ReadOnly Property WriteOverlayImageFile As String
-
-    End Class
-
     Private Shared Function OpenAdapterHandle(ntdevice As String, devInst As UInteger) As SafeFileHandle
 
         Dim handle As SafeFileHandle
@@ -88,7 +47,7 @@ Public Class ScsiAdapter
             handle = NativeFileIO.NtCreateFile(ntdevice, 0,
                                                  FileAccess.ReadWrite,
                                                  FileShare.ReadWrite,
-                                                 NativeFileIO.NtCreateDisposition.Open,
+                                                 NtCreateDisposition.Open,
                                                  0, 0, Nothing, Nothing)
 
         Catch ex As Exception
@@ -110,8 +69,8 @@ Public Class ScsiAdapter
                 End If
 
             Catch ex As Win32Exception When _
-                (ex.NativeErrorCode = NativeFileIO.NativeConstants.ERROR_INVALID_FUNCTION) OrElse
-                (ex.NativeErrorCode = NativeFileIO.NativeConstants.ERROR_IO_DEVICE)
+                (ex.NativeErrorCode = NativeConstants.ERROR_INVALID_FUNCTION) OrElse
+                (ex.NativeErrorCode = NativeConstants.ERROR_IO_DEVICE)
 
                 '' In case of SCSIPORT (Win XP) miniport, there is always a risk
                 '' that we lose contact with IOCTL_SCSI_MINIPORT after device adds
@@ -119,7 +78,7 @@ Public Class ScsiAdapter
                 '' the SCSI adapter and it fails IOCTL_SCSI_MINIPORT requests, just
                 '' issue a bus re-enumeration to find the dummy IOCTL device, which
                 '' will make SCSIPORT let control requests through again.
-                If Not DriverSetup.HasStorPort Then
+                If Not API.HasStorPort Then
                     Trace.WriteLine("PhDskMnt::OpenAdapterHandle: Lost contact with miniport, rescanning...")
                     Try
                         API.RescanScsiAdapter(devInst)
@@ -202,7 +161,7 @@ Public Class ScsiAdapter
     End Function
 
     ''' <summary>
-    ''' Opens first found Arsenal Image Mounter.
+    ''' Opens first found Arsenal Image Mounter adapter.
     ''' </summary>
     Public Sub New()
         Me.New(OpenAdapter())
@@ -362,9 +321,9 @@ Public Class ScsiAdapter
 
         '' Translate Win32 path to native NT path that kernel understands
         If (Not String.IsNullOrEmpty(Filename)) AndAlso (Not NativePath) Then
-            Select Case API.GetDiskType(Flags)
+            Select Case Flags.GetDiskType()
                 Case DeviceFlags.TypeProxy
-                    Select Case API.GetProxyType(Flags)
+                    Select Case Flags.GetProxyType()
 
                         Case DeviceFlags.ProxyTypeSharedMemory
                             Filename = $"\BaseNamedObjects\Global\{Filename}"
@@ -399,7 +358,7 @@ Public Class ScsiAdapter
 
                 write_filter_added = New GlobalCriticalMutex()
 
-                NativeFileIO.AddFilter(NativeFileIO.NativeConstants.DiskDriveGuid, "aimwrfltr", addfirst:=True)
+                NativeFileIO.AddFilter(NativeConstants.DiskDriveGuid, "aimwrfltr", addfirst:=True)
 
             End If
 
@@ -541,7 +500,7 @@ Public Class ScsiAdapter
 
             If write_filter_added IsNot Nothing Then
 
-                NativeFileIO.RemoveFilter(NativeFileIO.NativeConstants.DiskDriveGuid, "aimwrfltr")
+                NativeFileIO.RemoveFilter(NativeConstants.DiskDriveGuid, "aimwrfltr")
 
                 Trace.WriteLine($"ScsiAdapter.CreateDevice: Thread {Thread.CurrentThread.ManagedThreadId} leaving global critical section")
 
@@ -638,7 +597,7 @@ Public Class ScsiAdapter
                                                       BitConverter.GetBytes(DeviceNumber),
                                                       ReturnCode)
 
-        If ReturnCode = NativeFileIO.NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND Then ' Device already removed
+        If ReturnCode = NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND Then ' Device already removed
             Return
         ElseIf ReturnCode <> 0 Then
             Throw NativeFileIO.GetExceptionForNtStatus(ReturnCode)
@@ -894,7 +853,7 @@ Public Class ScsiAdapter
     Public Sub RescanBus()
 
         Try
-            NativeFileIO.DeviceIoControl(SafeFileHandle, NativeFileIO.NativeConstants.IOCTL_SCSI_RESCAN_BUS, Nothing, 0)
+            NativeFileIO.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_SCSI_RESCAN_BUS, Nothing, 0)
 
         Catch ex As Exception
             Trace.WriteLine($"IOCTL_SCSI_RESCAN_BUS failed: {ex.JoinMessages()}")
@@ -1034,11 +993,58 @@ Public Class ScsiAdapter
     ''' <summary>
     ''' Returns a PnP registry property for the device object that SCSI port driver has created for a mounted device.
     ''' </summary>
-    Public Function GetPnPDeviceName(DeviceNumber As UInteger, prop As NativeFileIO.CmDevNodeRegistryProperty) As IEnumerable(Of String)
+    Public Function GetPnPDeviceName(DeviceNumber As UInteger, prop As CmDevNodeRegistryProperty) As IEnumerable(Of String)
 
         Return API.EnumerateDeviceProperty(_DeviceInstance, DeviceNumber, prop)
 
     End Function
+
+End Class
+
+''' <summary>
+''' Object storing properties for a virtual disk device. Returned by
+''' QueryDevice() method.
+''' </summary>
+Public NotInheritable Class DeviceProperties
+
+    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+    Public Sub New(adapter As ScsiAdapter, device_number As UInt32)
+
+        _DeviceNumber = device_number
+
+        adapter.QueryDevice(_DeviceNumber,
+                                _DiskSize,
+                                _BytesPerSector,
+                                _ImageOffset,
+                                _Flags,
+                                _Filename,
+                                _WriteOverlayImageFile)
+
+    End Sub
+
+    ''' <summary>Device number of virtual disk.</summary>
+    Public ReadOnly Property DeviceNumber As UInt32
+
+    ''' <summary>Size of virtual disk.</summary>
+    Public ReadOnly Property DiskSize As Int64
+
+    ''' <summary>Number of bytes per sector for virtual disk geometry.</summary>
+    Public ReadOnly Property BytesPerSector As UInt32
+
+    ''' <summary>A skip offset if virtual disk data does not begin immediately at start of disk image file.
+    ''' Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter
+    ''' or Windows filesystem drivers.</summary>
+    Public ReadOnly Property ImageOffset As Int64
+
+    ''' <summary>Flags specifying properties for virtual disk. See comments for each flag value.</summary>
+    Public ReadOnly Property Flags As DeviceFlags
+
+    ''' <summary>Name of disk image file holding storage for file type virtual disk or used to create a
+    ''' virtual memory type virtual disk.</summary>
+    Public Property Filename As String
+
+    ''' <summary>Path to differencing file used in write-temporary mode.</summary>
+    Public ReadOnly Property WriteOverlayImageFile As String
 
 End Class
 

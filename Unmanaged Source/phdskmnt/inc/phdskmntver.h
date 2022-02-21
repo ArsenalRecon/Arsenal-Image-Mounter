@@ -1,7 +1,7 @@
 #define PHDSKMNT_MAJOR_VERSION      1
 #define PHDSKMNT_MINOR_VERSION      2
 #define PHDSKMNT_MINOR_LOW_VERSION  9
-#define PHDSKMNT_BUILD_VERSION      64
+#define PHDSKMNT_BUILD_VERSION      65
 
 #ifndef STR
 #define STR_EXPAND(tok) #tok

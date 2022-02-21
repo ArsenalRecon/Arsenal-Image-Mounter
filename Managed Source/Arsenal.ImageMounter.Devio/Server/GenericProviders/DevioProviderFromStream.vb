@@ -13,6 +13,8 @@
 '''''
 
 Imports System.IO
+Imports System.Runtime.InteropServices
+Imports Arsenal.ImageMounter.Extensions
 
 Namespace Server.GenericProviders
 
@@ -21,7 +23,11 @@ Namespace Server.GenericProviders
     ''' object as storage backend.
     ''' </summary>
     Public Class DevioProviderFromStream
+#If NETSTANDARD2_1_OR_GREATER OrElse NETCOREAPP Then
+        Inherits DevioProviderUnmanagedBase
+#Else
         Inherits DevioProviderManagedBase
+#End If
 
         ''' <summary>
         ''' Stream object used by this instance.
@@ -86,6 +92,33 @@ Namespace Server.GenericProviders
             End Get
         End Property
 
+#If NETSTANDARD2_1_OR_GREATER OrElse NETCOREAPP Then
+        Public Overloads Overrides Function Read(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
+
+            _BaseStream.Position = fileoffset
+
+            If _BaseStream.Position <= _BaseStream.Length AndAlso
+                count > _BaseStream.Length - _BaseStream.Position Then
+
+                count = CInt(_BaseStream.Length - _BaseStream.Position)
+
+            End If
+
+            Dim mem = LowLevelExtensions.GetSpan(buffer + bufferoffset, count)
+
+            Return _BaseStream.Read(mem)
+
+        End Function
+
+        Public Overloads Overrides Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
+
+            _BaseStream.Position = fileoffset
+            Dim mem = LowLevelExtensions.GetReadOnlySpan(buffer + bufferoffset, count)
+            _BaseStream.Write(mem)
+            Return count
+
+        End Function
+#Else
         Public Overloads Overrides Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
             _BaseStream.Position = fileoffset
@@ -108,6 +141,7 @@ Namespace Server.GenericProviders
             Return count
 
         End Function
+#End If
 
         Protected Overrides Sub Dispose(disposing As Boolean)
 

@@ -23,7 +23,7 @@ Namespace Server.SpecializedProviders
     Public Class DevioProviderLibAFF4
         Inherits DevioProviderDLLWrapperBase
 
-        <DllImport("libaff4_devio.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libaff4_devio", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Public Shared Function dllopen(<MarshalAs(UnmanagedType.LPStr), [In]> filename As String,
                                        <MarshalAs(UnmanagedType.Bool)> read_only As Boolean,
                                        <MarshalAs(UnmanagedType.FunctionPtr), Out> ByRef dllread As DLLReadWriteMethod,
@@ -32,19 +32,19 @@ Namespace Server.SpecializedProviders
                                        <Out> ByRef size As Long) As SafeDevioProviderDLLHandle
         End Function
 
-        <DllImport("libaff4_devio.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libaff4_devio", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Public Shared Function getsectorsize(handle As SafeDevioProviderDLLHandle) As UInteger
         End Function
 
-        <DllImport("libaff4_devio.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libaff4_devio", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Public Shared Function getlasterrorcode() As Integer
         End Function
 
-        <DllImport("libaff4_devio.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libaff4_devio", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Public Shared Function geterrormessage(errorcode As Integer) As <MarshalAs(UnmanagedType.LPStr)> String
         End Function
 
-        <DllImport("libaff4_devio.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libaff4_devio", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Public Shared Function getimagecount(<MarshalAs(UnmanagedType.LPStr), [In]> containerfile As String) As UInteger
         End Function
 

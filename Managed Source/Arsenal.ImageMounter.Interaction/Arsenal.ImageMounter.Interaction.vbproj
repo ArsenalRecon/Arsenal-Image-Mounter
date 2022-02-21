@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
+    <Description>Arsenal Image Mounter GUI Interaction features</Description>
+    <TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Server\Services\DevioDrvService.vb" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Devio.Interop\Arsenal.ImageMounter.Devio.Interop.csproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter.Devio\Arsenal.ImageMounter.Devio.vbproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter.Dialogs\Arsenal.ImageMounter.Dialogs.csproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="DiscUtils.Core">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Dmg">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Dmg.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Fat">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Fat.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Ntfs">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Ntfs.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.OpticalDisk">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.OpticalDisk.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Streams">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Streams.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Vdi">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Vdi.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Vhd">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Vhd.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Vhdx">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Vhdx.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Vmdk">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Vmdk.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Xva">
+
+      <HintPath>$(DiscUtilsPath)\DiscUtils.Xva.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Memory">
+      <Version>4.5.4</Version>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="AsyncMessageBox.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

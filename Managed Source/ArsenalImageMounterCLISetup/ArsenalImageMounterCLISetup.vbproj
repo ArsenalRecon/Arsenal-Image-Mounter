@@ -6,10 +6,11 @@
     <OutputType>Exe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <Title>Arsenal Image Mounter Command Line Setup</Title>
-	  <TargetFrameworks>net40;net5.0-windows</TargetFrameworks>
+	<TargetFrameworks>net40;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Dialogs\Arsenal.ImageMounter.Dialogs.csproj" />
     <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
   </ItemGroup>
 
@@ -22,7 +23,7 @@
   <PropertyGroup>
     <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net40'">
       echo Building "$(SolutionDir)..\DriverSetup\$(AssemblyName).exe"
-      ILMerge /wildcards /ndebug /copyattrs /keepfirst /out:"$(SolutionDir)..\DriverSetup\$(AssemblyName).exe" $(AssemblyName).exe Arsenal.ImageMounter.dll Arsenal.ImageMounter.Interop.dll DotNetZip.dll || goto err
+      ILMerge /wildcards /ndebug /copyattrs /keepfirst /out:"$(SolutionDir)..\DriverSetup\$(AssemblyName).exe" $(AssemblyName).exe Arsenal.ImageMounter.dll Arsenal.ImageMounter.Interop.dll Arsenal.ImageMounter.Dialogs.dll DotNetZip.dll || goto err
       TestAssembly "$(SolutionDir)..\DriverSetup\$(AssemblyName).exe" &gt; nul || goto err
       signtool sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /t "http://timestamp.comodoca.com/authenticode" "$(SolutionDir)..\DriverSetup\$(AssemblyName).exe" || goto err
       goto :eof

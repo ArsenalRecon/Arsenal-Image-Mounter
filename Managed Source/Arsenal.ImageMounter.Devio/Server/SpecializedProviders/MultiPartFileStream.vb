@@ -11,6 +11,7 @@
 
 Imports System.IO
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
+Imports Arsenal.ImageMounter.IO
 
 Namespace Server.SpecializedProviders
 
@@ -40,19 +41,16 @@ Namespace Server.SpecializedProviders
             Try
                 imagestreams = Array.ConvertAll(Imagefiles,
                                                 Function(Imagefile)
-                                                    Trace.WriteLine("Opening image " & Imagefile)
+                                                    Trace.WriteLine($"Opening image {Imagefile}")
                                                     Return New FileStream(Imagefile, FileMode.Open, DiskAccess, ShareMode)
                                                 End Function)
 
-            Catch When (
-                Function()
-                    If imagestreams IsNot Nothing Then
-                        Array.ForEach(imagestreams, Sub(imagestream) imagestream.Close())
-                    End If
-                    Return False
-                End Function)()
+            Catch ex As Exception
+                If imagestreams IsNot Nothing Then
+                    Array.ForEach(imagestreams, Sub(imagestream) imagestream.Close())
+                End If
 
-                Throw
+                Throw New IOException($"Error opening image files '{Imagefiles.FirstOrDefault()}'", ex)
 
             End Try
 

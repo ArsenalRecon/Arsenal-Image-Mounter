@@ -34,12 +34,18 @@ Public Module ServerModule
 
     Private Event RunToEnd As EventHandler
 
-    Private ReadOnly architectureLibPath As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
-        {"i386", "x86"},
-        {"AMD64", "x64"}
-    }
-
     Private Function GetArchitectureLibPath() As String
+
+#If NET471_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+
+        Return RuntimeInformation.ProcessArchitecture.ToString()
+
+#Else
+
+        Static architectureLibPath As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+            {"i386", "x86"},
+            {"AMD64", "x64"}
+        }
 
         Dim architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
 
@@ -51,9 +57,11 @@ Public Module ServerModule
 
         If architectureLibPath.TryGetValue(architecture, path) Then
             Return path
+        Else
+            Return architecture
         End If
 
-        Return architecture
+#End If
 
     End Function
 
@@ -63,73 +71,65 @@ Public Module ServerModule
         "DiskDriver"
     }
 
+#If NET471_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+    Public ReadOnly Property IsOsWindows As Boolean = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+#Else
+    Public ReadOnly Property IsOsWindows As Boolean = True
+#End If
+
     Sub New()
 
-        Dim appPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)
+        If _IsOsWindows Then
 
-        For i = 0 To assemblyPaths.Length - 1
-            assemblyPaths(i) = Path.Combine(appPath, assemblyPaths(i))
-        Next
+            Dim appPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)
 
-        Dim native_dll_paths = assemblyPaths.Concat(Environment.GetEnvironmentVariable("PATH").Split(";"c))
+            For i = 0 To assemblyPaths.Length - 1
+                assemblyPaths(i) = Path.Combine(appPath, assemblyPaths(i))
+            Next
 
-        Environment.SetEnvironmentVariable("PATH", String.Join(";", native_dll_paths))
+#If NET471_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+            Dim native_dll_paths = assemblyPaths.Append(Environment.GetEnvironmentVariable("PATH"))
+#Else
+            Dim native_dll_paths = assemblyPaths.Concat({Environment.GetEnvironmentVariable("PATH")})
+#End If
+
+            Environment.SetEnvironmentVariable("PATH", String.Join(";", native_dll_paths))
+
+        End If
 
     End Sub
 
-    <MTAThread>
     Public Function Main(ParamArray args As String()) As Integer
 
         Try
-            Dim cmdline = $"{Environment.CommandLine} "
+            Dim commands = ParseCommandLine(args, StringComparer.OrdinalIgnoreCase)
 
-            Dim pos = cmdline.IndexOf(" /background ", StringComparison.OrdinalIgnoreCase)
-
-            If pos >= 0 Then
+            If commands.ContainsKey("background") Then
 
                 Using ready_wait As New ManualResetEvent(initialState:=False)
 
                     NativeFileIO.SetInheritable(ready_wait.SafeWaitHandle, inheritable:=True)
 
-                    cmdline = $"{cmdline.Substring(0, pos)} /detach={ready_wait.SafeWaitHandle.DangerousGetHandle()} {cmdline.Substring(pos + " /background ".Length)}"
+                    Dim cmdline =
+                        String.Join(" ", commands.SelectMany(
+                        Function(cmd)
+                            If cmd.Key.Equals("background", StringComparison.OrdinalIgnoreCase) Then
+                                Return Enumerable.Empty(Of String)()
+                            ElseIf cmd.Value.Length = 0 Then
+                                Return {$"--{cmd.Key}"}
+                            Else
+                                Return cmd.Value.Select(Function(value) $"--{cmd.Key}=""{value}""")
+                            End If
+                        End Function))
+
+                    cmdline = $"{cmdline} --detach={ready_wait.SafeWaitHandle.DangerousGetHandle()}"
 
                     Dim pstart As New ProcessStartInfo With {
                         .UseShellExecute = False
                     }
 
-                    Dim arguments_pos = 0
-
-                    While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = " "c
-                        arguments_pos += 1
-                    End While
-
-                    If arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = """"c Then
-
-                        Do
-                            arguments_pos += 1
-                        Loop While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) <> """"c
-
-                        arguments_pos += 1
-
-                    Else
-
-                        While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) <> " "c
-                            arguments_pos += 1
-                        End While
-
-                    End If
-
-                    If arguments_pos < cmdline.Length Then
-
-                        pstart.FileName = cmdline.Substring(0, arguments_pos)
-
-                        While arguments_pos < cmdline.Length AndAlso cmdline(arguments_pos) = " "c
-                            arguments_pos += 1
-                        End While
-
-                        pstart.Arguments = cmdline.Substring(arguments_pos)
-
-                    End If
+                    pstart.FileName = Process.GetCurrentProcess().MainModule.FileName
+                    pstart.Arguments = cmdline
 
                     Using process As New Process
 
@@ -155,7 +155,7 @@ Public Module ServerModule
 
             End If
 
-            Return SafeMain(args)
+            Return UnsafeMain(commands)
 
         Catch ex As AbandonedMutexException
             Trace.WriteLine(ex.ToString())
@@ -173,10 +173,6 @@ Public Module ServerModule
 
         Finally
             RaiseEvent RunToEnd(Nothing, EventArgs.Empty)
-
-            If Debugger.IsAttached Then
-                Console.ReadKey()
-            End If
 
         End Try
 
@@ -215,7 +211,7 @@ Please see EULA.txt for license information.")
 
     End Sub
 
-    Private Function SafeMain(args As IEnumerable(Of String)) As Integer
+    Private Function UnsafeMain(commands As IDictionary(Of String, String())) As Integer
 
         Dim image_path As String = Nothing
         Dim write_overlay_image_file As String = Nothing
@@ -230,7 +226,7 @@ Please see EULA.txt for license information.")
         Dim verbose As Boolean
         Dim device_flags As DeviceFlags
         Dim debug_compare As String = Nothing
-        Dim libewf_debug_output As String = "CONOUT$"
+        Dim libewf_debug_output As String = GetConsoleOutputDeviceName()
         Dim output_image As String = Nothing
         Dim output_image_variant As String = "dynamic"
         Dim dismount As String = Nothing
@@ -239,8 +235,6 @@ Please see EULA.txt for license information.")
         Dim fake_mbr As Boolean
         Dim auto_delete As Boolean
 
-        Dim commands = ParseCommandLine(args, StringComparer.OrdinalIgnoreCase)
-
         For Each cmd In commands
 
             Dim arg = cmd.Key
@@ -248,7 +242,7 @@ Please see EULA.txt for license information.")
             If arg.Equals("trace", StringComparison.OrdinalIgnoreCase) Then
                 If cmd.Value.Length = 0 Then
                     If commands.ContainsKey("detach") Then
-                        Console.WriteLine("Switches /trace and /background cannot be combined")
+                        Console.WriteLine("Switches --trace and --background cannot be combined")
                         Return -1
                     End If
                     Trace.Listeners.Add(New ConsoleTraceListener(True))
@@ -345,7 +339,7 @@ Please see EULA.txt for license information.")
                 show_help = True
                 Exit For
             Else
-                Console.WriteLine($"Unsupported command line switch: /{arg}")
+                Console.WriteLine($"Unsupported command line switch: --{arg}")
                 show_help = True
                 Exit For
             End If
@@ -359,36 +353,36 @@ Please see EULA.txt for license information.")
 
             Dim providers = String.Join("|", DevioServiceFactory.InstalledProvidersByNameAndFileAccess.Keys)
 
-            Dim msg = $"{asmname}.
+            Dim msg = $"{asmname}
 
 Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to the Arsenal 
 Image Mounter virtual SCSI miniport driver.
 
 Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
 
-Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01) or AFF4 forensic disk images, you must make the Libewf (libewf.dll) and LibAFF4 (libaff4.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-original mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
+Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01) or AFF4 forensic disk images, you must make the Libewf (libewf.dll) and LibAFF4 (libaff4.dll) libraries available in the expected (/lib--x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-original mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
-aim_cli.exe /mount[=removable|cdrom] [/buffersize=bytes] [/readonly] [/fakesig] [/fakembr] /filename=imagefilename /provider={providers} [/writeoverlay=differencingimagefile [/autodelete]] [/background]
+{asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly] [--fakesig] [--fakembr] --filename=imagefilename --provider={providers} [--writeoverlay=differencingimagefile [--autodelete]] [--background]
 
 Syntax to start shared memory service mode, for mounting from other applications:
-aim_cli.exe /name=objectname [/buffersize=bytes] [/readonly] [/fakembr] /filename=imagefilename /provider={providers} [/background]
+{asmname} --name=objectname [--buffersize=bytes] [--readonly] [--fakembr] --filename=imagefilename --provider={providers} [--background]
 
 Syntax to start TCP/IP service mode, for mounting from other computers:
-aim_cli.exe [/ipaddress=listenaddress] /port=tcpport [/readonly] [/fakembr] /filename=imagefilename /provider={providers} [/background]
+aim_cli.exe [--ipaddress=listenaddress] --port=tcpport [--readonly] [--fakembr] --filename=imagefilename --provider={providers} [--background]
 
 Syntax to convert a disk image without mounting:
-aim_cli.exe /filename=imagefilename [/fakembr] /provider={providers} /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
-aim_cli.exe /filename=imagefilename [/fakembr] /provider={providers} /convert=\\?\PhysicalDriveN [/background]
+{asmname} --filename=imagefilename [--fakembr] --provider={providers} --convert=outputimagefilename [--variant=fixed|dynamic] [--background]
+{asmname} --filename=imagefilename [--fakembr] --provider={providers} --convert=\\?\PhysicalDriveN [--background]
 
 Syntax to save as a new disk image after mounting:
-aim_cli.exe /device=devicenumber /saveas=outputimagefilename [/variant=fixed|dynamic] [/background]
+{asmname} --device=devicenumber --saveas=outputimagefilename [--variant=fixed|dynamic] [--background]
 
 Syntax to save a physical disk as an image file:
-aim_cli.exe /device=\\?\PhysicalDriveN /convert=outputimagefilename [/variant=fixed|dynamic] [/background]
+{asmname} --device=\\?\PhysicalDriveN --convert=outputimagefilename [--variant=fixed|dynamic] [--background]
 
 Syntax to dismount a mounted device:
-aim_cli.exe /dismount[=devicenumber] [/force]
+{asmname} --dismount[=devicenumber] [--force]
 
 "
 
@@ -506,7 +500,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         If Not String.IsNullOrWhiteSpace(debug_compare) Then
 
-            Dim DebugCompareStream = File.OpenRead(debug_compare)
+            Dim DebugCompareStream = New FileStream(debug_compare, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete, FileOptions.Asynchronous)
 
             provider = New DebugProvider(provider, DebugCompareStream)
 
@@ -542,7 +536,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             provider.Dispose()
 
-            Console.WriteLine("None of /name, /port, /mount or /convert switches specified, nothing to do.")
+            Console.WriteLine("None of --name, --port, --mount or --convert switches specified, nothing to do.")
 
             Return 1
 
@@ -560,7 +554,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             Catch ex As Exception
                 Trace.WriteLine($"Failed to open SCSI adapter: {ex.JoinMessages()}")
-                Throw New IOException("Cannot access Arsenal Image Mounter driver. Check that the driver is installed and that you are running this application with administrative privileges.")
+                Throw New IOException("Cannot access Arsenal Image Mounter driver. Check that the driver is installed and that you are running this application with administrative privileges.", ex)
 
             End Try
 
@@ -568,7 +562,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             If auto_delete Then
                 Dim rc = service.SetWriteOverlayDeleteOnClose()
-                If rc <> NativeFileIO.NativeConstants.NO_ERROR Then
+                If rc <> NativeConstants.NO_ERROR Then
                     Console.WriteLine($"Failed to set auto-delete for write overlay image ({rc}): {New Win32Exception(rc).Message}")
                 End If
             End If
@@ -607,7 +601,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             If mount Then
 
-                Console.WriteLine($"Virtual disk created. To dismount, type aim_cli /dismount={service.DiskDeviceNumber:X6}")
+                Console.WriteLine($"Virtual disk created. To dismount, type aim_cli --dismount={service.DiskDeviceNumber:X6}")
 
             Else
 
@@ -790,7 +784,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
 #If DEBUG Then
 
-                Using h = NativeFileIO.NtCreateFile(dev.path, NativeFileIO.NtObjectAttributes.OpenIf, 0, FileShare.ReadWrite, NativeFileIO.NtCreateDisposition.Open, NativeFileIO.NtCreateOptions.NonDirectoryFile Or NativeFileIO.NtCreateOptions.SynchronousIoNonAlert, FileAttributes.Normal, Nothing, Nothing)
+                Using h = NativeFileIO.NtCreateFile(dev.path, NtObjectAttributes.OpenIf, 0, FileShare.ReadWrite, NtCreateDisposition.Open, NtCreateOptions.NonDirectoryFile Or NtCreateOptions.SynchronousIoNonAlert, FileAttributes.Normal, Nothing, Nothing)
                     Dim prop = NativeFileIO.GetStorageStandardProperties(h)
                     Console.WriteLine("")
                 End Using

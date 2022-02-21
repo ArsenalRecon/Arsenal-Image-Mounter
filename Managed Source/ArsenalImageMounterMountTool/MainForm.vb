@@ -105,7 +105,7 @@ Public Class MainForm
                                        MessageBoxDefaultButton.Button2) = DialogResult.OK Then
 
                         Try
-                            NativeFileIO.ShutdownSystem(NativeFileIO.ShutdownFlags.Reboot, NativeFileIO.ShutdownReasons.ReasonFlagPlanned)
+                            NativeFileIO.ShutdownSystem(ShutdownFlags.Reboot, ShutdownReasons.ReasonFlagPlanned)
                             Environment.Exit(0)
 
                         Catch ex2 As Exception
@@ -390,7 +390,7 @@ Public Class MainForm
 
             Invoke(Sub() SetDiskView(simpleview, finished:=False))
 
-            Dim listFunction As Func(Of ScsiAdapter, IEnumerable(Of ScsiAdapter.DeviceProperties), IEnumerable(Of DiskStateView))
+            Dim listFunction As Func(Of ScsiAdapter, IEnumerable(Of DeviceProperties), IEnumerable(Of DiskStateView))
 
             'Try
             '    Dim fullview = fullviewtask.Result
@@ -773,7 +773,7 @@ Public Class MainForm
         Try
 
             If cbNotifyLibEwf.Checked Then
-                Server.SpecializedProviders.DevioProviderLibEwf.SetNotificationFile("CONOUT$")
+                Server.SpecializedProviders.DevioProviderLibEwf.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName())
                 Server.SpecializedProviders.DevioProviderLibEwf.NotificationVerbose = True
             Else
                 Server.SpecializedProviders.DevioProviderLibEwf.NotificationVerbose = False
@@ -884,7 +884,7 @@ Public Class MainForm
     Private Sub btnRAMDisk_Click(sender As Object, e As EventArgs) Handles btnRAMDisk.Click
 
         Try
-            Dim ramdisk = DiscUtilsInteraction.InteractiveCreateRAMDisk(Adapter)
+            Dim ramdisk = DiscUtilsInteraction.InteractiveCreateRAMDisk(Me, Adapter)
 
             If ramdisk Is Nothing Then
                 Return

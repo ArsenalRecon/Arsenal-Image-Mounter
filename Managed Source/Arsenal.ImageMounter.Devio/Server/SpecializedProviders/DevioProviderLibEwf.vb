@@ -18,6 +18,7 @@ Imports System.Text
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
+Imports Arsenal.ImageMounter.Reflection
 Imports Microsoft.Win32.SafeHandles
 
 #Disable Warning CA2101 ' Specify marshaling for P/Invoke string arguments
@@ -44,7 +45,7 @@ Namespace Server.SpecializedProviders
                 SetHandle(handle)
             End Sub
 
-            Private Sub New()
+            Public Sub New()
                 MyBase.New(True)
 
             End Sub
@@ -78,7 +79,7 @@ Namespace Server.SpecializedProviders
                 SetHandle(handle)
             End Sub
 
-            Private Sub New()
+            Public Sub New()
                 MyBase.New(True)
 
             End Sub
@@ -99,8 +100,9 @@ Namespace Server.SpecializedProviders
 
                 Dim errmsg As New StringBuilder(32000)
 
-                If libewf_error_sprint(Me, errmsg, errmsg.Capacity) > 0 Then
-                    Return errmsg.ToString()
+                If libewf_error_backtrace_sprint(Me, errmsg, errmsg.Capacity) > 0 Then
+                    Dim msgs = errmsg.ToString().Split(vbLf(0)).Reverse()
+                    Return String.Join(Environment.NewLine, msgs)
                 Else
                     Return $"Unknown error 0x{handle:X}"
                 End If
@@ -114,47 +116,53 @@ Namespace Server.SpecializedProviders
 
         Public ReadOnly Property SafeHandle As SafeLibEwfFileHandle
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_access_flags_read() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_access_flags_read_write() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_access_flags_write() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_access_flags_write_resume() As Byte
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_notify_stream_open(<[In], MarshalAs(UnmanagedType.LPStr)> filename As String, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Sub libewf_notify_set_verbose(Verbose As Integer)
         End Sub
 
-        <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Unicode, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <Obsolete, DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Unicode, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_open_wide(<[In](), MarshalAs(UnmanagedType.LPArray)> filenames As String(), numberOfFiles As Integer, AccessFlags As Byte) As SafeLibEwfFileHandle
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_initialize(<Out> ByRef handle As SafeLibEwfFileHandle, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Unicode, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Shared Function libewf_handle_open(handle As SafeLibEwfFileHandle, <[In](), MarshalAs(UnmanagedType.LPArray)> filenames As String(), numberOfFiles As Integer, AccessFlags As Integer, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+        End Function
+
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Unicode, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_open_wide(handle As SafeLibEwfFileHandle, <[In](), MarshalAs(UnmanagedType.LPArray)> filenames As String(), numberOfFiles As Integer, AccessFlags As Integer, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        Private Delegate Function f_libewf_handle_open(handle As SafeLibEwfFileHandle, filenames As String(), numberOfFiles As Integer, AccessFlags As Integer, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
+
+        <Obsolete, DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_media_size(handle As SafeLibEwfFileHandle, <Out> ByRef media_size As Long) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_get_media_size(handle As SafeLibEwfFileHandle, <Out> ByRef media_size As Long, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
@@ -164,68 +172,68 @@ Namespace Server.SpecializedProviders
             [End] = 2
         End Enum
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_seek_offset(handle As SafeLibEwfFileHandle, offset As Long, whence As Whence, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Long
         End Function
 
-        <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <Obsolete, DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_read_random(handle As SafeLibEwfFileHandle, buffer As IntPtr, buffer_size As IntPtr, offset As Long) As IntPtr
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_read_buffer(handle As SafeLibEwfFileHandle, buffer As IntPtr, buffer_size As IntPtr, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As IntPtr
         End Function
 
-        <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <Obsolete, DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_write_random(handle As SafeLibEwfFileHandle, buffer As IntPtr, buffer_size As IntPtr, offset As Long) As IntPtr
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_write_buffer(handle As SafeLibEwfFileHandle, buffer As IntPtr, buffer_size As IntPtr, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As IntPtr
         End Function
 
-        <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <Obsolete, DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_write_finalize(handle As SafeLibEwfFileHandle) As IntPtr
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_write_finalize(handle As SafeLibEwfFileHandle, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As IntPtr
         End Function
 
-        <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <Obsolete, DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_close(handle As IntPtr) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_close(handle As IntPtr, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_notify_stream_close(<Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_notify_set_stream(FILE As IntPtr, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <Obsolete, DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <Obsolete, DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_get_bytes_per_sector(safeLibEwfHandle As SafeLibEwfFileHandle, <Out> ByRef SectorSize As UInteger) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_get_bytes_per_sector(safeLibEwfHandle As SafeLibEwfFileHandle, <Out> ByRef SectorSize As UInteger, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_get_chunk_size(safeLibEwfHandle As SafeLibEwfFileHandle, <Out> ByRef ChunkSize As UInteger, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_get_sectors_per_chunk(safeLibEwfHandle As SafeLibEwfFileHandle, <Out> ByRef SectorsPerChunk As UInteger, <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_utf16_header_value(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                      <[In], MarshalAs(UnmanagedType.LPStr, SizeParamIndex:=2)> identifier As String,
                                                                      identifier_length As IntPtr,
@@ -234,7 +242,7 @@ Namespace Server.SpecializedProviders
                                                                      <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_utf8_hash_value(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                      <[In], MarshalAs(UnmanagedType.LPStr, SizeParamIndex:=2)> hash_value_identifier As String,
                                                                      hash_value_identifier_length As IntPtr,
@@ -243,68 +251,68 @@ Namespace Server.SpecializedProviders
                                                                      <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_header_codepage(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   codepage As Integer,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_bytes_per_sector(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   bytes_per_sector As UInteger,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_media_size(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   media_size As ULong,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_media_type(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   media_type As LIBEWF_MEDIA_TYPE,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_media_flags(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   media_flags As LIBEWF_MEDIA_FLAGS,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_format(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   ewf_format As LIBEWF_FORMAT,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_compression_method(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   compression_method As LIBEWF_COMPRESSION_METHOD,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_compression_values(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   compression_level As LIBEWF_COMPRESSION_LEVEL,
                                                                   compression_flags As LIBEWF_COMPRESSION_FLAGS,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_maximum_segment_size(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   maximum_segment_size As ULong,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_sectors_per_chunk(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   sectors_per_chunk As UInteger,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_set_error_granularity(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                   sectors_per_chunk As UInteger,
                                                                   <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
@@ -319,7 +327,7 @@ Namespace Server.SpecializedProviders
                                                                                                                      value2 As TValue2,
                                                                                                                      <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_handle_get_utf16_header_value(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                      <[In], MarshalAs(UnmanagedType.LPStr, SizeParamIndex:=2)> identifier As String,
                                                                      identifier_length As IntPtr,
@@ -328,15 +336,19 @@ Namespace Server.SpecializedProviders
                                                                      <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True, CharSet:=CharSet.Ansi)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True, CharSet:=CharSet.Ansi)>
         Private Shared Function libewf_error_sprint(errobj As SafeLibEwfErrorObjectHandle, buffer As StringBuilder, length As Integer) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True, CharSet:=CharSet.Ansi)>
+        Private Shared Function libewf_error_backtrace_sprint(errobj As SafeLibEwfErrorObjectHandle, buffer As StringBuilder, length As Integer) As Integer
+        End Function
+
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_error_fprint(errobj As SafeLibEwfErrorObjectHandle, clibfile As IntPtr) As Integer
         End Function
 
-        <DllImport("libewf.dll", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
+        <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
         Private Shared Function libewf_error_free(ByRef errobj As IntPtr) As Integer
         End Function
 
@@ -356,7 +368,7 @@ Namespace Server.SpecializedProviders
 
         Public Shared Function OpenNotificationStream() As NamedPipeServerStream
             Dim pipename = $"DevioProviderLibEwf-{Guid.NewGuid()}"
-            Dim pipe As New NamedPipeServerStream(pipename, PipeDirection.In, 1, PipeTransmissionMode.Message, PipeOptions.None)
+            Dim pipe As New NamedPipeServerStream(pipename, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None)
             Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
             If libewf_notify_stream_open($"\\?\PIPE\{pipename}", errobj) < 0 Then
                 pipe.Dispose()
@@ -373,42 +385,59 @@ Namespace Server.SpecializedProviders
         End Property
 
         Public Sub New(filenames As String(), Flags As Byte)
+
             _Flags = Flags
 
             Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
 
-            If libewf_handle_initialize(_SafeHandle, errobj) <> 1 Then
+            If libewf_handle_initialize(_SafeHandle, errobj) <> 1 OrElse
+                _SafeHandle.IsInvalid OrElse Failed(errobj) Then
 
                 ThrowError(errobj, "Error initializing libewf handle.")
 
             End If
 
-            If libewf_handle_open_wide(_SafeHandle, filenames, filenames.Length, Flags, errobj) <> 1 OrElse
-                _SafeHandle.IsInvalid Then
+            Dim func As f_libewf_handle_open
+
+#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+            If NativeLib.IsWindows Then
+                func = AddressOf libewf_handle_open_wide
+            Else
+                func = AddressOf libewf_handle_open
+            End If
+#Else
+            func = AddressOf libewf_handle_open_wide
+#End If
+
+            If func(_SafeHandle, filenames, filenames.Length, Flags, errobj) <> 1 OrElse Failed(errobj) Then
 
                 ThrowError(errobj, "Error opening image file(s)")
 
             End If
 
-            If libewf_handle_get_bytes_per_sector(_SafeHandle, _SectorSize, errobj) < 0 Then
+            If libewf_handle_get_bytes_per_sector(_SafeHandle, _SectorSize, errobj) < 0 OrElse Failed(errobj) Then
 
                 ThrowError(errobj, "Unable to get number of bytes per sector")
 
             End If
 
-            If libewf_handle_get_chunk_size(_SafeHandle, _ChunkSize, errobj) < 0 Then
+            If libewf_handle_get_chunk_size(_SafeHandle, _ChunkSize, errobj) < 0 OrElse Failed(errobj) Then
 
                 ThrowError(errobj, "Unable to get chunk size")
 
             End If
 
-            If libewf_handle_get_sectors_per_chunk(_SafeHandle, _SectorsPerChunk, errobj) < 0 Then
+            If libewf_handle_get_sectors_per_chunk(_SafeHandle, _SectorsPerChunk, errobj) < 0 OrElse Failed(errobj) Then
 
                 ThrowError(errobj, "Unable to get number of sectors per chunk")
 
             End If
 
         End Sub
+
+        Protected Shared Function Failed(errobj As SafeLibEwfErrorObjectHandle) As Boolean
+            Return errobj IsNot Nothing AndAlso Not errobj.IsInvalid
+        End Function
 
         Protected Shared Sub ThrowError(errobj As SafeLibEwfErrorObjectHandle, message As String)
 
@@ -443,7 +472,7 @@ Namespace Server.SpecializedProviders
                 Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
 
                 Dim RC = libewf_handle_get_media_size(_SafeHandle, Length, errobj)
-                If RC < 0 Then
+                If RC < 0 OrElse Failed(errobj) Then
                     ThrowError(errobj, "libewf_handle_get_media_size() failed")
                 End If
             End Get
@@ -461,7 +490,7 @@ Namespace Server.SpecializedProviders
 
                 Dim offset = libewf_handle_seek_offset(_SafeHandle, fileoffset, Whence.Set, errobj)
 
-                If offset <> fileoffset Then
+                If offset <> fileoffset OrElse Failed(errobj) Then
 
                     ThrowError(errobj, $"Error seeking to position {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}")
 
@@ -484,6 +513,12 @@ Namespace Server.SpecializedProviders
                 'End If
 
                 Dim result = libewf_handle_read_buffer(_SafeHandle, buffer + bufferoffset, New IntPtr(iteration_count), errobj).ToInt32()
+
+                If result < 0 OrElse Failed(errobj) Then
+
+                    ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}")
+
+                End If
 
                 If result > 0 Then
 
@@ -521,14 +556,12 @@ Namespace Server.SpecializedProviders
 
             Dim sizedone As Integer
 
-            Dim retval As IntPtr
-
             Dim size As New IntPtr(count)
 
             Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
 
             Dim offset = libewf_handle_seek_offset(_SafeHandle, fileoffset, Whence.Set, errobj)
-            If offset <> fileoffset Then
+            If offset <> fileoffset OrElse Failed(errobj) Then
                 ThrowError(errobj, $"Error seeking to position {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}")
             End If
 
@@ -538,20 +571,16 @@ Namespace Server.SpecializedProviders
                     sizenow = New IntPtr(16384)
                 End If
 
-                retval = libewf_handle_write_buffer(_SafeHandle, buffer + bufferoffset + sizedone, sizenow, errobj)
+                Dim retval = libewf_handle_write_buffer(_SafeHandle, buffer + bufferoffset + sizedone, sizenow, errobj)
 
-                If retval.ToInt64() <= 0 Then
+                If retval.ToInt64() <= 0 OrElse Failed(errobj) Then
                     ThrowError(errobj, "Write failed")
                 End If
 
                 sizedone += retval.ToInt32()
             End While
 
-            If sizedone <= 0 Then
-                Return retval.ToInt32()
-            Else
-                Return sizedone
-            End If
+            Return sizedone
 
         End Function
 
@@ -585,7 +614,7 @@ Namespace Server.SpecializedProviders
 
             Dim retval = libewf_handle_set_utf16_header_value(SafeHandle, identifier, New IntPtr(identifier.Length), value, New IntPtr(value.Length), errobj)
 
-            If retval <> 1 Then
+            If retval <> 1 OrElse Failed(errobj) Then
                 ThrowError(errobj, $"Parameter set '{identifier}'='{value}' failed")
             End If
 
@@ -607,7 +636,7 @@ Namespace Server.SpecializedProviders
 
                 Dim retval = libewf_handle_set_utf8_hash_value(SafeHandle, identifier, New IntPtr(identifier.Length), utf8.DangerousGetHandle(), New IntPtr(valuestr.Length), errobj)
 
-                If retval <> 1 Then
+                If retval <> 1 OrElse Failed(errobj) Then
                     ThrowError(errobj, $"Hash result set '{identifier}'='{value}' failed")
                 End If
 
@@ -621,7 +650,7 @@ Namespace Server.SpecializedProviders
 
             Dim retval = func(SafeHandle, value, errobj)
 
-            If retval <> 1 Then
+            If retval <> 1 OrElse Failed(errobj) Then
                 ThrowError(errobj, $"Parameter set {func.Method.Name}({value}) failed")
             End If
 
@@ -633,7 +662,7 @@ Namespace Server.SpecializedProviders
 
             Dim retval = func(SafeHandle, value1, value2, errobj)
 
-            If retval <> 1 Then
+            If retval <> 1 OrElse Failed(errobj) Then
                 ThrowError(errobj, $"Parameter set {func.Method.Name}({value1}, {value2}) failed")
             End If
 
@@ -679,7 +708,7 @@ Namespace Server.SpecializedProviders
 
             Public Property CodePage As Integer = LIBEWF_CODEPAGE_ASCII
 
-            Public Property StorageStandardProperties As NativeFileIO.StorageStandardProperties
+            Public Property StorageStandardProperties As StorageStandardProperties
 
             Public Property CaseNumber As String
 
@@ -691,9 +720,13 @@ Namespace Server.SpecializedProviders
 
             Public Property Notes As String
 
-            Public Property AcquiryOperatingSystem As String = $"Windows {DriverSetup.OSVersion}"
+#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+            Public Property AcquiryOperatingSystem As String = RuntimeInformation.OSDescription
+#Else
+            Public Property AcquiryOperatingSystem As String = $"Windows {API.OSVersion}"
+#End If
 
-            Public Property AcquirySoftware As String = $"aim-libewf"
+            Public Property AcquirySoftware As String = "aim-libewf"
 
             Public Property MediaSize As ULong
 

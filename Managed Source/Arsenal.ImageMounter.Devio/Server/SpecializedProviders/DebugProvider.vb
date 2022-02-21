@@ -23,7 +23,7 @@ Namespace Server.SpecializedProviders
     ''' compared to raw image files.
     ''' </summary>
     Public Class DebugProvider
-        Inherits DevioProviderManagedBase
+        Inherits DevioProviderUnmanagedBase
 
         Public ReadOnly Property BaseProvider As IDevioProvider
 
@@ -65,23 +65,17 @@ Namespace Server.SpecializedProviders
             End Get
         End Property
 
-        Private Declare Function memcmp Lib "msvcrt.dll" (<[In]> buf1 As Byte(), <[In]> buf2 As Byte(), count As IntPtr) As Integer
-        Private Declare Function memcmp Lib "msvcrt.dll" (<[In]> buf1 As Byte(), buf2 As IntPtr, count As IntPtr) As Integer
-        Private Declare Function memcmp Lib "msvcrt.dll" (buf1 As IntPtr, <[In]> buf2 As Byte(), count As IntPtr) As Integer
-        Private Declare Function memcmp Lib "msvcrt.dll" (buf1 As IntPtr, buf2 As IntPtr, count As IntPtr) As Integer
+        Private Declare Function memcmp Lib "msvcrt" (<[In]> buf1 As IntPtr, buf2 As Byte(), count As IntPtr) As Integer
 
-        Public Overrides Function Read(buf1 As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
+        Public Overrides Function Read(buf1 As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
             Static buf2 As Byte()
 
-            Dim compareTask = Task.Factory.StartNew(
-                Function()
-                    If buf2 Is Nothing OrElse buf2.Length < count Then
-                        Array.Resize(buf2, count)
-                    End If
-                    DebugCompareStream.Position = fileoffset
-                    Return DebugCompareStream.Read(buf2, 0, count)
-                End Function, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
+            If buf2 Is Nothing OrElse buf2.Length < count Then
+                Array.Resize(buf2, count)
+            End If
+            DebugCompareStream.Position = fileoffset
+            Dim compareTask = DebugCompareStream.ReadAsync(buf2, 0, count)
 
             Dim rc1 = BaseProvider.Read(buf1, bufferoffset, count, fileoffset)
             Dim rc2 = compareTask.Result
@@ -90,18 +84,7 @@ Namespace Server.SpecializedProviders
                 Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X)} bytes, returned 0x{rc1:X)} bytes from image provider and 0x{rc2:X} bytes from debug compare stream.")
             End If
 
-            Dim cmp As Integer
-
-            Dim handle = GCHandle.Alloc(buf1, GCHandleType.Pinned)
-            Try
-                cmp = memcmp(buf2, handle.AddrOfPinnedObject() + bufferoffset, New IntPtr(Math.Min(rc1, rc2)))
-
-            Finally
-                handle.Free()
-
-            End Try
-
-            If cmp <> 0 Then
+            If memcmp(buf1 + bufferoffset, buf2, New IntPtr(Math.Min(rc1, rc2))) <> 0 Then
                 Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X} bytes, returned different data from image provider than from debug compare stream.")
             End If
 
@@ -109,7 +92,7 @@ Namespace Server.SpecializedProviders
 
         End Function
 
-        Public Overrides Function Write(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
+        Public Overrides Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
             Return BaseProvider.Write(buffer, bufferoffset, count, fileoffset)
         End Function
 

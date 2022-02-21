@@ -1,6 +1,4 @@
-﻿Imports System.Security
-Imports System.Security.Permissions
-Imports System.Text
+﻿Imports System.Text
 Imports System.Threading
 
 #Disable Warning IDE0079 ' Remove unnecessary suppression
@@ -8,7 +6,6 @@ Imports System.Threading
 
 Namespace IO
 
-    <SecuritySafeCritical>
     Public Class ConsoleProgressBar
         Implements IDisposable
 
@@ -18,7 +15,6 @@ Namespace IO
 
         Private ReadOnly updateFunc As Func(Of Double)
 
-        <SecuritySafeCritical>
         Private Sub New(update As Func(Of Double))
             updateFunc = update
             CreateConsoleProgressBar()
@@ -38,7 +34,6 @@ Namespace IO
 
         End Sub
 
-        <SecuritySafeCritical>
         Private Sub Tick(o As Object)
 
             Dim newvalue = updateFunc()
@@ -51,11 +46,9 @@ Namespace IO
 
         End Sub
 
-        <SecuritySafeCritical>
-        <SecurityPermission(SecurityAction.Demand, Flags:=SecurityPermissionFlag.AllFlags)>
         Public Shared Sub CreateConsoleProgressBar()
 
-            If NativeFileIO.UnsafeNativeMethods.GetFileType(NativeFileIO.UnsafeNativeMethods.GetStdHandle(NativeFileIO.StdHandle.Output)) <> NativeFileIO.Win32FileType.Character Then
+            If IsConsoleOutputRedirected() Then
                 Return
             End If
 
@@ -81,11 +74,9 @@ Namespace IO
 
         End Sub
 
-        <SecuritySafeCritical>
-        <SecurityPermission(SecurityAction.Demand, Flags:=SecurityPermissionFlag.AllFlags)>
         Public Shared Sub UpdateConsoleProgressBar(value As Double)
 
-            If NativeFileIO.UnsafeNativeMethods.GetFileType(NativeFileIO.UnsafeNativeMethods.GetStdHandle(NativeFileIO.StdHandle.Output)) <> NativeFileIO.Win32FileType.Character Then
+            If IsConsoleOutputRedirected() Then
                 Return
             End If
 

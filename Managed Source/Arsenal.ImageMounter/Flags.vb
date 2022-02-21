@@ -11,7 +11,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
-
+#Disable Warning CA1069 ' Enums values should not be duplicated
 
 ''' <summary>
 ''' Values for flag fields used when creating, querying or modifying virtual disks.

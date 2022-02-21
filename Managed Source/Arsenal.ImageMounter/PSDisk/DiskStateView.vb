@@ -15,7 +15,7 @@ Namespace PSDisk
         Private _ImagePath As String
         Private _DiskSizeNumeric As Long?
 
-        Public Property DeviceProperties As ScsiAdapter.DeviceProperties
+        Public Property DeviceProperties As DeviceProperties
 
         Public Property RawDiskSignature As UInt32?
 
@@ -25,7 +25,7 @@ Namespace PSDisk
 
         Public Property DeviceName As String
 
-        Public Property StorageDeviceNumber As IO.NativeFileIO.STORAGE_DEVICE_NUMBER?
+        Public Property StorageDeviceNumber As IO.STORAGE_DEVICE_NUMBER?
 
         Public ReadOnly Property DriveNumberString As String
             Get
@@ -73,18 +73,18 @@ Namespace PSDisk
             End Get
         End Property
 
-        Public Property NativePartitionLayout As IO.NativeFileIO.PARTITION_STYLE?
+        Public Property NativePartitionLayout As IO.PARTITION_STYLE?
 
         Public ReadOnly Property PartitionLayout As String
             Get
                 If _NativePartitionLayout.HasValue Then
 
                     Select Case _NativePartitionLayout.Value
-                        Case IO.NativeFileIO.PARTITION_STYLE.PARTITION_STYLE_GPT
+                        Case IO.PARTITION_STYLE.PARTITION_STYLE_GPT
                             Return "GPT"
-                        Case IO.NativeFileIO.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        Case IO.PARTITION_STYLE.PARTITION_STYLE_MBR
                             Return "MBR"
-                        Case IO.NativeFileIO.PARTITION_STYLE.PARTITION_STYLE_RAW
+                        Case IO.PARTITION_STYLE.PARTITION_STYLE_RAW
                             Return "RAW"
                         Case Else
                             Return "Unknown"
@@ -131,7 +131,7 @@ Namespace PSDisk
                     Return Nothing
                 End If
 
-                Return API.FormatBytes(size.Value)
+                Return IO.FormatBytes(size.Value)
             End Get
         End Property
 
@@ -161,6 +161,16 @@ Namespace PSDisk
                 End If
 
                 Return String.Join(Environment.NewLine, _MountPoints)
+            End Get
+        End Property
+
+        Public ReadOnly Property MountPointsSequenceString As String
+            Get
+                If _MountPoints Is Nothing OrElse _MountPoints.Length = 0 Then
+                    Return String.Empty
+                End If
+
+                Return $"Mount Points: {String.Join(", ", _MountPoints)}"
             End Get
         End Property
 

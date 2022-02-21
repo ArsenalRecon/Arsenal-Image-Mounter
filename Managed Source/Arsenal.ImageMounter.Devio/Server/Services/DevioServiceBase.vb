@@ -9,8 +9,12 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+#Disable Warning CA1840 ' Use 'Environment.CurrentManagedThreadId'
+
 Imports System.ComponentModel
 Imports System.IO
+Imports System.Runtime.InteropServices
+Imports System.Runtime.Versioning
 Imports System.Threading
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Extensions
@@ -115,6 +119,7 @@ Namespace Server.Services
         ''' Event raised when service thread exits.
         ''' </summary>
         Public Event ServiceShutdown As EventHandler Implements IVirtualDiskService.ServiceShutdown
+
         Protected Overridable Sub OnServiceShutdown(e As EventArgs)
             RaiseEvent ServiceShutdown(Me, e)
         End Sub
@@ -125,6 +130,8 @@ Namespace Server.Services
         ''' property.
         ''' </summary>
         Public Event ServiceUnhandledException As ThreadExceptionEventHandler Implements IVirtualDiskService.ServiceUnhandledException
+
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Protected Overridable Sub OnServiceUnhandledException(e As ThreadExceptionEventArgs)
             RaiseEvent ServiceUnhandledException(Me, e)
             If HasDiskDevice AndAlso _ForceRemoveDiskDeviceOnCrash AndAlso _ScsiAdapter IsNot Nothing Then
@@ -137,6 +144,7 @@ Namespace Server.Services
         ''' disconnection.
         ''' </summary>
         Protected Event StopServiceThread As EventHandler
+
         Protected Overridable Sub OnStopServiceThread(e As EventArgs)
             RaiseEvent StopServiceThread(Me, e)
         End Sub
@@ -272,6 +280,7 @@ Namespace Server.Services
         ''' proxy operation and which proxy communication protocol to use, which therefore do not
         ''' need to be specified in this parameter. A common value to pass however, is DeviceFlags.ReadOnly
         ''' to create a read-only virtual disk device.</param>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Overridable Sub StartServiceThreadAndMount(ScsiAdapter As ScsiAdapter,
                                                           Flags As DeviceFlags)
 
@@ -312,6 +321,7 @@ Namespace Server.Services
         ''' Dismounts an Arsenal Image Mounter Disk Device created by StartServiceThreadAndMount() and waits
         ''' for service thread of this instance to exit.
         ''' </summary>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Overridable Sub DismountAndStopServiceThread()
 
             RemoveDeviceAndStopServiceThread()
@@ -325,6 +335,7 @@ Namespace Server.Services
         ''' for service thread of this instance to exit.
         ''' </summary>
         ''' <param name="timeout">Timeout value to wait for service thread exit, or Timeout.Infinite to wait infinitely.</param>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Overridable Function DismountAndStopServiceThread(timeout As TimeSpan) As Boolean
 
             RemoveDeviceAndStopServiceThread()
@@ -345,6 +356,7 @@ Namespace Server.Services
         ''' Dismounts an Arsenal Image Mounter Disk Device created by StartServiceThreadAndMount(). If device
         ''' was already removed, it calls EmergencyStopServiceThread() to notify service thread.
         ''' </summary>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Protected Sub RemoveDeviceAndStopServiceThread()
 
             Trace.WriteLine($"Notifying service stopping for device {_DiskDeviceNumber:X6}...")
@@ -364,7 +376,7 @@ Namespace Server.Services
 
                 Catch ex As Win32Exception When (
                   i < 40 AndAlso
-                  ex.NativeErrorCode = NativeFileIO.NativeConstants.ERROR_ACCESS_DENIED)
+                  ex.NativeErrorCode = NativeConstants.ERROR_ACCESS_DENIED)
 
                     Trace.WriteLine($"Access denied attempting to remove device {_DiskDeviceNumber:X6}, retrying...")
 
@@ -373,7 +385,7 @@ Namespace Server.Services
                     Continue Do
 
                 Catch ex As Win32Exception When _
-                    ex.NativeErrorCode = NativeFileIO.NativeConstants.ERROR_FILE_NOT_FOUND
+                    ex.NativeErrorCode = NativeConstants.ERROR_FILE_NOT_FOUND
 
                     Trace.WriteLine($"Attempt to remove non-existent device {_DiskDeviceNumber:X6}")
 
@@ -462,6 +474,7 @@ Namespace Server.Services
         ''' Opens a DiskDevice object for direct access to a mounted device provided by
         ''' this service instance.
         ''' </summary>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Overridable Function OpenDiskDevice(access As FileAccess) As DiskDevice
             Return _ScsiAdapter.OpenDevice(DiskDeviceNumber, access)
         End Function
@@ -470,6 +483,7 @@ Namespace Server.Services
         ''' Returns a PhysicalDrive or CdRom device name for a mounted device provided by
         ''' this service instance.
         ''' </summary>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Overridable Function GetDiskDeviceName() As String Implements IVirtualDiskService.GetDiskDeviceName
             Return _ScsiAdapter.GetDeviceName(DiskDeviceNumber)
         End Function
@@ -480,6 +494,7 @@ Namespace Server.Services
         ''' overlay image is not needed for future sessions.
         ''' </summary>
         ''' <returns>Returns 0 on success or Win32 error code on failure</returns>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Function SetWriteOverlayDeleteOnClose() As Integer
             Using disk = OpenDiskDevice(FileAccess.ReadWrite)
                 Return API.SetWriteOverlayDeleteOnClose(disk.SafeFileHandle)
@@ -496,12 +511,14 @@ Namespace Server.Services
         ''' forcefully removed if a crash occurs in service thread of this instance. Default is True.</returns>
         Public Overridable Property ForceRemoveDiskDeviceOnCrash As Boolean = True
 
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Overridable Sub RemoveDevice() Implements IVirtualDiskService.RemoveDevice
 
             _ScsiAdapter.RemoveDevice(DiskDeviceNumber)
 
         End Sub
 
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Overridable Sub RemoveDeviceSafe() Implements IVirtualDiskService.RemoveDeviceSafe
 
             _ScsiAdapter.RemoveDeviceSafe(DiskDeviceNumber)
@@ -518,6 +535,12 @@ Namespace Server.Services
                     ' TODO: dispose managed state (managed objects).
                     If HasDiskDevice Then
                         Try
+#If NETSTANDARD OrElse NETCOREAPP Then
+                            If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+                                Exit Try
+                            End If
+#End If
+
                             DismountAndStopServiceThread()
 
                         Catch

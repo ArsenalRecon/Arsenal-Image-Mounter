@@ -1,30 +1,26 @@
 ﻿Imports Arsenal.ImageMounter.IO.NativeFileIO
-Imports Arsenal.ImageMounter.IO.NativeFileIO.NativeConstants
+Imports Arsenal.ImageMounter.IO.NativeConstants
 Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
 Imports System.ComponentModel
 Imports System.Diagnostics.CodeAnalysis
 Imports System.Runtime.InteropServices
-Imports System.Security
-Imports System.Security.Permissions
+Imports System.Runtime.Versioning
 
 #Disable Warning IDE0079 ' Remove unnecessary suppression
 #Disable Warning SYSLIB0003 ' Type or member is obsolete
 
 Namespace IO
 
-    <SecurityCritical>
-    <SecurityPermission(SecurityAction.Demand, Flags:=SecurityPermissionFlag.AllFlags)>
+    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
     Public Class FileStreamsEnumerator
         Implements IEnumerable(Of FindStreamData)
 
         Public Property FilePath As String
 
-        <SecuritySafeCritical>
         Public Function GetEnumerator() As IEnumerator(Of FindStreamData) Implements IEnumerable(Of FindStreamData).GetEnumerator
             Return New Enumerator(_FilePath)
         End Function
 
-        <SecuritySafeCritical>
         Private Function IEnumerable_GetEnumerator() As IEnumerator Implements IEnumerable.GetEnumerator
             Return GetEnumerator()
         End Function
@@ -47,7 +43,6 @@ Namespace IO
             End Sub
 
             Public ReadOnly Property Current As FindStreamData Implements IEnumerator(Of FindStreamData).Current
-                <SecuritySafeCritical>
                 Get
                     If disposedValue Then
                         Throw New ObjectDisposedException("FileStreamsEnumerator.Enumerator")
@@ -58,13 +53,11 @@ Namespace IO
             End Property
 
             Private ReadOnly Property IEnumerator_Current As Object Implements IEnumerator.Current
-                <SecuritySafeCritical>
                 Get
                     Return Current
                 End Get
             End Property
 
-            <SecuritySafeCritical>
             Public Function MoveNext() As Boolean Implements IEnumerator.MoveNext
 
                 If disposedValue Then
@@ -92,7 +85,6 @@ Namespace IO
 
             End Function
 
-            <SecuritySafeCritical>
             Private Sub Reset() Implements IEnumerator.Reset
                 Throw New NotImplementedException
             End Sub
@@ -119,7 +111,6 @@ Namespace IO
             End Sub
 
             '' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-            '<SecuritySafeCritical>
             'Protected Overrides Sub Finalize()
             '    ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
             '    Dispose(False)
@@ -127,7 +118,6 @@ Namespace IO
             'End Sub
 
             ' This code added by Visual Basic to correctly implement the disposable pattern.
-            <SecuritySafeCritical>
             Public Sub Dispose() Implements IDisposable.Dispose
                 ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
                 Dispose(True)

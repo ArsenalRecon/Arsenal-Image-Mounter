@@ -21,7 +21,7 @@ Imports Arsenal.ImageMounter
 
 Public Module MainModule
 
-    Private ReadOnly ownerWindow As New NativeFileIO.NativeWindowHandle(NativeFileIO.SafeNativeMethods.GetConsoleWindow())
+    Private ReadOnly ownerWindow As New Dialogs.NativeWindowHandle(NativeFileIO.SafeNativeMethods.GetConsoleWindow())
 
     Public Function Main(ParamArray args As String()) As Integer
 

@@ -7,10 +7,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Title>Arsenal Image Mounter Setup</Title>
     <StartupObject>Arsenal.ImageMounter.MainForm</StartupObject>
-	  <TargetFrameworks>net40;net5.0-windows</TargetFrameworks>
+	<TargetFrameworks>net40;netcoreapp3.1</TargetFrameworks>
+    <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Dialogs\Arsenal.ImageMounter.Dialogs.csproj" />
     <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
   </ItemGroup>
 

@@ -58,7 +58,7 @@ Namespace Server.Services
         Public Const DefaultBufferSize As Long = (8 << 20) + IMDPROXY_HEADER_SIZE
 
         Private Shared Function GetNextRandomValue() As Guid
-            Return NativeFileIO.GenRandomGuid()
+            Return NativeCalls.GenRandomGuid()
         End Function
 
         ''' <summary>

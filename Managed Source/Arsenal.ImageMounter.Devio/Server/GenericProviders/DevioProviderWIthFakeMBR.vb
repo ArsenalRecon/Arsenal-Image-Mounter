@@ -111,7 +111,7 @@ Namespace Server.GenericProviders
 
             Buffer.BlockCopy(_default_boot_code, 0, _PrefixBuffer, 0, _default_boot_code.Length)
 
-            Dim signature = BitConverter.GetBytes(GenerateDiskSignature())
+            Dim signature = BitConverter.GetBytes(NativeFileIO.GenerateDiskSignature())
 
             Buffer.BlockCopy(signature, 0, _PrefixBuffer, DiskSignatureOffset, signature.Length)
 
@@ -400,14 +400,6 @@ Namespace Server.GenericProviders
         Private Const DiskSignatureOffset As Integer = &H1B8
 
         Private Const PartitionTableOffset As Integer = 512 - 2 - 4 * 16
-
-        Private Shared Function GenerateDiskSignature() As Integer
-
-            Dim value = NativeFileIO.GenRandomInt32()
-
-            Return value Or &H80808081 And &HFEFEFEFF
-
-        End Function
 
     End Class
 

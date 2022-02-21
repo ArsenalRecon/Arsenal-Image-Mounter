@@ -4,9 +4,8 @@
 
   <PropertyGroup>
     <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
-    <UseWindowsForms>true</UseWindowsForms>
     <Description>Arsenal Image Mounter Device I/O Backend</Description>
-	  <TargetFrameworks>net40;net47;net5.0-windows</TargetFrameworks>
+	<TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,54 +13,62 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Devio.Interop\Arsenal.ImageMounter.Devio.Interop.csproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj" />
     <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="DiscUtils.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Core">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Core.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Dmg, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Dmg">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Dmg.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Fat, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Fat">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Fat.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Ntfs, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Ntfs">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Ntfs.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.OpticalDisk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.OpticalDisk">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.OpticalDisk.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Streams, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Streams">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Streams.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Vdi, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Vdi">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Vdi.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Vhd, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Vhd">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Vhd.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Vhdx, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Vhdx">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Vhdx.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Vmdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Vmdk">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Vmdk.dll</HintPath>
     </Reference>
-    <Reference Include="DiscUtils.Xva, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+    <Reference Include="DiscUtils.Xva">
       
       <HintPath>$(DiscUtilsPath)\DiscUtils.Xva.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Memory">
+      <Version>4.5.4</Version>
+    </PackageReference>
   </ItemGroup>
 
 </Project>
