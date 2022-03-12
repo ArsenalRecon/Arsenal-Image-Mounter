@@ -7,6 +7,7 @@ Imports System.Runtime.InteropServices
 Imports System.Runtime.Versioning
 Imports System.Security
 Imports System.Security.AccessControl
+Imports System.Threading
 Imports Arsenal.ImageMounter.Extensions
 Imports Microsoft.Win32.SafeHandles
 
@@ -27,6 +28,62 @@ Namespace IO
             Return NativeFileIO.GetFileSize(path)
 
         End Function
+
+        Public Function ReadAllBytes(path As String) As Byte()
+
+#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+            If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+                Return File.ReadAllBytes(path)
+            End If
+#End If
+
+            Using stream = NativeFileIO.OpenFileStream(path,
+                                                       FileMode.Open,
+                                                       FileAccess.Read,
+                                                       FileShare.Read Or FileShare.Delete,
+                                                       CType(NativeConstants.FILE_FLAG_BACKUP_SEMANTICS, FileOptions))
+
+                Dim buffer(0 To CInt(stream.Length - 1)) As Byte
+
+                If stream.Read(buffer, 0, buffer.Length) <> stream.Length Then
+
+                    Throw New IOException($"Incomplete read from '{path}'")
+
+                End If
+
+                Return buffer
+
+            End Using
+
+        End Function
+
+#If NETSTANDARD2_1_OR_GREATER OrElse NETCOREAPP Then
+        Public Async Function ReadAllBytesAsync(path As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of Byte())
+
+            If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+                Return Await File.ReadAllBytesAsync(path, cancellationToken)
+            End If
+
+            Using stream = NativeFileIO.OpenFileStream(path,
+                                                       FileMode.Open,
+                                                       FileAccess.Read,
+                                                       FileShare.Read Or FileShare.Delete,
+                                                       CType(NativeConstants.FILE_FLAG_BACKUP_SEMANTICS, FileOptions) Or FileOptions.Asynchronous)
+
+                Dim buffer(0 To CInt(stream.Length - 1)) As Byte
+
+                If Await stream.ReadAsync(buffer, cancellationToken) <> stream.Length Then
+
+                    Throw New IOException($"Incomplete read from '{path}'")
+
+                End If
+
+                Return buffer
+
+            End Using
+
+        End Function
+#End If
 
         <StructLayout(LayoutKind.Sequential, CharSet:=CharSet.Unicode)>
         Public Structure SP_DEVINFO_DATA
@@ -1612,7 +1669,7 @@ Namespace IO
             Public Const STATUS_OBJECT_NAME_NOT_FOUND As Integer = &HC0000034
             Public Const STATUS_BAD_COMPRESSION_BUFFER As Integer = &HC0000242
 
-            Public Const FILE_BEGIN As Integer = 1
+            Public Const FILE_BEGIN As Integer = 0
             Public Const FILE_CURRENT As Integer = 1
             Public Const FILE_END As Integer = 2
 

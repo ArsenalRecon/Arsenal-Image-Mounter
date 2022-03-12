@@ -13,17 +13,18 @@ Graphical applications
 ArsenalImageMounter.exe has been moved to ArsenalRecon.com web site.
 https://arsenalrecon.com/weapons/image-mounter/
 
-One-piece (with the exception of libewf.dll) powerful tool for mounting
-disk image files as virtual drives. Supports raw disk images and various
-virtual machine image formats through integrated DiscUtils library. Also
-supports certain forensics image formats if libewf.dll is also installed.
-Automatically installs necessary driver components if not already installed.
+One-piece (with the exception of some third-party libraries for supporting
+forensics image file formats) powerful tool for mounting disk image files as
+virtual drives. Supports raw disk images and various virtual machine image
+formats through integrated DiscUtils library. Also supports certain forensics
+image formats if libewf.dll is also installed. Automatically installs
+necessary driver components if not already installed.
 
-ArsenalImageMounter.exe requires .NET Framework 4.x, which is included by
-default in Windows 8 or later. Can be installed separately on Windows XP,
-Vista or 7.
+ArsenalImageMounter.exe requires .NET Framework 4.8, which is included by
+default in latest versions of Windows 10, 11 and Server 2022 and can be
+installed separately on Windows 7, Server 2008 R2 and later.
 
-Tested on Windows 7, 8.1 and 10, but should also work on Windows XP or Vista.
+Tested on Windows 10, but should also work on Windows 7, 8 and 8.1.
 
 
 -------------------------
@@ -38,9 +39,9 @@ Does not include driver setup files. Driver could be set up separately using
 either command line tool aim_ll.exe or graphical ArsenalImageMounter.exe, or
 the separate packages in the DriverSetup directory.
 
-aim_cli.exe requires .NET Framework 4.x, which is included by
-default in Windows 8 or later. Can be installed separately on Windows XP,
-Vista or 7.
+aim_cli.exe requires .NET Framework 4.5, which is included by
+default in Windows 8 or later. Can be installed separately on Windows Vista
+and 7.
 
 Tested on Windows 7, 8.1 and 10, but should also work on Windows XP or Vista.
 
@@ -56,6 +57,17 @@ None of the files in this zip archive require any .NET Framework components.
 
 Tested on Windows 7, 8.1 and 10, but should also work on any Windows version
 from Windows 2000 and up.
+
+
+------------------------------------
+Command line applications\DotNetCore
+------------------------------------
+
+.NET Core 3.1 version of aim_cli. Requires .NET Core 3.1, .NET 5 or .NET 6.
+Same features as with the .NET Framework 4.5 version above, but typically
+with better performance. When running on other platforms than Windows,
+available features are limited to what does not require kernel level drivers.
+For example image file format conversion is available in this scenario.
 
 
 -----------
@@ -105,9 +117,12 @@ http://ltr-data.se/library/ArsenalImageMounter
 Requires .NET Framework 4.x or later, which is included by default in Windows
 8 or later. Can be installed separately on Windows XP, Vista or 7.
 
+It is also possible to build API components for .NET Core 3.1 or later which
+also works with .NET 5 and 6.
+
 
 aimapi.zip:
-DLL files that can be used form other applications to use most features of
+DLL files that can be used from other applications to use most features of
 virtual SCSI miniport driver. Files in this archive do not require any .NET
 Framework components and should work on any Windows version from 2000 and up.
 
@@ -119,7 +134,7 @@ to use the API.
 Managed Source
 --------------
 
-Visual Studio 2010-2015 solution with source projects for .NET API libraries,
+Visual Studio 2017-2022 solution with source projects for .NET API libraries,
 command line tools and some proof-on-concept graphical applications.
 
 
@@ -127,7 +142,7 @@ command line tools and some proof-on-concept graphical applications.
 Unmanaged Source
 ----------------
 
-Visual Studio 2013-2015 solution with source projects for native (non-.NET)
+Visual Studio 2017-2019 solution with source projects for native (non-.NET)
 driver, API library and command line tool. Driver project requires WDK 8.1 or
 later.
 

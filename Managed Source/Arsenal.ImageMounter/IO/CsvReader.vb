@@ -53,7 +53,7 @@ Namespace IO
 
         End Function
 
-        Public Shared Function Create(Of T As {Class, New})(FilePath As String, delimiters As Char()) As CsvReader(Of T)
+        Public Shared Function Create(Of T As {Class, New})(FilePath As String, ParamArray delimiters As Char()) As CsvReader(Of T)
             Return New CsvReader(Of T)(FilePath, delimiters)
 
         End Function
