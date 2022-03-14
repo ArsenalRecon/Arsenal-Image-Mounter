@@ -97,14 +97,18 @@ public class PinnedBuffer : SafeBuffer
     /// <param name="instance">Existing object to pin in memory.</param>
     /// <param name="totalObjectSize">Total number of bytes used by obj</param>
     /// <param name="byteOffset">Byte offset into memory where this instance should start</param>
-    public PinnedBuffer(object instance, int totalObjectSize, int byteOffset)
+    /// <param name="byteLength">Number of bytes from byteOffset to map into this instance</param>
+    public PinnedBuffer(object instance, int totalObjectSize, int byteOffset, int byteLength)
         : this()
     {
-        if (byteOffset > totalObjectSize)
+        checked
         {
-            throw new ArgumentOutOfRangeException(nameof(byteOffset), "Argument byteOffset must be within total object size");
+            if (byteOffset < 0 || byteLength < 0 || byteOffset + byteLength > totalObjectSize)
+            {
+                throw new IndexOutOfRangeException($"{byteOffset} and {byteLength} must resolve to positions within the array");
+            }
         }
-        Initialize(checked((ulong)(totalObjectSize - byteOffset)));
+        Initialize(checked((ulong)byteLength));
         GCHandle = GCHandle.Alloc(instance, GCHandleType.Pinned);
         SetHandle(GCHandle.AddrOfPinnedObject() + byteOffset);
     }
@@ -261,20 +265,12 @@ public class PinnedBuffer<T> : PinnedBuffer where T : struct
     /// <param name="arrayOffset">Offset in the existing object where this PinnedBuffer should begin.</param>
     /// <param name="arrayItems">Number of items in the array to cover with this PinnedBuffer instance.</param>
     public PinnedBuffer(T[] instance, int arrayOffset, int arrayItems)
-        : base(instance, MakeTotalByteSize(instance, arrayOffset, arrayItems), Buffer.ByteLength(instance) / instance.Length * arrayOffset)
+        : base(
+            instance,
+            totalObjectSize: Buffer.ByteLength(instance),
+            byteOffset: Buffer.ByteLength(instance) / instance.Length * arrayOffset,
+            byteLength: Buffer.ByteLength(instance) / instance.Length * arrayItems)
     {
-    }
-
-    private static int MakeTotalByteSize(T[] obj, int arrayOffset, int arrayItems)
-    {
-        checked
-        {
-            if (arrayOffset < 0 || arrayItems < 0 || arrayOffset + arrayItems > obj.Length)
-            {
-                throw new IndexOutOfRangeException($"{arrayOffset} and {arrayItems} must resolve to positions within the array");
-            }
-        }
-        return Buffer.ByteLength(obj);
     }
 }
 
