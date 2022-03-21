@@ -86,6 +86,7 @@ public class PinnedBuffer : SafeBuffer
     public PinnedBuffer(PinnedBuffer existing, int offset)
         : base(ownsHandle: true)
     {
+        Initialize(checked(existing.ByteLength - (ulong)offset));
         GCHandle = GCHandle.Alloc(existing.GCHandle.Target, GCHandleType.Pinned);
         SetHandle(GCHandle.AddrOfPinnedObject() + existing.Offset + offset);
     }

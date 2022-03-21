@@ -1850,7 +1850,7 @@ Currently, the following application has files open on this volume:
             Dim handle = UnsafeNativeMethods.CreateFile(FileName, DesiredAccess, ShareMode, SecurityAttributes, CreationDisposition, FlagsAndAttributes, TemplateFile)
 
             If handle.IsInvalid Then
-                Throw New IOException($"Cannot open {FileName}", New Win32Exception)
+                Throw New IOException($"Cannot open '{FileName}'", New Win32Exception)
             End If
 
             Return handle
