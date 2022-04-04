@@ -5,7 +5,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <Title>Arsenal Image Mounter Control Application</Title>
-	  <TargetFrameworks>net40;netcoreapp3.1</TargetFrameworks>
+	  <TargetFrameworks>net45;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <Description>Arsenal Image Mounter Low Level API Library</Description>
-	<TargetFrameworks>net40;net45;net48;netcoreapp3.1</TargetFrameworks>
+	<TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

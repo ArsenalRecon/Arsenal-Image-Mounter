@@ -5,7 +5,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <Title>Arsenal Image Mounter Debug-Analyze Tool</Title>
-	<TargetFrameworks>net40;netcoreapp3.1</TargetFrameworks>
+	<TargetFrameworks>net45;netcoreapp3.1</TargetFrameworks>
     <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
 

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net40;net45;net48;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
     <Description>Arsenal Image Mounter Interop Library</Description>
     <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
