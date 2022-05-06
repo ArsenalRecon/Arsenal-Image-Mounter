@@ -1,0 +1,302 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Arsenal.ImageMounter.Devio.Interop</name>
+    </assembly>
+    <members>
+        <member name="T:Arsenal.ImageMounter.Devio.Client.DevioDirectStream">
+            <summary>
+            Base class for classes that implement Stream for client side of Devio protocol.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Client.DevioDirectStream.#ctor(Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider,System.Boolean)">
+            <summary>
+            Initiates a new instance with supplied provider object.
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.Devio.Client.DevioShmStream">
+            <summary>
+            Derives DevioStream and implements client side of Devio shared memory communication
+            proxy.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Client.DevioShmStream.Open(System.String,System.Boolean)">
+            <summary>
+            Creates a new instance by opening an existing Devio shared memory object and starts
+            communication with a Devio service using this shared memory object.
+            </summary>
+            <param name="name">Name of shared memory object to use for communication.</param>
+            <param name="read_only">Specifies if communication should be read-only.</param>
+            <returns>Returns new instance of DevioShmStream.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Client.DevioShmStream.#ctor(System.String,System.Boolean)">
+            <summary>
+            Creates a new instance by opening an existing Devio shared memory object and starts
+            communication with a Devio service using this shared memory object.
+            </summary>
+            <param name="name">Name of shared memory object to use for communication.</param>
+            <param name="read_only">Specifies if communication should be read-only.</param>
+        </member>
+        <member name="T:Arsenal.ImageMounter.Devio.Client.DevioStream">
+            <summary>
+            Base class for classes that implement Stream for client side of Devio protocol.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.ObjectName">
+            <summary>
+            Object name used by proxy implementation.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.Size">
+            <summary>
+            Virtual disk size of server object.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.Alignment">
+            <summary>
+            Alignment requirement for I/O at server.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.Flags">
+            <summary>
+            Proxy flags specified for proxy connection.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Client.DevioStream.#ctor(System.String,System.Boolean)">
+            <summary>
+            Initiates a new instance with supplied object name and read-only flag.
+            </summary>
+            <param name="name">Object name used by proxy implementation.</param>
+            <param name="read_only">Flag set to true to indicate read-only proxy
+            operation.</param>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.CanRead">
+            <summary>
+            Indicates whether Stream is readable. This implementation returns a
+            constant value of True, because Devio proxy implementations are
+            always readable.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.CanSeek">
+            <summary>
+            Indicates whether Stream is seekable. This implementation returns a
+            constant value of True.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.CanWrite">
+            <summary>
+            Indicates whether Stream is writable. This implementation returns True
+            unless ProxyFlags property contains IMDPROXY_FLAGS.IMDPROXY_FLAG_RO value.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Client.DevioStream.Flush">
+            <summary>
+            This implementation does not do anything.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Client.DevioStream.Dispose(System.Boolean)">
+            <summary>
+            When overridden in a derived class, closes communication and causes server side to exit.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.Length">
+            <summary>
+            Returns current virtual disk size.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.Position">
+            <summary>
+            Current byte position in Stream.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Client.DevioStream.Seek(System.Int64,System.IO.SeekOrigin)">
+            <summary>
+            Moves current position in Stream.
+            </summary>
+            <param name="offset">Byte offset to move. Can be negative to move backwards.</param>
+            <param name="origin">Origin from where number of bytes to move counts.</param>
+            <returns>Returns new absolute position in Stream.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Client.DevioStream.SetLength(System.Int64)">
+            <summary>
+            This method is not supported in this implementation and throws a NotImplementedException.
+            A derived class can override this method to implement a resize feature.
+            </summary>
+            <param name="value">New total size of Stream</param>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.RequiredAlignment">
+            <summary>
+            Alignment requirement for I/O at server.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Client.DevioStream.ProxyFlags">
+            <summary>
+            Proxy flags specified for proxy connection.
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS">
+            <summary>
+            Constants used in connection with Devio proxy communication.
+            </summary>
+        </member>
+        <member name="F:Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS.IMDPROXY_HEADER_SIZE">
+            <summary>
+            Header size when communicating using a shared memory object.
+            </summary>
+        </member>
+        <member name="F:Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS.REQUIRED_ALIGNMENT">
+            <summary>
+            Default required alignment for I/O operations.
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider">
+            <summary>
+            <para>Interface with functionality required for a class to represent an object that can
+            service Devio I/O requests at server side. Classes implementing this
+            interface provides functions for determining properties such as virtual disk size
+            and whether virtual disk is writable, as well as functions for reading from and
+            optionally writing to virtual disk.</para>
+            
+            <para>To make implementation easier, two base classes implement this interface. That is
+            DevioProviderManagedBase and DevioProviderUnmanagedBase. The first one makes it
+            possible to implement this interface by just overriding a few functions for reading
+            data to and writing data from managed byte arrays. The latter one makes it possible
+            to implement this interface by just overriding a few functions for reading data to
+            and writing data from unmanaged memory provided a pointer to unmanaged block of
+            memory.</para>
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.Length">
+            <summary>
+            Size of virtual disk.
+            </summary>
+            <value>Size of virtual disk.</value>
+            <returns>Size of virtual disk.</returns>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.SectorSize">
+            <summary>
+            Sector size of virtual disk.
+            </summary>
+            <value>Sector size of virtual disk.</value>
+            <returns>Sector size of virtual disk.</returns>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.CanWrite">
+            <summary>
+            Determines whether virtual disk is writable or read-only.
+            </summary>
+            <value>True if virtual disk can be written to through this instance, or False
+            if it is opened for reading only.</value>
+            <returns>True if virtual disk can be written to through this instance, or False
+            if it is opened for reading only.</returns>
+        </member>
+        <member name="P:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.SupportsShared">
+            <summary>
+            Indicates whether provider supports shared image operations with registrations
+            and reservations.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.Read(System.IntPtr,System.Int32,System.Int32,System.Int64)">
+            <summary>
+            Reads bytes from virtual disk to a memory area specified by a pointer to unmanaged memory.
+            </summary>
+            <param name="buffer">Pointer to unmanaged memory where read bytes are stored.</param>
+            <param name="bufferoffset">Offset in unmanaged memory buffer where bytes are stored.</param>
+            <param name="count">Number of bytes to read from virtual disk device.</param>
+            <param name="fileoffset">Offset at virtual disk device where read starts.</param>
+            <returns>Returns number of bytes read from device that were stored at specified memory position.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.Write(System.IntPtr,System.Int32,System.Int32,System.Int64)">
+            <summary>
+            Writes out bytes to virtual disk device from a memory area specified by a pointer to unmanaged memory.
+            </summary>
+            <param name="buffer">Pointer to unmanaged memory area containing bytes to write out to device.</param>
+            <param name="bufferoffset">Offset in unmanaged memory buffer where bytes to write are located.</param>
+            <param name="count">Number of bytes to write to virtual disk device.</param>
+            <param name="fileoffset">Offset at virtual disk device where write starts.</param>
+            <returns>Returns number of bytes written to device.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.Read(System.Byte[],System.Int32,System.Int32,System.Int64)">
+            <summary>
+            Reads bytes from virtual disk to a byte array.
+            </summary>
+            <param name="buffer">Byte array with enough size where read bytes are stored.</param>
+            <param name="bufferoffset">Offset in array where bytes are stored.</param>
+            <param name="count">Number of bytes to read from virtual disk device.</param>
+            <param name="fileoffset">Offset at virtual disk device where read starts.</param>
+            <returns>Returns number of bytes read from device that were stored in byte array.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.Write(System.Byte[],System.Int32,System.Int32,System.Int64)">
+            <summary>
+            Writes out bytes from byte array to virtual disk device.
+            </summary>
+            <param name="buffer">Byte array containing bytes to write out to device.</param>
+            <param name="bufferoffset">Offset in array where bytes to write start.</param>
+            <param name="count">Number of bytes to write to virtual disk device.</param>
+            <param name="fileoffset">Offset at virtual disk device where write starts.</param>
+            <returns>Returns number of bytes written to device.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider.SharedKeys(Arsenal.ImageMounter.Devio.IMDPROXY_SHARED_REQ,Arsenal.ImageMounter.Devio.IMDPROXY_SHARED_RESP@,System.UInt64[]@)">
+            <summary>
+            Manage registrations and reservation keys for shared images.
+            </summary>
+            <param name="Request">Request data</param>
+            <param name="Response">Response data</param>
+            <param name="Keys">List of currently registered keys</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.SetBit(System.Byte[],System.Int32)">
+            <summary>
+            Sets a bit to 1 in a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to set to 1</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.ClearBit(System.Byte[],System.Int32)">
+            <summary>
+            Sets a bit to 0 in a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to set to 0</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.GetBit(System.Byte[],System.Int32)">
+            <summary>
+            Gets a bit from a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to get</param>
+            <returns>True if value of specified bit is 1, false if 0.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.IsBufferZero(System.Byte[])">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty or buffer is null, true is returned, false otherwise.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.IsBufferZero(System.Span{System.Byte})">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.IsBufferZero(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.SequenceEqual(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Compares two byte spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
+            If lengths are equal and byte sequences are equal, true is returned.</returns>
+        </member>
+    </members>
+</doc>

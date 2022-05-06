@@ -2237,7 +2237,7 @@ Currently, the following application has files open on this volume:
 #If NETFRAMEWORK AndAlso Not NET462_OR_GREATER Then
             Return New FileStream(OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped:=True), GetFileStreamLegalAccessValue(DesiredAccess), 4096, isAsync:=True)
 #Else
-            Return New FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode, FileOptions.Asynchronous)
+            Return New FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode, bufferSize:=1, useAsync:=True)
 #End If
 
         End Function

@@ -500,7 +500,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         If Not String.IsNullOrWhiteSpace(debug_compare) Then
 
-            Dim DebugCompareStream = New FileStream(debug_compare, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete, FileOptions.Asynchronous)
+            Dim DebugCompareStream = New FileStream(debug_compare, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete, bufferSize:=1, useAsync:=True)
 
             provider = New DebugProvider(provider, DebugCompareStream)
 

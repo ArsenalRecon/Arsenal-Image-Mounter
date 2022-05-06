@@ -386,7 +386,7 @@ Namespace Server.Interaction
         Private Shared Function GetProviderRaw(Imagefile As String, DiskAccess As FileAccess) As DevioProviderFromStream
 
 #If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
-            Dim stream As New FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete, FileOptions.Asynchronous)
+            Dim stream As New FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete, bufferSize:=1, useAsync:=True)
 #Else
             Dim stream = NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete, Overlapped:=True)
 #End If
@@ -602,7 +602,7 @@ Namespace Server.Interaction
             Dim Disk = GetDiscUtilsVirtualDisk(Imagefile, FileAccess, ProxyType.DiscUtils)
 
             If Disk Is Nothing Then
-                Dim fs As New FileStream(Imagefile, FileMode.Open, FileAccess, FileShare.Read Or FileShare.Delete, FileOptions.Asynchronous)
+                Dim fs As New FileStream(Imagefile, FileMode.Open, FileAccess, FileShare.Read Or FileShare.Delete, bufferSize:=1, useAsync:=True)
                 Try
                     Disk = New Dmg.Disk(fs, Ownership.Dispose)
                 Catch

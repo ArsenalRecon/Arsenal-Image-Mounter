@@ -1,0 +1,432 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Arsenal.ImageMounter.Interop</name>
+    </assembly>
+    <members>
+        <member name="T:System.Runtime.CompilerServices.IsExternalInit">
+            <summary>
+            Reserved to be used by the compiler for tracking metadata. This class should not be used by developers in source code.
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.IMAGE_FILE_HEADER">
+            <summary>
+            PE image header
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.IMAGE_OPTIONAL_HEADER">
+            <summary>
+            PE optional header
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.IMAGE_NT_HEADERS">
+            <summary>
+            Base of PE headers
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.VS_VERSIONINFO">
+            <summary>
+            Version resource header fields
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.FixedFileVerInfo">
+            <summary>
+            Fixed numeric fields in file version resource
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.FixedFileVerInfo.FileVersion">
+            <summary>
+            File version from fixed numeric fields
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.FixedFileVerInfo.ProductVersion">
+            <summary>
+            Product version from fixed numeric fields
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetImageNtHeaders(System.Byte[])">
+            <summary>
+            Gets IMAGE_NT_HEADERS structure from raw PE image
+            </summary>
+            <param name="rawFile">Raw exe or dll data</param>
+            <returns>IMAGE_NT_HEADERS structure</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetRawFileVersionResource(System.Void*,System.Int32@)">
+            <summary>
+            Locates version resource in a PE image
+            </summary>
+            <param name="FileData">Pointer to raw or mapped exe or dll</param>
+            <param name="ResourceSize">Returns size of found resource</param>
+            <returns>Pointer to located version resource or null if none found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetFixedVersionInfo(Arsenal.ImageMounter.IO.VS_VERSIONINFO*)">
+            <summary>
+            Gets fixed numeric fields from PE version resource
+            </summary>
+            <param name="versionResource">Pointer to version resource</param>
+            <returns>FixedFileVerInfo structure with fixed numeric version fields</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueInt(Arsenal.ImageMounter.IO.VS_VERSIONINFO*,System.String)">
+            <summary>
+            Gets numeric block from PE version resource
+            </summary>
+            <param name="versionResource">Pointer to version resource</param>
+            <param name="SubBlock">Name of sub block</param>
+            <returns>Located uint value, or null if not found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueString(Arsenal.ImageMounter.IO.VS_VERSIONINFO*,System.String)">
+            <summary>
+            Gets string block from PE version resource
+            </summary>
+            <param name="versionResource">Pointer to version resource</param>
+            <param name="SubBlock">Name of sub block</param>
+            <returns>Pointer to located string, or null if not found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueWithTranslation(Arsenal.ImageMounter.IO.VS_VERSIONINFO*,System.String,System.UInt32)">
+            <summary>
+            Gets string block from PE version resource using default or specific language translation for the version resource
+            </summary>
+            <param name="versionResource">Pointer to version resource</param>
+            <param name="strRecordName">Name of string record</param>
+            <param name="dwTranslationCode">Translation language code or MaxValue to use default for version resource</param>
+            <returns>Pointer to located string, or null if not found</returns>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.NativeFileVersion">
+            <summary>
+            File version resource information
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.NativeFileVersion.Fixed">
+            <summary>
+            Fixed numeric fields
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.NativeFileVersion.Fields">
+            <summary>
+            Common string fields, if present
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.NativeFileVersion.FileVersion">
+            <summary>
+            File version from fixed numeric fields
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.NativeFileVersion.ProductVersion">
+            <summary>
+            Product version from fixed numeric fields
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.NativeFileVersion.FileDate">
+            <summary>
+            File date from fixed numeric fields, if present
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.GetNativeFileVersion(System.Byte[])">
+            <summary>
+            Parses raw file data into a NativeFileVersion structure
+            </summary>
+            <param name="rawFile">Raw exe or dll file data with a version resource</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.#ctor(System.Byte*,System.Int32)">
+            <summary>
+            Parses raw or mapped file data into a NativeFileVersion structure
+            </summary>
+            <param name="fileData">Raw or mapped exe or dll file data with a version resource</param>
+            <param name="size">Size of raw file data</param>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.UNICODE_STRING">
+            <summary>
+            Structure for counted Unicode strings used in NT API calls
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.UNICODE_STRING.Length">
+            <summary>
+            Length in bytes of Unicode string pointed to by Buffer
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.UNICODE_STRING.MaximumLength">
+            <summary>
+            Maximum length in bytes of string memory pointed to by Buffer
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.UNICODE_STRING.Buffer">
+            <summary>
+            Unicode character buffer in unmanaged memory
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.UNICODE_STRING.#ctor(System.IntPtr,System.UInt16)">
+            <summary>
+            Initialize with pointer to existing unmanaged string
+            </summary>
+            <param name="str">Pointer to existing unicode string in managed memory</param>
+            <param name="byte_count">Length in bytes of string pointed to by <paramref name="str"/></param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.UNICODE_STRING.ToString">
+            <summary>
+            Creates a managed string object from UNICODE_STRING instance.
+            </summary>
+            <returns>Managed string</returns>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.PinnedBuffer">
+            <summary>
+            Pins a value object for unmanaged use.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PinnedBuffer.GCHandle">
+            <summary>
+            Contains GCHandle that holds managed data pinned
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PinnedBuffer.Offset">
+            <summary>
+            Offset into managed buffer where unmanaged pointer starts
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PinnedBuffer.Target">
+            <summary>
+            Target managed object pinned by this instance
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.#ctor">
+            <summary>
+            Initializes a new empty object
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.Create(System.String)">
+            <summary>
+            Initializes a new instance with an existing type T object and pins memory
+            position.
+            </summary>
+            <param name="instance">Existing object to marshal to unmanaged memory.</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.Create``1(``0[])">
+            <summary>
+            Initializes a new instance with an existing type T array and pins memory
+            position.
+            </summary>
+            <param name="instance">Existing object to marshal to unmanaged memory.</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.Serialize``1(``0@)">
+            <summary>
+            Serializes a value structure as into a new byte array
+            </summary>
+            <typeparam name="T">Type of managed strucute to serialize</typeparam>
+            <param name="instance">Instance of managed structure to serialize</param>
+            <returns></returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.Deserialize``1(System.Byte[])">
+            <summary>
+            Deserializes a managed value structure from a byte array
+            </summary>
+            <typeparam name="T">Type of managed structure to deserialize</typeparam>
+            <param name="buffer">Byte array containing data to form the managed structure</param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentException"><paramref name="buffer"/> is null or too small</exception>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.#ctor(Arsenal.ImageMounter.IO.PinnedBuffer,System.Int32)">
+            <summary>
+            Creates a new pinning for an offset into the existing pinned buffer.
+            </summary>
+            <param name="existing">Existing pinned object</param>
+            <param name="offset">Offset into existing pinned objects</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.#ctor(System.Object,System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance with an existing object and pins memory
+            position.
+            </summary>
+            <param name="instance">Existing object to pin in memory.</param>
+            <param name="totalObjectSize">Total number of bytes used by obj</param>
+            <param name="byteOffset">Byte offset into memory where this instance should start</param>
+            <param name="byteLength">Number of bytes from byteOffset to map into this instance</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.#ctor(System.Object,System.Int32)">
+            <summary>
+            Initializes a new instance with an existing object and pins memory
+            position.
+            </summary>
+            <param name="instance">Existing object to pin in memory.</param>
+            <param name="size">Number of bytes in unmanaged memory</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.ReleaseHandle">
+            <summary>
+            Implementation of <see cref="M:System.Runtime.InteropServices.SafeHandle.ReleaseHandle"/> that releases
+            the pinning GCHandle.
+            </summary>
+            <returns>Always returns true</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.op_Addition(Arsenal.ImageMounter.IO.PinnedBuffer,System.Int32)">
+            <summary>
+            Creates a new pinned object for an offset into existing pinned object.
+            </summary>
+            <param name="existing">Existing pinned object</param>
+            <param name="offset">Offset into existing pinned objects</param>
+            <returns>New pinned object</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.op_Subtraction(Arsenal.ImageMounter.IO.PinnedBuffer,System.Int32)">
+            <summary>
+            Creates a new pinned object for an offset into existing pinned object.
+            </summary>
+            <param name="existing">Existing pinned object</param>
+            <param name="offset">Offset into existing pinned objects</param>
+            <returns>New pinned object</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.ToString">
+            <summary>
+            Calls ToString implementation of pinned object, or returns the string
+            '{Unallocated}' if object is not initialized.
+            </summary>
+            <returns>Calls ToString implementation of pinned object, or returns the string
+            '{Unallocated}' if object is not initialized.</returns>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.PinnedBuffer`1">
+            <summary>
+            Pins an array of values for unmanaged use.
+            </summary>
+            <typeparam name="T">Type of elements in array.</typeparam>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PinnedBuffer`1.Target">
+            <summary>
+            Returns associated object of this instance.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsMemory">
+            <summary>
+            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsMemory(System.Int32)">
+            <summary>
+            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsMemory(System.Int32,System.Int32)">
+            <summary>
+            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsSpan">
+            <summary>
+            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsSpan(System.Int32)">
+            <summary>
+            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsSpan(System.Int32,System.Int32)">
+            <summary>
+            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance with an new type T array and pins memory
+            position.
+            </summary>
+            <param name="count">Number of items in new array.</param>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PinnedBuffer`1.TypeSize">
+            <summary>
+            Returns unmanaged byte size of type <typeparamref name="T"/>
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.#ctor(`0[])">
+            <summary>
+            Initializes a new instance with an existing type T array and pins memory
+            position.
+            </summary>
+            <param name="instance">Existing object to marshal to unmanaged memory.</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.#ctor(`0[],System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance with an existing type T array and pins memory
+            position.
+            </summary>
+            <param name="instance">Existing object to marshal to unmanaged memory.</param>
+            <param name="arrayOffset">Offset in the existing object where this PinnedBuffer should begin.</param>
+            <param name="arrayItems">Number of items in the array to cover with this PinnedBuffer instance.</param>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.PinnedString">
+            <summary>
+            Pins a managed string for unmanaged use.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PinnedString.Target">
+            <summary>
+            Returns managed object pinned by this instance.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PinnedString.UnicodeString">
+            <summary>
+            Creates a UNICODE_STRING structure pointing to the string buffer
+            pinned by this instance. Useful for calls into ntdll.dll, LSA and
+            similar native operating system components.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedString.#ctor(System.String)">
+            <summary>
+            Initializes a new instance with an existing managed string and pins memory
+            position.
+            </summary>
+            <param name="str">Managed string to pin in unmanaged memory.</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.PinnedString.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance with a new managed string and pins memory
+            position.
+            </summary>
+            <param name="count">Size in characters of managed string to pin in unmanaged memory.</param>
+        </member>
+        <member name="T:Arsenal.ImageMounter.SystemNeeded">
+            <summary>
+            Makes sure that screen stays on or computer does not go into sleep
+            during some work
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.SystemNeeded.ExecutionState">
+            <summary>
+            Flags indicating what system resource and interface are required
+            </summary>
+        </member>
+        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.SystemRequired">
+            <summary>
+            </summary>
+        </member>
+        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.DisplayRequired">
+            <summary>
+            </summary>
+        </member>
+        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.UserPresent">
+            <summary>
+            </summary>
+        </member>
+        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.AwaymodeRequired">
+            <summary>
+            </summary>
+        </member>
+        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.Continuous">
+            <summary>
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.SystemNeeded.#ctor">
+            <summary>
+            Initializes a block of code that is done with SystemRequired and Continous requirements
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.SystemNeeded.#ctor(Arsenal.ImageMounter.SystemNeeded.ExecutionState)">
+            <summary>
+            Initializes a block of code that is done with certain resource and interface requirements
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.SystemNeeded.Dispose(System.Boolean)">
+            <summary>
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.SystemNeeded.Dispose">
+            <summary>
+            </summary>
+        </member>
+    </members>
+</doc>
