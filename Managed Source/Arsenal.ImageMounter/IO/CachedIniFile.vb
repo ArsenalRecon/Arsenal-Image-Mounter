@@ -316,7 +316,7 @@ Namespace IO
                             End If
 
                             If Line.StartsWith("[", StringComparison.Ordinal) AndAlso Line.EndsWith("]", StringComparison.Ordinal) Then
-                                Dim SectionKey = Line.Substring(1, Line.Length - 2).Trim()
+                                Dim SectionKey = Line.AsSpan(1, Line.Length - 2).Trim().ToString()
                                 CurrentSection = Item(SectionKey)
                                 Continue Do
                             End If
@@ -326,8 +326,8 @@ Namespace IO
                                 Continue Do
                             End If
 
-                            Dim Key = Line.Remove(EqualSignPos).Trim()
-                            Dim Value = Line.Substring(EqualSignPos + 1).Trim()
+                            Dim Key = Line.AsSpan(0, EqualSignPos).Trim().ToString()
+                            Dim Value = Line.AsSpan(EqualSignPos + 1).Trim().ToString()
 
                             CurrentSection(Key) = Value
 

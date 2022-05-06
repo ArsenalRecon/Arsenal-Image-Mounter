@@ -215,12 +215,12 @@ Namespace IO
 
                 If i < 0 Then
 
-                    fields.Add(line.Substring(startIdx).Trim(_TextQuotes))
+                    fields.Add(line.AsSpan(startIdx).Trim(_TextQuotes).ToString())
                     Exit While
 
                 End If
 
-                fields.Add(line.Substring(startIdx, i - startIdx).Trim(_TextQuotes))
+                fields.Add(line.AsSpan(startIdx, i - startIdx).Trim(_TextQuotes).ToString())
                 startIdx = i + 1
 
             End While

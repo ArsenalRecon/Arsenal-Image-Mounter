@@ -102,7 +102,11 @@ Namespace Extensions
 
             For i = 0 To bytes.Length - 1
 
+#If NETCOREAPP OrElse NETSTANDARD2_1_OR_GREATER Then
+                bytes(i) = Byte.Parse(str.AsSpan(i << 1, 2), NumberStyles.HexNumber)
+#Else
                 bytes(i) = Byte.Parse(str.Substring(i << 1, 2), NumberStyles.HexNumber)
+#End If
 
             Next
 
@@ -134,7 +138,11 @@ Namespace Extensions
 
             For i = 0 To count - 1
 
+#If NETCOREAPP OrElse NETSTANDARD2_1_OR_GREATER Then
+                bytes(i) = Byte.Parse(str.AsSpan((i + offset) << 1, 2), NumberStyles.HexNumber)
+#Else
                 bytes(i) = Byte.Parse(str.Substring((i + offset) << 1, 2), NumberStyles.HexNumber)
+#End If
 
             Next
 

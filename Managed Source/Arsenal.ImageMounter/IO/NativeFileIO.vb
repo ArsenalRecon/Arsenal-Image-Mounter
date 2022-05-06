@@ -17,7 +17,7 @@ Imports Microsoft.Win32.SafeHandles
 ''''' Routines for accessing some useful Win32 API functions to access features not
 ''''' directly accessible through .NET Framework.
 ''''' 
-''''' Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -3027,6 +3027,16 @@ Currently, the following application has files open on this volume:
 
         End Function
 
+        Public Shared Function GetPartitionInformation(DevicePath As String) As PARTITION_INFORMATION?
+
+            Using devicehandle = OpenFileHandle(DevicePath, FileAccess.Read, FileShare.ReadWrite, FileMode.Open, 0)
+
+                Return GetPartitionInformation(devicehandle)
+
+            End Using
+
+        End Function
+
         Public Shared Function GetPartitionInformation(disk As SafeFileHandle) As PARTITION_INFORMATION?
 
             Dim partition_info As PARTITION_INFORMATION = Nothing
@@ -3038,6 +3048,16 @@ Currently, the following application has files open on this volume:
             Else
                 Return Nothing
             End If
+
+        End Function
+
+        Public Shared Function GetPartitionInformationEx(DevicePath As String) As PARTITION_INFORMATION_EX?
+
+            Using devicehandle = OpenFileHandle(DevicePath, FileAccess.Read, FileShare.ReadWrite, FileMode.Open, 0)
+
+                Return GetPartitionInformationEx(devicehandle)
+
+            End Using
 
         End Function
 
@@ -3123,6 +3143,16 @@ Currently, the following application has files open on this volume:
             End Function
 
         End Class
+
+        Public Shared Function GetDriveLayoutEx(DevicePath As String) As DriveLayoutInformation
+
+            Using devicehandle = OpenFileHandle(DevicePath, FileAccess.Read, FileShare.ReadWrite, FileMode.Open, 0)
+
+                Return GetDriveLayoutEx(devicehandle)
+
+            End Using
+
+        End Function
 
         Public Shared Function GetDriveLayoutEx(disk As SafeFileHandle) As DriveLayoutInformation
 
@@ -3573,7 +3603,11 @@ Currently, the following application has files open on this volume:
             If DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase) OrElse
                 DevicePath.StartsWith("\\.\PhysicalDrive", StringComparison.OrdinalIgnoreCase) Then          ' \\?\PhysicalDrive paths to partitioned disks
 
+#If NETCOREAPP OrElse NETSTANDARD2_1_OR_GREATER Then
+                Return EnumerateDiskVolumes(UInteger.Parse(DevicePath.AsSpan("\\?\PhysicalDrive".Length)))
+#Else
                 Return EnumerateDiskVolumes(UInteger.Parse(DevicePath.Substring("\\?\PhysicalDrive".Length)))
+#End If
 
             ElseIf DevicePath.StartsWith("\\?\", StringComparison.Ordinal) OrElse
                 DevicePath.StartsWith("\\.\", StringComparison.Ordinal) Then
