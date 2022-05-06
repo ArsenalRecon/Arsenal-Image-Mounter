@@ -4,6 +4,11 @@
         <name>Arsenal.ImageMounter.Interop</name>
     </assembly>
     <members>
+        <member name="T:System.Runtime.CompilerServices.IsExternalInit">
+            <summary>
+            Reserved to be used by the compiler for tracking metadata. This class should not be used by developers in source code.
+            </summary>
+        </member>
         <member name="T:Arsenal.ImageMounter.IO.IMAGE_FILE_HEADER">
             <summary>
             PE image header
@@ -225,7 +230,7 @@
             <param name="existing">Existing pinned object</param>
             <param name="offset">Offset into existing pinned objects</param>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.#ctor(System.Object,System.Int32,System.Int32)">
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.#ctor(System.Object,System.Int32,System.Int32,System.Int32)">
             <summary>
             Initializes a new instance with an existing object and pins memory
             position.
@@ -233,6 +238,7 @@
             <param name="instance">Existing object to pin in memory.</param>
             <param name="totalObjectSize">Total number of bytes used by obj</param>
             <param name="byteOffset">Byte offset into memory where this instance should start</param>
+            <param name="byteLength">Number of bytes from byteOffset to map into this instance</param>
         </member>
         <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.#ctor(System.Object,System.Int32)">
             <summary>

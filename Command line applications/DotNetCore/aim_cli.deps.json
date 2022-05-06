@@ -38,24 +38,29 @@
           }
         }
       },
-      "System.Diagnostics.EventLog/5.0.0": {
+      "System.Diagnostics.EventLog/6.0.0": {
         "dependencies": {
-          "Microsoft.NETCore.Platforms": "5.0.0",
           "Microsoft.Win32.Registry": "5.0.0",
           "System.Security.Principal.Windows": "5.0.0"
         },
         "runtime": {
-          "lib/netstandard2.0/System.Diagnostics.EventLog.dll": {
-            "assemblyVersion": "5.0.0.0",
-            "fileVersion": "5.0.20.51904"
+          "lib/netcoreapp3.1/System.Diagnostics.EventLog.dll": {
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "6.0.21.52210"
           }
         },
         "runtimeTargets": {
-          "runtimes/win/lib/netcoreapp2.0/System.Diagnostics.EventLog.dll": {
+          "runtimes/win/lib/netcoreapp3.1/System.Diagnostics.EventLog.Messages.dll": {
             "rid": "win",
             "assetType": "runtime",
-            "assemblyVersion": "5.0.0.0",
-            "fileVersion": "5.0.20.51904"
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win/lib/netcoreapp3.1/System.Diagnostics.EventLog.dll": {
+            "rid": "win",
+            "assetType": "runtime",
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "6.0.21.52210"
           }
         }
       },
@@ -122,22 +127,22 @@
           }
         }
       },
-      "System.ServiceProcess.ServiceController/5.0.0": {
+      "System.ServiceProcess.ServiceController/6.0.0": {
         "dependencies": {
-          "System.Diagnostics.EventLog": "5.0.0"
+          "System.Diagnostics.EventLog": "6.0.0"
         },
         "runtime": {
-          "lib/netstandard2.0/System.ServiceProcess.ServiceController.dll": {
-            "assemblyVersion": "5.0.0.0",
-            "fileVersion": "5.0.20.51904"
+          "lib/netcoreapp3.1/System.ServiceProcess.ServiceController.dll": {
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "6.0.21.52210"
           }
         },
         "runtimeTargets": {
-          "runtimes/win/lib/netstandard2.0/System.ServiceProcess.ServiceController.dll": {
+          "runtimes/win/lib/netcoreapp3.1/System.ServiceProcess.ServiceController.dll": {
             "rid": "win",
             "assetType": "runtime",
-            "assemblyVersion": "5.0.0.0",
-            "fileVersion": "5.0.20.51904"
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "6.0.21.52210"
           }
         }
       },
@@ -146,7 +151,7 @@
           "Arsenal.ImageMounter.Interop": "1.0.0",
           "Microsoft.Win32.Registry": "5.0.0",
           "System.IO.FileSystem.AccessControl": "5.0.0",
-          "System.ServiceProcess.ServiceController": "5.0.0"
+          "System.ServiceProcess.ServiceController": "6.0.0"
         },
         "runtime": {
           "Arsenal.ImageMounter.dll": {}
@@ -298,12 +303,12 @@
       "path": "microsoft.win32.registry/5.0.0",
       "hashPath": "microsoft.win32.registry.5.0.0.nupkg.sha512"
     },
-    "System.Diagnostics.EventLog/5.0.0": {
+    "System.Diagnostics.EventLog/6.0.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-FHkCwUfsTs+/5tsK+c0egLfacUgbhvcwi3wUFWSEEArSXao343mYqcpOVVFMlcCkdNtjU4YwAWaKYwal6f02og==",
-      "path": "system.diagnostics.eventlog/5.0.0",
-      "hashPath": "system.diagnostics.eventlog.5.0.0.nupkg.sha512"
+      "sha512": "sha512-lcyUiXTsETK2ALsZrX+nWuHSIQeazhqPphLfaRxzdGaG93+0kELqpgEHtwWOlQe7+jSFnKwaCAgL4kjeZCQJnw==",
+      "path": "system.diagnostics.eventlog/6.0.0",
+      "hashPath": "system.diagnostics.eventlog.6.0.0.nupkg.sha512"
     },
     "System.IO.FileSystem.AccessControl/5.0.0": {
       "type": "package",
@@ -333,12 +338,12 @@
       "path": "system.security.principal.windows/5.0.0",
       "hashPath": "system.security.principal.windows.5.0.0.nupkg.sha512"
     },
-    "System.ServiceProcess.ServiceController/5.0.0": {
+    "System.ServiceProcess.ServiceController/6.0.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-p2yX167GW1pr2DCR6cW+cBKrvhli4thckXk108faFaTPHnoudb0AYPcIPq3nmrwn7IQj9FEmjpyJlXzcOmIjjw==",
-      "path": "system.serviceprocess.servicecontroller/5.0.0",
-      "hashPath": "system.serviceprocess.servicecontroller.5.0.0.nupkg.sha512"
+      "sha512": "sha512-qMBvG8ZFbkXoe0Z5/D7FAAadfPkH2v7vSuh2xsLf3U6jNoejpIdeV18A0htiASsLK1CCAc/p59kaLXlt2yB1gw==",
+      "path": "system.serviceprocess.servicecontroller/6.0.0",
+      "hashPath": "system.serviceprocess.servicecontroller.6.0.0.nupkg.sha512"
     },
     "Arsenal.ImageMounter/1.0.0": {
       "type": "project",
