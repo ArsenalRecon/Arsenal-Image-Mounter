@@ -15,6 +15,9 @@ Imports System.Collections.ObjectModel
 Imports System.Globalization
 Imports System.IO
 Imports System.Reflection
+Imports System.Runtime.InteropServices
+Imports System.Runtime.Versioning
+Imports Arsenal.ImageMounter.Devio.Client
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
@@ -110,6 +113,7 @@ Namespace Server.Interaction
         ''' <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
         ''' this could specify a flag for read-only mounting.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProxyType, Flags As DeviceFlags, DiskAccess As VirtualDiskAccess) As DevioServiceBase
 
             If Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) OrElse
@@ -138,6 +142,7 @@ Namespace Server.Interaction
         ''' <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
         ''' this could specify a flag for read-only mounting.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProxyType, Flags As DeviceFlags) As DevioServiceBase
 
             Dim DiskAccess As FileAccess
@@ -285,6 +290,7 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetProvider(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType) As IDevioProvider
 
             Dim device_number As UInteger
@@ -313,6 +319,7 @@ Namespace Server.Interaction
 
         End Function
 
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, ProviderName As String) As IDevioProvider
 
             Dim device_number As UInteger
@@ -341,18 +348,21 @@ Namespace Server.Interaction
 
         End Function
 
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DeviceNumber As UInteger, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
 
             Return GetProviderPhysical(DeviceNumber, GetDirectFileAccessFlags(DiskAccess))
 
         End Function
 
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
 
             Return GetProviderPhysical(DevicePath, GetDirectFileAccessFlags(DiskAccess))
 
         End Function
 
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DeviceNumber As UInteger, DiskAccess As FileAccess) As DevioProviderFromStream
 
             Using adapter As New ScsiAdapter
@@ -367,6 +377,7 @@ Namespace Server.Interaction
 
         End Function
 
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As FileAccess) As DevioProviderFromStream
 
             Dim disk As New DiskDevice(DevicePath, DiskAccess)
@@ -459,6 +470,7 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType) As DevioServiceBase
 
             Return GetService(Imagefile, DiskAccess, Proxy, FakeMBR:=False)
@@ -472,6 +484,7 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType, FakeMBR As Boolean) As DevioServiceBase
 
             If Proxy = ProxyType.None AndAlso Not FakeMBR Then
@@ -510,6 +523,7 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetService(Imagefile As String, DiskAccess As FileAccess, Proxy As ProxyType) As DevioServiceBase
 
             Dim Service As DevioServiceBase
@@ -924,6 +938,96 @@ Namespace Server.Interaction
         End Function
 
         Private Const ContainerIndexSeparator = ":::"
+
+        Public Shared Function OpenImage(imagepath As String) As VirtualDisk
+
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                (imagepath.StartsWith("\\?\", StringComparison.Ordinal) OrElse
+                imagepath.StartsWith("\\.\", StringComparison.Ordinal)) AndAlso
+                String.IsNullOrWhiteSpace(Path.GetExtension(imagepath)) Then
+
+                Dim vdisk As New DiskDevice(imagepath, FileAccess.Read)
+                Dim diskstream = vdisk.GetRawDiskStream()
+                Return New Raw.Disk(diskstream, Ownership.Dispose)
+
+            End If
+
+            If Path.GetExtension(imagepath).Equals(".001", StringComparison.Ordinal) AndAlso File.Exists(Path.ChangeExtension(imagepath, ".002")) Then
+                Dim diskstream As New DevioDirectStream(GetProviderMultiPartRaw(imagepath, FileAccess.Read), ownsProvider:=True)
+                Return New Raw.Disk(diskstream, Ownership.Dispose)
+            End If
+
+            If imagepath.EndsWith(".e01", StringComparison.OrdinalIgnoreCase) Then
+                Dim diskstream As New DevioDirectStream(New DevioProviderLibEwf(imagepath, DevioProviderLibEwf.AccessFlagsRead), ownsProvider:=True)
+                Return New Raw.Disk(diskstream, Ownership.Dispose)
+            End If
+
+            If imagepath.EndsWith(".aff4", StringComparison.OrdinalIgnoreCase) Then
+                Dim diskstream As New DevioDirectStream(New DevioProviderLibAFF4(imagepath), ownsProvider:=True)
+                Return New Raw.Disk(diskstream, Ownership.Dispose)
+            End If
+
+            Dim disk = VirtualDisk.OpenDisk(imagepath, FileAccess.Read)
+            If disk Is Nothing Then
+                disk = New Raw.Disk(imagepath, FileAccess.Read)
+            End If
+
+            Return disk
+
+        End Function
+
+        Public Shared Function OpenImageAsStream(arg As String) As Stream
+
+            Select Case Path.GetExtension(arg).ToLowerInvariant()
+
+                Case ".vhd", ".vdi", ".vmdk", ".vhdx", ".dmg"
+                    If Not DiscUtilsInitialized Then
+                        Trace.WriteLine("DiscUtils not available!")
+                    End If
+                    Dim provider = GetProviderDiscUtils(arg, FileAccess.Read)
+                    Trace.WriteLine($"Image '{arg}' sector size: {provider.SectorSize}")
+                    Return New DevioDirectStream(provider, ownsProvider:=True)
+
+                Case ".001"
+                    If File.Exists(Path.ChangeExtension(arg, ".002")) Then
+                        Return New DevioDirectStream(GetProviderMultiPartRaw(arg, FileAccess.Read), ownsProvider:=True)
+                    Else
+                        Return New FileStream(arg, FileMode.Open, FileAccess.Read, FileShare.Read)
+                    End If
+
+                Case ".raw", ".dd", ".img", ".ima", ".iso", ".bin", ".nrg"
+                    Return New FileStream(arg, FileMode.Open, FileAccess.Read, FileShare.Read)
+
+                Case ".e01", ".aff", ".ex01", ".lx01"
+                    DevioProviderLibEwf.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName())
+                    'DevioProviderLibEwf.NotificationVerbose = True
+
+                    Dim provider = GetProviderLibEwf(arg, FileAccess.Read)
+                    Console.WriteLine($"Image '{arg}' sector size: {provider.SectorSize}")
+                    Return New DevioDirectStream(provider, ownsProvider:=True)
+
+                Case ".aff4"
+                    Dim provider = GetProviderLibAFF4(arg, FileAccess.Read)
+                    Console.WriteLine($"Image '{arg}' sector size: {provider.SectorSize}")
+                    Return New DevioDirectStream(provider, ownsProvider:=True)
+
+                Case Else
+                    If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                        (arg.StartsWith("\\?\", StringComparison.Ordinal) OrElse
+                        arg.StartsWith("\\.\", StringComparison.Ordinal)) Then
+
+                        Dim disk As New DiskDevice(arg, FileAccess.Read)
+                        Dim sector_size = If(disk.Geometry?.BytesPerSector, 512)
+                        Console.WriteLine($"Physical disk '{arg}' sector size: {sector_size}")
+                        Return disk.GetRawDiskStream()
+                    Else
+                        Console.WriteLine($"Unknown image file extension '{arg}', using raw device data.")
+                        Return New FileStream(arg, FileMode.Open, FileAccess.Read, FileShare.Read)
+                    End If
+
+            End Select
+
+        End Function
 
     End Class
 

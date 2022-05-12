@@ -40,8 +40,6 @@ Namespace Server.GenericProviders
 
         Friend ReadOnly Property SuffixBuffer As Byte()
 
-        Private Shared ReadOnly _default_boot_code As Byte() = {&HF4, &HEB, &HFD}   ' HLT ; JMP -3
-
         Public Shared Function GetVBRPartitionLength(baseProvider As IDevioProvider) As Long
 
             Dim vbr(0 To CInt(baseProvider.NullCheck(NameOf(baseProvider)).SectorSize - 1UI)) As Byte
@@ -109,9 +107,9 @@ Namespace Server.GenericProviders
 
             Dim stream = builder.Build()
 
-            Buffer.BlockCopy(_default_boot_code, 0, _PrefixBuffer, 0, _default_boot_code.Length)
+            NativeConstants.DefaultBootCode.CopyTo(_PrefixBuffer)
 
-            Dim signature = BitConverter.GetBytes(NativeFileIO.GenerateDiskSignature())
+            Dim signature = BitConverter.GetBytes(NativeCalls.GenerateDiskSignature())
 
             Buffer.BlockCopy(signature, 0, _PrefixBuffer, DiskSignatureOffset, signature.Length)
 

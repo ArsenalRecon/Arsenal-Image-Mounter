@@ -18,6 +18,7 @@
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
@@ -29,6 +30,7 @@ namespace Arsenal.ImageMounter.Devio.Client;
 /// Derives DevioStream and implements client side of Devio shared memory communication
 /// proxy.
 /// </summary>
+[SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)]
 public partial class DevioShmStream : DevioStream
 {
     private readonly EventWaitHandle RequestEvent;

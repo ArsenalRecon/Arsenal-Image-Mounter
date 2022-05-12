@@ -12,6 +12,8 @@
 
 Imports System.IO
 Imports System.Runtime.CompilerServices
+Imports System.Runtime.InteropServices
+Imports System.Runtime.Versioning
 Imports System.Security.Cryptography
 Imports System.Threading
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
@@ -103,6 +105,10 @@ Namespace Server.GenericProviders
 
                 ElseIf "dynamic".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase) Then
 
+                    If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+                        Throw New PlatformNotSupportedException("Sparse files not supported on target platform or OS")
+                    End If
+
                     Try
                         NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, True)
 
@@ -123,12 +129,12 @@ Namespace Server.GenericProviders
 
         End Sub
 
-        <Extension>
+        <Extension, SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Public Sub WriteToPhysicalDisk(provider As IDevioProvider, outputDevice As String, completionPosition As CompletionPosition, cancel As CancellationToken)
 
-            Using target = NativeFileIO.OpenFileStream(outputDevice, FileMode.Open, FileAccess.ReadWrite, FileShare.Delete, ImageConversionIoBufferSize)
+            Using disk As New DiskDevice(outputDevice, FileAccess.ReadWrite)
 
-                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=Nothing, completionPosition:=completionPosition, cancel:=cancel)
+                provider.WriteToSkipEmptyBlocks(disk.GetRawDiskStream(), ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=Nothing, completionPosition:=completionPosition, cancel:=cancel)
 
             End Using
 
@@ -142,15 +148,19 @@ Namespace Server.GenericProviders
                 .BytesPerSector = provider.SectorSize
             }
 
-            Dim physical_disk_handle = TryCast(TryCast(provider, DevioProviderFromStream)?.BaseStream, FileStream)?.SafeFileHandle
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
 
-            If physical_disk_handle IsNot Nothing Then
+                Dim physical_disk_handle = TryCast(TryCast(provider, DevioProviderFromStream)?.BaseStream, FileStream)?.SafeFileHandle
 
-                Dim storageproperties = NativeFileIO.GetStorageStandardProperties(physical_disk_handle)
-                If storageproperties.HasValue Then
+                If physical_disk_handle IsNot Nothing Then
 
-                    imaging_parameters.StorageStandardProperties = storageproperties.Value
-                    Trace.WriteLine($"Source disk vendor '{imaging_parameters.StorageStandardProperties.VendorId}' model '{imaging_parameters.StorageStandardProperties.ProductId}', serial number '{imaging_parameters.StorageStandardProperties.SerialNumber}'")
+                    Dim storageproperties = NativeFileIO.GetStorageStandardProperties(physical_disk_handle)
+                    If storageproperties.HasValue Then
+
+                        imaging_parameters.StorageStandardProperties = storageproperties.Value
+                        Trace.WriteLine($"Source disk vendor '{imaging_parameters.StorageStandardProperties.VendorId}' model '{imaging_parameters.StorageStandardProperties.ProductId}', serial number '{imaging_parameters.StorageStandardProperties.SerialNumber}'")
+
+                    End If
 
                 End If
 

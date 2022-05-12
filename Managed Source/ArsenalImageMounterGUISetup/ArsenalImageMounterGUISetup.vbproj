@@ -7,8 +7,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Title>Arsenal Image Mounter Setup</Title>
     <StartupObject>Arsenal.ImageMounter.MainForm</StartupObject>
-	<TargetFrameworks>net45;netcoreapp3.1</TargetFrameworks>
+	<TargetFrameworks>net45;net6.0-windows</TargetFrameworks>
     <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +17,7 @@
     <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &lt; 0">
     <Reference Include="System.Configuration" />
   </ItemGroup>
 

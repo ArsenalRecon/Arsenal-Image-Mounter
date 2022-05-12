@@ -12,15 +12,12 @@
 '''''
 
 Imports System.ComponentModel
-Imports System.Collections.Generic
 Imports System.IO
-Imports System.Text
 Imports System.Globalization
 Imports System.Reflection
 Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
 Imports System.Threading
-Imports System.Threading.Tasks
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.Devio.Server.Services
@@ -29,6 +26,9 @@ Imports Arsenal.ImageMounter.IO
 Imports Arsenal.ImageMounter.Extensions
 Imports Microsoft.Win32.SafeHandles
 Imports System.Net
+Imports System.Runtime.Versioning
+
+#Disable Warning CA1416 ' Validate platform compatibility
 
 Public Module ServerModule
 
@@ -71,15 +71,9 @@ Public Module ServerModule
         "DiskDriver"
     }
 
-#If NET471_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
-    Public ReadOnly Property IsOsWindows As Boolean = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-#Else
-    Public ReadOnly Property IsOsWindows As Boolean = True
-#End If
-
     Sub New()
 
-        If _IsOsWindows Then
+        If IsOsWindows Then
 
             Dim appPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)
 
@@ -125,11 +119,15 @@ Public Module ServerModule
                     cmdline = $"{cmdline} --detach={ready_wait.SafeWaitHandle.DangerousGetHandle()}"
 
                     Dim pstart As New ProcessStartInfo With {
-                        .UseShellExecute = False
+                        .UseShellExecute = False,
+                        .Arguments = cmdline
                     }
 
+#If NETCOREAPP Then
+                    pstart.FileName = Environment.ProcessPath
+#Else
                     pstart.FileName = Process.GetCurrentProcess().MainModule.FileName
-                    pstart.Arguments = cmdline
+#End If
 
                     Using process As New Process
 
@@ -751,6 +749,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
     End Sub
 
+    <SupportedOSPlatform("windows")>
     Public Sub ListDevices()
 
         Dim adapters = API.EnumerateAdapterDeviceInstanceNames()

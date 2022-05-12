@@ -372,7 +372,7 @@ public static class DriverSetup
                          where File.Exists(p)
                          select FileVersionInfo.GetVersionInfo(p)?.OriginalFilename ?? Path.GetFileName(p)).ToArray();
 
-                Trace.WriteLine(string.Format("Pending file replace operations: '{0}'", string.Join("', '", array)));
+                Trace.WriteLine($"Pending file replace operations: '{string.Join("', '", array)}'");
                 
 				var pending_install_file = (from item in CachedIniFile.EnumerateFileSectionValuePairs(infPath, "PhysicalDiskMounterDevice.Services")
                                                where "AddService".Equals(item.Key, StringComparison.OrdinalIgnoreCase)

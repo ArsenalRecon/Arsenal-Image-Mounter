@@ -28,21 +28,21 @@ Namespace Server.Interaction
             Dim sector_count As Long
 
             Select Case partition_style
-                Case PARTITION_STYLE.PARTITION_STYLE_MBR
+                Case PARTITION_STYLE.MBR
                     Dim partition_table = BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsNtfs)
                     Dim partition = partition_table(0)
                     open_volume = AddressOf partition.Open
                     first_sector = partition.FirstSector
                     sector_count = partition.SectorCount
 
-                Case PARTITION_STYLE.PARTITION_STYLE_GPT
+                Case PARTITION_STYLE.GPT
                     Dim partition_table = GuidPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsNtfs)
                     Dim partition = partition_table(1)
                     open_volume = AddressOf partition.Open
                     first_sector = partition.FirstSector
                     sector_count = partition.SectorCount
 
-                Case PARTITION_STYLE.PARTITION_STYLE_RAW
+                Case PARTITION_STYLE.RAW
                     open_volume = Function() disk.Content
                     first_sector = 0
                     sector_count = disk.Capacity \ disk.SectorSize
@@ -78,7 +78,7 @@ Namespace Server.Interaction
             End Select
 
             '' Adjust hidden sectors count
-            If partition_style = PARTITION_STYLE.PARTITION_STYLE_MBR Then
+            If partition_style = PARTITION_STYLE.MBR Then
 
                 Using raw = open_volume()
 

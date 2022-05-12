@@ -13,6 +13,7 @@
 Imports System.IO
 Imports System.IO.MemoryMappedFiles
 Imports System.Runtime.InteropServices
+Imports System.Runtime.Versioning
 Imports System.Threading
 Imports Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders

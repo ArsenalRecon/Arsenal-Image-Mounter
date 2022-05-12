@@ -265,24 +265,71 @@ Public Class DiskDevice
     End Property
 
     ''' <summary>
+    ''' Reads first sector of disk or disk volume
+    ''' </summary>
+    Public Function ReadBootSector() As Byte()
+
+        Dim bootsect(0 To Geometry.Value.BytesPerSector - 1) As Byte
+        Dim bytesread As Integer
+
+        With GetRawDiskStream()
+            .Position = 0
+            bytesread = .Read(bootsect, 0, bootsect.Length)
+        End With
+
+        If bytesread < 512 Then
+            Return Nothing
+        End If
+
+        If bytesread <> bootsect.Length Then
+            Array.Resize(bootsect, bytesread)
+        End If
+
+        Return bootsect
+
+    End Function
+
+    ''' <summary>
     ''' Return a value indicating whether present sector 0 data indicates a valid MBR
-    ''' with a partition table and a disk signature.
+    ''' with a partition table.
     ''' </summary>
     Public ReadOnly Property HasValidPartitionTable As Boolean
         Get
 
-            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
+            Dim bootsect = ReadBootSector()
 
-            With GetRawDiskStream()
-                .Position = 0
-                .Read(rawsig, 0, rawsig.Length)
-            End With
+            Return BitConverter.ToUInt16(bootsect, &H1FE) = &HAA55US AndAlso
+                (bootsect(&H1BE) And &H7F) = 0 AndAlso
+                (bootsect(&H1CE) And &H7F) = 0 AndAlso
+                (bootsect(&H1DE) And &H7F) = 0 AndAlso
+                (bootsect(&H1EE) And &H7F) = 0
 
-            Return BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US AndAlso
-                (rawsig(&H1BE) And &H7F) = 0 AndAlso
-                (rawsig(&H1CE) And &H7F) = 0 AndAlso
-                (rawsig(&H1DE) And &H7F) = 0 AndAlso
-                (rawsig(&H1EE) And &H7F) = 0
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Return a value indicating whether present sector 0 data indicates a valid MBR
+    ''' with a partition table and not blank or fake boot code.
+    ''' </summary>
+    Public ReadOnly Property HasValidBootCode As Boolean
+        Get
+
+            Dim bootsect = ReadBootSector()
+
+            If bootsect Is Nothing OrElse
+                bootsect(0) = 0 OrElse
+                bootsect.AsSpan(0, NativeConstants.DefaultBootCode.Length).
+                SequenceEqual(NativeConstants.DefaultBootCode.Span) Then
+
+                Return False
+
+            End If
+
+            Return BitConverter.ToUInt16(bootsect, &H1FE) = &HAA55US AndAlso
+                (bootsect(&H1BE) And &H7F) = 0 AndAlso
+                (bootsect(&H1CE) And &H7F) = 0 AndAlso
+                (bootsect(&H1DE) And &H7F) = 0 AndAlso
+                (bootsect(&H1EE) And &H7F) = 0
 
         End Get
     End Property

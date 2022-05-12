@@ -213,10 +213,21 @@ Arsenal.ImageMounter
  Gets or sets disk signature stored in boot record.
  </summary>
 </member>
+<member name="M:Arsenal.ImageMounter.DiskDevice.ReadBootSector">
+ <summary>
+ Reads first sector of disk or disk volume
+ </summary>
+</member>
 <member name="P:Arsenal.ImageMounter.DiskDevice.HasValidPartitionTable">
  <summary>
  Return a value indicating whether present sector 0 data indicates a valid MBR
- with a partition table and a disk signature.
+ with a partition table.
+ </summary>
+</member>
+<member name="P:Arsenal.ImageMounter.DiskDevice.HasValidBootCode">
+ <summary>
+ Return a value indicating whether present sector 0 data indicates a valid MBR
+ with a partition table and not blank or fake boot code.
  </summary>
 </member>
 <member name="M:Arsenal.ImageMounter.DiskDevice.FlushBuffers">

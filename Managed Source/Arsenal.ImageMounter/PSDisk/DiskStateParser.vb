@@ -1,13 +1,11 @@
-﻿Imports System.Threading.Tasks
-Imports Arsenal.ImageMounter.ScsiAdapter
-Imports System.Runtime.InteropServices
-Imports Arsenal.ImageMounter.PSDisk
-Imports Arsenal.ImageMounter.IO
+﻿Imports Arsenal.ImageMounter.IO
 Imports Arsenal.ImageMounter.Extensions
 Imports System.IO
+Imports System.Runtime.Versioning
 
 Namespace PSDisk
 
+    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
     Public NotInheritable Class DiskStateParser
 
         Private Sub New()

@@ -5,7 +5,8 @@
   <PropertyGroup>
     <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
     <Description>Arsenal Image Mounter Device I/O Backend</Description>
-	<TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
+	<TargetFrameworks>net45;net6.0</TargetFrameworks>
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>

@@ -109,8 +109,10 @@ public static unsafe class NativeCalls
 		return bytes;
 	}
 
+    public static uint GenerateDiskSignature() => GenRandomUInt32() | 0x80808081U & 0xFEFEFEFFU;
+
 #if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
-	public static void GenRandomBytes(byte[] bytes, int offset, int count) =>
+    public static void GenRandomBytes(byte[] bytes, int offset, int count) =>
 		GenRandomBytes(bytes.AsSpan(offset, count));
 
     public static void GenRandomBytes(Span<byte> span)

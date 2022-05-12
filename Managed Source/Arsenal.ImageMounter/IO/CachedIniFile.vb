@@ -303,20 +303,20 @@ Namespace IO
                         Dim CurrentSection = Item(String.Empty)
 
                         Do
-                            Dim Line = .ReadLine()
+                            Dim Linestr = .ReadLine()
 
-                            If Line Is Nothing Then
+                            If Linestr Is Nothing Then
                                 Exit Do
                             End If
 
-                            Line = Line.Trim()
+                            Dim Line = Linestr.AsSpan().Trim()
 
-                            If Line.Length = 0 OrElse Line.StartsWith(";", StringComparison.Ordinal) Then
+                            If Line.Length = 0 OrElse Line.StartsWith(";".AsSpan(), StringComparison.Ordinal) Then
                                 Continue Do
                             End If
 
-                            If Line.StartsWith("[", StringComparison.Ordinal) AndAlso Line.EndsWith("]", StringComparison.Ordinal) Then
-                                Dim SectionKey = Line.AsSpan(1, Line.Length - 2).Trim().ToString()
+                            If Line.StartsWith("[".AsSpan(), StringComparison.Ordinal) AndAlso Line.EndsWith("]".AsSpan(), StringComparison.Ordinal) Then
+                                Dim SectionKey = Line.Slice(1, Line.Length - 2).Trim().ToString()
                                 CurrentSection = Item(SectionKey)
                                 Continue Do
                             End If
@@ -326,8 +326,8 @@ Namespace IO
                                 Continue Do
                             End If
 
-                            Dim Key = Line.AsSpan(0, EqualSignPos).Trim().ToString()
-                            Dim Value = Line.AsSpan(EqualSignPos + 1).Trim().ToString()
+                            Dim Key = Line.Slice(0, EqualSignPos).Trim().ToString()
+                            Dim Value = Line.Slice(EqualSignPos + 1).Trim().ToString()
 
                             CurrentSection(Key) = Value
 

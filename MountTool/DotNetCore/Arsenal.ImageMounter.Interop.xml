@@ -4,11 +4,6 @@
         <name>Arsenal.ImageMounter.Interop</name>
     </assembly>
     <members>
-        <member name="T:System.Runtime.CompilerServices.IsExternalInit">
-            <summary>
-            Reserved to be used by the compiler for tracking metadata. This class should not be used by developers in source code.
-            </summary>
-        </member>
         <member name="T:Arsenal.ImageMounter.IO.IMAGE_FILE_HEADER">
             <summary>
             PE image header

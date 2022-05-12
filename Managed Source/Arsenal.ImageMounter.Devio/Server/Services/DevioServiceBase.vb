@@ -131,11 +131,15 @@ Namespace Server.Services
         ''' </summary>
         Public Event ServiceUnhandledException As ThreadExceptionEventHandler Implements IVirtualDiskService.ServiceUnhandledException
 
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
         Protected Overridable Sub OnServiceUnhandledException(e As ThreadExceptionEventArgs)
             RaiseEvent ServiceUnhandledException(Me, e)
-            If HasDiskDevice AndAlso _ForceRemoveDiskDeviceOnCrash AndAlso _ScsiAdapter IsNot Nothing Then
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                HasDiskDevice AndAlso
+                _ForceRemoveDiskDeviceOnCrash AndAlso
+                _ScsiAdapter IsNot Nothing Then
+
                 _ScsiAdapter.RemoveDevice(_DiskDeviceNumber)
+
             End If
         End Sub
 

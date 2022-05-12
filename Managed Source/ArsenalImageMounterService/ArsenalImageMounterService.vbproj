@@ -6,7 +6,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>aim_cli</AssemblyName>
     <Title>Arsenal Image Mounter Console Service</Title>
-	<TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
+	<TargetFrameworks>net45;net6.0</TargetFrameworks>
     <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
 
@@ -28,4 +28,7 @@
       exit %25ERRORLEVEL%25</PostBuildEvent>
   </PropertyGroup>
 
+  <Target Name="AfterPublishSign" AfterTargets="Publish" Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
+    <Exec Command="signtool.exe sign /a /v /n &quot;Arsenal Consulting, Inc.&quot; /d &quot;Arsenal Image Mounter&quot; /du &quot;http://www.arsenalrecon.com&quot; /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /t &quot;http://timestamp.comodoca.com/authenticode&quot; &quot;$(PublishDir)\$(AssemblyName).exe&quot; &quot;$(PublishDir)\$(AssemblyName).dll&quot;" />
+  </Target>
 </Project>

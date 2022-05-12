@@ -80,11 +80,11 @@ Namespace PSDisk
                 If _NativePartitionLayout.HasValue Then
 
                     Select Case _NativePartitionLayout.Value
-                        Case IO.PARTITION_STYLE.PARTITION_STYLE_GPT
+                        Case IO.PARTITION_STYLE.GPT
                             Return "GPT"
-                        Case IO.PARTITION_STYLE.PARTITION_STYLE_MBR
+                        Case IO.PARTITION_STYLE.MBR
                             Return "MBR"
-                        Case IO.PARTITION_STYLE.PARTITION_STYLE_RAW
+                        Case IO.PARTITION_STYLE.RAW
                             Return "RAW"
                         Case Else
                             Return "Unknown"

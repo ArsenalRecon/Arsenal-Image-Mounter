@@ -3,8 +3,13 @@
   <PropertyGroup>
     <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
     <Description>Arsenal Image Mounter Device I/O Backend</Description>
-    <TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net45;net6.0</TargetFrameworks>
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj" />

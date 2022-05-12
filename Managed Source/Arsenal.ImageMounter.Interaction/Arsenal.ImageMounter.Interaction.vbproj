@@ -5,8 +5,9 @@
   <PropertyGroup>
     <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
     <Description>Arsenal Image Mounter GUI Interaction features</Description>
-    <TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net45;net6.0-windows</TargetFrameworks>
     <UseWindowsForms>true</UseWindowsForms>
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>

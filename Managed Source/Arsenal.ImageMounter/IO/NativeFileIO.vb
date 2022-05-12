@@ -275,6 +275,11 @@ Namespace IO
               hFile As SafeFileHandle,
               <[In]> ByRef lpCommTimeouts As COMMTIMEOUTS) As Boolean
 
+            Friend Declare Auto Function GetVolumePathName Lib "kernel32" (
+              <MarshalAs(UnmanagedType.LPWStr), [In]> lpszFileName As String,
+              <Out> lpszVolumePathName As Char(),
+              cchBufferLength As Int32) As Boolean
+
             Friend Declare Auto Function CreateFile Lib "kernel32" (
               <MarshalAs(UnmanagedType.LPWStr), [In]> lpFileName As String,
               dwDesiredAccess As FileSystemRights,
@@ -552,6 +557,11 @@ Namespace IO
               Options As UInt32,
               pInstallerInfo As IntPtr,
               <Out> ByRef pNeedReboot As Boolean) As Integer
+
+            Friend Declare Auto Function MapFileAndCheckSum Lib "imagehlp" (
+              <MarshalAs(UnmanagedType.LPWStr), [In]> file As String,
+              <Out> ByRef headerSum As Integer,
+              <Out> ByRef checkSum As Integer) As Integer
 
             Friend Declare Auto Function CM_Locate_DevNode Lib "setupapi" (
               ByRef devInst As UInt32,
@@ -2968,18 +2978,15 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function ReadNullTerminatedString(buffer As Byte(), ByRef offset As Integer) As String
 
-            Dim sb As New StringBuilder
+            Dim ptr = MemoryMarshal.Cast(Of Byte, Char)(buffer)
 
-            Do
-                Dim c = BitConverter.ToChar(buffer, offset)
-                offset += 2
-                If c = Nothing Then
-                    Exit Do
-                End If
-                sb.Append(c)
-            Loop
+            offset = ptr.IndexOf(New Char)
 
-            Return sb.ToString()
+            If offset < 0 Then
+                offset = buffer.Length
+            End If
+
+            Return ptr.Slice(0, offset).ToString()
 
         End Function
 
@@ -3193,10 +3200,10 @@ Currently, the following application has files open on this volume:
                                                                        PARTITION_INFORMATION_EX)
                     Next
 
-                    If layout.PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_MBR Then
+                    If layout.PartitionStyle = PARTITION_STYLE.MBR Then
                         Dim mbr = buffer.Read(Of DRIVE_LAYOUT_INFORMATION_MBR)(8)
                         Return New DriveLayoutInformationMBR(layout, partitions, mbr)
-                    ElseIf layout.PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_GPT Then
+                    ElseIf layout.PartitionStyle = PARTITION_STYLE.GPT Then
                         Dim gpt = buffer.Read(Of DRIVE_LAYOUT_INFORMATION_GPT)(8)
                         Return New DriveLayoutInformationGPT(layout, partitions, gpt)
                     Else
@@ -3235,10 +3242,10 @@ Currently, the following application has files open on this volume:
 
                 Select Case layout.DriveLayoutInformation.PartitionStyle
 
-                    Case PARTITION_STYLE.PARTITION_STYLE_MBR
+                    Case PARTITION_STYLE.MBR
                         buffer.Write(CULng(pos), DirectCast(layout, DriveLayoutInformationMBR).MBR)
 
-                    Case PARTITION_STYLE.PARTITION_STYLE_GPT
+                    Case PARTITION_STYLE.GPT
                         buffer.Write(CULng(pos), DirectCast(layout, DriveLayoutInformationGPT).GPT)
 
                 End Select
@@ -3266,22 +3273,16 @@ Currently, the following application has files open on this volume:
 
         End Sub
 
-        Public Shared Function GenerateDiskSignature() As UInteger
-
-            Return NativeCalls.GenRandomUInt32() Or &H80808081UI And &HFEFEFEFFUI
-
-        End Function
-
         Public Shared Sub InitializeDisk(disk As SafeFileHandle, PartitionStyle As PARTITION_STYLE)
 
             Using buffer As New PinnedBuffer(Of CREATE_DISK_GPT)(1)
 
                 Select Case PartitionStyle
 
-                    Case PARTITION_STYLE.PARTITION_STYLE_MBR
+                    Case PARTITION_STYLE.MBR
                         Dim mbr As New CREATE_DISK_MBR With {
-                            .PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_MBR,
-                            .DiskSignature = GenerateDiskSignature()
+                            .PartitionStyle = PARTITION_STYLE.MBR,
+                            .DiskSignature = NativeCalls.GenerateDiskSignature()
                         }
 
                         mbr.DiskSignature = mbr.DiskSignature Or &H80808081UI
@@ -3289,9 +3290,9 @@ Currently, the following application has files open on this volume:
 
                         buffer.Write(0, mbr)
 
-                    Case PARTITION_STYLE.PARTITION_STYLE_GPT
+                    Case PARTITION_STYLE.GPT
                         Dim gpt As New CREATE_DISK_GPT With {
-                            .PartitionStyle = PARTITION_STYLE.PARTITION_STYLE_GPT,
+                            .PartitionStyle = PARTITION_STYLE.GPT,
                             .DiskId = Guid.NewGuid(),
                             .MaxPartitionCount = 128
                         }
@@ -3471,6 +3472,23 @@ Currently, the following application has files open on this volume:
                 Where target IsNot Nothing AndAlso target.Contains(nt_device_path, StringComparer.OrdinalIgnoreCase)
                 Select $"\\?\{dosdevice}\"
                 Into FirstOrDefault()
+
+        End Function
+
+        Public Shared Function GetVolumePathName(path As String) As String
+
+            Dim result(0 To 32767) As Char
+            If Not UnsafeNativeMethods.GetVolumePathName(path, result, result.Length) Then
+                Throw New IOException($"Failed to get volume name for path '{path}'", New Win32Exception)
+            End If
+
+            Dim index = Array.IndexOf(result, New Char)
+
+            If index >= 0 Then
+                Return New String(result, 0, index)
+            Else
+                Return New String(result)
+            End If
 
         End Function
 
@@ -4418,6 +4436,12 @@ Currently, the following application has files open on this volume:
             End If
 
         End Sub
+
+        Public Shared Function MapFileAndCheckSum(file As String, <Out> ByRef headerSum As Integer, <Out> ByRef checkSum As Integer) As Boolean
+
+            Return UnsafeNativeMethods.MapFileAndCheckSum(file, headerSum, checkSum) = 0
+
+        End Function
 
         ''' <summary>
         ''' Re-enumerates partitions on all disk drives currently connected to the system. No exceptions are

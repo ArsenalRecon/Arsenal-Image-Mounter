@@ -63,11 +63,13 @@ from Windows 2000 and up.
 Command line applications\DotNetCore
 ------------------------------------
 
-.NET Core 3.1 version of aim_cli. Requires .NET Core 3.1, .NET 5 or .NET 6.
+"Modern .NET" version of aim_cli. Requires .NET 6 or later.
+
 Same features as with the .NET Framework 4.5 version above, but typically
 with better performance. When running on other platforms than Windows,
 available features are limited to what does not require kernel level drivers.
-For example image file format conversion is available in this scenario.
+For example image file format conversion is available in this scenario, but
+not mounting images as virtual disks.
 
 
 -----------
@@ -117,8 +119,8 @@ http://ltr-data.se/library/ArsenalImageMounter
 Requires .NET Framework 4.x or later, which is included by default in Windows
 8 or later. Can be installed separately on Windows XP, Vista or 7.
 
-It is also possible to build API components for .NET Core 3.1 or later which
-also works with .NET 5 and 6.
+It is also possible to build API components for .NET 6 or later "modern .NET"
+runtimes.
 
 
 aimapi.zip:

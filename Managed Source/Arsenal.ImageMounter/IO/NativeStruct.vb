@@ -17,6 +17,12 @@ Namespace IO
 
     Public Module NativeStruct
 
+#If NET471_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
+        Public ReadOnly Property IsOsWindows As Boolean = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+#Else
+        Public ReadOnly Property IsOsWindows As Boolean = True
+#End If
+
         Public Function GetFileSize(path As String) As Long
 
 #If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
@@ -987,9 +993,9 @@ Namespace IO
         End Structure
 
         Public Enum PARTITION_STYLE As Byte
-            PARTITION_STYLE_MBR
-            PARTITION_STYLE_GPT
-            PARTITION_STYLE_RAW
+            MBR
+            GPT
+            RAW
         End Enum
 
         <StructLayout(LayoutKind.Sequential)>
@@ -1672,6 +1678,9 @@ Namespace IO
             Public Const FILE_BEGIN As Integer = 0
             Public Const FILE_CURRENT As Integer = 1
             Public Const FILE_END As Integer = 2
+
+            Public Shared ReadOnly Property DefaultBootCode As ReadOnlyMemory(Of Byte) =
+                New Byte() {&HF4, &HEB, &HFD}   ' HLT ; JMP -3
 
             Private Sub New()
             End Sub

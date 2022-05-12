@@ -42,7 +42,7 @@ Namespace Server.Interaction
 
                     Dim disk As New Raw.Disk(device.GetRawDiskStream(), Ownership.None, discutils_geometry)
 
-                    DiscUtilsInteraction.InitializeVirtualDisk(disk, discutils_geometry, PARTITION_STYLE.PARTITION_STYLE_MBR, FormatFileSystem, "RAM disk")
+                    DiscUtilsInteraction.InitializeVirtualDisk(disk, discutils_geometry, PARTITION_STYLE.MBR, FormatFileSystem, "RAM disk")
 
                     device.FlushBuffers()
 

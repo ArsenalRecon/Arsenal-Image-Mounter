@@ -96,7 +96,7 @@ Namespace IO
 
             row.Append("."c, Math.Max(Console.WindowWidth - 3 - currentPos, 0))
 
-            Dim percent = $" {(100 * value):0} % "
+            Dim percent = $" {100 * value:0} % "
 
             Dim midpos = (Console.WindowWidth - 3 - percent.Length) >> 1
 

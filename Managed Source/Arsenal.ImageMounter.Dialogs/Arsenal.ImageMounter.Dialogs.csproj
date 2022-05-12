@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45;net48;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net45;net6.0-windows</TargetFrameworks>
     <Description>Arsenal Image Mounter Windows Forms Library</Description>
     <UseWindowsForms>true</UseWindowsForms>
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &lt; 0">

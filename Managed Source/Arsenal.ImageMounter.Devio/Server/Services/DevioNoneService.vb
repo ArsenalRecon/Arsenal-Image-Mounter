@@ -10,6 +10,7 @@
 '''''
 
 Imports System.IO
+Imports System.Runtime.Versioning
 Imports Arsenal.ImageMounter.Devio.Server.GenericProviders
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.IO
@@ -22,6 +23,7 @@ Namespace Server.Services
     ''' it just passes a disk image file name or RAM disk information for direct mounting
     ''' internally in Arsenal Image Mounter SCSI Adapter.
     ''' </summary>
+    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
     Public Class DevioNoneService
         Inherits DevioServiceBase
 

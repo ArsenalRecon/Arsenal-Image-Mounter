@@ -6,7 +6,8 @@
     <OutputType>Exe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <Title>Arsenal Image Mounter Command Line Setup</Title>
-	<TargetFrameworks>net45;netcoreapp3.1</TargetFrameworks>
+	<TargetFrameworks>net45;net6.0-windows</TargetFrameworks>
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>
