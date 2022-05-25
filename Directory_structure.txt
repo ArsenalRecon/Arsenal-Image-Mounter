@@ -1,8 +1,8 @@
 Description of directory structure for Arsenal Image Mounter repository.
 
-libewf.dll and zlib.dll binaries (to facilitate EnCase/EWF image mounting) are
-included under their respective licenses - see lgpl-3.0.txt and
-zlib license.txt.
+Regarding licenses for external components such as libewf, zlib, libaff4,
+libqcow etc, see information about there respective license in
+Third-Party-Licenses directory.
 
 
 
@@ -17,14 +17,14 @@ One-piece (with the exception of some third-party libraries for supporting
 forensics image file formats) powerful tool for mounting disk image files as
 virtual drives. Supports raw disk images and various virtual machine image
 formats through integrated DiscUtils library. Also supports certain forensics
-image formats if libewf.dll is also installed. Automatically installs
-necessary driver components if not already installed.
+image formats if libewf.dll, libaff4.dll and libqcow.dll are also installed.
+Automatically installs necessary driver components if not already installed.
 
-ArsenalImageMounter.exe requires .NET Framework 4.8, which is included by
-default in latest versions of Windows 10, 11 and Server 2022 and can be
-installed separately on Windows 7, Server 2008 R2 and later.
+ArsenalImageMounter.exe requires .NET 6.0, which can be installed on Windows 7
+and later.
+https://dotnet.microsoft.com/en-us/download/dotnet/6.0
 
-Tested on Windows 10, but should also work on Windows 7, 8 and 8.1.
+Tested on Windows 10 and 11, but should also work on Windows 7, 8 and 8.1.
 
 
 -------------------------
@@ -39,11 +39,31 @@ Does not include driver setup files. Driver could be set up separately using
 either command line tool aim_ll.exe or graphical ArsenalImageMounter.exe, or
 the separate packages in the DriverSetup directory.
 
-aim_cli.exe requires .NET Framework 4.5, which is included by
-default in Windows 8 or later. Can be installed separately on Windows Vista
-and 7.
+aim_cli.exe comes in two different versions.
 
-Tested on Windows 7, 8.1 and 10, but should also work on Windows XP or Vista.
+-- Command line applications\aim_cli.exe
+
+This version requires .NET Framework 4.8, which is included by default in
+latest versions of Windows 10, 11 and Server 2022 and can be installed
+separately on Windows 7, Server 2008 R2 and later.
+
+.NET Framework 4.8 is available here:
+https://dotnet.microsoft.com/en-us/download/dotnet-framework/net48
+
+-- Command line applications\DotNetCore\aim_cli.exe
+
+Recommended for best performance.
+
+This version requires .NET 6.0 which can be installed on Windows 7 and later
+and Server 2008 R2 and later as well as Linux and MacOS.
+
+.NET 6.0 is available here:
+https://dotnet.microsoft.com/en-us/download/dotnet/6.0
+
+Tested on Windows 7, 8.1, 10, 11 and Linux. When running on other platforms
+than Windows, available features are limited to what does not require kernel
+level drivers. For example image file format conversion is available in this
+scenario, but not mounting images as virtual disks.
 
 
 aim_ll.zip:
@@ -57,19 +77,6 @@ None of the files in this zip archive require any .NET Framework components.
 
 Tested on Windows 7, 8.1 and 10, but should also work on any Windows version
 from Windows 2000 and up.
-
-
-------------------------------------
-Command line applications\DotNetCore
-------------------------------------
-
-"Modern .NET" version of aim_cli. Requires .NET 6 or later.
-
-Same features as with the .NET Framework 4.5 version above, but typically
-with better performance. When running on other platforms than Windows,
-available features are limited to what does not require kernel level drivers.
-For example image file format conversion is available in this scenario, but
-not mounting images as virtual disks.
 
 
 -----------
@@ -144,7 +151,7 @@ command line tools and some proof-on-concept graphical applications.
 Unmanaged Source
 ----------------
 
-Visual Studio 2017-2019 solution with source projects for native (non-.NET)
+Visual Studio 2017-2022 solution with source projects for native (non-.NET)
 driver, API library and command line tool. Driver project requires WDK 8.1 or
 later.
 
@@ -157,5 +164,7 @@ Windows 7.
 MountTool
 ---------
 
-Compiled exe files for the sample graphical and command line tools under
-Managed Source directory.
+Compiled exe file for the sample graphical under Managed Source directory.
+The application requires .NET Framework 4.8. There is also a .NET 6 version
+in the DotNetCore subdirectory.
+

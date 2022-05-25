@@ -1,7 +1,6 @@
 ﻿using Arsenal.ImageMounter.Extensions;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,7 +8,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CA1835 // Prefer the 'Memory'-based overloads for 'ReadAsync' and 'WriteAsync'
+
 
 namespace Arsenal.ImageMounter.IO;
 
@@ -98,14 +97,13 @@ public class CombinedSeekStream : Stream
         return num;
     }
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     public override async Task<int> ReadAsync(byte[] buffer, int index, int count, CancellationToken cancellationToken)
     {
         var num = 0;
 
         while (_current.Value is not null && count > 0)
         {
-            var r = await _current.Value.ReadAsync(buffer, index, count, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+            var r = await _current.Value.ReadAsync(buffer, index, count, cancellationToken).ConfigureAwait(false);
 
             if (r <= 0)
             {
@@ -128,10 +126,8 @@ public class CombinedSeekStream : Stream
     public override int EndRead(IAsyncResult asyncResult) =>
         ((Task<int>)asyncResult).Result;
 
-#endif
-
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public async override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var count = buffer.Length;
         var index = 0;
@@ -139,7 +135,7 @@ public class CombinedSeekStream : Stream
 
         while (_current.Value is not null && count > 0)
         {
-            var r = await _current.Value.ReadAsync(buffer.Slice(index, count), cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+            var r = await _current.Value.ReadAsync(buffer.Slice(index, count), cancellationToken).ConfigureAwait(false);
 
             if (r <= 0)
             {
@@ -217,7 +213,6 @@ public class CombinedSeekStream : Stream
         }
     }
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     public override async Task WriteAsync(byte[] buffer, int index, int count, CancellationToken cancellationToken)
     {
         if (!CanWrite)
@@ -243,7 +238,7 @@ public class CombinedSeekStream : Stream
         {
             var current_count = (int)Math.Min(count, _current.Value.Length - _current.Value.Position);
 
-            await _current.Value.WriteAsync(buffer, index, current_count, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+            await _current.Value.WriteAsync(buffer, index, current_count, cancellationToken).ConfigureAwait(false);
 
             Seek(current_count, SeekOrigin.Current);
 
@@ -258,10 +253,8 @@ public class CombinedSeekStream : Stream
     public override void EndWrite(IAsyncResult asyncResult) =>
         ((Task)asyncResult).Wait();
 
-#endif
-
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public async override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (!CanWrite)
         {
@@ -289,7 +282,7 @@ public class CombinedSeekStream : Stream
         {
             var current_count = (int)Math.Min(count, _current.Value.Length - _current.Value.Position);
 
-            await _current.Value.WriteAsync(buffer.Slice(index, current_count), cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+            await _current.Value.WriteAsync(buffer.Slice(index, current_count), cancellationToken).ConfigureAwait(false);
 
             Seek(current_count, SeekOrigin.Current);
 
@@ -338,9 +331,7 @@ public class CombinedSeekStream : Stream
 
     public override void Flush() => _current.Value?.Flush();
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     public override Task FlushAsync(CancellationToken cancellationToken) => _current.Value?.FlushAsync(cancellationToken) ?? Task.FromResult(0);
-#endif
 
     private long _position;
 

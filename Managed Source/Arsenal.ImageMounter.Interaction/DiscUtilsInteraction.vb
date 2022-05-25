@@ -7,6 +7,8 @@ Imports DiscUtils
 Imports DiscUtils.Core.WindowsSecurity.AccessControl
 Imports DiscUtils.Partitions
 Imports Buffer = System.Buffer
+Imports System.Buffers
+Imports System.Runtime.InteropServices
 
 Namespace Server.Interaction
 
@@ -82,16 +84,22 @@ Namespace Server.Interaction
 
                 Using raw = open_volume()
 
-                    Dim vbr(0 To disk.SectorSize - 1) As Byte
+                    Dim sector_size = disk.SectorSize
 
-                    raw.Read(vbr, 0, vbr.Length)
+                    Dim vbr = ArrayPool(Of Byte).Shared.Rent(disk.SectorSize)
+                    Try
+                        raw.Read(vbr, 0, sector_size)
 
-                    Dim newvalue = BitConverter.GetBytes(CUInt(first_sector))
-                    Buffer.BlockCopy(newvalue, 0, vbr, &H1C, newvalue.Length)
+                        MemoryMarshal.Write(vbr.AsSpan(&H1C), CUInt(first_sector))
 
-                    raw.Position = 0
+                        raw.Position = 0
 
-                    raw.Write(vbr, 0, vbr.Length)
+                        raw.Write(vbr, 0, sector_size)
+
+                    Finally
+                        ArrayPool(Of Byte).Shared.Return(vbr)
+
+                    End Try
 
                 End Using
 

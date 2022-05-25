@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Buffers
 Imports System.Diagnostics.CodeAnalysis
 Imports System.IO
 Imports System.IO.Pipes
@@ -98,14 +99,28 @@ Namespace Server.SpecializedProviders
                     Return "No error"
                 End If
 
-                Dim errmsg As New StringBuilder(32000)
+                Dim errmsg = ArrayPool(Of Char).Shared.Rent(32000)
 
-                If libewf_error_backtrace_sprint(Me, errmsg, errmsg.Capacity) > 0 Then
-                    Dim msgs = errmsg.ToString().Split(vbLf(0)).Reverse()
-                    Return String.Join(Environment.NewLine, msgs)
-                Else
-                    Return $"Unknown error 0x{handle:X}"
-                End If
+                Try
+                    If libewf_error_backtrace_sprint(Me, errmsg, errmsg.Length) > 0 Then
+
+                        Dim msgs = New ReadOnlyMemory(Of Char)(errmsg).
+                            ReadNullTerminatedUnicodeString().
+                            SplitReverse(vbLf(0)).
+                            Select(Function(msg) msg.TrimEnd(vbCr(0)))
+
+                        Return String.Join(Environment.NewLine, msgs)
+
+                    Else
+
+                        Return $"Unknown error 0x{handle:X}"
+
+                    End If
+
+                Finally
+                    ArrayPool(Of Char).Shared.Return(errmsg)
+
+                End Try
 
             End Function
 
@@ -246,7 +261,7 @@ Namespace Server.SpecializedProviders
         Private Shared Function libewf_handle_set_utf8_hash_value(safeLibEwfHandle As SafeLibEwfFileHandle,
                                                                      <[In], MarshalAs(UnmanagedType.LPStr, SizeParamIndex:=2)> hash_value_identifier As String,
                                                                      hash_value_identifier_length As IntPtr,
-                                                                     <[In]> utf8_string As IntPtr,
+                                                                     <[In], MarshalAs(UnmanagedType.LPUTF8Str)> utf8_string As String,
                                                                      utf8_string_length As IntPtr,
                                                                      <Out> ByRef errobj As SafeLibEwfErrorObjectHandle) As Integer
         End Function
@@ -337,11 +352,11 @@ Namespace Server.SpecializedProviders
         End Function
 
         <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True, CharSet:=CharSet.Ansi)>
-        Private Shared Function libewf_error_sprint(errobj As SafeLibEwfErrorObjectHandle, buffer As StringBuilder, length As Integer) As Integer
+        Private Shared Function libewf_error_sprint(errobj As SafeLibEwfErrorObjectHandle, <Out> buffer As Char(), length As Integer) As Integer
         End Function
 
         <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True, CharSet:=CharSet.Ansi)>
-        Private Shared Function libewf_error_backtrace_sprint(errobj As SafeLibEwfErrorObjectHandle, buffer As StringBuilder, length As Integer) As Integer
+        Private Shared Function libewf_error_backtrace_sprint(errobj As SafeLibEwfErrorObjectHandle, <Out> buffer As Char(), length As Integer) As Integer
         End Function
 
         <DllImport("libewf", CallingConvention:=CallingConvention.Cdecl, SetLastError:=True, ThrowOnUnmappableChar:=True)>
@@ -399,15 +414,11 @@ Namespace Server.SpecializedProviders
 
             Dim func As f_libewf_handle_open
 
-#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
             If NativeLib.IsWindows Then
                 func = AddressOf libewf_handle_open_wide
             Else
                 func = AddressOf libewf_handle_open
             End If
-#Else
-            func = AddressOf libewf_handle_open_wide
-#End If
 
             If func(_SafeHandle, filenames, filenames.Length, Flags, errobj) <> 1 OrElse Failed(errobj) Then
 
@@ -630,17 +641,13 @@ Namespace Server.SpecializedProviders
 
             Trace.WriteLine($"{identifier} = {valuestr}")
 
-            Using utf8 = PinnedBuffer.Create(Encoding.UTF8.GetBytes(valuestr))
+            Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
 
-                Dim errobj As SafeLibEwfErrorObjectHandle = Nothing
+            Dim retval = libewf_handle_set_utf8_hash_value(SafeHandle, identifier, New IntPtr(identifier.Length), valuestr, New IntPtr(valuestr.Length), errobj)
 
-                Dim retval = libewf_handle_set_utf8_hash_value(SafeHandle, identifier, New IntPtr(identifier.Length), utf8.DangerousGetHandle(), New IntPtr(valuestr.Length), errobj)
-
-                If retval <> 1 OrElse Failed(errobj) Then
-                    ThrowError(errobj, $"Hash result set '{identifier}'='{value}' failed")
-                End If
-
-            End Using
+            If retval <> 1 OrElse Failed(errobj) Then
+                ThrowError(errobj, $"Hash result set '{identifier}'='{value}' failed")
+            End If
 
         End Sub
 
@@ -720,11 +727,7 @@ Namespace Server.SpecializedProviders
 
             Public Property Notes As String
 
-#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
             Public Property AcquiryOperatingSystem As String = RuntimeInformation.OSDescription
-#Else
-            Public Property AcquiryOperatingSystem As String = $"Windows {API.OSVersion}"
-#End If
 
             Public Property AcquirySoftware As String = "aim-libewf"
 

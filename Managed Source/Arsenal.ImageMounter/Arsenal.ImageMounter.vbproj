@@ -4,9 +4,13 @@
 
   <PropertyGroup>
     <Description>Arsenal Image Mounter Low Level API Library</Description>
-	<TargetFrameworks>net45;net6.0</TargetFrameworks>
+	<TargetFrameworks>net48;net6.0</TargetFrameworks>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Buffers" Version="*" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Arsenal.ImageMounter.Interop\Arsenal.ImageMounter.Interop.csproj" />
@@ -17,12 +21,12 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="6.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="*" />
     <PackageReference Include="Microsoft.Win32.Registry">
-      <Version>5.0.0</Version>
+      <Version>*</Version>
     </PackageReference>
     <PackageReference Include="System.IO.FileSystem.AccessControl">
-      <Version>5.0.0</Version>
+      <Version>*</Version>
     </PackageReference>
   </ItemGroup>
 

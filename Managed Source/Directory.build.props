@@ -17,8 +17,21 @@
     <Deterministic>false</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RollForward>LatestMajor</RollForward>
-    <DiscUtilsPath Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\netstandard2.1</DiscUtilsPath>
-    <DiscUtilsPath Condition="'$(TargetFramework.CompareTo(`net5`))' &lt; 0">$(SolutionDir)..\..\3rdparty\DiscUtils\$(Configuration)\$(TargetFramework)</DiscUtilsPath>
+
+    <Title>Arsenal Image Mounter</Title>
+    <Company>Arsenal Recon</Company>
+    <Product>Arsenal Image Mounter</Product>
+    <Copyright>Copyright © Arsenal Recon, 2015 - 2022</Copyright>
+    <Trademark />
+    <FileVersion>3.9.204.0</FileVersion>
+    <ProductVersion>3.9.204.0</ProductVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Company>Arsenal Recon</Company>
+    <PackageVersion>$(FileVersion)</PackageVersion>
+    <PackageOutputPath>$(LocalNuGetPath)\$(Configuration)</PackageOutputPath>
 
   </PropertyGroup>
 
@@ -26,20 +39,7 @@
 
     <DelaySign>false</DelaySign>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>$(SolutionDir)Arsenal.ImageMounter.snk</AssemblyOriginatorKeyFile>
-
-  </PropertyGroup>
-
-  <PropertyGroup>
-
-    <Title>Arsenal Image Mounter</Title>
-    <Company>Arsenal Recon</Company>
-    <Product>Arsenal Image Mounter</Product>
-    <Copyright>Copyright © Arsenal Recon, 2015 - 2022</Copyright>
-    <Trademark />
-    <FileVersion>3.9.201.0</FileVersion>
-    <ProductVersion>3.9.201.0</ProductVersion>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <AssemblyOriginatorKeyFile>..\Arsenal.ImageMounter.snk</AssemblyOriginatorKeyFile>
 
   </PropertyGroup>
 

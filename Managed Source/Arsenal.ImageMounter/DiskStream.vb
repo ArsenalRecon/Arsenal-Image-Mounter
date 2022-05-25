@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Buffers
 Imports System.IO
 Imports System.Runtime.Versioning
 Imports Arsenal.ImageMounter.IO
@@ -20,7 +21,7 @@ Imports Microsoft.Win32.SafeHandles
 ''' where FileStream base implementation rely on file API not directly compatible with disk device
 ''' objects.
 ''' </summary>
-<SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+<SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
 Public Class DiskStream
     Inherits AligningStream
 
@@ -102,43 +103,49 @@ Public Class DiskStream
     ''' </summary>
     Public Function GetVBRPartitionLength() As Long?
 
-        Dim vbr(0 To CInt(NativeFileIO.GetDiskGeometry(SafeFileHandle).Value.BytesPerSector - 1UI)) As Byte
+        Dim bytesPerSector = NativeFileIO.GetDiskGeometry(SafeFileHandle).Value.BytesPerSector
+        Dim vbr = ArrayPool(Of Byte).Shared.Rent(bytesPerSector)
+        Try
+            Position = 0
 
-        Position = 0
+            If Read(vbr, 0, bytesPerSector) < bytesPerSector Then
+                Return Nothing
+            End If
 
-        If Read(vbr, 0, vbr.Length) < vbr.Length Then
-            Return Nothing
-        End If
+            Dim vbr_sector_size = BitConverter.ToInt16(vbr, &HB)
 
-        Dim vbr_sector_size = BitConverter.ToInt16(vbr, &HB)
+            If vbr_sector_size <= 0 Then
+                Return Nothing
+            End If
 
-        If vbr_sector_size <= 0 Then
-            Return Nothing
-        End If
+            Dim total_sectors As Long
 
-        Dim total_sectors As Long
+            total_sectors = BitConverter.ToUInt16(vbr, &H13)
 
-        total_sectors = BitConverter.ToUInt16(vbr, &H13)
+            If total_sectors = 0 Then
 
-        If total_sectors = 0 Then
+                total_sectors = BitConverter.ToUInt32(vbr, &H20)
 
-            total_sectors = BitConverter.ToUInt32(vbr, &H20)
+            End If
 
-        End If
+            If total_sectors = 0 Then
 
-        If total_sectors = 0 Then
+                total_sectors = BitConverter.ToInt64(vbr, &H28)
 
-            total_sectors = BitConverter.ToInt64(vbr, &H28)
+            End If
 
-        End If
+            If total_sectors < 0 Then
 
-        If total_sectors < 0 Then
+                Return Nothing
 
-            Return Nothing
+            End If
 
-        End If
+            Return total_sectors * vbr_sector_size
 
-        Return total_sectors * vbr_sector_size
+        Finally
+            ArrayPool(Of Byte).Shared.Return(vbr)
+
+        End Try
 
     End Function
 

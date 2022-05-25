@@ -29,7 +29,7 @@ Public Module MainModule
 
         Dim opMode As OpMode = OpMode.Status
 
-        If args?.Length > 0 Then
+        If args IsNot Nothing AndAlso args.Length > 0 Then
             If args(0).Equals("/install", StringComparison.OrdinalIgnoreCase) Then
                 opMode = OpMode.Install
             ElseIf args(0).Equals("/uninstall", StringComparison.OrdinalIgnoreCase) Then

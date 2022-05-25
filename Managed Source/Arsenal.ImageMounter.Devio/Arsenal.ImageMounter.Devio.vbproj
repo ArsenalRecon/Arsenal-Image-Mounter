@@ -5,7 +5,7 @@
   <PropertyGroup>
     <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
     <Description>Arsenal Image Mounter Device I/O Backend</Description>
-	<TargetFrameworks>net45;net6.0</TargetFrameworks>
+	<TargetFrameworks>net48;net6.0</TargetFrameworks>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
@@ -20,55 +20,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="DiscUtils.Core">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Dmg">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Dmg.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Fat">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Fat.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Ntfs">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Ntfs.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.OpticalDisk">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.OpticalDisk.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Streams">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Streams.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Vdi">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Vdi.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Vhd">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Vhd.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Vhdx">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Vhdx.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Vmdk">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Vmdk.dll</HintPath>
-    </Reference>
-    <Reference Include="DiscUtils.Xva">
-      
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Xva.dll</HintPath>
-    </Reference>
+    <PackageReference Include="LTRData.DiscUtils.Core" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Dmg" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Fat" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.OpticalDisk" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Streams" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Vdi" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Vmdk" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Xva" Version="*" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Memory">
-      <Version>4.5.4</Version>
+      <Version>*</Version>
     </PackageReference>
   </ItemGroup>
 

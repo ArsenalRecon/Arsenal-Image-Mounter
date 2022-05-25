@@ -23,6 +23,20 @@ Namespace Extensions
         End Function
 
         <Extension>
+        Public Function Join(strings As String(), separator As Char) As String
+
+            Return String.Join(separator, strings)
+
+        End Function
+
+#If NETFRAMEWORK Then
+        <Extension>
+        Public Function Split(str As String, delimiter As Char, options As StringSplitOptions) As String()
+            Return str.Split({delimiter}, options)
+        End Function
+#End If
+
+        <Extension>
         Public Function Concat(strings As IEnumerable(Of String)) As String
 
             Return String.Concat(strings)
@@ -63,109 +77,6 @@ Namespace Extensions
             Return Reflection.MembersStringParser(Of T).ToString(o)
 
         End Function
-
-        <Extension>
-        Public Function ToHexString(bytes As ICollection(Of Byte), offset As Integer, count As Integer) As String
-
-            If bytes Is Nothing OrElse offset > bytes.Count OrElse offset + count > bytes.Count Then
-                Return Nothing
-            End If
-
-            Dim valuestr As New StringBuilder(count << 1)
-            For i = offset To offset + count - 1
-                valuestr.Append(bytes(i).ToString("x2"))
-            Next
-
-            Return valuestr.ToString()
-
-        End Function
-
-        <Extension>
-        Public Function ToHexString(bytes As IEnumerable(Of Byte)) As String
-
-            If bytes Is Nothing Then
-                Return Nothing
-            End If
-
-            Dim valuestr As New StringBuilder
-            For Each b In bytes
-                valuestr.Append(b.ToString("x2"))
-            Next
-
-            Return valuestr.ToString()
-
-        End Function
-
-        Public Function ParseHexString(str As String) As Byte()
-
-            Dim bytes = New Byte(0 To (str.Length >> 1) - 1) {}
-
-            For i = 0 To bytes.Length - 1
-
-#If NETCOREAPP OrElse NETSTANDARD2_1_OR_GREATER Then
-                bytes(i) = Byte.Parse(str.AsSpan(i << 1, 2), NumberStyles.HexNumber)
-#Else
-                bytes(i) = Byte.Parse(str.Substring(i << 1, 2), NumberStyles.HexNumber)
-#End If
-
-            Next
-
-            Return bytes
-
-        End Function
-
-        Public Iterator Function ParseHexString(str As IEnumerable(Of Char)) As IEnumerable(Of Byte)
-
-            Dim buffer(0 To 1) As Char
-
-            For Each c In str
-
-                If buffer(0) = Nothing Then
-                    buffer(0) = c
-                Else
-                    buffer(1) = c
-                    Yield Byte.Parse(New String(buffer), NumberStyles.HexNumber)
-                    Array.Clear(buffer, 0, 2)
-                End If
-
-            Next
-
-        End Function
-
-        Public Function ParseHexString(str As String, offset As Integer, count As Integer) As Byte()
-
-            Dim bytes = New Byte(0 To (count >> 1) - 1) {}
-
-            For i = 0 To count - 1
-
-#If NETCOREAPP OrElse NETSTANDARD2_1_OR_GREATER Then
-                bytes(i) = Byte.Parse(str.AsSpan((i + offset) << 1, 2), NumberStyles.HexNumber)
-#Else
-                bytes(i) = Byte.Parse(str.Substring((i + offset) << 1, 2), NumberStyles.HexNumber)
-#End If
-
-            Next
-
-            Return bytes
-
-        End Function
-
-#If NETFRAMEWORK Then
-        <Extension>
-        Public Function Contains(str As String, chr As Char) As Boolean
-            Return str.IndexOf(chr) >= 0
-        End Function
-
-        <Extension>
-        Public Function Contains(str As String, substr As String) As Boolean
-            Return str.IndexOf(substr) >= 0
-        End Function
-
-        <Extension>
-        Public Function Contains(str As String, substr As String, comparison As StringComparison) As Boolean
-            Return str.IndexOf(substr, comparison) >= 0
-        End Function
-#End If
 
     End Module
 

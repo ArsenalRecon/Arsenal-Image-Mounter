@@ -1,144 +1,224 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO;
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using System.Text;
+using System.Security.Cryptography;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter;
 
-public static unsafe class NativeCalls
+public static class NativeCalls
 {
 #if NETCOREAPP
 	public static IntPtr CrtDllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
 	{
 		if ((libraryName.StartsWith("msvcr", StringComparison.OrdinalIgnoreCase) ||
-            libraryName.Equals("crtdll", StringComparison.OrdinalIgnoreCase)) &&
+			libraryName.Equals("crtdll", StringComparison.OrdinalIgnoreCase)) &&
 			!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            return NativeLibrary.Load("c", assembly, searchPath);
-        }
+		{
+			return NativeLibrary.Load("c", assembly, searchPath);
+		}
 
 		return IntPtr.Zero;
 	}
 #endif
 
-	[SupportedOSPlatform("windows")]
+	[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 	private static class WindowsAPI
 	{
-		[DllImport("advapi32", CharSet = CharSet.Auto, EntryPoint = "SystemFunction036", SetLastError = true)]
-		public static extern byte RtlGenRandom(IntPtr buffer, int length);
+		[DllImport("ntdll", CharSet = CharSet.Auto)]
+		public static extern unsafe int NtQueryVolumeInformationFile(SafeFileHandle FileHandle, out IoStatusBlock IoStatusBlock, void* FsInformation, int FsInformationLength, FsInformationClass FsInformationClass);
+
+		[DllImport("kernel32", CharSet = CharSet.Auto)]
+		public static extern unsafe bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, void* InBuffer, int InBufferSize, void* OutBuffer, int OutBufferSize, out int BytesReturned, void* overlapped);
+
+		[DllImport("kernel32", CharSet = CharSet.Auto)]
+		public static extern bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, in byte InBuffer, int InBufferSize, out byte OutBuffer, int OutBufferSize, out int BytesReturned, IntPtr overlapped);
 
 		[DllImport("advapi32", CharSet = CharSet.Auto, EntryPoint = "SystemFunction036", SetLastError = true)]
-		public static extern byte RtlGenRandom(byte[] buffer, int length);
+		public static extern byte RtlGenRandom(out byte buffer, int length);
 
-		public static void GetWindowsFunctions(out Action<byte[], int> GenRandomBytesFunc, out Action<IntPtr, int> GenRandomPtrFunc)
-		{
-			GenRandomBytesFunc = (buffer, length) => { if (RtlGenRandom(buffer, length) == 0) { throw new Exception("Random generation failed"); } };
-			GenRandomPtrFunc = (buffer, length) => { if (RtlGenRandom(buffer, length) == 0) { throw new Exception("Random generation failed"); } };
-		}
+		[DllImport("advapi32", CharSet = CharSet.Auto, EntryPoint = "SystemFunction036", SetLastError = true)]
+        public static extern unsafe byte RtlGenRandom(void* buffer, int length);
 	}
 
-	private static readonly Action<byte[], int> GenRandomBytesFunc;
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    
+	public static void GenRandom(Span<byte> bytes) =>
+		RandomNumberGenerator.Fill(bytes);
 
-	private static readonly Action<IntPtr, int> GenRandomPtrFunc;
-
-#if NETSTANDARD || NETCOREAPP
-	private static readonly Random Random = new();
-
-	private static void InternalGenRandom(Span<byte> buffer)
-    {
-		lock (Random)
-		{
-			Random.NextBytes(buffer);
-		}
-    }
-
-	static NativeCalls()
-    {
-		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-			WindowsAPI.GetWindowsFunctions(out GenRandomBytesFunc, out GenRandomPtrFunc);
-		}
-		else
-        {
-			GenRandomBytesFunc = (buffer, length) => InternalGenRandom(buffer.AsSpan(0, length));
-			GenRandomPtrFunc = (buffer, length) => InternalGenRandom(new Span<byte>(buffer.ToPointer(), length));
-		}
-	}
-#else
-	static NativeCalls()
+    public static T GenRandom<T>() where T : unmanaged
 	{
-		GenRandomBytesFunc = (buffer, length) => { if (WindowsAPI.RtlGenRandom(buffer, length) == 0) { throw new Exception("Random generation failed"); } };
-		GenRandomPtrFunc = (buffer, length) => { if (WindowsAPI.RtlGenRandom(buffer, length) == 0) { throw new Exception("Random generation failed"); } };
-	}
-#endif
-
-	public static T GenRandomValue<T>() where T : unmanaged
-	{
-		T value;
-		GenRandomPtrFunc(new IntPtr(&value), sizeof(T));
+		T value = default;
+		GenRandom(LowLevelExtensions.AsBytes(ref value));
 		return value;
 	}
 
-	public static sbyte GenRandomSByte() => GenRandomValue<sbyte>();
+#else
 
-	public static short GenRandomInt16() => GenRandomValue<short>();
+	public static void GenRandom(Span<byte> bytes)
+	{
+		if (WindowsAPI.RtlGenRandom(out bytes[0], bytes.Length) == 0)
+		{
+			throw new Exception("Random generation failed");
+		}
+	}
 
-	public static int GenRandomInt32() => GenRandomValue<int>();
+	public static unsafe T GenRandom<T>() where T : unmanaged
+	{
+		T value;
+		if (WindowsAPI.RtlGenRandom(&value, sizeof(T)) == 0)
+		{
+			throw new Exception("Random generation failed");
+		}
+		return value;
+	}
 
-	public static long GenRandomInt64() => GenRandomValue<long>();
+#endif
 
-	public static byte GenRandomByte() => GenRandomValue<byte>();
+	public static sbyte GenRandomSByte() => GenRandom<sbyte>();
 
-	public static ushort GenRandomUInt16() => GenRandomValue<ushort>();
+	public static short GenRandomInt16() => GenRandom<short>();
 
-	public static uint GenRandomUInt32() => GenRandomValue<uint>();
+	public static int GenRandomInt32() => GenRandom<int>();
 
-	public static ulong GenRandomUInt64() => GenRandomValue<ulong>();
+	public static long GenRandomInt64() => GenRandom<long>();
 
-	public static Guid GenRandomGuid() => GenRandomValue<Guid>();
+	public static byte GenRandomByte() => GenRandom<byte>();
+
+	public static ushort GenRandomUInt16() => GenRandom<ushort>();
+
+	public static uint GenRandomUInt32() => GenRandom<uint>();
+
+	public static ulong GenRandomUInt64() => GenRandom<ulong>();
+
+	public static Guid GenRandomGuid() => GenRandom<Guid>();
 
 	public static byte[] GenRandomBytes(int count)
 	{
 		var bytes = new byte[count];
-		GenRandomBytesFunc(bytes, count);
+		GenRandom(bytes);
 		return bytes;
 	}
 
-    public static uint GenerateDiskSignature() => GenRandomUInt32() | 0x80808081U & 0xFEFEFEFFU;
+	public static uint GenerateDiskSignature() => (GenRandomUInt32() | 0x80808081U) & 0xFEFEFEFFU;
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
-    public static void GenRandomBytes(byte[] bytes, int offset, int count) =>
-		GenRandomBytes(bytes.AsSpan(offset, count));
+	[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+	public static unsafe FILE_FS_FULL_SIZE_INFORMATION? GetVolumeSizeInformation(SafeFileHandle SafeFileHandle)
+	{
+		var value = default(FILE_FS_FULL_SIZE_INFORMATION);
 
-    public static void GenRandomBytes(Span<byte> span)
+		var status = WindowsAPI.NtQueryVolumeInformationFile(SafeFileHandle,
+															 out var _,
+															 &value,
+															 sizeof(FILE_FS_FULL_SIZE_INFORMATION),
+															 FsInformationClass.FileFsFullSizeInformation);
+
+		if (status < 0)
+		{
+			return default;
+		}
+
+		return value;
+	}
+
+	private struct TrimDiskRegionInData
     {
-		fixed (byte* bytesPtr = span)
-        {
-			GenRandomPtrFunc(new IntPtr(bytesPtr), span.Length);
+        public unsafe TrimDiskRegionInData(DEVICE_DATA_SET_RANGE range,
+                                           DEVICE_DATA_MANAGEMENT_SET_ACTION action,
+                                           int flags)
+		{
+            Attributes = new(action,
+                             flags,
+                             0,
+                             0,
+                             sizeof(TrimDiskRegionInData) - sizeof(DEVICE_DATA_SET_RANGE),
+                             sizeof(DEVICE_DATA_SET_RANGE));
+
+            Range = range;
         }
-    }
-#else
-	public static void GenRandomBytes(byte[] bytes, int offset, int count)
+
+        public DEVICE_MANAGE_DATA_SET_ATTRIBUTES Attributes { get; }
+
+		public DEVICE_DATA_SET_RANGE Range { get; }
+	}
+
+	[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+	public static unsafe void TrimDiskRange(SafeFileHandle disk, long startingOffset, ulong lengthInBytes)
     {
-		if (bytes is null)
-        {
-			throw new ArgumentNullException(nameof(bytes));
-        }
+        var request = new TrimDiskRegionInData(new(startingOffset, lengthInBytes),
+                                               DEVICE_DATA_MANAGEMENT_SET_ACTION.DeviceDsmAction_Trim,
+                                               0);
 
-		if (offset < 0 || checked(offset + count) > bytes.Length)
-        {
-			throw new IndexOutOfRangeException(nameof(offset));
-        }
+		if (!WindowsAPI.DeviceIoControl(disk,
+										NativeConstants.IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES,
+										&request,
+										sizeof(TrimDiskRegionInData),
+										null,
+										0,
+										out var _,
+										null))
+		{
+			throw new Win32Exception();
+		}
+	}
 
-		fixed (byte* bytesPtr = &bytes[offset])
-        {
-			GenRandomPtrFunc(new IntPtr(bytesPtr), count);
-        }
-    }
-#endif
+	[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+	public static unsafe void InitializeDisk(SafeFileHandle disk, PARTITION_STYLE PartitionStyle)
+	{
+		switch (PartitionStyle)
+		{
+			case PARTITION_STYLE.MBR:
+				{
+					var mbr = new CREATE_DISK_MBR(partitionStyle: PARTITION_STYLE.MBR,
+												  diskSignature: GenerateDiskSignature());
+
+                    if (!WindowsAPI.DeviceIoControl(disk,
+                                                    NativeConstants.IOCTL_DISK_CREATE_DISK,
+                                                    &mbr,
+                                                    sizeof(CREATE_DISK_MBR),
+                                                    null,
+                                                    0,
+                                                    out var _,
+                                                    null))
+                    {
+						throw new Win32Exception();
+                    }
+
+					break;
+				}
+
+			case PARTITION_STYLE.GPT:
+				{
+					var gpt = new CREATE_DISK_GPT(partitionStyle: PARTITION_STYLE.GPT,
+												  diskId: Guid.NewGuid(),
+												  maxPartitionCount: 128);
+
+					if (!WindowsAPI.DeviceIoControl(disk,
+													NativeConstants.IOCTL_DISK_CREATE_DISK,
+													&gpt,
+													sizeof(CREATE_DISK_GPT),
+													null,
+													0,
+													out var _,
+													null))
+					{
+						throw new Win32Exception();
+					}
+
+					break;
+				}
+
+			default:
+				{
+					throw new ArgumentOutOfRangeException(nameof(PartitionStyle));
+				}
+		}
+	}
 }
+

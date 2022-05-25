@@ -48,6 +48,7 @@ Partial Class MainForm
         Me.btnRAMDisk = New System.Windows.Forms.Button()
         Me.btnMountLibAFF4 = New System.Windows.Forms.Button()
         Me.btnShowOpened = New System.Windows.Forms.Button()
+        Me.btnMountLibQCow = New System.Windows.Forms.Button()
         CType(Me.lbDevices, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.DiskStateViewBindingSource, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
@@ -66,9 +67,9 @@ Partial Class MainForm
         '
         Me.btnRefresh.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnRefresh.Location = New System.Drawing.Point(12, 221)
+        Me.btnRefresh.Location = New System.Drawing.Point(12, 163)
         Me.btnRefresh.Name = "btnRefresh"
-        Me.btnRefresh.Size = New System.Drawing.Size(629, 24)
+        Me.btnRefresh.Size = New System.Drawing.Size(627, 24)
         Me.btnRefresh.TabIndex = 1
         Me.btnRefresh.Text = "Refresh list"
         Me.btnRefresh.UseVisualStyleBackColor = True
@@ -78,9 +79,9 @@ Partial Class MainForm
         Me.btnRemoveSelected.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.btnRemoveSelected.Enabled = False
-        Me.btnRemoveSelected.Location = New System.Drawing.Point(12, 311)
+        Me.btnRemoveSelected.Location = New System.Drawing.Point(12, 253)
         Me.btnRemoveSelected.Name = "btnRemoveSelected"
-        Me.btnRemoveSelected.Size = New System.Drawing.Size(629, 24)
+        Me.btnRemoveSelected.Size = New System.Drawing.Size(627, 24)
         Me.btnRemoveSelected.TabIndex = 4
         Me.btnRemoveSelected.Text = "Remove selected"
         Me.btnRemoveSelected.UseVisualStyleBackColor = True
@@ -90,9 +91,9 @@ Partial Class MainForm
         Me.btnRemoveAll.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.btnRemoveAll.Enabled = False
-        Me.btnRemoveAll.Location = New System.Drawing.Point(12, 341)
+        Me.btnRemoveAll.Location = New System.Drawing.Point(12, 283)
         Me.btnRemoveAll.Name = "btnRemoveAll"
-        Me.btnRemoveAll.Size = New System.Drawing.Size(629, 24)
+        Me.btnRemoveAll.Size = New System.Drawing.Size(627, 24)
         Me.btnRemoveAll.TabIndex = 5
         Me.btnRemoveAll.Text = "Remove all"
         Me.btnRemoveAll.UseVisualStyleBackColor = True
@@ -101,9 +102,9 @@ Partial Class MainForm
         '
         Me.btnMountRaw.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnMountRaw.Location = New System.Drawing.Point(12, 401)
+        Me.btnMountRaw.Location = New System.Drawing.Point(12, 343)
         Me.btnMountRaw.Name = "btnMountRaw"
-        Me.btnMountRaw.Size = New System.Drawing.Size(629, 24)
+        Me.btnMountRaw.Size = New System.Drawing.Size(627, 24)
         Me.btnMountRaw.TabIndex = 7
         Me.btnMountRaw.Text = "Mount raw image"
         Me.btnMountRaw.UseVisualStyleBackColor = True
@@ -112,9 +113,9 @@ Partial Class MainForm
         '
         Me.btnMountDiscUtils.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnMountDiscUtils.Location = New System.Drawing.Point(12, 460)
+        Me.btnMountDiscUtils.Location = New System.Drawing.Point(12, 402)
         Me.btnMountDiscUtils.Name = "btnMountDiscUtils"
-        Me.btnMountDiscUtils.Size = New System.Drawing.Size(629, 24)
+        Me.btnMountDiscUtils.Size = New System.Drawing.Size(627, 24)
         Me.btnMountDiscUtils.TabIndex = 9
         Me.btnMountDiscUtils.Text = "Mount through DiscUtils"
         Me.btnMountDiscUtils.UseVisualStyleBackColor = True
@@ -123,9 +124,9 @@ Partial Class MainForm
         '
         Me.btnMountLibEwf.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnMountLibEwf.Location = New System.Drawing.Point(12, 490)
+        Me.btnMountLibEwf.Location = New System.Drawing.Point(12, 432)
         Me.btnMountLibEwf.Name = "btnMountLibEwf"
-        Me.btnMountLibEwf.Size = New System.Drawing.Size(629, 24)
+        Me.btnMountLibEwf.Size = New System.Drawing.Size(627, 24)
         Me.btnMountLibEwf.TabIndex = 10
         Me.btnMountLibEwf.Text = "Mount through libewf"
         Me.btnMountLibEwf.UseVisualStyleBackColor = True
@@ -134,9 +135,9 @@ Partial Class MainForm
         '
         Me.btnRescanBus.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnRescanBus.Location = New System.Drawing.Point(12, 251)
+        Me.btnRescanBus.Location = New System.Drawing.Point(12, 193)
         Me.btnRescanBus.Name = "btnRescanBus"
-        Me.btnRescanBus.Size = New System.Drawing.Size(629, 24)
+        Me.btnRescanBus.Size = New System.Drawing.Size(627, 24)
         Me.btnRescanBus.TabIndex = 2
         Me.btnRescanBus.Text = "Rescan SCSI bus"
         Me.btnRescanBus.UseVisualStyleBackColor = True
@@ -145,10 +146,10 @@ Partial Class MainForm
         '
         Me.cbNotifyLibEwf.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.cbNotifyLibEwf.AutoSize = True
-        Me.cbNotifyLibEwf.Location = New System.Drawing.Point(15, 550)
+        Me.cbNotifyLibEwf.Location = New System.Drawing.Point(15, 526)
         Me.cbNotifyLibEwf.Name = "cbNotifyLibEwf"
         Me.cbNotifyLibEwf.Size = New System.Drawing.Size(98, 17)
-        Me.cbNotifyLibEwf.TabIndex = 12
+        Me.cbNotifyLibEwf.TabIndex = 13
         Me.cbNotifyLibEwf.Text = "Debug console"
         Me.cbNotifyLibEwf.UseVisualStyleBackColor = True
         '
@@ -156,9 +157,9 @@ Partial Class MainForm
         '
         Me.btnMountMultiPartRaw.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnMountMultiPartRaw.Location = New System.Drawing.Point(12, 430)
+        Me.btnMountMultiPartRaw.Location = New System.Drawing.Point(12, 372)
         Me.btnMountMultiPartRaw.Name = "btnMountMultiPartRaw"
-        Me.btnMountMultiPartRaw.Size = New System.Drawing.Size(629, 24)
+        Me.btnMountMultiPartRaw.Size = New System.Drawing.Size(627, 24)
         Me.btnMountMultiPartRaw.TabIndex = 8
         Me.btnMountMultiPartRaw.Text = "Mount multi-part raw"
         Me.btnMountMultiPartRaw.UseVisualStyleBackColor = True
@@ -180,7 +181,7 @@ Partial Class MainForm
         Me.lbDevices.ReadOnly = True
         Me.lbDevices.RowHeadersVisible = False
         Me.lbDevices.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
-        Me.lbDevices.Size = New System.Drawing.Size(629, 188)
+        Me.lbDevices.Size = New System.Drawing.Size(627, 131)
         Me.lbDevices.TabIndex = 0
         '
         'ScsiIdDataGridViewTextBoxColumn
@@ -255,9 +256,9 @@ Partial Class MainForm
         '
         Me.btnRAMDisk.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnRAMDisk.Location = New System.Drawing.Point(12, 371)
+        Me.btnRAMDisk.Location = New System.Drawing.Point(12, 313)
         Me.btnRAMDisk.Name = "btnRAMDisk"
-        Me.btnRAMDisk.Size = New System.Drawing.Size(629, 24)
+        Me.btnRAMDisk.Size = New System.Drawing.Size(627, 24)
         Me.btnRAMDisk.TabIndex = 6
         Me.btnRAMDisk.Text = "Create RAM disk"
         Me.btnRAMDisk.UseVisualStyleBackColor = True
@@ -266,9 +267,9 @@ Partial Class MainForm
         '
         Me.btnMountLibAFF4.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnMountLibAFF4.Location = New System.Drawing.Point(12, 520)
+        Me.btnMountLibAFF4.Location = New System.Drawing.Point(12, 462)
         Me.btnMountLibAFF4.Name = "btnMountLibAFF4"
-        Me.btnMountLibAFF4.Size = New System.Drawing.Size(629, 24)
+        Me.btnMountLibAFF4.Size = New System.Drawing.Size(627, 24)
         Me.btnMountLibAFF4.TabIndex = 11
         Me.btnMountLibAFF4.Text = "Mount through libaff4"
         Me.btnMountLibAFF4.UseVisualStyleBackColor = True
@@ -278,18 +279,30 @@ Partial Class MainForm
         Me.btnShowOpened.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.btnShowOpened.Enabled = False
-        Me.btnShowOpened.Location = New System.Drawing.Point(12, 281)
+        Me.btnShowOpened.Location = New System.Drawing.Point(12, 223)
         Me.btnShowOpened.Name = "btnShowOpened"
-        Me.btnShowOpened.Size = New System.Drawing.Size(629, 24)
+        Me.btnShowOpened.Size = New System.Drawing.Size(627, 24)
         Me.btnShowOpened.TabIndex = 3
         Me.btnShowOpened.Text = "Show using applications"
         Me.btnShowOpened.UseVisualStyleBackColor = True
+        '
+        'btnMountLibQCow
+        '
+        Me.btnMountLibQCow.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.btnMountLibQCow.Location = New System.Drawing.Point(12, 492)
+        Me.btnMountLibQCow.Name = "btnMountLibQCow"
+        Me.btnMountLibQCow.Size = New System.Drawing.Size(627, 24)
+        Me.btnMountLibQCow.TabIndex = 12
+        Me.btnMountLibQCow.Text = "Mount through libqcow"
+        Me.btnMountLibQCow.UseVisualStyleBackColor = True
         '
         'MainForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(653, 575)
+        Me.ClientSize = New System.Drawing.Size(651, 551)
+        Me.Controls.Add(Me.btnMountLibQCow)
         Me.Controls.Add(Me.btnMountLibAFF4)
         Me.Controls.Add(Me.lbDevices)
         Me.Controls.Add(Me.cbNotifyLibEwf)
@@ -336,4 +349,5 @@ Partial Class MainForm
     Private WithEvents btnRAMDisk As System.Windows.Forms.Button
     Private WithEvents btnMountLibAFF4 As Button
     Private WithEvents btnShowOpened As Button
+    Private WithEvents btnMountLibQCow As Button
 End Class

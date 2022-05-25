@@ -1,4 +1,5 @@
 ﻿Imports System.Runtime.InteropServices
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO.NativeFileIO
 
 Namespace Reflection
@@ -38,10 +39,10 @@ Namespace Reflection
 
         End Function
 
-        Public Shared Function GetProcAddressNoThrow(moduleName As String, procedureName As String) As IntPtr
+        Public Shared Function GetProcAddressNoThrow(moduleName As ReadOnlyMemory(Of Char), procedureName As String) As IntPtr
 
             Dim hModule As IntPtr
-            If Not NativeLibrary.TryLoad(moduleName, hModule) Then
+            If Not NativeLibrary.TryLoad(moduleName.ToString(), hModule) Then
                 Return Nothing
             End If
 
@@ -76,17 +77,17 @@ Namespace Reflection
 
         End Function
 
-        Public Shared Function GetProcAddress(moduleName As String, procedureName As String, delegateType As Type) As [Delegate]
+        Public Shared Function GetProcAddress(moduleName As ReadOnlyMemory(Of Char), procedureName As String, delegateType As Type) As [Delegate]
 
-            Dim hModule = Win32Try(UnsafeNativeMethods.LoadLibrary(moduleName))
+            Dim hModule = Win32Try(UnsafeNativeMethods.LoadLibraryW(moduleName.MakeNullTerminated()))
 
             Return Marshal.GetDelegateForFunctionPointer(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)), delegateType)
 
         End Function
 
-        Public Shared Function GetProcAddressNoThrow(moduleName As String, procedureName As String) As IntPtr
+        Public Shared Function GetProcAddressNoThrow(moduleName As ReadOnlyMemory(Of Char), procedureName As String) As IntPtr
 
-            Dim hModule = UnsafeNativeMethods.LoadLibrary(moduleName)
+            Dim hModule = UnsafeNativeMethods.LoadLibraryW(moduleName.MakeNullTerminated())
 
             If hModule = Nothing Then
                 Return Nothing
@@ -98,7 +99,7 @@ Namespace Reflection
 
 #End If
 
-        Public Shared Function GetProcAddressNoThrow(moduleName As String, procedureName As String, delegateType As Type) As [Delegate]
+        Public Shared Function GetProcAddressNoThrow(moduleName As ReadOnlyMemory(Of Char), procedureName As String, delegateType As Type) As [Delegate]
 
             Dim fptr = GetProcAddressNoThrow(moduleName, procedureName)
 

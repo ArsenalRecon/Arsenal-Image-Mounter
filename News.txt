@@ -108,3 +108,22 @@
 * Some users have experienced extremely bad performance on Windows XP. A
   possible reason has been identified and corrected. Please report if such
   problems are still seen!
+
+-- Managed API 3.9.204
+
+* Optimizations and modernizations in many places.
+
+* Split Windows-specific code to isolated libraries so that other libraries
+  can be referenced by applications that target other platforms.
+
+* Target frameworks are now .NET Framework 4.8 and .NET 6.0 only.
+
+* Integrated with libqcow.dll to support Qemu images and libaff4.dll to
+  support AFF4 images.
+
+* The build process now generates nuget packages to the directory specified
+  by LocalNuGetPath environment variable.
+
+* Projects now reference most third-party .NET dependencies as packages
+  instead of .dll files directly.
+

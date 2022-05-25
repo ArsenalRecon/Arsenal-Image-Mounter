@@ -1,39 +1,22 @@
-How to build user-mode tools and library
-----------------------------------------
+How to build unmanaged source, including drivers and native libraries
+---------------------------------------------------------------------
 
-* Required: Visual Studio 2010-2015. You can download free versions of
-  Visual Studio Express:
-  http://www.microsoft.com/en-us/download/details.aspx?id=34673
-
-
-* Install PowerShell 3.0 from
-  http://www.microsoft.com/en-us/download/details.aspx?id=34595
-
-
-* Download Arsenal-Image-Mounter from
-  https://github.com/ArsenalRecon/Arsenal-Image-Mounter (there's a link to
-  'Download ZIP' at the right), and unpack it:
-  https://github.com/ArsenalRecon/Arsenal-Image-Mounter/archive/master.zip
-
-
-* Start Visual Studio and open the solution .sln files in "Native Source" or
-  ".NET Source" directories.
-
-
-* The driver project requires Windows Driver Kit.
+* It is possible to build driver, native API DLL and native command line
+  tools with Windows Driver Kit 7.0.
   https://msdn.microsoft.com/en-us/library/windows/hardware/ff557573.aspx
   If you don't need to build the driver project, you can simply exclude that
-  project from the build process or from the solution.
+  project from the build process.
+
+* There is also a Visual Studio solution where you can build these components
+  in Visual Studio 2017-2022.
+
+How to build managed source, including graphical and command line tools for
+mounting images, installing driver, converting between image formats etc
+---------------------------------------------------------------------------
+
+* It is possible to build all of this with .NET 6.0 SDK.
+  https://dotnet.microsoft.com/en-us/download/dotnet/6.0
 
 
-* Now you can go to the Build Menu in the main screen of Visual Studio, and
-  click 'Build Project'. If successful, the binaries are placed
-  in the Source\*\bin\Release\ folders.
-
-
-* Install the driver with the ArsenalImageMounter-DriverSetup.exe utility
-  (in the DriverSetup folder). Finally, if you want to use libewf.dll, copy
-  the libewf.dll, msvcr100.dll and zlib.dll files from the libewf subdirectory
-  in the root to the same directory as the exe file where you are about to use
-  libewf.dll.
+* It is also possible to build all of this with Visual Studio 2019-2022.
 

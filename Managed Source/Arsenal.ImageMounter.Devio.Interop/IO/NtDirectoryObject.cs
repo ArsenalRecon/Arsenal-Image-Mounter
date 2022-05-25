@@ -1,14 +1,12 @@
 ﻿using Microsoft.Win32.SafeHandles;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using static Arsenal.ImageMounter.IO.NativeStruct;
+using System.Runtime.Versioning;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable 0649
 
 namespace Arsenal.ImageMounter.IO;
 
@@ -22,6 +20,7 @@ public enum NtObjectAccess
     AllAccess = 0x000F0000 | 0xF
 }
 
+[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public class NtDirectoryObject : IDisposable
 {
     private bool disposedValue;
@@ -30,9 +29,9 @@ public class NtDirectoryObject : IDisposable
     private static extern int NtOpenDirectoryObject(out SafeFileHandle handle, NtObjectAccess access, in ObjectAttributes objectAttributes);
 
     [DllImport("ntdll", SetLastError = false)]
-    unsafe private static extern int NtQueryDirectoryObject(
+    private static extern int NtQueryDirectoryObject(
         SafeFileHandle DirectoryHandle,
-        byte* buffer,
+        out byte buffer,
         int length,
         [MarshalAs(UnmanagedType.U1)] bool returnSingleEntry,
         [MarshalAs(UnmanagedType.U1)] bool restartScan,
@@ -45,25 +44,18 @@ public class NtDirectoryObject : IDisposable
         : this(path, access, null)
     { }
 
-    unsafe public NtDirectoryObject(string path, NtObjectAccess access, NtDirectoryObject root)
+    public NtDirectoryObject(string path, NtObjectAccess access, NtDirectoryObject root)
     {
-        using var pinnedpathstr = new PinnedString(path);
+        using var path_native = UnicodeString.Pin(path);
 
-        var pathstr = pinnedpathstr.UnicodeString;
+        var objectAttributes = new ObjectAttributes(root?.Handle, path_native, NtObjectAttributes.OpenIf, null, null);
 
-        var objectAttributes = new ObjectAttributes(
-            root?.Handle?.DangerousGetHandle() ?? IntPtr.Zero,
-            new IntPtr(&pathstr),
-            NtObjectAttributes.OpenIf,
-            IntPtr.Zero,
-            IntPtr.Zero);
-
-        NativeFileIO.NtDllTry(NtOpenDirectoryObject(out var handle, access, in objectAttributes));
+        NativeFileIO.NtDllTry(NtOpenDirectoryObject(out var handle, access, objectAttributes));
 
         Handle = handle;
     }
 
-    private struct ObjectDirectoryInformation
+    private readonly struct ObjectDirectoryInformation
     {
         public readonly UNICODE_STRING Name;
         public readonly UNICODE_STRING TypeName;
@@ -92,18 +84,18 @@ public class NtDirectoryObject : IDisposable
         }
     }
 
-    unsafe private (string Name, string TypeName) EnumerateNextObject(ref int context, bool restartScan)
+    private (string Name, string TypeName) EnumerateNextObject(ref int context, bool restartScan)
     {
         const int bufferSize = 600;
-        var buffer = stackalloc byte[bufferSize];
-        var result = NtQueryDirectoryObject(Handle, buffer, bufferSize, returnSingleEntry: true, restartScan, ref context, out var returnLength);
+        Span<byte> buffer = stackalloc byte[bufferSize];
+        var result = NtQueryDirectoryObject(Handle, out buffer[0], bufferSize, returnSingleEntry: true, restartScan, ref context, out var returnLength);
         
         if (result < 0)
         {
             return default;
         }
 
-        var info = *(ObjectDirectoryInformation*)buffer;
+        var info = MemoryMarshal.Read<ObjectDirectoryInformation>(buffer);
         return (info.Name.ToString(), string.Intern(info.TypeName.ToString()));
     }
 

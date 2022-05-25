@@ -18,7 +18,7 @@ Namespace IO
     ''' <summary>
     ''' Represents a system notification event object. Well known paths are available as constants of SystemNotificationEvent class.
     ''' </summary>
-    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Class SystemNotificationEvent
         Inherits WaitHandle
 

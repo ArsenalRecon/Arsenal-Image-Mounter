@@ -3,12 +3,12 @@
   <PropertyGroup>
     <RootNamespace>Arsenal.ImageMounter.Devio</RootNamespace>
     <Description>Arsenal Image Mounter Device I/O Backend</Description>
-    <TargetFrameworks>net45;net6.0</TargetFrameworks>
+    <TargetFrameworks>net48;net6.0</TargetFrameworks>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+    <PackageReference Include="System.ValueTuple" Version="*" />
   </ItemGroup>
 
   <ItemGroup>

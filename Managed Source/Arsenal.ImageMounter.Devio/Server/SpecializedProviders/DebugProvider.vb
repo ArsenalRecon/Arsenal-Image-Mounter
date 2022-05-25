@@ -65,7 +65,7 @@ Namespace Server.SpecializedProviders
             End Get
         End Property
 
-        Private Declare Function memcmp Lib "msvcrt" (<[In]> buf1 As IntPtr, buf2 As Byte(), count As IntPtr) As Integer
+        Private Declare Function RtlCompareMemory Lib "ntdll" (buf1 As IntPtr, buf2 As Byte(), count As IntPtr) As IntPtr
 
         Public Overrides Function Read(buf1 As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
@@ -84,7 +84,8 @@ Namespace Server.SpecializedProviders
                 Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X)} bytes, returned 0x{rc1:X)} bytes from image provider and 0x{rc2:X} bytes from debug compare stream.")
             End If
 
-            If memcmp(buf1 + bufferoffset, buf2, New IntPtr(Math.Min(rc1, rc2))) <> 0 Then
+            Dim cmpcount As New IntPtr(Math.Min(rc1, rc2))
+            If RtlCompareMemory(buf1 + bufferoffset, buf2, cmpcount) <> cmpcount Then
                 Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X} bytes, returned different data from image provider than from debug compare stream.")
             End If
 

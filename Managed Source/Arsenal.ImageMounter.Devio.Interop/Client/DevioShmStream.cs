@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.IO;
+using System;
 
 // '''' DevioShmStream.vb
 // '''' Client side component for use with devio proxy services from other clients
@@ -30,7 +31,7 @@ namespace Arsenal.ImageMounter.Devio.Client;
 /// Derives DevioStream and implements client side of Devio shared memory communication
 /// proxy.
 /// </summary>
-[SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)]
+[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public partial class DevioShmStream : DevioStream
 {
     private readonly EventWaitHandle RequestEvent;
@@ -137,7 +138,7 @@ public partial class DevioShmStream : DevioStream
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public unsafe override int Read(Span<byte> buffer)
+    public override int Read(Span<byte> buffer)
     {
         var Request = default(IMDPROXY_READ_REQ);
         Request.request_code = IMDPROXY_REQ.IMDPROXY_REQ_READ;
@@ -157,10 +158,9 @@ public partial class DevioShmStream : DevioStream
         }
 
         var Length = (int)Response.length;
-        fixed (void* bufptr = buffer)
-        {
-            Buffer.MemoryCopy((MapView.DangerousGetHandle() + IMDPROXY_HEADER_SIZE).ToPointer(), bufptr, buffer.Length, Length);
-        }
+
+        MapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer[..Length]);
+
         Position += Length;
         return Length;
     }
@@ -195,17 +195,15 @@ public partial class DevioShmStream : DevioStream
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public unsafe override void Write(ReadOnlySpan<byte> buffer)
+    public override void Write(ReadOnlySpan<byte> buffer)
     {
         var Request = default(IMDPROXY_WRITE_REQ);
         Request.request_code = IMDPROXY_REQ.IMDPROXY_REQ_WRITE;
         Request.offset = (ulong)Position;
         Request.length = (ulong)buffer.Length;
         MapView.Write(0x0, Request);
-        fixed (void* bufptr = buffer)
-        {
-            Buffer.MemoryCopy(bufptr, (MapView.DangerousGetHandle() + IMDPROXY_HEADER_SIZE).ToPointer(), (long)(MapView.ByteLength - IMDPROXY_HEADER_SIZE), buffer.Length);
-        }
+        MapView.WriteSpan(IMDPROXY_HEADER_SIZE, buffer);
+
         RequestEvent.Set();
         if (WaitHandle.WaitAny(new WaitHandle[] { ResponseEvent, ServerMutex }) != 0)
         {

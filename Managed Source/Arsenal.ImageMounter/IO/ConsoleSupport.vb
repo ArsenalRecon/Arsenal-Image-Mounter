@@ -1,7 +1,7 @@
 ﻿Imports System.IO
 Imports System.Runtime.CompilerServices
-Imports System.Runtime.InteropServices
 Imports System.Text
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.Reflection
 
 Namespace IO
@@ -10,15 +10,11 @@ Namespace IO
 
         Public Function GetConsoleOutputDeviceName() As String
 
-#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
             If NativeLib.IsWindows Then
                 Return "CONOUT$"
             Else
                 Return "/dev/tty"
             End If
-#Else
-            Return "CONOUT$"
-#End If
 
         End Function
 
@@ -39,9 +35,9 @@ Namespace IO
                 End If
             End If
 
-            Dim origLines = message.Replace(vbCr, "").Split({vbLf(0)})
+            Dim origLines = message.AsMemory().Split(vbLf(0))
 
-            Dim resultLines As New List(Of String)(origLines.Length)
+            Dim resultLines As New List(Of String)()
 
             Dim result As New StringBuilder
 
@@ -52,9 +48,11 @@ Namespace IO
                 result.Length = 0
                 line.Length = 0
 
+                origLine = origLine.TrimEnd(vbCr(0))
+
                 For Each Word In origLine.Split(WordDelimiter)
                     If Word.Length >= Width Then
-                        result.AppendLine(Word)
+                        result.AppendLine(Word.ToString())
                         Continue For
                     End If
                     If Word.Length + line.Length >= Width Then
@@ -68,11 +66,7 @@ Namespace IO
                 Next
 
                 If line.Length > 0 Then
-#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
                     result.Append(line)
-#Else
-                    result.Append(line.ToString())
-#End If
                 End If
 
                 resultLines.Add(result.ToString())
@@ -85,11 +79,7 @@ Namespace IO
 
         Public Function IsConsoleOutputRedirected() As Boolean
 
-#If NET45_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
             Return Console.IsOutputRedirected
-#Else
-            Return NativeFileIO.UnsafeNativeMethods.GetFileType(NativeFileIO.UnsafeNativeMethods.GetStdHandle(StdHandle.Output)) <> Win32FileType.Character
-#End If
 
         End Function
 

@@ -46,6 +46,8 @@ Namespace Server.Interaction
             MultiPartRaw
 
             LibAFF4
+
+            LibQcow
         End Enum
 
         ''' <summary>
@@ -90,6 +92,9 @@ Namespace Server.Interaction
                                    VirtualDiskAccess.ReadOnlyFileSystem})},
                 {ProxyType.LibAFF4,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
+                                   VirtualDiskAccess.ReadOnlyFileSystem})},
+                {ProxyType.LibQcow,
+                 Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadOnlyFileSystem})}
             }
 
@@ -113,7 +118,7 @@ Namespace Server.Interaction
         ''' <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
         ''' this could specify a flag for read-only mounting.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProxyType, Flags As DeviceFlags, DiskAccess As VirtualDiskAccess) As DevioServiceBase
 
             If Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) OrElse
@@ -142,7 +147,7 @@ Namespace Server.Interaction
         ''' <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
         ''' this could specify a flag for read-only mounting.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProxyType, Flags As DeviceFlags) As DevioServiceBase
 
             Dim DiskAccess As FileAccess
@@ -259,7 +264,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file. This does not create a DevioServiceBase
         ''' object that can actually serve incoming requests, it just creates the provider object that can
         ''' be used with a later created DevioServiceBase object.
@@ -282,7 +287,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file. This does not create a DevioServiceBase
         ''' object that can actually serve incoming requests, it just creates the provider object that can
         ''' be used with a later created DevioServiceBase object.
@@ -290,10 +295,12 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetProvider(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType) As IDevioProvider
 
             Dim device_number As UInteger
+
+            Dim attributes As FileAttributes
 
             If UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
 
@@ -301,7 +308,8 @@ Namespace Server.Interaction
 
             ElseIf (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
                 Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
-                Imagefile.IndexOf("\"c, 4) < 0 Then
+                (Not NativeFileIO.TryGetFileAttributes(Imagefile, attributes) OrElse
+                attributes.HasFlag(FileAttributes.Directory)) Then
 
                 Return GetProviderPhysical(Imagefile, DiskAccess)
 
@@ -319,10 +327,12 @@ Namespace Server.Interaction
 
         End Function
 
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, ProviderName As String) As IDevioProvider
 
             Dim device_number As UInteger
+
+            Dim attributes As FileAttributes
 
             If UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
 
@@ -330,7 +340,8 @@ Namespace Server.Interaction
 
             ElseIf (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
                 Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
-                Imagefile.IndexOf("\"c, 4) < 0 Then
+                (Not NativeFileIO.TryGetFileAttributes(Imagefile, attributes) OrElse
+                attributes.HasFlag(FileAttributes.Directory)) Then
 
                 Return GetProviderPhysical(Imagefile, DiskAccess)
 
@@ -348,21 +359,21 @@ Namespace Server.Interaction
 
         End Function
 
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DeviceNumber As UInteger, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
 
             Return GetProviderPhysical(DeviceNumber, GetDirectFileAccessFlags(DiskAccess))
 
         End Function
 
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
 
             Return GetProviderPhysical(DevicePath, GetDirectFileAccessFlags(DiskAccess))
 
         End Function
 
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DeviceNumber As UInteger, DiskAccess As FileAccess) As DevioProviderFromStream
 
             Using adapter As New ScsiAdapter
@@ -377,7 +388,7 @@ Namespace Server.Interaction
 
         End Function
 
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As FileAccess) As DevioProviderFromStream
 
             Dim disk As New DiskDevice(DevicePath, DiskAccess)
@@ -396,11 +407,7 @@ Namespace Server.Interaction
 
         Private Shared Function GetProviderRaw(Imagefile As String, DiskAccess As FileAccess) As DevioProviderFromStream
 
-#If NET461_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
             Dim stream As New FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete, bufferSize:=1, useAsync:=True)
-#Else
-            Dim stream = NativeFileIO.OpenFileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete, Overlapped:=True)
-#End If
 
             Return New DevioProviderFromStream(stream, ownsStream:=True) With {
                 .CustomSectorSize = GetSectorSizeFromFileName(Imagefile)
@@ -412,6 +419,7 @@ Namespace Server.Interaction
             {ProxyType.DiscUtils, AddressOf GetProviderDiscUtils},
             {ProxyType.LibEwf, AddressOf GetProviderLibEwf},
             {ProxyType.LibAFF4, AddressOf GetProviderLibAFF4},
+            {ProxyType.LibQcow, AddressOf GetProviderLibQcow},
             {ProxyType.MultiPartRaw, AddressOf GetProviderMultiPartRaw},
             {ProxyType.None, AddressOf GetProviderRaw}
         }
@@ -420,6 +428,7 @@ Namespace Server.Interaction
             {ProxyType.DiscUtils, AddressOf GetProviderDiscUtils},
             {ProxyType.LibEwf, AddressOf GetProviderLibEwf},
             {ProxyType.LibAFF4, AddressOf GetProviderLibAFF4},
+            {ProxyType.LibQcow, AddressOf GetProviderLibQcow},
             {ProxyType.MultiPartRaw, AddressOf GetProviderMultiPartRaw},
             {ProxyType.None, AddressOf GetProviderRaw}
         }
@@ -428,6 +437,7 @@ Namespace Server.Interaction
             {"DiscUtils", AddressOf GetProviderDiscUtils},
             {"LibEwf", AddressOf GetProviderLibEwf},
             {"LibAFF4", AddressOf GetProviderLibAFF4},
+            {"LibQcow", AddressOf GetProviderLibQcow},
             {"MultiPartRaw", AddressOf GetProviderMultiPartRaw},
             {"None", AddressOf GetProviderRaw}
         }
@@ -436,6 +446,7 @@ Namespace Server.Interaction
             {"DiscUtils", AddressOf GetProviderDiscUtils},
             {"LibEwf", AddressOf GetProviderLibEwf},
             {"LibAFF4", AddressOf GetProviderLibAFF4},
+            {"LibQcow", AddressOf GetProviderLibQcow},
             {"MultiPartRaw", AddressOf GetProviderMultiPartRaw},
             {"None", AddressOf GetProviderRaw}
         }
@@ -470,7 +481,7 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType) As DevioServiceBase
 
             Return GetService(Imagefile, DiskAccess, Proxy, FakeMBR:=False)
@@ -484,7 +495,7 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType, FakeMBR As Boolean) As DevioServiceBase
 
             If Proxy = ProxyType.None AndAlso Not FakeMBR Then
@@ -523,7 +534,7 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Function GetService(Imagefile As String, DiskAccess As FileAccess, Proxy As ProxyType) As DevioServiceBase
 
             Dim Service As DevioServiceBase
@@ -534,7 +545,7 @@ Namespace Server.Interaction
                     If Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) OrElse
                         Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase) Then
 
-                        Return New DevioNoneService("\\?\vhdaccess" & NativeFileIO.GetNtPath(Imagefile), DiskAccess)
+                        Return New DevioNoneService($"\\?\vhdaccess{NativeFileIO.GetNtPath(Imagefile)}", DiskAccess)
 
                     Else
 
@@ -561,7 +572,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using DiscUtils library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -587,7 +598,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using DiscUtils library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -769,7 +780,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified set of multi-part raw image files.
         ''' </summary>
         ''' <param name="Imagefile">First part image file.</param>
@@ -781,7 +792,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified set of multi-part raw image files.
         ''' </summary>
         ''' <param name="Imagefile">First part image file.</param>
@@ -797,7 +808,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified set of multi-part raw image files.
         ''' </summary>
         ''' <param name="Imagefile">First part image file.</param>
@@ -813,8 +824,56 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using libewf library.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        Public Shared Function GetProviderLibQcow(Imagefile As String, DiskAccess As VirtualDiskAccess) As IDevioProvider
+
+            Dim FileAccess As FileAccess
+
+            Select Case DiskAccess
+                Case VirtualDiskAccess.ReadOnly
+                    FileAccess = FileAccess.Read
+
+                Case VirtualDiskAccess.ReadWriteOverlay
+                    FileAccess = FileAccess.ReadWrite
+
+                Case Else
+                    Throw New ArgumentException($"Unsupported VirtualDiskAccess for libewf: {DiskAccess}", NameOf(DiskAccess))
+
+            End Select
+
+            Return GetProviderLibQcow(Imagefile, FileAccess)
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file using libqcow library.
+        ''' </summary>
+        ''' <param name="Imagefile">Image file.</param>
+        ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+        Public Shared Function GetProviderLibQcow(Imagefile As String, DiskAccess As FileAccess) As IDevioProvider
+
+            Dim Flags As Byte
+
+            If DiskAccess.HasFlag(FileAccess.Read) Then
+                Flags = Flags Or DevioProviderLibQcow.AccessFlagsRead
+            End If
+
+            If DiskAccess.HasFlag(FileAccess.Write) Then
+                Flags = Flags Or DevioProviderLibQcow.AccessFlagsWrite
+            End If
+
+            Return New DevioProviderLibQcow(Imagefile, Flags)
+
+        End Function
+
+        ''' <summary>
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
+        ''' for servicing I/O requests to a specified image file using libqcow library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
@@ -839,7 +898,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using libewf library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -861,7 +920,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using libaff4 library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -881,7 +940,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using libaff4 library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -897,7 +956,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using libaff4 library.
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
@@ -926,7 +985,7 @@ Namespace Server.Interaction
         End Function
 
         ''' <summary>
-        ''' Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+        ''' Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
         ''' for servicing I/O requests to a specified image file using libaff4 library.
         ''' </summary>
         ''' <param name="containerfile">Container file containing image to mount.</param>
@@ -946,7 +1005,7 @@ Namespace Server.Interaction
                 imagepath.StartsWith("\\.\", StringComparison.Ordinal)) AndAlso
                 String.IsNullOrWhiteSpace(Path.GetExtension(imagepath)) Then
 
-                Dim vdisk As New DiskDevice(imagepath, FileAccess.Read)
+                Dim vdisk As New DiskDevice(imagepath.AsMemory(), FileAccess.Read)
                 Dim diskstream = vdisk.GetRawDiskStream()
                 Return New Raw.Disk(diskstream, Ownership.Dispose)
 
@@ -959,6 +1018,13 @@ Namespace Server.Interaction
 
             If imagepath.EndsWith(".e01", StringComparison.OrdinalIgnoreCase) Then
                 Dim diskstream As New DevioDirectStream(New DevioProviderLibEwf(imagepath, DevioProviderLibEwf.AccessFlagsRead), ownsProvider:=True)
+                Return New Raw.Disk(diskstream, Ownership.Dispose)
+            End If
+
+            If imagepath.EndsWith(".qcow2", StringComparison.OrdinalIgnoreCase) OrElse
+                imagepath.EndsWith(".qcow", StringComparison.OrdinalIgnoreCase) OrElse
+                imagepath.EndsWith(".qcow2c", StringComparison.OrdinalIgnoreCase) Then
+                Dim diskstream As New DevioDirectStream(New DevioProviderLibQcow(imagepath, DevioProviderLibQcow.AccessFlagsRead), ownsProvider:=True)
                 Return New Raw.Disk(diskstream, Ownership.Dispose)
             End If
 
@@ -999,8 +1065,14 @@ Namespace Server.Interaction
                     Return New FileStream(arg, FileMode.Open, FileAccess.Read, FileShare.Read)
 
                 Case ".e01", ".aff", ".ex01", ".lx01"
-                    DevioProviderLibEwf.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName())
-                    'DevioProviderLibEwf.NotificationVerbose = True
+                    DevioProviderLibEwf.SetNotificationFile(GetConsoleOutputDeviceName())
+
+                    Dim provider = GetProviderLibEwf(arg, FileAccess.Read)
+                    Console.WriteLine($"Image '{arg}' sector size: {provider.SectorSize}")
+                    Return New DevioDirectStream(provider, ownsProvider:=True)
+
+                Case ".qcow", ".qcow2", ".qcow2c"
+                    DevioProviderLibQcow.SetNotificationFile(GetConsoleOutputDeviceName())
 
                     Dim provider = GetProviderLibEwf(arg, FileAccess.Read)
                     Console.WriteLine($"Image '{arg}' sector size: {provider.SectorSize}")
@@ -1016,7 +1088,7 @@ Namespace Server.Interaction
                         (arg.StartsWith("\\?\", StringComparison.Ordinal) OrElse
                         arg.StartsWith("\\.\", StringComparison.Ordinal)) Then
 
-                        Dim disk As New DiskDevice(arg, FileAccess.Read)
+                        Dim disk As New DiskDevice(arg.AsMemory(), FileAccess.Read)
                         Dim sector_size = If(disk.Geometry?.BytesPerSector, 512)
                         Console.WriteLine($"Physical disk '{arg}' sector size: {sector_size}")
                         Return disk.GetRawDiskStream()

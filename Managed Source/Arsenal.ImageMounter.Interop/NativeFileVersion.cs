@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Runtime.InteropServices;
 using WORD = System.UInt16;
 using DWORD = System.UInt32;
 using LONG = System.Int32;
 using BYTE = System.Byte;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable 0649
 #pragma warning disable 1591
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO;
 
+using Arsenal.ImageMounter.Extensions;
 using Internal;
+using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 
 public enum IMAGE_FILE_MACHINE : WORD
@@ -51,7 +54,7 @@ public enum IMAGE_FILE_MACHINE : WORD
 /// <summary>
 /// PE image header
 /// </summary>
-public struct IMAGE_FILE_HEADER
+public readonly struct IMAGE_FILE_HEADER
 {
     public readonly IMAGE_FILE_MACHINE Machine;
     public readonly WORD NumberOfSections;
@@ -71,7 +74,7 @@ internal struct IMAGE_DATA_DIRECTORY
 /// <summary>
 /// PE optional header
 /// </summary>
-public struct IMAGE_OPTIONAL_HEADER
+public readonly struct IMAGE_OPTIONAL_HEADER
 {
     //
     // Standard fields.
@@ -115,7 +118,7 @@ internal unsafe struct IMAGE_DOS_HEADER
 /// <summary>
 /// Base of PE headers
 /// </summary>
-public struct IMAGE_NT_HEADERS
+public readonly struct IMAGE_NT_HEADERS
 {
     public readonly int Signature;
     public readonly IMAGE_FILE_HEADER FileHeader;
@@ -127,18 +130,27 @@ public struct IMAGE_NT_HEADERS
 /// </summary>
 public unsafe struct VS_VERSIONINFO
 {
-    public readonly ushort wLength;
-    public readonly ushort wValueLength;
-    public readonly ushort wType;
-    public fixed char szKey[16];
-    public fixed ushort Padding1[1];
+    public readonly ushort Length { get; }
+    public readonly ushort ValueLength { get; }
+    public readonly ushort Type { get; }
+
+    private fixed char szKey[16];
+    
+    private readonly ushort padding1;
+    
     public FixedFileVerInfo FixedFileInfo { get; }
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    public ReadOnlySpan<char> Key => MemoryMarshal.CreateReadOnlySpan(ref szKey[0], 16);
+#else
+    public ReadOnlySpan<char> Key => new(Unsafe.AsPointer(ref szKey[0]), 16);
+#endif
 }
 
 /// <summary>
 /// Fixed numeric fields in file version resource
 /// </summary>
-public struct FixedFileVerInfo
+public readonly struct FixedFileVerInfo
 {
     public const uint FixedFileVerSignature = 0xFEEF04BD;
 
@@ -167,25 +179,22 @@ public struct FixedFileVerInfo
     public Version ProductVersion => new(ProductVersionMS.HIWORD(), ProductVersionMS.LOWORD(), ProductVersionLS.HIWORD(), ProductVersionLS.LOWORD());
 }
 
-[SupportedOSPlatform("windows")]
+[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 internal static class WindowsSpecific
 {
-    [DllImport("kernel32")]
-    public extern static void SetLastError(int errcode);
+    [DllImport("version", CharSet = CharSet.Unicode)]
+    public static extern unsafe bool VerQueryValue(void* pBlock, string lpSubBlock, out char* lplpBuffer, out int puLen);
 
     [DllImport("version", CharSet = CharSet.Unicode)]
-    public extern unsafe static bool VerQueryValue(void* pBlock, string lpSubBlock, out char* lplpBuffer, out int puLen);
+    public static extern unsafe bool VerQueryValue(void* pBlock, string lpSubBlock, out uint* lplpBuffer, out int puLen);
 
     [DllImport("version", CharSet = CharSet.Unicode)]
-    public extern unsafe static bool VerQueryValue(void* pBlock, string lpSubBlock, out uint* lplpBuffer, out int puLen);
-
-    [DllImport("version", CharSet = CharSet.Unicode)]
-    public extern unsafe static DWORD VerLanguageName(DWORD wLang, char* szLang, DWORD cchLang);
+    public static extern DWORD VerLanguageName(DWORD wLang, out char szLang, DWORD cchLang);
 }
 
 public static class NativePE
 {
-    private readonly static long _rsrc_id = 0x000000637273722E; // ".rsrc\0\0\0"
+    private static readonly long _rsrc_id = 0x000000637273722E; // ".rsrc\0\0\0"
 
     private const int ERROR_RESOURCE_DATA_NOT_FOUND = 1812;
     private const int ERROR_RESOURCE_TYPE_NOT_FOUND = 1813;
@@ -202,14 +211,12 @@ public static class NativePE
     /// <summary>
     /// Gets IMAGE_NT_HEADERS structure from raw PE image
     /// </summary>
-    /// <param name="rawFile">Raw exe or dll data</param>
+    /// <param name="FileData">Raw exe or dll data</param>
     /// <returns>IMAGE_NT_HEADERS structure</returns>
-    public static IMAGE_NT_HEADERS GetImageNtHeaders(byte[] rawFile)
+    public static IMAGE_NT_HEADERS GetImageNtHeaders(ReadOnlySpan<byte> FileData)
     {
-        using var FileData = PinnedBuffer.Create(rawFile);
-
-        var dos_header = FileData.Read<IMAGE_DOS_HEADER>(0);
-        var header = FileData.Read<IMAGE_NT_HEADERS>((ulong)dos_header.e_lfanew);
+        var dos_header = MemoryMarshal.Read<IMAGE_DOS_HEADER>(FileData);
+        var header = MemoryMarshal.Read<IMAGE_NT_HEADERS>(FileData.Slice(dos_header.e_lfanew));
 
         if (header.Signature != 0x4550 || header.FileHeader.SizeOfOptionalHeader == 0)
         {
@@ -220,119 +227,109 @@ public static class NativePE
     }
 
     /// <summary>
+    /// Returns a copy of fixed file version fields in a PE image
+    /// </summary>
+    /// <param name="FileData">Pointer to raw or mapped exe or dll</param>
+    /// <returns>Copy of data from located version resource</returns>
+    public static FixedFileVerInfo GetFixedFileVerInfo(ReadOnlySpan<byte> FileData) =>
+        GetRawFileVersionResource(FileData, out _).FixedFileInfo;
+
+    /// <summary>
     /// Locates version resource in a PE image
     /// </summary>
     /// <param name="FileData">Pointer to raw or mapped exe or dll</param>
     /// <param name="ResourceSize">Returns size of found resource</param>
-    /// <returns>Pointer to located version resource or null if none found</returns>
-    public unsafe static VS_VERSIONINFO* GetRawFileVersionResource(void* FileData, out int ResourceSize)
+    /// <returns>Reference to located version resource</returns>
+    public static unsafe ref readonly VS_VERSIONINFO GetRawFileVersionResource(ReadOnlySpan<byte> FileData, out int ResourceSize)
     {
         ResourceSize = 0;
 
-        var dos_header = (IMAGE_DOS_HEADER*)FileData;
+        ref readonly var dos_header = ref FileData.AsRef<IMAGE_DOS_HEADER>();
 
-        var header = (IMAGE_NT_HEADERS*)((byte*)FileData + dos_header->e_lfanew);
+        var header_ptr = FileData.Slice(dos_header.e_lfanew);
 
-        if (header == null || header->Signature != 0x4550 || header->FileHeader.SizeOfOptionalHeader == 0)
+        ref readonly var header = ref header_ptr.AsRef<IMAGE_NT_HEADERS>();
+
+        var sizeOfOptionalHeader = header.FileHeader.SizeOfOptionalHeader;
+
+        if (header.Signature != 0x4550 || sizeOfOptionalHeader == 0)
         {
             throw new BadImageFormatException();
         }
 
-        IMAGE_DATA_DIRECTORY* resource_header;
+        var optional_header_ptr = FileData.Slice(dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) - sizeof(IMAGE_OPTIONAL_HEADER));
 
-        if (header->FileHeader.SizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER32))
-        {
-            var optional_header = (IMAGE_OPTIONAL_HEADER32*)&header->OptionalHeader;
-            var data_directory = (IMAGE_DATA_DIRECTORY*)&optional_header->DataDirectory[0];
-            resource_header = data_directory + 2;
-        }
-        else if (header->FileHeader.SizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64))
-        {
-            var optional_header = (IMAGE_OPTIONAL_HEADER64*)&header->OptionalHeader;
-            var data_directory = (IMAGE_DATA_DIRECTORY*)&optional_header->DataDirectory[0];
-            resource_header = data_directory + 2;
-        }
-        else
-        {
-            throw new BadImageFormatException();
-        }
+        ref readonly var resource_header = ref FindImageDataDirectory(sizeOfOptionalHeader, optional_header_ptr);
 
-        var section_table = (IMAGE_SECTION_HEADER*)((BYTE*)&header->OptionalHeader + header->FileHeader.SizeOfOptionalHeader);
-        IMAGE_SECTION_HEADER* section_header = null;
+        var section_table = MemoryMarshal.Cast<byte, IMAGE_SECTION_HEADER>(optional_header_ptr.Slice(sizeOfOptionalHeader))
+            .Slice(0, header.FileHeader.NumberOfSections);
 
-        for (var i = 0; i < header->FileHeader.NumberOfSections; i++)
-        {
-            if (section_table[i].Name != _rsrc_id)
-            {
-                continue;
-            }
+        ref readonly var section_header = ref FindResourceSection(section_table);
 
-            section_header = section_table + i;
-            break;
-        }
+        var raw = FileData.Slice((int)section_header.PointerToRawData);
 
-        if (section_header == null)
-        {
-            throw new BadImageFormatException();
-        }
+        var resource_section = raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress));
+        ref readonly var resource_dir = ref resource_section.AsRef<IMAGE_RESOURCE_DIRECTORY>();
+        var resource_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress) + sizeof(IMAGE_RESOURCE_DIRECTORY)));
 
-        var raw = (BYTE*)FileData + section_header->PointerToRawData;
-
-        var resource_section = (IMAGE_RESOURCE_DIRECTORY*)(raw + (resource_header->VirtualAddress - section_header->VirtualAddress));
-        var resource_dir_entry = (IMAGE_RESOURCE_DIRECTORY_ENTRY*)(resource_section + 1);
-
-        for (var i = 0; i < resource_section->NumberOfNamedEntries + resource_section->NumberOfIdEntries; i++)
+        for (var i = 0; i < resource_dir.NumberOfNamedEntries + resource_dir.NumberOfIdEntries; i++)
         {
             if (!resource_dir_entry[i].NameIsString &&
                 resource_dir_entry[i].Id == RT_VERSION &&
                 resource_dir_entry[i].DataIsDirectory)
             {
-                var found_entry = resource_dir_entry + i;
+                ref readonly var found_entry = ref resource_dir_entry[i];
 
-                var found_dir = (IMAGE_RESOURCE_DIRECTORY*)((BYTE*)resource_section + found_entry->OffsetToDirectory);
+                var found_dir = resource_section.Slice((int)found_entry.OffsetToDirectory);
+                ref readonly var found_dir_header = ref found_dir.AsRef<IMAGE_RESOURCE_DIRECTORY>();
 
-                if ((found_dir->NumberOfIdEntries + found_dir->NumberOfNamedEntries) == 0)
+                if ((found_dir_header.NumberOfIdEntries + found_dir_header.NumberOfNamedEntries) == 0)
                 {
                     continue;
                 }
 
-                var found_dir_entry = (IMAGE_RESOURCE_DIRECTORY_ENTRY*)(found_dir + 1);
+                var found_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(found_dir.Slice(sizeof(IMAGE_RESOURCE_DIRECTORY)));
 
-                for (var j = 0; j < found_dir->NumberOfNamedEntries + found_dir->NumberOfIdEntries; j++)
+                for (var j = 0; j < found_dir_header.NumberOfNamedEntries + found_dir_header.NumberOfIdEntries; j++)
                 {
                     if (!found_dir_entry[j].DataIsDirectory)
                     {
                         continue;
                     }
 
-                    var found_subdir = (IMAGE_RESOURCE_DIRECTORY*)((BYTE*)resource_section + found_dir_entry->OffsetToDirectory);
+                    var found_subdir = resource_section.Slice((int)found_dir_entry[j].OffsetToDirectory);
+                    ref readonly var found_subdir_header = ref found_subdir.AsRef<IMAGE_RESOURCE_DIRECTORY>();
 
-                    if ((found_subdir->NumberOfIdEntries + found_subdir->NumberOfNamedEntries) == 0)
+                    if ((found_subdir_header.NumberOfIdEntries + found_subdir_header.NumberOfNamedEntries) == 0)
                     {
                         continue;
                     }
 
-                    var found_subdir_entry = (IMAGE_RESOURCE_DIRECTORY_ENTRY*)(found_subdir + 1);
+                    var found_subdir_entry = found_subdir.Slice(sizeof(IMAGE_RESOURCE_DIRECTORY));
+                    ref readonly var found_subdir_entry_header = ref found_subdir_entry.AsRef<IMAGE_RESOURCE_DIRECTORY_ENTRY>();
 
-                    if (found_subdir_entry->DataIsDirectory)
+                    if (found_subdir_entry_header.DataIsDirectory)
                     {
                         continue;
                     }
 
-                    var found_data_entry = (IMAGE_RESOURCE_DATA_ENTRY*)((BYTE*)resource_section + found_subdir_entry->OffsetToData);
+                    var found_data_entry = resource_section.Slice((int)found_subdir_entry_header.OffsetToData);
+                    ref readonly var found_data_entry_header = ref found_data_entry.AsRef<IMAGE_RESOURCE_DATA_ENTRY>();
 
-                    var resptr = (VS_VERSIONINFO*)(raw + (found_data_entry->OffsetToData - section_header->VirtualAddress));
+                    var found_res = raw.Slice((int)(found_data_entry_header.OffsetToData - section_header.VirtualAddress));
+                    ref readonly var found_res_block = ref found_res.AsRef<VS_VERSIONINFO>();
 
-                    if (resptr->wType != 0 ||
-                        !StringComparer.Ordinal.Equals(new string(resptr->szKey, 0, 15), "VS_VERSION_INFO") ||
-                        resptr->FixedFileInfo.Signature != FixedFileVerInfo.FixedFileVerSignature)
+                    if (found_res_block.Type != 0 ||
+                        !MemoryExtensions.Equals(found_res_block.Key, "VS_VERSION_INFO\0".AsSpan(), StringComparison.Ordinal) ||
+                        found_res_block.FixedFileInfo.StructVersion == 0 ||
+                        found_res_block.FixedFileInfo.Signature != FixedFileVerInfo.FixedFileVerSignature)
                     {
-                        throw new BadImageFormatException("No version resource in PE file");
+                        throw new BadImageFormatException("No valid version resource in PE file");
                     }
 
-                    ResourceSize = (int)found_data_entry->Size;
+                    ResourceSize = (int)found_data_entry_header.Size;
 
-                    return resptr;
+                    return ref found_res_block;
                 }
             }
         }
@@ -340,47 +337,39 @@ public static class NativePE
         throw new BadImageFormatException("No version resource in PE file");
     }
 
-    public unsafe static FixedFileVerInfo GetFixedVersionInfo(byte[] rawFile)
+    private static ref readonly IMAGE_SECTION_HEADER FindResourceSection(ReadOnlySpan<IMAGE_SECTION_HEADER> section_table)
     {
-        if (rawFile == null)
+        for (var i = 0; i < section_table.Length; i++)
         {
-            throw new ArgumentNullException(nameof(rawFile));
-        }
-        if (rawFile.Length < 4096)
-        {
-            throw new ArgumentException("Array too short", nameof(rawFile));
-        }
-
-        fixed (byte* fileData = rawFile)
-        {
-            var ptr = GetRawFileVersionResource(fileData, out var size);
-
-            if ((byte*)ptr - fileData + size > rawFile.Length)
+            if (section_table[i].Name != _rsrc_id)
             {
-                throw new BadImageFormatException();
+                continue;
             }
 
-            return GetFixedVersionInfo(ptr);
+            return ref section_table[i];
         }
+
+        throw new BadImageFormatException("No resource section found in PE file");
     }
 
-    /// <summary>
-    /// Gets fixed numeric fields from PE version resource
-    /// </summary>
-    /// <param name="versionResource">Pointer to version resource</param>
-    /// <returns>FixedFileVerInfo structure with fixed numeric version fields</returns>
-    public unsafe static FixedFileVerInfo GetFixedVersionInfo(VS_VERSIONINFO* versionResource)
+    private static unsafe ref readonly IMAGE_DATA_DIRECTORY FindImageDataDirectory(ushort sizeOfOptionalHeader, ReadOnlySpan<byte> optional_header_ptr)
     {
-        if (versionResource == null ||
-            versionResource->wType != 0 ||
-            !StringComparer.Ordinal.Equals(new string(versionResource->szKey, 0, 15), "VS_VERSION_INFO") ||
-            versionResource->FixedFileInfo.StructVersion == 0 ||
-            versionResource->FixedFileInfo.Signature != FixedFileVerInfo.FixedFileVerSignature)
+        if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER32) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
         {
-            throw new BadImageFormatException("No valied version resource in PE file");
+            ref readonly var optional_header = ref optional_header_ptr.AsRef<IMAGE_OPTIONAL_HEADER32>();
+            var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER32));
+            var data_directory = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
+            return ref data_directory[2];
+        }
+        else if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
+        {
+            ref readonly var optional_header = ref optional_header_ptr.AsRef<IMAGE_OPTIONAL_HEADER64>();
+            var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER64));
+            var data_directory = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
+            return ref data_directory[2];
         }
 
-        return versionResource->FixedFileInfo;
+        throw new BadImageFormatException();
     }
 
     /// <summary>
@@ -389,29 +378,26 @@ public static class NativePE
     /// <param name="versionResource">Pointer to version resource</param>
     /// <param name="SubBlock">Name of sub block</param>
     /// <returns>Located uint value, or null if not found</returns>
-    [SupportedOSPlatform("windows")]
-    public unsafe static uint? QueryValueInt(VS_VERSIONINFO* versionResource, string SubBlock)
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    internal static unsafe uint? QueryValueInt(in VS_VERSIONINFO versionResource, string SubBlock)
     {
-        if (versionResource == null)
-        {
-            WindowsSpecific.SetLastError(ERROR_NO_MORE_ITEMS);
-            return null;
-        }
-
         if (SubBlock == null)
         {
             SubBlock = "\\StringFileInfo\\040904E4\\FileDescription";
         }
 
-        if (!WindowsSpecific.VerQueryValue(versionResource, SubBlock, out uint* lpVerBuf, out var len) ||
-            lpVerBuf == null ||
-            len != sizeof(int))
+        fixed (VS_VERSIONINFO* versionResourcePtr = &versionResource)
         {
-            return null;
-        }
-        else
-        {
-            return *lpVerBuf;
+            if (!WindowsSpecific.VerQueryValue(versionResourcePtr, SubBlock, out uint* lpVerBuf, out var len) ||
+                lpVerBuf == null ||
+                len != sizeof(uint))
+            {
+                return null;
+            }
+            else
+            {
+                return *lpVerBuf;
+            }
         }
     }
 
@@ -421,27 +407,25 @@ public static class NativePE
     /// <param name="versionResource">Pointer to version resource</param>
     /// <param name="SubBlock">Name of sub block</param>
     /// <returns>Pointer to located string, or null if not found</returns>
-    [SupportedOSPlatform("windows")]
-    public static unsafe char* QueryValueString(VS_VERSIONINFO* versionResource, string SubBlock)
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    internal static unsafe string QueryValueString(in VS_VERSIONINFO versionResource, string SubBlock)
     {
-        if (versionResource == null)
-        {
-            WindowsSpecific.SetLastError(ERROR_NO_MORE_ITEMS);
-            return null;
-        }
-
         if (SubBlock == null)
         {
             SubBlock = "\\StringFileInfo\\040904E4\\FileDescription";
         }
 
-        if (!WindowsSpecific.VerQueryValue(versionResource, SubBlock, out char* lpVerBuf, out _))
+        fixed (VS_VERSIONINFO* versionResourcePtr = &versionResource)
         {
-            return null;
-        }
-        else
-        {
-            return lpVerBuf;
+            if (WindowsSpecific.VerQueryValue(versionResourcePtr, SubBlock, out char* lpVerBuf, out var len) &&
+                len > 0)
+            {
+                return new(lpVerBuf, 0, len);
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 
@@ -452,15 +436,9 @@ public static class NativePE
     /// <param name="strRecordName">Name of string record</param>
     /// <param name="dwTranslationCode">Translation language code or MaxValue to use default for version resource</param>
     /// <returns>Pointer to located string, or null if not found</returns>
-    [SupportedOSPlatform("windows")]
-    public static unsafe char* QueryValueWithTranslation(VS_VERSIONINFO* versionResource, string strRecordName, DWORD dwTranslationCode = DWORD.MaxValue)
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    internal static string QueryValueWithTranslation(in VS_VERSIONINFO versionResource, string strRecordName, DWORD dwTranslationCode = DWORD.MaxValue)
     {
-        if (versionResource == null)
-        {
-            WindowsSpecific.SetLastError(ERROR_NO_MORE_ITEMS);
-            return null;
-        }
-
         const DWORD dwDefaultTranslationCode = 0x04E40409;
         if (dwTranslationCode == DWORD.MaxValue)
         {
@@ -527,43 +505,15 @@ public class NativeFileVersion
     }
 
     /// <summary>
-    /// Parses raw file data into a NativeFileVersion structure
-    /// </summary>
-    /// <param name="rawFile">Raw exe or dll file data with a version resource</param>
-    [SupportedOSPlatform("windows")]
-    public static unsafe NativeFileVersion GetNativeFileVersion(byte[] rawFile)
-    {
-        if (rawFile == null)
-        {
-            throw new ArgumentNullException(nameof(rawFile));
-        }
-        if (rawFile.Length < 512)
-        {
-            throw new ArgumentException("Array too short", nameof(rawFile));
-        }
-
-        fixed (byte* file_data = rawFile)
-        {
-            return new(file_data, rawFile.Length);
-        }
-    }
-
-    /// <summary>
     /// Parses raw or mapped file data into a NativeFileVersion structure
     /// </summary>
     /// <param name="fileData">Raw or mapped exe or dll file data with a version resource</param>
-    /// <param name="size">Size of raw file data</param>
-    [SupportedOSPlatform("windows")]
-    public unsafe NativeFileVersion(byte* fileData, int size)
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public NativeFileVersion(ReadOnlySpan<byte> fileData)
     {
-        var ptr = NativePE.GetRawFileVersionResource(fileData, out var resourceSize);
+        ref readonly var ptr = ref NativePE.GetRawFileVersionResource(fileData, out var resourceSize);
 
-        if ((byte*)ptr - fileData + resourceSize > size)
-        {
-            throw new BadImageFormatException();
-        }
-
-        Fixed = NativePE.GetFixedVersionInfo(ptr);
+        Fixed = ptr.FixedFileInfo;
 
         var lpdwTranslationCode = NativePE.QueryValueInt(ptr, "\\VarFileInfo\\Translation");
 
@@ -571,11 +521,11 @@ public class NativeFileVersion
         if (lpdwTranslationCode.HasValue)
         {
             dwTranslationCode = lpdwTranslationCode.Value;
-            var tcLanguageName = stackalloc char[128];
-            if (WindowsSpecific.VerLanguageName(dwTranslationCode.LOWORD(), tcLanguageName, 128) != 0)
+            Span<char> tcLanguageName = stackalloc char[128];
+            if (WindowsSpecific.VerLanguageName(dwTranslationCode.LOWORD(), out tcLanguageName[0], 128) != 0)
             {
                 Fields.Add("TranslationCode", dwTranslationCode.ToString("X"));
-                Fields.Add("LanguageName", new string(tcLanguageName));
+                Fields.Add("LanguageName", tcLanguageName.ReadNullTerminatedUnicodeString());
             }
         }
         else
@@ -600,7 +550,7 @@ public class NativeFileVersion
 
             if (fieldvalue != null)
             {
-                Fields.Add(fieldname, new string(fieldvalue));
+                Fields.Add(fieldname, fieldvalue);
             }
         }
     }

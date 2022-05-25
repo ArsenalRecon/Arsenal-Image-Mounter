@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Buffers
 Imports System.ComponentModel
 Imports System.IO
 Imports System.Runtime.InteropServices
@@ -21,7 +22,7 @@ Imports Microsoft.Win32.SafeHandles
 ''' <summary>
 ''' Represents disk objects, attached to a virtual or physical SCSI adapter.
 ''' </summary>
-<SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+<SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
 Public Class DiskDevice
     Inherits DeviceObject
 
@@ -34,7 +35,7 @@ Public Class DiskDevice
     ''' If the object was opened in any other way, such as by supplying an already
     ''' open handle, this property returns null/Nothing.
     ''' </summary>
-    Public ReadOnly Property DevicePath As String
+    Public ReadOnly Property DevicePath As ReadOnlyMemory(Of Char)
 
     Private Sub AllowExtendedDasdIo()
         If Not NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero) Then
@@ -47,7 +48,7 @@ Public Class DiskDevice
         End If
     End Sub
 
-    Protected Friend Sub New(DeviceNameAndHandle As KeyValuePair(Of String, SafeFileHandle), AccessMode As FileAccess)
+    Protected Friend Sub New(DeviceNameAndHandle As KeyValuePair(Of ReadOnlyMemory(Of Char), SafeFileHandle), AccessMode As FileAccess)
         MyBase.New(DeviceNameAndHandle.Value, AccessMode)
 
         _DevicePath = DeviceNameAndHandle.Key
@@ -61,7 +62,7 @@ Public Class DiskDevice
     ''' size and similar, but not for reading or writing raw disk data.
     ''' </summary>
     ''' <param name="DevicePath"></param>
-    Public Sub New(DevicePath As String)
+    Public Sub New(DevicePath As ReadOnlyMemory(Of Char))
         MyBase.New(DevicePath)
 
         _DevicePath = DevicePath
@@ -74,12 +75,33 @@ Public Class DiskDevice
     ''' </summary>
     ''' <param name="DevicePath"></param>
     ''' <param name="AccessMode"></param>
-    Public Sub New(DevicePath As String, AccessMode As FileAccess)
+    Public Sub New(DevicePath As ReadOnlyMemory(Of Char), AccessMode As FileAccess)
         MyBase.New(DevicePath, AccessMode)
 
         _DevicePath = DevicePath
 
         AllowExtendedDasdIo()
+    End Sub
+
+    ''' <summary>
+    ''' Opens an disk device object without requesting read or write permissions. The
+    ''' resulting object can only be used to query properties like SCSI address, disk
+    ''' size and similar, but not for reading or writing raw disk data.
+    ''' </summary>
+    ''' <param name="DevicePath"></param>
+    Public Sub New(DevicePath As String)
+        Me.New(DevicePath.AsMemory())
+
+    End Sub
+
+    ''' <summary>
+    ''' Opens an disk device object, requesting read, write or both permissions.
+    ''' </summary>
+    ''' <param name="DevicePath"></param>
+    ''' <param name="AccessMode"></param>
+    Public Sub New(DevicePath As String, AccessMode As FileAccess)
+        Me.New(DevicePath.AsMemory(), AccessMode)
+
     End Sub
 
     ''' <summary>
@@ -95,7 +117,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves device number for this disk on the owner SCSI adapter.
     ''' </summary>
-    Public ReadOnly Property DeviceNumber As UInt32
+    Public ReadOnly Property DeviceNumber As UInteger
         Get
             If _CachedAddress Is Nothing Then
                 Dim scsi_address = ScsiAddress.Value
@@ -147,6 +169,10 @@ Public Class DiskDevice
         End Get
     End Property
 
+    Public Sub TrimRange(startingOffset As Long, lengthInBytes As ULong)
+        NativeCalls.TrimDiskRange(SafeFileHandle, startingOffset, lengthInBytes)
+    End Sub
+
     ''' <summary>
     ''' Enumerates disk volumes that use extents of this disk.
     ''' </summary>
@@ -195,22 +221,29 @@ Public Class DiskDevice
     ''' <summary>
     ''' Gets or sets disk signature stored in boot record.
     ''' </summary>
-    Public Property DiskSignature As UInt32?
+    Public Property DiskSignature As UInteger?
         Get
-            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
-            With GetRawDiskStream()
-                .Position = 0
-                .Read(rawsig, 0, rawsig.Length)
-            End With
-            If BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US AndAlso
+            Dim bytesPerSector = Geometry.Value.BytesPerSector
+            Dim rawsig = ArrayPool(Of Byte).Shared.Rent(bytesPerSector)
+            Try
+                With GetRawDiskStream()
+                    .Position = 0
+                    .Read(rawsig, 0, bytesPerSector)
+                End With
+                If BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US AndAlso
                     rawsig(&H1C2) <> &HEE AndAlso
                     (rawsig(&H1BE) And &H7F) = 0 AndAlso
                     (rawsig(&H1CE) And &H7F) = 0 AndAlso
                     (rawsig(&H1DE) And &H7F) = 0 AndAlso
                     (rawsig(&H1EE) And &H7F) = 0 Then
 
-                Return BitConverter.ToUInt32(rawsig, &H1B8)
-            End If
+                    Return BitConverter.ToUInt32(rawsig, &H1B8)
+                End If
+
+            Finally
+                ArrayPool(Of Byte).Shared.Return(rawsig)
+
+            End Try
 
             Return Nothing
         End Get
@@ -218,33 +251,46 @@ Public Class DiskDevice
             If Not Value.HasValue Then
                 Return
             End If
-            Dim newvalue = BitConverter.GetBytes(Value.Value)
-            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
-            With GetRawDiskStream()
-                .Position = 0
-                .Read(rawsig, 0, rawsig.Length)
-                Buffer.BlockCopy(newvalue, 0, rawsig, &H1B8, newvalue.Length)
-                .Position = 0
-                .Write(rawsig, 0, rawsig.Length)
-            End With
+
+            Dim bytesPerSector = Geometry.Value.BytesPerSector
+            Dim rawsig = ArrayPool(Of Byte).Shared.Rent(bytesPerSector)
+            Try
+                With GetRawDiskStream()
+                    .Position = 0
+                    .Read(rawsig, 0, bytesPerSector)
+                    MemoryMarshal.Write(rawsig.AsSpan(&H1B8), Value.Value)
+                    .Position = 0
+                    .Write(rawsig, 0, bytesPerSector)
+                End With
+
+            Finally
+                ArrayPool(Of Byte).Shared.Return(rawsig)
+
+            End Try
         End Set
     End Property
 
     ''' <summary>
     ''' Gets or sets disk signature stored in boot record.
     ''' </summary>
-    Public Property VBRHiddenSectorsCount As UInt32?
+    Public Property VBRHiddenSectorsCount As UInteger?
         Get
-            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
+            Dim bytesPerSector = Geometry.Value.BytesPerSector
+            Dim rawsig = ArrayPool(Of Byte).Shared.Rent(bytesPerSector)
+            Try
+                With GetRawDiskStream()
+                    .Position = 0
+                    .Read(rawsig, 0, bytesPerSector)
+                End With
 
-            With GetRawDiskStream()
-                .Position = 0
-                .Read(rawsig, 0, rawsig.Length)
-            End With
+                If BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US Then
+                    Return BitConverter.ToUInt32(rawsig, &H1C)
+                End If
 
-            If BitConverter.ToUInt16(rawsig, &H1FE) = &HAA55US Then
-                Return BitConverter.ToUInt32(rawsig, &H1C)
-            End If
+            Finally
+                ArrayPool(Of Byte).Shared.Return(rawsig)
+
+            End Try
 
             Return Nothing
         End Get
@@ -252,15 +298,22 @@ Public Class DiskDevice
             If Not Value.HasValue Then
                 Return
             End If
-            Dim newvalue = BitConverter.GetBytes(Value.Value)
-            Dim rawsig(0 To Geometry.Value.BytesPerSector - 1) As Byte
-            With GetRawDiskStream()
-                .Position = 0
-                .Read(rawsig, 0, rawsig.Length)
-                Buffer.BlockCopy(newvalue, 0, rawsig, &H1C, newvalue.Length)
-                .Position = 0
-                .Write(rawsig, 0, rawsig.Length)
-            End With
+
+            Dim bytesPerSector = Geometry.Value.BytesPerSector
+            Dim rawsig = ArrayPool(Of Byte).Shared.Rent(bytesPerSector)
+            Try
+                With GetRawDiskStream()
+                    .Position = 0
+                    .Read(rawsig, 0, bytesPerSector)
+                    MemoryMarshal.Write(rawsig.AsSpan(&H1C), Value.Value)
+                    .Position = 0
+                    .Write(rawsig, 0, bytesPerSector)
+                End With
+
+            Finally
+                ArrayPool(Of Byte).Shared.Return(rawsig)
+
+            End Try
         End Set
     End Property
 
@@ -297,6 +350,10 @@ Public Class DiskDevice
         Get
 
             Dim bootsect = ReadBootSector()
+
+            If bootsect Is Nothing Then
+                Return False
+            End If
 
             Return BitConverter.ToUInt16(bootsect, &H1FE) = &HAA55US AndAlso
                 (bootsect(&H1BE) And &H7F) = 0 AndAlso
@@ -424,7 +481,7 @@ Public Class DiskDevice
     ''' for physical disks, not disk partitions.
     ''' </summary>
     Public Sub InitializeDisk(PartitionStyle As PARTITION_STYLE)
-        NativeFileIO.InitializeDisk(SafeFileHandle, PartitionStyle)
+        NativeCalls.InitializeDisk(SafeFileHandle, PartitionStyle)
     End Sub
 
     ''' <summary>
@@ -450,10 +507,10 @@ Public Class DiskDevice
     ''' <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
     ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
     ''' virtual memory type virtual disk.</param>
-    Public Sub QueryDevice(<Out> ByRef DeviceNumber As UInt32,
-                           <Out> ByRef DiskSize As Int64,
-                           <Out> ByRef BytesPerSector As UInt32,
-                           <Out> ByRef ImageOffset As Int64,
+    Public Sub QueryDevice(<Out> ByRef DeviceNumber As UInteger,
+                           <Out> ByRef DiskSize As Long,
+                           <Out> ByRef BytesPerSector As UInteger,
+                           <Out> ByRef ImageOffset As Long,
                            <Out> ByRef Flags As DeviceFlags,
                            <Out> ByRef Filename As String)
 
@@ -487,10 +544,10 @@ Public Class DiskDevice
     ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
     ''' virtual memory type virtual disk.</param>
     ''' <param name="WriteOverlayImagefile">Path to differencing file used in write-temporary mode.</param>
-    Public Sub QueryDevice(<Out> ByRef DeviceNumber As UInt32,
-                           <Out> ByRef DiskSize As Int64,
-                           <Out> ByRef BytesPerSector As UInt32,
-                           <Out> ByRef ImageOffset As Int64,
+    Public Sub QueryDevice(<Out> ByRef DeviceNumber As UInteger,
+                           <Out> ByRef DiskSize As Long,
+                           <Out> ByRef BytesPerSector As UInteger,
+                           <Out> ByRef ImageOffset As Long,
                            <Out> ByRef Flags As DeviceFlags,
                            <Out> ByRef Filename As String,
                            <Out> ByRef WriteOverlayImagefile As String)
@@ -558,7 +615,7 @@ Public Class DiskDevice
     ''' <returns></returns>
     Public ReadOnly Property VolumeSizeInformation As FILE_FS_FULL_SIZE_INFORMATION?
         Get
-            Return NativeFileIO.GetVolumeSizeInformation(SafeFileHandle)
+            Return NativeCalls.GetVolumeSizeInformation(SafeFileHandle)
         End Get
     End Property
 
@@ -595,7 +652,6 @@ Public Class DiskDevice
 
     End Sub
 
-#If NET45_OR_GREATER OrElse NETCOREAPP OrElse NETSTANDARD Then
     ''' <summary>
     ''' Locks and dismounts filesystem on a volume. Upon successful return, further access to the device
     ''' can only be done through this device object instance until it is either closed (disposed) or lock is
@@ -606,10 +662,9 @@ Public Class DiskDevice
     ''' successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
     Public Async Function DismountVolumeFilesystemAsync(Force As Boolean, cancel As CancellationToken) As Task
 
-        NativeFileIO.Win32Try(Await NativeFileIO.DismountVolumeFilesystemAsync(SafeFileHandle, Force, cancel).ConfigureAwait(continueOnCapturedContext:=False))
+        NativeFileIO.Win32Try(Await NativeFileIO.DismountVolumeFilesystemAsync(SafeFileHandle, Force, cancel).ConfigureAwait(False))
 
     End Function
-#End If
 
     ''' <summary>
     ''' Get live statistics from write filter driver.

@@ -1,8 +1,6 @@
 ﻿using Arsenal.ImageMounter.Extensions;
 using System;
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
 using System.Buffers;
-#endif
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -11,7 +9,7 @@ using System.Threading.Tasks;
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CA1062 // Validate arguments of public methods
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CA1835 // Prefer the 'Memory'-based overloads for 'ReadAsync' and 'WriteAsync'
+
 
 namespace Arsenal.ImageMounter.IO;
 
@@ -76,7 +74,6 @@ public class AligningStream : Stream
         return totalSize;
     }
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     private async Task<int> SafeBaseReadAsync(byte[] buffer, int offset, int count, CancellationToken token)
     {
         if (Position >= Length)
@@ -110,7 +107,6 @@ public class AligningStream : Stream
 
         return totalSize;
     }
-#endif
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
 
@@ -180,7 +176,7 @@ public class AligningStream : Stream
         return totalSize;
     }
 
-    public async override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var count = buffer.Length;
         var offset = 0;
@@ -293,7 +289,6 @@ public class AligningStream : Stream
         }
     }
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state) =>
         ReadAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
@@ -337,7 +332,6 @@ public class AligningStream : Stream
             ArrayPool<byte>.Shared.Return(newbuffer);
         }
     }
-#endif
 
     public override long Seek(long offset, SeekOrigin origin) => origin switch
     {
@@ -419,7 +413,6 @@ public class AligningStream : Stream
         }
     }
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state) =>
         WriteAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
@@ -508,11 +501,10 @@ public class AligningStream : Stream
 
     public override Task FlushAsync(CancellationToken cancellationToken)
     => BaseStream.FlushAsync(cancellationToken);
-#endif
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
 
-    public async override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var count = buffer.Length;
         var offset = 0;

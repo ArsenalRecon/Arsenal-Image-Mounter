@@ -4,6 +4,30 @@
         <name>Arsenal.ImageMounter.Devio.Interop</name>
     </assembly>
     <members>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.IsBufferZero(System.Byte[])">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty or buffer is null, true is returned, false otherwise.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.IsBufferZero(System.Span{System.Byte})">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.IsBufferZero(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
+        </member>
         <member name="T:Arsenal.ImageMounter.Devio.Client.DevioDirectStream">
             <summary>
             Base class for classes that implement Stream for client side of Devio protocol.
@@ -242,61 +266,6 @@
             <param name="Request">Request data</param>
             <param name="Response">Response data</param>
             <param name="Keys">List of currently registered keys</param>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.SetBit(System.Byte[],System.Int32)">
-            <summary>
-            Sets a bit to 1 in a bit field.
-            </summary>
-            <param name="data">Bit field</param>
-            <param name="bitnumber">Bit number to set to 1</param>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.ClearBit(System.Byte[],System.Int32)">
-            <summary>
-            Sets a bit to 0 in a bit field.
-            </summary>
-            <param name="data">Bit field</param>
-            <param name="bitnumber">Bit number to set to 0</param>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.GetBit(System.Byte[],System.Int32)">
-            <summary>
-            Gets a bit from a bit field.
-            </summary>
-            <param name="data">Bit field</param>
-            <param name="bitnumber">Bit number to get</param>
-            <returns>True if value of specified bit is 1, false if 0.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.IsBufferZero(System.Byte[])">
-            <summary>
-            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
-            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
-            </summary>
-            <param name="buffer"></param>
-            <returns>If all bytes are zero, buffer is empty or buffer is null, true is returned, false otherwise.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.IsBufferZero(System.Span{System.Byte})">
-            <summary>
-            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
-            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
-            </summary>
-            <param name="buffer"></param>
-            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.IsBufferZero(System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
-            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
-            </summary>
-            <param name="buffer"></param>
-            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.NativeBitConverter.SequenceEqual(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Compares two byte spans using C runtime memcmp function.
-            </summary>
-            <param name="first">First span</param>
-            <param name="second">Second span</param>
-            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
-            If lengths are equal and byte sequences are equal, true is returned.</returns>
         </member>
     </members>
 </doc>

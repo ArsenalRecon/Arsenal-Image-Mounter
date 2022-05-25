@@ -17,7 +17,7 @@
 
 using System.IO;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -54,7 +54,7 @@ public partial class DevioDirectStream : DevioStream
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public unsafe override int Read(Span<byte> buffer)
+    public override unsafe int Read(Span<byte> buffer)
     {
         fixed (void* ptr = buffer)
         {
@@ -92,7 +92,7 @@ public partial class DevioDirectStream : DevioStream
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public unsafe override void Write(ReadOnlySpan<byte> buffer)
+    public override unsafe void Write(ReadOnlySpan<byte> buffer)
     {
         fixed (void* ptr = buffer)
         {

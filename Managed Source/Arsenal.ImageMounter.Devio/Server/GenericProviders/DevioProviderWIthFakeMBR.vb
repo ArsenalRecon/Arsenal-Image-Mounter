@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Buffers
 Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
@@ -42,41 +43,50 @@ Namespace Server.GenericProviders
 
         Public Shared Function GetVBRPartitionLength(baseProvider As IDevioProvider) As Long
 
-            Dim vbr(0 To CInt(baseProvider.NullCheck(NameOf(baseProvider)).SectorSize - 1UI)) As Byte
+            baseProvider.NullCheck(NameOf(baseProvider))
 
-            If baseProvider.Read(vbr, 0, vbr.Length, 0) < vbr.Length Then
-                Return 0
-            End If
+            Dim sector_size = CInt(baseProvider.SectorSize)
 
-            Dim vbr_sector_size = BitConverter.ToInt16(vbr, &HB)
+            Dim vbr = ArrayPool(Of Byte).Shared.Rent(sector_size)
+            Try
+                If baseProvider.Read(vbr, 0, sector_size, 0) < sector_size Then
+                    Return 0
+                End If
 
-            If vbr_sector_size <= 0 Then
-                Return 0
-            End If
+                Dim vbr_sector_size = BitConverter.ToInt16(vbr, &HB)
 
-            Dim total_sectors As Long
+                If vbr_sector_size <= 0 Then
+                    Return 0
+                End If
 
-            total_sectors = BitConverter.ToUInt16(vbr, &H13)
+                Dim total_sectors As Long
 
-            If total_sectors = 0 Then
+                total_sectors = BitConverter.ToUInt16(vbr, &H13)
 
-                total_sectors = BitConverter.ToUInt32(vbr, &H20)
+                If total_sectors = 0 Then
 
-            End If
+                    total_sectors = BitConverter.ToUInt32(vbr, &H20)
 
-            If total_sectors = 0 Then
+                End If
 
-                total_sectors = BitConverter.ToInt64(vbr, &H28)
+                If total_sectors = 0 Then
 
-            End If
+                    total_sectors = BitConverter.ToInt64(vbr, &H28)
 
-            If total_sectors < 0 Then
+                End If
 
-                Return 0
+                If total_sectors < 0 Then
 
-            End If
+                    Return 0
 
-            Return total_sectors * vbr_sector_size
+                End If
+
+                Return total_sectors * vbr_sector_size
+
+            Finally
+                ArrayPool(Of Byte).Shared.Return(vbr)
+
+            End Try
 
         End Function
 

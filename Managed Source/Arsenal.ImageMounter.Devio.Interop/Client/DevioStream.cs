@@ -168,7 +168,6 @@ public abstract partial class DevioStream : Stream
     /// </summary>
     public IMDPROXY_FLAGS ProxyFlags => Flags;
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state) =>
         ReadAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
@@ -186,13 +185,8 @@ public abstract partial class DevioStream : Stream
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         Write(buffer, offset, count);
-#if NET461_OR_GREATER || NETSTANDARD || NETCOREAPP
         return Task.CompletedTask;
-#else
-        return LowLevelExtensions.ZeroCompletedTask;
-#endif
     }
-#endif
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
@@ -201,7 +195,7 @@ public abstract partial class DevioStream : Stream
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         Write(buffer.Span);
-        return new ValueTask();
+        return new();
     }
 #endif
 }

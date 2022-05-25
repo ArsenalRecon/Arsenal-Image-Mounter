@@ -1,7 +1,5 @@
 ﻿Imports System.Collections.ObjectModel
 Imports System.IO
-Imports System.Linq.Expressions
-Imports System.Reflection
 Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.Reflection
 
@@ -84,7 +82,7 @@ Namespace IO
         ' IDisposable
         Protected Overridable Sub Dispose(disposing As Boolean)
 
-            If Not Me.disposedValue Then
+            If Not disposedValue Then
 
                 If disposing Then
                     ' TODO: dispose managed state (managed objects).
@@ -98,7 +96,7 @@ Namespace IO
 
             End If
 
-            Me.disposedValue = True
+            disposedValue = True
 
         End Sub
 

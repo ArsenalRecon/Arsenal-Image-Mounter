@@ -1,0 +1,6 @@
+-- From forked repository built with VS 2019 with WDK7/msvcrt.dll compatible toolchain and libraries
+https://github.com/LTRData/libqcow/tree/msvcrt-compat
+
+libqcow is licensed under the GNU Lesser General Public License v3.0
+
+lgpl-3.0.txt

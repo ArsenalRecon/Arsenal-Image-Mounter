@@ -48,7 +48,6 @@ Public Class AsyncMessageBox
     Private m_CurrentFont As Font
     Private m_Sized As Boolean
 
-    <SuppressMessage("Usage", "CA2245:Do not assign a property to itself.")>
     Protected Overrides Sub OnLoad(e As EventArgs)
         MyBase.OnLoad(e)
 
@@ -59,8 +58,10 @@ Public Class AsyncMessageBox
         End If
 
         '' Yes, properties assigned to themselves. Just triggers properties changed events.
+#Disable Warning CA2245 ' Do not assign a property to itself
         ForeColor = ForeColor
         BackColor = BackColor
+#Enable Warning CA2245 ' Do not assign a property to itself
 
         OnResize(EventArgs.Empty)
 

@@ -1,21 +1,20 @@
-﻿Imports Arsenal.ImageMounter.IO.NativeFileIO
-Imports Arsenal.ImageMounter.IO.NativeConstants
-Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
-Imports System.ComponentModel
-Imports System.Diagnostics.CodeAnalysis
+﻿Imports System.ComponentModel
 Imports System.Runtime.InteropServices
 Imports System.Runtime.Versioning
+Imports Arsenal.ImageMounter.Extensions
+Imports Arsenal.ImageMounter.IO.NativeConstants
+Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
 
 #Disable Warning IDE0079 ' Remove unnecessary suppression
 #Disable Warning SYSLIB0003 ' Type or member is obsolete
 
 Namespace IO
 
-    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Class FileStreamsEnumerator
         Implements IEnumerable(Of FindStreamData)
 
-        Public Property FilePath As String
+        Public Property FilePath As ReadOnlyMemory(Of Char)
 
         Public Function GetEnumerator() As IEnumerator(Of FindStreamData) Implements IEnumerable(Of FindStreamData).GetEnumerator
             Return New Enumerator(_FilePath)
@@ -25,20 +24,20 @@ Namespace IO
             Return GetEnumerator()
         End Function
 
-        Public Sub New(FilePath As String)
+        Public Sub New(FilePath As ReadOnlyMemory(Of Char))
             _FilePath = FilePath
         End Sub
 
         Public NotInheritable Class Enumerator
             Implements IEnumerator(Of FindStreamData)
 
-            Public ReadOnly Property FilePath As String
+            Public ReadOnly Property FilePath As ReadOnlyMemory(Of Char)
 
             Public ReadOnly Property SafeHandle As SafeFindHandle
 
             Private _current As FindStreamData
 
-            Public Sub New(FilePath As String)
+            Public Sub New(FilePath As ReadOnlyMemory(Of Char))
                 _FilePath = FilePath
             End Sub
 
@@ -65,7 +64,7 @@ Namespace IO
                 End If
 
                 If _SafeHandle Is Nothing Then
-                    _SafeHandle = FindFirstStream(_FilePath, 0, _current, 0)
+                    _SafeHandle = FindFirstStreamW(_FilePath.MakeNullTerminated(), 0, _current, 0)
                     If Not _SafeHandle.IsInvalid Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_HANDLE_EOF Then
@@ -74,7 +73,7 @@ Namespace IO
                         Throw New Win32Exception
                     End If
                 Else
-                    If FindNextStream(_SafeHandle, _current) Then
+                    If FindNextStreamW(_SafeHandle, _current) Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_HANDLE_EOF Then
                         Return False
@@ -94,7 +93,7 @@ Namespace IO
 
             ' IDisposable
             Private Sub Dispose(disposing As Boolean)
-                If Not Me.disposedValue Then
+                If Not disposedValue Then
                     If disposing Then
                         ' TODO: dispose managed state (managed objects).
 
@@ -107,7 +106,7 @@ Namespace IO
                     ' TODO: set large fields to null.
                     _current = Nothing
                 End If
-                Me.disposedValue = True
+                disposedValue = True
             End Sub
 
             '' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.

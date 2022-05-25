@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45;net6.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
     <Description>Arsenal Image Mounter Windows Forms Library</Description>
     <UseWindowsForms>true</UseWindowsForms>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &lt; 0">
-    <PackageReference Include="DotNetZip" Version="1.16.0" />
+    <PackageReference Include="DotNetZip" Version="1.*" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &gt;= 0 And '$(TargetFramework.CompareTo(`net5`))' &lt; 0">
@@ -17,7 +17,7 @@
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &gt;= 0">
     <PackageReference Include="System.Memory">
-      <Version>4.5.4</Version>
+      <Version>*</Version>
     </PackageReference>
   </ItemGroup>
 
@@ -28,10 +28,10 @@
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="6.0.0" />
     <PackageReference Include="Microsoft.Win32.Registry">
-      <Version>5.0.0</Version>
+      <Version>*</Version>
     </PackageReference>
     <PackageReference Include="System.IO.FileSystem.AccessControl">
-      <Version>5.0.0</Version>
+      <Version>*</Version>
     </PackageReference>
   </ItemGroup>
 

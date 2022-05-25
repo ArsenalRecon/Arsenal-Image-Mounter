@@ -39,29 +39,29 @@
             Product version from fixed numeric fields
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetImageNtHeaders(System.Byte[])">
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetImageNtHeaders(System.ReadOnlySpan{System.Byte})">
             <summary>
             Gets IMAGE_NT_HEADERS structure from raw PE image
             </summary>
-            <param name="rawFile">Raw exe or dll data</param>
+            <param name="FileData">Raw exe or dll data</param>
             <returns>IMAGE_NT_HEADERS structure</returns>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetRawFileVersionResource(System.Void*,System.Int32@)">
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetFixedFileVerInfo(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Returns a copy of fixed file version fields in a PE image
+            </summary>
+            <param name="FileData">Pointer to raw or mapped exe or dll</param>
+            <returns>Copy of data from located version resource</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetRawFileVersionResource(System.ReadOnlySpan{System.Byte},System.Int32@)">
             <summary>
             Locates version resource in a PE image
             </summary>
             <param name="FileData">Pointer to raw or mapped exe or dll</param>
             <param name="ResourceSize">Returns size of found resource</param>
-            <returns>Pointer to located version resource or null if none found</returns>
+            <returns>Reference to located version resource</returns>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetFixedVersionInfo(Arsenal.ImageMounter.IO.VS_VERSIONINFO*)">
-            <summary>
-            Gets fixed numeric fields from PE version resource
-            </summary>
-            <param name="versionResource">Pointer to version resource</param>
-            <returns>FixedFileVerInfo structure with fixed numeric version fields</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueInt(Arsenal.ImageMounter.IO.VS_VERSIONINFO*,System.String)">
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueInt(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String)">
             <summary>
             Gets numeric block from PE version resource
             </summary>
@@ -69,7 +69,7 @@
             <param name="SubBlock">Name of sub block</param>
             <returns>Located uint value, or null if not found</returns>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueString(Arsenal.ImageMounter.IO.VS_VERSIONINFO*,System.String)">
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueString(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String)">
             <summary>
             Gets string block from PE version resource
             </summary>
@@ -77,7 +77,7 @@
             <param name="SubBlock">Name of sub block</param>
             <returns>Pointer to located string, or null if not found</returns>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueWithTranslation(Arsenal.ImageMounter.IO.VS_VERSIONINFO*,System.String,System.UInt32)">
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueWithTranslation(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String,System.UInt32)">
             <summary>
             Gets string block from PE version resource using default or specific language translation for the version resource
             </summary>
@@ -116,18 +116,11 @@
             File date from fixed numeric fields, if present
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.GetNativeFileVersion(System.Byte[])">
-            <summary>
-            Parses raw file data into a NativeFileVersion structure
-            </summary>
-            <param name="rawFile">Raw exe or dll file data with a version resource</param>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.#ctor(System.Byte*,System.Int32)">
+        <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.#ctor(System.ReadOnlySpan{System.Byte})">
             <summary>
             Parses raw or mapped file data into a NativeFileVersion structure
             </summary>
             <param name="fileData">Raw or mapped exe or dll file data with a version resource</param>
-            <param name="size">Size of raw file data</param>
         </member>
         <member name="T:Arsenal.ImageMounter.IO.UNICODE_STRING">
             <summary>
@@ -149,6 +142,18 @@
             Unicode character buffer in unmanaged memory
             </summary>
         </member>
+        <member name="P:Arsenal.ImageMounter.IO.UNICODE_STRING.Span">
+            <summary>
+            Returns a <see cref="T:System.Span`1"/> for the length of the buffer
+            that is currently in use.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.UNICODE_STRING.MaximumSpan">
+            <summary>
+            Returns a <see cref="T:System.Span`1"/> for the complete buffer, including
+            any currently unused part.
+            </summary>
+        </member>
         <member name="M:Arsenal.ImageMounter.IO.UNICODE_STRING.#ctor(System.IntPtr,System.UInt16)">
             <summary>
             Initialize with pointer to existing unmanaged string
@@ -161,6 +166,374 @@
             Creates a managed string object from UNICODE_STRING instance.
             </summary>
             <returns>Managed string</returns>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.UnicodeString">
+            <summary>
+            Provides a way to marshal managed strings to UNICODE_STRING in
+            unmanaged memory.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.UnicodeString.Length">
+            <summary>
+            Length in bytes of Unicode string pointed to by Buffer
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.UnicodeString.MaximumLength">
+            <summary>
+            Maximum length in bytes of string memory pointed to by Buffer
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.UnicodeString.Buffer">
+            <summary>
+            Unicode character buffer in unmanaged memory
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.UnicodeString.#ctor(System.String)">
+            <summary>
+            Initializes instance with a new managed string
+            </summary>
+            <param name="buffer">Managed string</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.UnicodeString.ToString">
+            <summary>
+            Returns stored managed string
+            </summary>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.UnicodeString.Pin">
+            <summary>
+            Creates a SafeBuffer that marshals this instance to unmanaged memory and keeps
+            the string pinned until the SafeBuffer instance is disposed.
+            </summary>
+            <returns>SafeBuffer instance</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.UnicodeString.Pin(System.String)">
+            <summary>
+            Creates a SafeBuffer that marshals a managed string as UNICODE_STRING in unmanaged
+            memory and keeps the string pinned until the SafeBuffer instance is disposed.
+            </summary>
+            <returns>SafeBuffer instance</returns>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION">
+            
+             Structure used with ImScsiQueryDevice and embedded in
+             SRB_IMSCSI_CREATE_DATA structure used with IOCTL_SCSI_MINIPORT
+             requests.
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION.DeviceNumber">
+            On create this can be set to IMSCSI_AUTO_DEVICE_NUMBER
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION.DiskSize">
+            Total size in bytes.
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION.BytesPerSector">
+            Bytes per sector
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION.WriteOverlayFileNameLength">
+            Length of write overlay file name after FileName field, if
+            Flags field contains write overlay flag.
+        </member>
+        <member name="F:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION.Reserved">
+            Padding if none of flag specific fields are in use.
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION.ImageOffset">
+            The byte offset in image file where the virtual disk data begins.
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION.Flags">
+            Creation flags. Type of device and type of connection.
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_DEVICE_CONFIGURATION.FileNameLength">
+            Length in bytes of the FileName member.
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.IMSCSI_SET_DEVICE_FLAGS">
+            
+             Structure used with ImScsiSetDeviceFlags and embedded in
+             SRB_IMSCSI_SET_DEVICE_FLAGS structure used with IOCTL_SCSI_MINIPORT
+             requests.
+            
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.IMSCSI_SET_DEVICE_FLAGS.#ctor(System.UInt32,System.UInt32,System.UInt32)">
+            <summary>
+            
+            </summary>
+            <param name="deviceNumber"></param>
+            <param name="flagsToChange"></param>
+            <param name="flagValues"></param>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_SET_DEVICE_FLAGS.DeviceNumber">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_SET_DEVICE_FLAGS.FlagsToChange">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_SET_DEVICE_FLAGS.FlagValues">
+            
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.IMSCSI_EXTEND_SIZE">
+            
+             Structure used with ImScsiExtendSize and embedded in
+             SRB_IMSCSI_EXTEND_SIZE structure used with IOCTL_SCSI_MINIPORT
+             requests.
+            
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.IMSCSI_EXTEND_SIZE.#ctor(System.UInt32,System.Int64)">
+            <summary>
+            
+            </summary>
+            <param name="deviceNumber"></param>
+            <param name="extendSize"></param>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_EXTEND_SIZE.DeviceNumber">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.IMSCSI_EXTEND_SIZE.ExtendSize">
+            
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="F:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.IO_REPARSE_TAG_MOUNT_POINT">
+            
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.#ctor(System.UInt16,System.UInt16,System.UInt16,System.UInt16,System.UInt16)">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.ReparseTag">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.ReparseDataLength">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.Reserved">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.SubstituteNameOffset">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.SubstituteNameLength">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.PrintNameOffset">
+            
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.PrintNameLength">
+            
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.StringExtensions">
+            <summary>
+            Low-level string manipulation methods
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ParseDoubleTerminatedString(System.ReadOnlyMemory{System.Byte})">
+            <summary>
+            Parses a multi-string where each string is terminated by null char
+            and the whole buffer is terminated by double null chars.
+            </summary>
+            <param name="chars">Memory that contains the double null terminated string</param>
+            <returns>Each individual string in the buffer</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ParseDoubleTerminatedString(System.ReadOnlyMemory{System.Char})">
+            <summary>
+            Parses a multi-string where each string is terminated by null char
+            and the whole buffer is terminated by double null chars.
+            </summary>
+            <param name="chars">Memory that contains the double null terminated string</param>
+            <returns>Each individual string in the buffer</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.IndexOfTerminator``1(System.ReadOnlySpan{``0})">
+            <summary>
+            Return position of first empty element, or the entire span length if
+            no empty elements are found.
+            </summary>
+            <param name="buffer">Span to search</param>
+            <returns>Position of first found empty element or entire span length if none found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.IndexOfTerminator``1(System.Span{``0})">
+            <summary>
+            Return position of first empty element, or the entire span length if
+            no empty elements are found.
+            </summary>
+            <param name="buffer">Span to search</param>
+            <returns>Position of first found empty element or entire span length if none found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedAsciiString(System.Byte[],System.Int32)">
+            <summary>
+            Reads null terminated ASCII string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <param name="offset">Offset in byte buffer where the string starts</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedAsciiString(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Reads null terminated ASCII string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.Byte[],System.Int32)">
+            <summary>
+            Reads null terminated Unicode string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <param name="offset">Offset in byte buffer where the string starts</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Reads null terminated Unicode string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlySpan{System.Char})">
+            <summary>
+            Reads null terminated Unicode string from char buffer.
+            </summary>
+            <param name="chars">Buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.Span{System.Char})">
+            <summary>
+            Reads null terminated Unicode string from char buffer.
+            </summary>
+            <param name="chars">Buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlyMemory{System.Char})">
+            <summary>
+            Reads null terminated Unicode string from char buffer.
+            </summary>
+            <param name="chars">Buffer</param>
+            <returns>Memory region up to null terminator</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.Memory{System.Char})">
+            <summary>
+            Reads null terminated Unicode string from char buffer.
+            </summary>
+            <param name="chars">Buffer</param>
+            <returns>Memory region up to null terminator</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.NullCheck``1(``0,System.String)">
+            <summary>
+            Checks if reference is null and in that case throws an <see cref="T:System.ArgumentNullException"/> with supplied argument name.
+            </summary>
+            <typeparam name="T">Type of reference to check</typeparam>
+            <param name="obj">Reference to check</param>
+            <param name="param">Name of parameter in calling code</param>
+            <returns>Reference in <paramref name="obj"/> parameter, if not null.</returns>
+            <exception cref="T:System.ArgumentNullException"><paramref name="obj"/> is null</exception>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.SafeFindHandle">
+            <summary>
+            Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.SafeFindHandle.#ctor(System.IntPtr,System.Boolean)">
+            <summary>
+            Initiates a new instance with an existing open handle.
+            </summary>
+            <param name="open_handle">Existing open handle.</param>
+            <param name="owns_handle">Indicates whether handle should be closed when this
+            instance is released.</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.SafeFindHandle.#ctor">
+            <summary>
+            Creates a new empty instance. This constructor is used by native to managed
+            handle marshaller.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.SafeFindHandle.ReleaseHandle">
+            <summary>
+            Closes contained handle by calling FindClose() Win32 API.
+            </summary>
+            <returns>Return value from FindClose() Win32 API.</returns>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PARTITION_INFORMATION.IsFTPartition">
+            <summary>
+            Indicates whether this partition entry represents a Windows NT fault tolerant partition,
+            such as mirror or stripe set.
+            </summary>
+            <value>
+            Indicates whether this partition entry represents a Windows NT fault tolerant partition,
+            such as mirror or stripe set.
+            </value>
+            <returns>True if this partition entry represents a Windows NT fault tolerant partition,
+            such as mirror or stripe set. False otherwise.</returns>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PARTITION_INFORMATION.FTPartitionSubType">
+            <summary>
+            If this partition entry represents a Windows NT fault tolerant partition, such as mirror or stripe,
+            set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
+            partitions.
+            </summary>
+            <value>
+            If this partition entry represents a Windows NT fault tolerant partition, such as mirror or stripe,
+            set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
+            partitions.
+            </value>
+            <returns>If this partition entry represents a Windows NT fault tolerant partition, such as mirror or
+            stripe, set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
+            partitions.</returns>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.PARTITION_INFORMATION.IsContainerPartition">
+            <summary>
+            Indicates whether this partition entry represents a container partition, also known as extended
+            partition, where an extended partition table can be found in first sector.
+            </summary>
+            <value>
+            Indicates whether this partition entry represents a container partition.
+            </value>
+            <returns>True if this partition entry represents a container partition. False otherwise.</returns>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.SRB_IO_CONTROL">
+            <summary>
+            SRB_IO_CONTROL header, as defined in NTDDDISK.
+            </summary>
+        </member>
+        <member name="T:Arsenal.ImageMounter.IO.NativeStructWrapper`1">
+            <summary>
+            This class allocates unmanaged memory for a native structure and initializes
+            that memory by marshalling a managed object. It gurantees that the managed
+            object stays alive and the unmanaged memory block is valid for at least the
+            lifetime of this object and that the unmanaged memory is released when this
+            object is disposed.
+            
+            Since this class derives form SafeBuffer there are many instance methods
+            available to read and modify the unmanaged buffer in a safe way and when
+            marshalled to native code in for example a P/Invoke call, it gets automatically
+            translated to the address of the unmanaged memory block. It also uses reference
+            counting and is guaranteed to stay alive during such calls.
+            <see cref="T:System.Runtime.InteropServices.SafeBuffer"/>
+            </summary>
+            <typeparam name="T">Type of managed object</typeparam>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativeStructWrapper`1.#ctor(`0)">
+            <summary>
+            Initializes a new instance by allocating unmanaged memory and marshalling
+            the supplied managed object to that memory.
+            </summary>
+            <param name="obj">Managed object to marshal to unmanaged memory</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativeStructWrapper`1.#ctor">
+            <summary>
+            Initializes an empty instance. Used internally by native marshaller and
+            not intended to be used directly from user code.
+            </summary>
+        </member>
+        <member name="P:Arsenal.ImageMounter.IO.NativeStructWrapper`1.Object">
+            <summary>
+            Managed object that was originally marshalled to unmanaged memory.
+            </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativeStructWrapper`1.ReleaseHandle">
+            <summary>
+            Releases unmanaged memory used by this instance.
+            </summary>
+            <returns>Always returns true</returns>
         </member>
         <member name="T:Arsenal.ImageMounter.IO.PinnedBuffer">
             <summary>
@@ -200,23 +573,6 @@
             position.
             </summary>
             <param name="instance">Existing object to marshal to unmanaged memory.</param>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.Serialize``1(``0@)">
-            <summary>
-            Serializes a value structure as into a new byte array
-            </summary>
-            <typeparam name="T">Type of managed strucute to serialize</typeparam>
-            <param name="instance">Instance of managed structure to serialize</param>
-            <returns></returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.Deserialize``1(System.Byte[])">
-            <summary>
-            Deserializes a managed value structure from a byte array
-            </summary>
-            <typeparam name="T">Type of managed structure to deserialize</typeparam>
-            <param name="buffer">Byte array containing data to form the managed structure</param>
-            <returns></returns>
-            <exception cref="T:System.ArgumentException"><paramref name="buffer"/> is null or too small</exception>
         </member>
         <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer.#ctor(Arsenal.ImageMounter.IO.PinnedBuffer,System.Int32)">
             <summary>
@@ -285,34 +641,34 @@
             Returns associated object of this instance.
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsMemory">
+        <member name="P:Arsenal.ImageMounter.IO.PinnedBuffer`1.Memory">
             <summary>
-            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            Creates a <see cref="T:System.Memory`1"/> representing the array pinned by this instance.
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsMemory(System.Int32)">
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.Slice(System.Int32)">
             <summary>
-            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            Creates a <see cref="T:System.Memory`1"/> representing a portion of the array pinned by this instance.
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsMemory(System.Int32,System.Int32)">
+        <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.Slice(System.Int32,System.Int32)">
             <summary>
-            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            Creates a <see cref="T:System.Memory`1"/> representing a portion of the array pinned by this instance.
             </summary>
         </member>
         <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsSpan">
             <summary>
-            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            Creates a <see cref="T:System.Span`1"/> representing the array pinned by this instance.
             </summary>
         </member>
         <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsSpan(System.Int32)">
             <summary>
-            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            Creates a <see cref="T:System.Span`1"/> representing a portion of the array pinned by this instance.
             </summary>
         </member>
         <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.AsSpan(System.Int32,System.Int32)">
             <summary>
-            Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+            Creates a <see cref="T:System.Span`1"/> representing a portion of the array pinned by this instance.
             </summary>
         </member>
         <member name="M:Arsenal.ImageMounter.IO.PinnedBuffer`1.#ctor(System.Int32)">
@@ -373,6 +729,62 @@
             position.
             </summary>
             <param name="count">Size in characters of managed string to pin in unmanaged memory.</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.SetBit(System.Span{System.Byte},System.Int32)">
+            <summary>
+            Sets a bit to 1 in a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to set to 1</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.ClearBit(System.Span{System.Byte},System.Int32)">
+            <summary>
+            Sets a bit to 0 in a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to set to 0</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.GetBit(System.ReadOnlySpan{System.Byte},System.Int32)">
+            <summary>
+            Gets a bit from a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to get</param>
+            <returns>True if value of specified bit is 1, false if 0.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.BinaryEqual(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Compares two byte spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
+            If lengths are equal and byte sequences are equal, true is returned.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.BinaryCompare(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Compares two byte spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>Result of memcmp comparison.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.BinaryEqual``1(System.ReadOnlySpan{``0},System.ReadOnlySpan{``0})">
+            <summary>
+            Compares two spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
+            If lengths are equal and byte sequences are equal, true is returned.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.BinaryCompare``1(System.ReadOnlySpan{``0},System.ReadOnlySpan{``0})">
+            <summary>
+            Compares two spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>Result of memcmp comparison.</returns>
         </member>
         <member name="T:Arsenal.ImageMounter.SystemNeeded">
             <summary>

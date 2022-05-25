@@ -165,20 +165,11 @@ Namespace Server.Services
                 End Try
 
                 Try
-#If NETFRAMEWORK AndAlso Not NET46_OR_GREATER Then
-                    Mapping = MemoryMappedFile.CreateNew($"Global\{_ObjectName}",
-                                                         _BufferSize,
-                                                         MemoryMappedFileAccess.ReadWrite,
-                                                         MemoryMappedFileOptions.None,
-                                                         Nothing,
-                                                         HandleInheritability.None)
-#Else
                     Mapping = MemoryMappedFile.CreateNew($"Global\{_ObjectName}",
                                                          _BufferSize,
                                                          MemoryMappedFileAccess.ReadWrite,
                                                          MemoryMappedFileOptions.None,
                                                          HandleInheritability.None)
-#End If
 
                     DisposableObjects.Add(Mapping)
 

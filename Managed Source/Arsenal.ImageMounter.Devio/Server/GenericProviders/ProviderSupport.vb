@@ -129,8 +129,8 @@ Namespace Server.GenericProviders
 
         End Sub
 
-        <Extension, SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Sub WriteToPhysicalDisk(provider As IDevioProvider, outputDevice As String, completionPosition As CompletionPosition, cancel As CancellationToken)
+        <Extension, SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
+        Public Sub WriteToPhysicalDisk(provider As IDevioProvider, outputDevice As ReadOnlyMemory(Of Char), completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Using disk As New DiskDevice(outputDevice, FileAccess.ReadWrite)
 
@@ -258,11 +258,7 @@ Namespace Server.GenericProviders
                 End If
 
                 For Each hashProvider In hashProviders
-#If NET46_OR_GREATER OrElse NETCOREAPP OrElse NETSTANDARD Then
                     hashProvider.Value.TransformFinalBlock(Array.Empty(Of Byte)(), 0, 0)
-#Else
-                    hashProvider.Value.TransformFinalBlock({}, 0, 0)
-#End If
                     hashResults(hashProvider.Key) = hashProvider.Value.Hash
                 Next
 

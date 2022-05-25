@@ -7,7 +7,7 @@ using ULONGLONG = System.UInt64;
 
 namespace Arsenal.ImageMounter.IO.Internal;
 
-internal unsafe struct IMAGE_OPTIONAL_HEADER32
+internal readonly unsafe struct IMAGE_OPTIONAL_HEADER32
 {
     //
     // Standard fields.
@@ -48,10 +48,11 @@ internal unsafe struct IMAGE_OPTIONAL_HEADER32
     public readonly DWORD SizeOfHeapCommit;
     public readonly DWORD LoaderFlags;
     public readonly DWORD NumberOfRvaAndSizes;
-    public fixed DWORD DataDirectory[32];
+
+    // Here follows 16 IMAGE_DATA_DIRECTORY entries
 }
 
-internal unsafe struct IMAGE_OPTIONAL_HEADER64
+internal readonly unsafe struct IMAGE_OPTIONAL_HEADER64
 {
     public readonly WORD Magic;
     public readonly BYTE MajorLinkerVersion;
@@ -82,7 +83,8 @@ internal unsafe struct IMAGE_OPTIONAL_HEADER64
     public readonly ULONGLONG SizeOfHeapCommit;
     public readonly DWORD LoaderFlags;
     public readonly DWORD NumberOfRvaAndSizes;
-    public fixed DWORD DataDirectory[32];
+
+    // Here follows 16 IMAGE_DATA_DIRECTORY entries
 }
 
 internal struct IMAGE_SECTION_HEADER

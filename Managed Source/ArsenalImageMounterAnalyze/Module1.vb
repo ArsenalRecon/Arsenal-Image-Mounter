@@ -19,7 +19,7 @@ Module Module1
     Sub Main()
 
         Dim devices = Aggregate dev In NativeFileIO.QueryDosDevice()
-                      Where dev.StartsWith("SCSI", StringComparison.OrdinalIgnoreCase) AndAlso dev.EndsWith(":", StringComparison.Ordinal)
+                      Where dev.StartsWith("SCSI", StringComparison.OrdinalIgnoreCase) AndAlso dev.EndsWith(":"c)
                       Order By dev
                       Into ToList()
 
@@ -36,7 +36,7 @@ Module Module1
             Console.Write(dev)
             Console.Write(" => ")
             Try
-                Using NativeFileIO.OpenFileHandle($"\\?\{dev}", FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, False)
+                Using NativeFileIO.OpenFileHandle($"\\?\{dev}".AsMemory(), FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, False)
                 End Using
                 Console.WriteLine("Successful.")
 
@@ -52,7 +52,7 @@ Module Module1
             Console.Write(dev)
             Console.Write(" => ")
             Try
-                Using h = NativeFileIO.OpenFileHandle($"\\?\{dev}", FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, False)
+                Using h = NativeFileIO.OpenFileHandle($"\\?\{dev}".AsMemory(), FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, False)
                     Dim ReturnCode = CheckDriverVersion(h)
                     Console.WriteLine($"Driver version: {ReturnCode:X4}")
                 End Using

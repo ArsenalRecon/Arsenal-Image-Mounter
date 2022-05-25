@@ -91,9 +91,7 @@ public class SubStream : Stream
 
     public override void Flush() => Parent.Flush();
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
-        public override Task FlushAsync(CancellationToken cancellationToken) => Parent.FlushAsync(cancellationToken);
-#endif
+    public override Task FlushAsync(CancellationToken cancellationToken) => Parent.FlushAsync(cancellationToken);
 
     public override int Read(byte[] buffer, int offset, int count)
     {
@@ -110,7 +108,6 @@ public class SubStream : Stream
         return Parent.Read(buffer, offset, (int)Math.Min(count, checked(_length - Position)));
     }
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         if (count < 0)
@@ -125,7 +122,6 @@ public class SubStream : Stream
 
         return Parent.ReadAsync(buffer, offset, (int)Math.Min(count, checked(_length - Position)), cancellationToken);
     }
-#endif
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
 
@@ -205,7 +201,6 @@ public class SubStream : Stream
         Parent.Write(buffer, offset, count);
     }
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         if (count < 0)
@@ -220,7 +215,6 @@ public class SubStream : Stream
 
         return Parent.WriteAsync(buffer, offset, count, cancellationToken);
     }
-#endif
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override void Write(ReadOnlySpan<byte> buffer)

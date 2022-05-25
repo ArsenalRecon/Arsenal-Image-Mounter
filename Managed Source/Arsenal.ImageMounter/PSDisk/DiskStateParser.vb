@@ -1,11 +1,11 @@
-﻿Imports Arsenal.ImageMounter.IO
-Imports Arsenal.ImageMounter.Extensions
-Imports System.IO
+﻿Imports System.IO
 Imports System.Runtime.Versioning
+Imports Arsenal.ImageMounter.Extensions
+Imports Arsenal.ImageMounter.IO
 
 Namespace PSDisk
 
-    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public NotInheritable Class DiskStateParser
 
         Private Sub New()
@@ -38,18 +38,16 @@ Namespace PSDisk
                     deviceProperties.
                     Select(
                         Function(dev)
-
                             Dim view As New T With {
                                 .DeviceProperties = dev,
-                                .DeviceName = getid(dev)
+                                .DeviceName = getid(dev),
+                                .FakeDiskSignature = dev.Flags.HasFlag(DeviceFlags.FakeDiskSignatureIfZero)
                             }
-
-                            view.FakeDiskSignature = dev.Flags.HasFlag(DeviceFlags.FakeDiskSignatureIfZero)
 
                             If view.DeviceName IsNot Nothing Then
                                 Try
                                     view.DevicePath = $"\\?\{view.DeviceName}"
-                                    Using device As New DiskDevice(view.DevicePath, FileAccess.Read)
+                                    Using device As New DiskDevice(view.DevicePath.AsMemory(), FileAccess.Read)
                                         view.RawDiskSignature = device.DiskSignature
                                         view.NativePropertyDiskOffline = device.DiskPolicyOffline
                                         view.NativePropertyDiskReadOnly = device.DiskPolicyReadOnly
@@ -70,7 +68,10 @@ Namespace PSDisk
 
                                 Try
                                     view.Volumes = NativeFileIO.EnumerateDiskVolumes(view.DevicePath).ToArray()
-                                    view.MountPoints = view.Volumes?.SelectMany(AddressOf NativeFileIO.EnumerateVolumeMountPoints).ToArray()
+                                    view.MountPoints = view.Volumes?.
+                                        SelectMany(Function(vol) NativeFileIO.EnumerateVolumeMountPoints(vol)).
+                                        Select(Function(mnt) mnt.ToString()).
+                                        ToArray()
 
                                 Catch ex As Exception
                                     Trace.WriteLine($"Error enumerating volumes for drive {view.DevicePath}: {ex.JoinMessages()}")

@@ -1,7 +1,9 @@
-﻿Imports System.Diagnostics.CodeAnalysis
+﻿Imports System.Buffers
 Imports System.IO
 Imports System.Runtime.InteropServices
+Imports System.Runtime.Versioning
 Imports System.Text
+Imports Arsenal.ImageMounter.Extensions
 
 Namespace IO
 
@@ -22,40 +24,64 @@ Namespace IO
         ''' Flushes registry mapping for all INI files.
         ''' is thrown.
         ''' </summary>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Sub Flush()
-            NativeFileIO.UnsafeNativeMethods.WritePrivateProfileString(Nothing, Nothing, Nothing, Nothing)
+            NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(Nothing, Nothing, Nothing, Nothing)
         End Sub
 
-        Public Shared Function EnumerateFileSectionNames(filename As String) As IEnumerable(Of String)
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
+        Public Shared Iterator Function EnumerateFileSectionNames(filename As ReadOnlyMemory(Of Char)) As IEnumerable(Of String)
 
-            Dim sectionnames(0 To 32766) As Char
+            Const NamesSize = 32767
 
-            Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionNames(sectionnames, sectionnames.Length, filename)
+            Dim sectionnames = ArrayPool(Of Char).Shared.Rent(NamesSize)
+            Try
+                Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionNamesW(sectionnames(0),
+                                                                                           NamesSize,
+                                                                                           filename.MakeNullTerminated())
 
-            Return NativeFileIO.ParseDoubleTerminatedString(sectionnames, size)
+                For Each name In StringExtensions.ParseDoubleTerminatedString(sectionnames.AsMemory(0, size))
+                    Yield name.ToString()
+                Next
+
+            Finally
+                ArrayPool(Of Char).Shared.Return(sectionnames)
+
+            End Try
 
         End Function
 
-        Public Shared Iterator Function EnumerateFileSectionValuePairs(filename As String, section As String) As IEnumerable(Of KeyValuePair(Of String, String))
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
+        Public Shared Iterator Function EnumerateFileSectionValuePairs(filename As ReadOnlyMemory(Of Char), section As ReadOnlyMemory(Of Char)) As IEnumerable(Of KeyValuePair(Of String, String))
 
-            Dim valuepairs(0 To 32766) As Char
+            Const ValuesSize = 32767
 
-            Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSection(section, valuepairs, valuepairs.Length, filename)
+            Dim valuepairs = ArrayPool(Of Char).Shared.Rent(ValuesSize)
+            Try
+                Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionW(section.MakeNullTerminated(),
+                                                                                      valuepairs(0),
+                                                                                      ValuesSize,
+                                                                                      filename.MakeNullTerminated())
 
-            For Each valuepair In NativeFileIO.ParseDoubleTerminatedString(valuepairs, size)
+                For Each valuepair In StringExtensions.ParseDoubleTerminatedString(valuepairs.AsMemory(0, size))
 
-                Dim pos = valuepair.IndexOf("="c)
+                    Dim pos = valuepair.Span.IndexOf("="c)
 
-                If pos < 0 Then
-                    Continue For
-                End If
+                    If pos < 0 Then
+                        Continue For
+                    End If
 
-                Dim key = valuepair.Remove(pos)
-                Dim value = valuepair.Substring(pos + 1)
+                    Dim key = valuepair.Slice(0, pos).ToString()
+                    Dim value = valuepair.Slice(pos + 1).ToString()
 
-                Yield New KeyValuePair(Of String, String)(key, value)
+                    Yield New KeyValuePair(Of String, String)(key, value)
 
-            Next
+                Next
+
+            Finally
+                ArrayPool(Of Char).Shared.Return(valuepairs)
+
+            End Try
 
         End Function
 
@@ -67,8 +93,28 @@ Namespace IO
         ''' <param name="SectionName">Name of INI file section where to save value</param>
         ''' <param name="SettingName">Name of value to save</param>
         ''' <param name="Value">Value to save</param>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
+        Public Shared Sub SaveValue(FileName As ReadOnlyMemory(Of Char), SectionName As ReadOnlyMemory(Of Char), SettingName As ReadOnlyMemory(Of Char), Value As ReadOnlyMemory(Of Char))
+            NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(SectionName.MakeNullTerminated(),
+                                                                                              SettingName.MakeNullTerminated(),
+                                                                                              Value.MakeNullTerminated(),
+                                                                                              FileName.MakeNullTerminated()))
+        End Sub
+
+        ''' <summary>
+        ''' Saves a value to an INI file by calling Win32 API function WritePrivateProfileString. If call fails and exception
+        ''' is thrown.
+        ''' </summary>
+        ''' <param name="FileName">Name and path of INI file where to save value</param>
+        ''' <param name="SectionName">Name of INI file section where to save value</param>
+        ''' <param name="SettingName">Name of value to save</param>
+        ''' <param name="Value">Value to save</param>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Sub SaveValue(FileName As String, SectionName As String, SettingName As String, Value As String)
-            NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileString(SectionName, SettingName, Value, FileName))
+            NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(MemoryMarshal.GetReference(SectionName.AsSpan()),
+                                                                                              MemoryMarshal.GetReference(SettingName.AsSpan()),
+                                                                                              MemoryMarshal.GetReference(Value.AsSpan()),
+                                                                                              MemoryMarshal.GetReference(FileName.AsSpan())))
         End Sub
 
         ''' <summary>
@@ -78,8 +124,9 @@ Namespace IO
         ''' <param name="FileName">Name and path of INI file where to save value</param>
         ''' <param name="SectionName">Name of INI file section where to save value</param>
         ''' <param name="SettingName">Name of value to save</param>
-        Public Sub SaveValue(FileName As String, SectionName As String, SettingName As String)
-            SaveValue(SectionName, SettingName, Item(SectionName)(SettingName), FileName)
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
+        Public Sub SaveValue(FileName As ReadOnlyMemory(Of Char), SectionName As String, SettingName As String)
+            SaveValue(SectionName.AsMemory(), SettingName.AsMemory(), Item(SectionName)(SettingName).AsMemory(), FileName)
         End Sub
 
         ''' <summary>
@@ -90,6 +137,7 @@ Namespace IO
         ''' </summary>
         ''' <param name="SectionName">Name of INI file section where to save value</param>
         ''' <param name="SettingName">Name of value to save</param>
+        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Sub SaveValue(SectionName As String, SettingName As String)
             If String.IsNullOrEmpty(_Filename) Then
                 Throw New InvalidOperationException("Filename property not set on this object.")
@@ -169,7 +217,7 @@ Namespace IO
         ''' <summary>
         ''' Name of last INI file loaded into this object.
         ''' </summary>
-        Public ReadOnly Property Filename() As String
+        Public ReadOnly Property Filename As String
 
         ''' <summary>
         ''' Text encoding of last INI file loaded into this object.

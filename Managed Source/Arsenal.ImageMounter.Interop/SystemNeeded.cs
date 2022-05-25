@@ -1,3 +1,4 @@
+using Arsenal.ImageMounter.IO;
 using System;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -8,7 +9,7 @@ namespace Arsenal.ImageMounter;
 /// Makes sure that screen stays on or computer does not go into sleep
 /// during some work
 /// </summary>
-[SupportedOSPlatform("windows")]
+[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public class SystemNeeded : IDisposable
 {
     /// <summary>

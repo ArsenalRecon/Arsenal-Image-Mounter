@@ -104,7 +104,7 @@ Namespace Server.GenericProviders
 
             End If
 
-            Dim mem = LowLevelExtensions.GetSpan(buffer + bufferoffset, count)
+            Dim mem = LowLevelExtensions.AsSpan(buffer + bufferoffset, count)
 
             Return _BaseStream.Read(mem)
 
@@ -113,7 +113,7 @@ Namespace Server.GenericProviders
         Public Overloads Overrides Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
             _BaseStream.Position = fileoffset
-            Dim mem = LowLevelExtensions.GetReadOnlySpan(buffer + bufferoffset, count)
+            Dim mem = LowLevelExtensions.AsReadOnlySpan(buffer + bufferoffset, count)
             _BaseStream.Write(mem)
             Return count
 

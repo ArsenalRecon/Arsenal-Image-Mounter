@@ -12,8 +12,6 @@
 '''''
 
 Imports System.Threading
-Imports Arsenal.ImageMounter.IO
-Imports Microsoft.Win32
 
 Public NotInheritable Class GlobalCriticalMutex
     Implements IDisposable

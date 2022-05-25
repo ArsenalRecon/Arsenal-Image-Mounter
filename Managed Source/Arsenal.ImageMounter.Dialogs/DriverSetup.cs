@@ -5,16 +5,13 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Runtime.Versioning;
+using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO;
-#if NETFRAMEWORK && !NET45_OR_GREATER
-using Ionic.Zip;
-#endif
 using Microsoft.Win32;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
@@ -28,8 +25,6 @@ namespace Arsenal.ImageMounter;
 /// </summary>
 public static class DriverSetup
 {
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
-
 	/// <summary>
 	/// Returns version of driver located inside a setup zip archive.
 	/// </summary>
@@ -137,117 +132,6 @@ public static class DriverSetup
     public static void InstallFromZipStream(IWin32Window ownerWindow, Stream zipStream) =>
 		InstallFromZipArchive(ownerWindow, new ZipArchive(zipStream, (ZipArchiveMode)0));
 
-#else
-
-	/// <summary>
-	/// Returns version of driver located inside a setup zip archive.
-	/// </summary>
-	/// <param name="zipFile">ZipFile object with setup files</param>
-	public static Version GetDriverVersionFromZipArchive(ZipFile zipFile)
-	{
-		var path1 = $"{API.Kernel}\\x86\\phdskmnt.sys";
-		var path2 = $"{API.Kernel}/x86/phdskmnt.sys";
-		var entry = zipFile.Entries.FirstOrDefault(e => e.FileName.Equals(path1, StringComparison.OrdinalIgnoreCase) || e.FileName.Equals(path2, StringComparison.OrdinalIgnoreCase));
-		if (entry == null)
-		{
-			throw new KeyNotFoundException($"Driver file phdskmnt.sys for {API.Kernel} missing in zip archive.");
-		}
-		using var versionFile = entry.OpenReader();
-		return NativeFileIO.GetFileVersion(versionFile);
-	}
-
-	/// <summary>
-	/// Installs Arsenal Image Mounter driver components from a zip archive.
-	/// This routine automatically selects the correct driver version for
-	/// current version of Windows.
-	/// </summary>
-	/// <param name="ownerWindow">This needs to be a valid handle to a Win32
-	/// window that will be parent to dialog boxes etc shown by setup API. In
-	/// console Applications, you could call
-	/// NativeFileIO.Win32API.GetConsoleWindow() to get a window handle to the
-	/// console window.</param>
-	/// <param name="zipFile">An System.IO.Compression.ZipArchive opened for reading that
-	/// contains setup source files. Directory layout in zip file needs to be
-	/// like in DriverSetup.zip found in DriverSetup directory in repository,
-	/// that is, one subdirectory for each kernel version followed by one
-	/// subdirectory for each architecture.</param>
-	public static void InstallFromZipArchive(IWin32Window ownerWindow, ZipFile zipFile)
-	{
-		var origdir = Environment.CurrentDirectory;
-
-		var temppath = Path.Combine(Path.GetTempPath(), "ArsenalImageMounter-DriverSetup");
-
-		Trace.WriteLine($"Using temp path: {temppath}");
-
-		if (Directory.Exists(temppath))
-		{
-			Directory.Delete(temppath, recursive: true);
-		}
-		Directory.CreateDirectory(temppath);
-		zipFile.ExtractAll(temppath, ExtractExistingFileAction.OverwriteSilently);
-		Install(ownerWindow, temppath);
-
-		Environment.CurrentDirectory = origdir;
-
-		if (!API.HasStorPort)
-		{
-			return;
-		}
-
-		new Thread(() =>
-		{
-
-			try
-			{
-				var stopwatch = Stopwatch.StartNew();
-				while (Directory.Exists(temppath))
-				{
-					try
-					{
-						Directory.Delete(temppath, recursive: true);
-					}
-					catch (IOException ex) when (stopwatch.Elapsed.TotalMinutes < 15.0)
-					{
-						Trace.WriteLine($"I/O Error removing temporary directory: {ex.JoinMessages()}");
-						Thread.Sleep(TimeSpan.FromSeconds(10.0));
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				Trace.WriteLine($"Error removing temporary directory: {ex.JoinMessages()}");
-			}
-
-		}).Start();
-	}
-
-    /// <summary>
-    /// Returns version of driver located inside a setup zip archive.
-    /// </summary>
-    /// <param name="zipStream">Stream containing a zip archive with setup files</param>
-    public static Version GetDriverVersionFromZipStream(Stream zipStream) =>
-		GetDriverVersionFromZipArchive(ZipFile.Read(zipStream));
-
-    /// <summary>
-    /// Installs Arsenal Image Mounter driver components from a zip archive.
-    /// This routine automatically selects the correct driver version for
-    /// current version of Windows.
-    /// </summary>
-    /// <param name="ownerWindow">This needs to be a valid handle to a Win32
-    /// window that will be parent to dialog boxes etc shown by setup API. In
-    /// console Applications, you could call
-    /// NativeFileIO.Win32API.GetConsoleWindow() to get a window handle to the
-    /// console window.</param>
-    /// <param name="zipStream">A stream opened for reading a zip file
-    /// containing setup source files. Directory layout in zip file needs to be
-    /// like in DriverSetup.zip found in DriverSetup directory in repository,
-    /// that is, one subdirectory for each kernel version followed by one
-    /// subdirectory for each architecture.</param>
-    public static void InstallFromZipStream(IWin32Window ownerWindow, Stream zipStream) =>
-		InstallFromZipArchive(ownerWindow, ZipFile.Read(zipStream));
-
-#endif
-
     /// <summary>
     /// Returns version of driver located in setup files directory.
     /// </summary>
@@ -260,23 +144,27 @@ public static class DriverSetup
     /// </summary>
     /// <param name="infFile">.inf file used to identify version of driver.</param>
     public static Version GetSetupFileDriverVersion(CachedIniFile infFile) =>
-		Version.Parse(infFile["Version"]["DriverVer"].Split(',')[1]);
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+		Version.Parse(infFile["Version"]["DriverVer"].AsSpan().SplitReverse(',').First());
+#else
+		Version.Parse(infFile["Version"]["DriverVer"].AsSpan().SplitReverse(',').First().ToString());
+#endif
 
-    /// <summary>
-    /// Installs Arsenal Image Mounter driver components from specified source
-    /// path. This routine automatically selects the correct driver version for
-    /// current version of Windows.
-    /// </summary>
-    /// <param name="ownerWindow">This needs to be a valid handle to a Win32
-    /// window that will be parent to dialog boxes etc shown by setup API. In
-    /// console Applications, you could call
-    /// NativeFileIO.Win32API.GetConsoleWindow() to get a window handle to the
-    /// console window.</param>
-    /// <param name="setupsource">Directory with setup files. Directory layout
-    /// at this path needs to be like in DriverSetup.7z found in DriverSetup
-    /// directory in repository, that is, one subdirectory for each kernel
-    /// version followed by one subdirectory for each architecture.</param>
-    public static void Install(IWin32Window ownerWindow, string setupsource)
+	/// <summary>
+	/// Installs Arsenal Image Mounter driver components from specified source
+	/// path. This routine automatically selects the correct driver version for
+	/// current version of Windows.
+	/// </summary>
+	/// <param name="ownerWindow">This needs to be a valid handle to a Win32
+	/// window that will be parent to dialog boxes etc shown by setup API. In
+	/// console Applications, you could call
+	/// NativeFileIO.Win32API.GetConsoleWindow() to get a window handle to the
+	/// console window.</param>
+	/// <param name="setupsource">Directory with setup files. Directory layout
+	/// at this path needs to be like in DriverSetup.7z found in DriverSetup
+	/// directory in repository, that is, one subdirectory for each kernel
+	/// version followed by one subdirectory for each architecture.</param>
+	public static void Install(IWin32Window ownerWindow, string setupsource)
 	{
 		CheckCompatibility(ownerWindow);
 		if (API.HasStorPort)
@@ -360,11 +248,11 @@ public static class DriverSetup
         
 		var infPath = Path.Combine(setupsource, API.Kernel, "phdskmnt.inf");
 
-        NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, "root\\phdskmnt", ForceReplaceExistingDrivers: false, out var reboot_required);
+        NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, @"root\phdskmnt".AsMemory(), ForceReplaceExistingDrivers: false, out var reboot_required);
 		
 		if (!reboot_required)
 		{
-            if (Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager", "PendingFileRenameOperations", null) is string[] array)
+            if (Registry.GetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager", "PendingFileRenameOperations", null) is string[] array)
             {
                 array = (from p in array
                          where p != null && p.Length > 4
@@ -374,9 +262,9 @@ public static class DriverSetup
 
                 Trace.WriteLine($"Pending file replace operations: '{string.Join("', '", array)}'");
                 
-				var pending_install_file = (from item in CachedIniFile.EnumerateFileSectionValuePairs(infPath, "PhysicalDiskMounterDevice.Services")
-                                               where "AddService".Equals(item.Key, StringComparison.OrdinalIgnoreCase)
-                                               select $"{item.Value.Split(',')[0]}.sys").FirstOrDefault((string installfile) => array.Contains(installfile, StringComparer.OrdinalIgnoreCase));
+				var pending_install_file = (from item in CachedIniFile.EnumerateFileSectionValuePairs(infPath.AsMemory(), "PhysicalDiskMounterDevice.Services".AsMemory())
+                                            where "AddService".Equals(item.Key, StringComparison.OrdinalIgnoreCase)
+                                            select $"{item.Value.AsMemory().Split(',').First()}.sys").FirstOrDefault(installfile => array.Contains(installfile, StringComparer.OrdinalIgnoreCase));
 
                 if (pending_install_file != null)
                 {
@@ -391,7 +279,7 @@ public static class DriverSetup
 		{
 			try
 			{
-				NativeFileIO.ShutdownSystem(NativeStruct.ShutdownFlags.Reboot, NativeStruct.ShutdownReasons.ReasonFlagPlanned);
+				NativeFileIO.ShutdownSystem(ShutdownFlags.Reboot, ShutdownReasons.ReasonFlagPlanned);
 				Environment.Exit(0);
 			}
 			catch (Exception ex)
@@ -413,14 +301,13 @@ public static class DriverSetup
 	/// console window.</param>
 	internal static void RemoveDevices(IWin32Window ownerWindow)
 	{
-        if (NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var hwinstances) != 0u)
+        if (NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt".AsMemory(), out var hwinstances) != 0u)
         {
             return;
         }
-        using var enumerator = hwinstances.GetEnumerator();
-		while (enumerator.MoveNext())
+        foreach (var hwinstance in hwinstances)
 		{
-			NativeFileIO.RemovePnPDevice(hwid: enumerator.Current, OwnerWindow: ownerWindow.Handle);
+			NativeFileIO.RemovePnPDevice(hwid: hwinstance, OwnerWindow: ownerWindow.Handle);
 		}
 	}
 
@@ -440,10 +327,10 @@ public static class DriverSetup
 	/// version followed by one subdirectory for each architecture.</param>
 	internal static void InstallScsiPortDriver(IWin32Window ownerWindow, string setupsource)
 	{
-		Trace.WriteLine(string.Format("Pre-installed controller inf: '{0}'", NativeFileIO.SetupCopyOEMInf(Path.Combine(setupsource, "CtlUnit", "ctlunit.inf"), NoOverwrite: false)));
+        Trace.WriteLine($"Pre-installed controller inf: '{(NativeFileIO.SetupCopyOEMInf(Path.Combine(setupsource, "CtlUnit", "ctlunit.inf"), NoOverwrite: false))}'");
 		Directory.SetCurrentDirectory(setupsource);
 		NativeFileIO.UnsafeNativeMethods.SetupSetNonInteractiveMode(state: false);
-		NativeFileIO.RunDLLInstallHinfSection(InfPath: Path.Combine(".", API.Kernel, "phdskmnt.inf"), OwnerWindow: ownerWindow.Handle, InfSection: "DefaultInstall");
+		NativeFileIO.RunDLLInstallHinfSection(InfPath: Path.Combine(".", API.Kernel, "phdskmnt.inf"), OwnerWindow: ownerWindow.Handle, InfSection: "DefaultInstall".AsMemory());
 		using (var scm = new ServiceController("phdskmnt"))
 		{
 			while (scm.Status != ServiceControllerStatus.Running)
@@ -462,7 +349,7 @@ public static class DriverSetup
 	/// </summary>
 	internal static void RemoveDriver()
 	{
-		using (var scm = NativeFileIO.UnsafeNativeMethods.OpenSCManager(null, null, 983103))
+		using (var scm = NativeFileIO.UnsafeNativeMethods.OpenSCManagerW(IntPtr.Zero, IntPtr.Zero, 983103))
 		{
 			if (scm.IsInvalid)
 			{
@@ -471,7 +358,7 @@ public static class DriverSetup
 			var array = new[] { "phdskmnt", "aimwrfltr" };
 			for (var i = 0; i < array.Length; i++)
 			{
-				using var svc = NativeFileIO.UnsafeNativeMethods.OpenService(scm, array[i], 983103);
+				using var svc = NativeFileIO.UnsafeNativeMethods.OpenServiceW(scm, array[i].AsSpan()[0], 983103);
 				if (svc.IsInvalid)
 				{
 					throw new Win32Exception("OpenService");
@@ -479,7 +366,9 @@ public static class DriverSetup
 				NativeFileIO.UnsafeNativeMethods.DeleteService(svc);
 			}
 		}
+
 		var array2 = new[] { "phdskmnt", "aimwrfltr" };
+		
 		for (var j = 0; j < array2.Length; j++)
 		{
 			var driverSysFile = Path.Combine(path2: $"drivers\\{array2[j]}.sys", path1: Environment.GetFolderPath(Environment.SpecialFolder.System, Environment.SpecialFolderOption.DoNotVerify));

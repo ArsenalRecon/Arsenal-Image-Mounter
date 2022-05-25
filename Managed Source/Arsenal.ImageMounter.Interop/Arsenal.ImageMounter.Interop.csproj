@@ -1,21 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45;net6.0</TargetFrameworks>
+    <TargetFrameworks>net48;net6.0</TargetFrameworks>
     <Description>Arsenal Image Mounter Interop Library</Description>
     <UseWindowsForms>false</UseWindowsForms>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="DiscUtils.Streams">
-      <HintPath>$(DiscUtilsPath)\DiscUtils.Streams.dll</HintPath>
-    </Reference>
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LTRData.DiscUtils.Streams" Version="*" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net45`))' &gt;= 0">
     <PackageReference Include="System.Memory">
-      <Version>4.5.4</Version>
+      <Version>*</Version>
     </PackageReference>
   </ItemGroup>
   

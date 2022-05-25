@@ -1,15 +1,13 @@
-﻿Imports Arsenal.ImageMounter.IO.NativeConstants
-Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
-Imports Arsenal.ImageMounter.IO.NativeFileIO
-Imports System.Diagnostics.CodeAnalysis
-Imports System.Text
+﻿Imports System.ComponentModel
 Imports System.Runtime.InteropServices
-Imports System.ComponentModel
 Imports System.Runtime.Versioning
+Imports Arsenal.ImageMounter.IO.NativeConstants
+Imports Arsenal.ImageMounter.IO.NativeFileIO
+Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods
 
 Namespace IO
 
-    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Class VolumeEnumerator
         Implements IEnumerable(Of String)
 
@@ -26,7 +24,7 @@ Namespace IO
 
             Public ReadOnly Property SafeHandle As SafeFindVolumeHandle
 
-            Private _sb As New StringBuilder(50)
+            Private _sb(0 To 49) As Char
 
             Public ReadOnly Property Current As String Implements IEnumerator(Of String).Current
                 Get
@@ -34,7 +32,7 @@ Namespace IO
                         Throw New ObjectDisposedException("VolumeEnumerator.Enumerator")
                     End If
 
-                    Return _sb.ToString()
+                    Return _sb.AsSpan().ReadNullTerminatedUnicodeString()
                 End Get
             End Property
 
@@ -51,7 +49,7 @@ Namespace IO
                 End If
 
                 If _SafeHandle Is Nothing Then
-                    _SafeHandle = FindFirstVolume(_sb, _sb.Capacity)
+                    _SafeHandle = FindFirstVolumeW(_sb(0), _sb.Length)
                     If Not _SafeHandle.IsInvalid Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_NO_MORE_FILES Then
@@ -60,7 +58,7 @@ Namespace IO
                         Throw New Win32Exception
                     End If
                 Else
-                    If FindNextVolume(_SafeHandle, _sb, _sb.Capacity) Then
+                    If FindNextVolumeW(_SafeHandle, _sb(0), _sb.Length) Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_NO_MORE_FILES Then
                         Return False
@@ -80,7 +78,7 @@ Namespace IO
 
             ' IDisposable
             Protected Overridable Sub Dispose(disposing As Boolean)
-                If Not Me.disposedValue Then
+                If Not disposedValue Then
                     If disposing Then
                         ' TODO: dispose managed state (managed objects).
                         _SafeHandle?.Dispose()
@@ -90,10 +88,9 @@ Namespace IO
                     _SafeHandle = Nothing
 
                     ' TODO: set large fields to null.
-                    _sb.Clear()
                     _sb = Nothing
                 End If
-                Me.disposedValue = True
+                disposedValue = True
             End Sub
 
             ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.

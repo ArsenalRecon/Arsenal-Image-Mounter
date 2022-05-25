@@ -150,7 +150,7 @@ Module MainModule
                                          BytesPerSector:=SectorSize,
                                          ImageOffset:=Offset,
                                          Flags:=Flags,
-                                         Filename:=FileName,
+                                         Filename:=FileName.AsMemory(),
                                          NativePath:=False,
                                          DeviceNumber:=CreateDeviceNumber)
                 End Using
@@ -166,7 +166,7 @@ Module MainModule
                 End Using
 
             Case OpMode.GetDeviceNumber
-                Using disk As New DiskDevice(DiskPath, FileAccess.ReadWrite)
+                Using disk As New DiskDevice(DiskPath.AsMemory(), FileAccess.ReadWrite)
                     Console.WriteLine($"DeviceNumber (format: LLTTPP hex): {disk.DeviceNumber:X6}")
                 End Using
 

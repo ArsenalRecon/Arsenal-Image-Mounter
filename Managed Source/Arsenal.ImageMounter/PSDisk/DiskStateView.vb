@@ -1,6 +1,4 @@
 ﻿Imports System.ComponentModel
-Imports System.Diagnostics.CodeAnalysis
-Imports Arsenal.ImageMounter.PSDisk
 
 Namespace PSDisk
 
@@ -17,7 +15,7 @@ Namespace PSDisk
 
         Public Property DeviceProperties As DeviceProperties
 
-        Public Property RawDiskSignature As UInt32?
+        Public Property RawDiskSignature As UInteger?
 
         Public Property DiskId As Guid?
 

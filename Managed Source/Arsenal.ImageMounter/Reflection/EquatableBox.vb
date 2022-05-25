@@ -22,11 +22,11 @@
             _Value = New T
         End Sub
 
-        Shared Widening Operator CType(value As T) As EquatableBox(Of T)
+        Public Shared Widening Operator CType(value As T) As EquatableBox(Of T)
             Return New EquatableBox(Of T)(value)
         End Operator
 
-        Shared Widening Operator CType(box As EquatableBox(Of T)) As T
+        Public Shared Widening Operator CType(box As EquatableBox(Of T)) As T
             Return box._Value
         End Operator
 

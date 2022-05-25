@@ -335,7 +335,7 @@ Public Class MainForm
 
                         If obj.DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.Ordinal) Then
                             Using New AsyncMessageBox("Please wait...")
-                                Using device As New DiskDevice(obj.DevicePath, FileAccess.ReadWrite)
+                                Using device As New DiskDevice(obj.DevicePath.AsMemory(), FileAccess.ReadWrite)
                                     device.DiskPolicyOffline = False
                                 End Using
                             End Using
@@ -478,7 +478,7 @@ Public Class MainForm
 
     End Sub
 
-    Private Sub btnShowOpened_Click(sender As Object, e As EventArgs) Handles btnShowOpened.Click
+    Private Async Sub btnShowOpened_Click(sender As Object, e As EventArgs) Handles btnShowOpened.Click
 
         Try
             For Each DeviceItem In lbDevices.
@@ -487,7 +487,7 @@ Public Class MainForm
                 Select(Function(row) row.DataBoundItem).
                 OfType(Of DiskStateView)()
 
-                Dim item = Task.Factory.StartNew(
+                Dim item = Task.Run(
                     Function()
 
                         Dim pdo_path = API.EnumeratePhysicalDeviceObjectPaths(Adapter.DeviceInstance, DeviceItem.DeviceProperties.DeviceNumber).FirstOrDefault()
@@ -499,17 +499,7 @@ Public Class MainForm
 
                         Return processlist
 
-                    End Function, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default).
-                    ContinueWith(
-                    Sub(t)
-
-                        MessageBox.Show(Me,
-                            t.Result,
-                            "Process list",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information)
-
-                    End Sub, TaskScheduler.FromCurrentSynchronizationContext())
+                    End Function)
 
                 ThreadPool.QueueUserWorkItem(
                     Sub()
@@ -535,6 +525,12 @@ Public Class MainForm
 
                         End While
                     End Sub)
+
+                MessageBox.Show(Me,
+                                Await item,
+                                "Process list",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Information)
 
             Next
 
@@ -593,10 +589,8 @@ Public Class MainForm
     End Sub
 
     Private Sub btnMount_Click(sender As Object, e As EventArgs) Handles btnMountRaw.Click,
-        btnMountLibEwf.Click,
-        btnMountDiscUtils.Click,
-        btnMountMultiPartRaw.Click,
-        btnMountLibAFF4.Click
+        btnMountLibEwf.Click, btnMountDiscUtils.Click, btnMountMultiPartRaw.Click,
+        btnMountLibAFF4.Click, btnMountLibQCow.Click
 
         Dim ProxyType As DevioServiceFactory.ProxyType
 
@@ -611,6 +605,11 @@ Public Class MainForm
                 Return
             End If
             ProxyType = DevioServiceFactory.ProxyType.LibEwf
+        ElseIf sender Is btnMountLibQcow Then
+            If Not LibqcowVerify.VerifyLibqcow(Me) Then
+                Return
+            End If
+            ProxyType = DevioServiceFactory.ProxyType.LibQcow
         ElseIf sender Is btnMountLibAFF4 Then
             ProxyType = DevioServiceFactory.ProxyType.LibAFF4
         Else

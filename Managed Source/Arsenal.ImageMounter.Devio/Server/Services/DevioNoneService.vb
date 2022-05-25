@@ -23,7 +23,7 @@ Namespace Server.Services
     ''' it just passes a disk image file name or RAM disk information for direct mounting
     ''' internally in Arsenal Image Mounter SCSI Adapter.
     ''' </summary>
-    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Class DevioNoneService
         Inherits DevioServiceBase
 
@@ -44,7 +44,19 @@ Namespace Server.Services
         ''' </summary>
         ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
         Public Sub New(Imagefile As String, DiskAccess As FileAccess)
-            MyBase.New(New DummyProvider(New FileInfo(Imagefile).Length), OwnsProvider:=True)
+            Me.New(Imagefile, New FileInfo(Imagefile).Length, DiskAccess)
+
+        End Sub
+
+        ''' <summary>
+        ''' Creates a DevioServiceBase compatible object, but without providing a proxy service.
+        ''' Instead, it just passes a disk image file name for direct mounting internally in
+        ''' SCSI Adapter.
+        ''' </summary>
+        ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+        ''' <param name="length">Disk size to initialize dummy provider instance</param>
+        Protected Sub New(Imagefile As String, length As Long, DiskAccess As FileAccess)
+            MyBase.New(New DummyProvider(length), OwnsProvider:=True)
 
             Offset = GetOffsetByFileExt(Imagefile)
 
@@ -70,6 +82,18 @@ Namespace Server.Services
         ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
         Public Sub New(Imagefile As String, DiskAccess As DevioServiceFactory.VirtualDiskAccess)
             Me.New(Imagefile, DevioServiceFactory.GetDirectFileAccessFlags(DiskAccess))
+
+        End Sub
+
+        ''' <summary>
+        ''' Creates a DevioServiceBase compatible object, but without providing a proxy service.
+        ''' Instead, it just passes a disk image file name for direct mounting internally in
+        ''' SCSI Adapter.
+        ''' </summary>
+        ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+        ''' <param name="length">Disk size to initialize dummy provider instance</param>
+        Protected Sub New(Imagefile As String, length As Long, DiskAccess As DevioServiceFactory.VirtualDiskAccess)
+            Me.New(Imagefile, length, DevioServiceFactory.GetDirectFileAccessFlags(DiskAccess))
 
         End Sub
 
@@ -115,7 +139,7 @@ Namespace Server.Services
 
             _Imagefile = Imagefile
 
-            _ProxyObjectName = "\\?\vhdaccess\??\awealloc" & NativeFileIO.GetNtPath(Imagefile)
+            _ProxyObjectName = $"\\?\vhdaccess\??\awealloc{NativeFileIO.GetNtPath(Imagefile)}"
 
         End Sub
 

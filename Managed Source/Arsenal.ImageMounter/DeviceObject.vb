@@ -18,7 +18,7 @@ Imports Microsoft.Win32.SafeHandles
 ''' <summary>
 ''' Base class that represents Arsenal Image Mounter SCSI miniport created device objects.
 ''' </summary>
-<SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+<SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
 Public MustInherit Class DeviceObject
     Implements IDisposable
 
@@ -31,7 +31,7 @@ Public MustInherit Class DeviceObject
     ''' in a new DeviceObject.
     ''' </summary>
     ''' <param name="Path">Path to pass to CreateFile API</param>
-    Protected Sub New(Path As String)
+    Protected Sub New(Path As ReadOnlyMemory(Of Char))
         Me.New(NativeFileIO.OpenFileHandle(Path, 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False), 0)
     End Sub
 
@@ -41,7 +41,7 @@ Public MustInherit Class DeviceObject
     ''' </summary>
     ''' <param name="Path">Path to pass to CreateFile API</param>
     ''' <param name="AccessMode">Access mode for opening and for underlying FileStream</param>
-    Protected Sub New(Path As String, AccessMode As FileAccess)
+    Protected Sub New(Path As ReadOnlyMemory(Of Char), AccessMode As FileAccess)
         Me.New(NativeFileIO.OpenFileHandle(Path, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped:=False), AccessMode)
     End Sub
 
@@ -60,7 +60,7 @@ Public MustInherit Class DeviceObject
 
     ' IDisposable
     Protected Overridable Sub Dispose(disposing As Boolean)
-        If Not Me.disposedValue Then
+        If Not disposedValue Then
             If disposing Then
                 ' TODO: dispose managed state (managed objects).
                 _SafeFileHandle?.Dispose()
@@ -71,7 +71,7 @@ Public MustInherit Class DeviceObject
             ' TODO: set large fields to null.
             _SafeFileHandle = Nothing
         End If
-        Me.disposedValue = True
+        disposedValue = True
     End Sub
 
     ' TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.

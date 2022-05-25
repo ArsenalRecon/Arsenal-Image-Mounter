@@ -96,14 +96,14 @@ Arsenal.ImageMounter
  Base class that represents Arsenal Image Mounter SCSI miniport created device objects.
  </summary>
 </member>
-<member name="M:Arsenal.ImageMounter.DeviceObject.#ctor(System.String)">
+<member name="M:Arsenal.ImageMounter.DeviceObject.#ctor(System.ReadOnlyMemory{System.Char})">
  <summary>
  Opens specified Path with CreateFile Win32 API and encapsulates the returned handle
  in a new DeviceObject.
  </summary>
  <param name="Path">Path to pass to CreateFile API</param>
 </member>
-<member name="M:Arsenal.ImageMounter.DeviceObject.#ctor(System.String,System.IO.FileAccess)">
+<member name="M:Arsenal.ImageMounter.DeviceObject.#ctor(System.ReadOnlyMemory{System.Char},System.IO.FileAccess)">
  <summary>
  Opens specified Path with CreateFile Win32 API and encapsulates the returned handle
  in a new DeviceObject.
@@ -135,6 +135,21 @@ Arsenal.ImageMounter
  open handle, this property returns null/Nothing.
  </summary>
 </member>
+<member name="M:Arsenal.ImageMounter.DiskDevice.#ctor(System.ReadOnlyMemory{System.Char})">
+ <summary>
+ Opens an disk device object without requesting read or write permissions. The
+ resulting object can only be used to query properties like SCSI address, disk
+ size and similar, but not for reading or writing raw disk data.
+ </summary>
+ <param name="DevicePath"></param>
+</member>
+<member name="M:Arsenal.ImageMounter.DiskDevice.#ctor(System.ReadOnlyMemory{System.Char},System.IO.FileAccess)">
+ <summary>
+ Opens an disk device object, requesting read, write or both permissions.
+ </summary>
+ <param name="DevicePath"></param>
+ <param name="AccessMode"></param>
+</member>
 <member name="M:Arsenal.ImageMounter.DiskDevice.#ctor(System.String)">
  <summary>
  Opens an disk device object without requesting read or write permissions. The
@@ -150,7 +165,7 @@ Arsenal.ImageMounter
  <param name="DevicePath"></param>
  <param name="AccessMode"></param>
 </member>
-<member name="M:Arsenal.ImageMounter.DiskDevice.#ctor(Arsenal.ImageMounter.IO.NativeStruct.SCSI_ADDRESS,System.IO.FileAccess)">
+<member name="M:Arsenal.ImageMounter.DiskDevice.#ctor(Arsenal.ImageMounter.IO.SCSI_ADDRESS,System.IO.FileAccess)">
  <summary>
  Opens an disk device object.
  </summary>
@@ -272,7 +287,7 @@ Arsenal.ImageMounter
  for physical disks, not disk partitions.
  </summary>
 </member>
-<member name="M:Arsenal.ImageMounter.DiskDevice.InitializeDisk(Arsenal.ImageMounter.IO.NativeStruct.PARTITION_STYLE)">
+<member name="M:Arsenal.ImageMounter.DiskDevice.InitializeDisk(Arsenal.ImageMounter.IO.PARTITION_STYLE)">
  <summary>
  Initialize a raw disk device for use with Windows. This method is available
  for physical disks, not disk partitions.
@@ -597,6 +612,16 @@ Arsenal.ImageMounter
  is thrown.
  </summary>
 </member>
+<member name="M:Arsenal.ImageMounter.IO.CachedIniFile.SaveValue(System.ReadOnlyMemory{System.Char},System.ReadOnlyMemory{System.Char},System.ReadOnlyMemory{System.Char},System.ReadOnlyMemory{System.Char})">
+ <summary>
+ Saves a value to an INI file by calling Win32 API function WritePrivateProfileString. If call fails and exception
+ is thrown.
+ </summary>
+ <param name="FileName">Name and path of INI file where to save value</param>
+ <param name="SectionName">Name of INI file section where to save value</param>
+ <param name="SettingName">Name of value to save</param>
+ <param name="Value">Value to save</param>
+</member>
 <member name="M:Arsenal.ImageMounter.IO.CachedIniFile.SaveValue(System.String,System.String,System.String,System.String)">
  <summary>
  Saves a value to an INI file by calling Win32 API function WritePrivateProfileString. If call fails and exception
@@ -607,7 +632,7 @@ Arsenal.ImageMounter
  <param name="SettingName">Name of value to save</param>
  <param name="Value">Value to save</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.CachedIniFile.SaveValue(System.String,System.String,System.String)">
+<member name="M:Arsenal.ImageMounter.IO.CachedIniFile.SaveValue(System.ReadOnlyMemory{System.Char},System.String,System.String)">
  <summary>
  Saves a current value from this object to an INI file by calling Win32 API function WritePrivateProfileString.
  If call fails and exception is thrown.
@@ -829,7 +854,7 @@ Arsenal.ImageMounter
  <param name="filterObjectType">Name of object types to return in the enumeration. Normally set to for example "File" to return file handles or "Key" to return registry key handles</param>
  <returns>Enumeration with information about each handle table entry</returns>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle,System.UInt32,System.Byte[],System.UInt32@)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle,System.UInt32,System.Memory{System.Byte},System.UInt32@)">
  <summary>
  Sends an IOCTL control request to a device driver, or an FSCTL control request to a filesystem driver.
  </summary>
@@ -840,7 +865,7 @@ Arsenal.ImageMounter
  <returns>This method returns a byte array that can be used to read and parse data returned by
  driver in the output buffer.</returns>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.CreateFile(System.String,System.Security.AccessControl.FileSystemRights,System.IO.FileShare,System.IntPtr,System.UInt32,System.Int32,System.IntPtr)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.CreateFile(System.ReadOnlyMemory{System.Char},System.Security.AccessControl.FileSystemRights,System.IO.FileShare,System.IntPtr,System.UInt32,System.Int32,System.IntPtr)">
  <summary>
  Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
  </summary>
@@ -852,7 +877,7 @@ Arsenal.ImageMounter
  <param name="FlagsAndAttributes"></param>
  <param name="TemplateFile"></param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileHandle(System.String,System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode,System.Boolean)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileHandle(System.ReadOnlyMemory{System.Char},System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode,System.Boolean)">
  <summary>
  Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
  </summary>
@@ -862,7 +887,7 @@ Arsenal.ImageMounter
  <param name="CreationDisposition">Open/creation mode.</param>
  <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileHandle(System.String,System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode,System.IO.FileOptions)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileHandle(System.ReadOnlyMemory{System.Char},System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode,System.IO.FileOptions)">
  <summary>
  Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
  </summary>
@@ -872,7 +897,7 @@ Arsenal.ImageMounter
  <param name="CreationDisposition">Open/creation mode.</param>
  <param name="Options">Specifies whether to request overlapped I/O.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileHandle(System.String,System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode,System.UInt32)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileHandle(System.ReadOnlyMemory{System.Char},System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode,System.UInt32)">
  <summary>
  Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
  </summary>
@@ -882,7 +907,7 @@ Arsenal.ImageMounter
  <param name="CreationDisposition">Open/creation mode.</param>
  <param name="Options">Specifies whether to request overlapped I/O.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.NtCreateFile(System.String,Arsenal.ImageMounter.IO.NativeStruct.NtObjectAttributes,System.IO.FileAccess,System.IO.FileShare,Arsenal.ImageMounter.IO.NativeStruct.NtCreateDisposition,Arsenal.ImageMounter.IO.NativeStruct.NtCreateOptions,System.IO.FileAttributes,Microsoft.Win32.SafeHandles.SafeFileHandle,Arsenal.ImageMounter.IO.NativeStruct.NtFileCreated@)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.NtCreateFile(System.String,Arsenal.ImageMounter.IO.NtObjectAttributes,System.IO.FileAccess,System.IO.FileShare,Arsenal.ImageMounter.IO.NtCreateDisposition,Arsenal.ImageMounter.IO.NtCreateOptions,System.IO.FileAttributes,Microsoft.Win32.SafeHandles.SafeFileHandle,Arsenal.ImageMounter.IO.NtFileCreated@)">
  <summary>
  Calls NT API NtCreateFile() function and encapsulates returned handle in a SafeFileHandle object.
  </summary>
@@ -897,7 +922,7 @@ Arsenal.ImageMounter
  <param name="WasCreated">Return information about whether a file was created, existing file opened etc.</param>
  <returns>NTSTATUS value indicating result of the operation.</returns>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.NtOpenEvent(System.String,Arsenal.ImageMounter.IO.NativeStruct.NtObjectAttributes,System.UInt32,Microsoft.Win32.SafeHandles.SafeFileHandle)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.NtOpenEvent(System.String,Arsenal.ImageMounter.IO.NtObjectAttributes,System.UInt32,Microsoft.Win32.SafeHandles.SafeFileHandle)">
  <summary>
  Calls NT API NtOpenEvent() function to open an event object using NT path and encapsulates returned handle in a SafeWaitHandle object.
  </summary>
@@ -907,7 +932,7 @@ Arsenal.ImageMounter
  <param name="RootDirectory">Root directory to start path parsing from, or null for rooted path.</param>
  <returns>NTSTATUS value indicating result of the operation.</returns>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenBackupHandle(System.String,System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenBackupHandle(System.ReadOnlyMemory{System.Char},System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode)">
  <summary>
  Calls Win32 API CreateFile() function to create a backup handle for a file or
  directory and encapsulates returned handle in a SafeFileHandle object. This
@@ -918,7 +943,7 @@ Arsenal.ImageMounter
  <param name="ShareMode">Share mode to request.</param>
  <param name="CreationDisposition">Open/creation mode.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.TryOpenBackupHandle(System.String,System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.TryOpenBackupHandle(System.ReadOnlyMemory{System.Char},System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode)">
  <summary>
  Calls Win32 API CreateFile() function to create a backup handle for a file or
  directory and encapsulates returned handle in a SafeFileHandle object. This
@@ -935,26 +960,7 @@ Arsenal.ImageMounter
  </summary>
  <param name="Value">FileAccess values.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileStream(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare)">
- <summary>
- Calls Win32 API CreateFile() function and encapsulates returned handle.
- </summary>
- <param name="FileName">Name of file to open.</param>
- <param name="DesiredAccess">File access to request.</param>
- <param name="ShareMode">Share mode to request.</param>
- <param name="CreationDisposition">Open/creation mode.</param>
-</member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileStream(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare,System.Int32)">
- <summary>
- Calls Win32 API CreateFile() function and encapsulates returned handle.
- </summary>
- <param name="FileName">Name of file to open.</param>
- <param name="DesiredAccess">File access to request.</param>
- <param name="ShareMode">Share mode to request.</param>
- <param name="CreationDisposition">Open/creation mode.</param>
- <param name="BufferSize">Buffer size to specify in constructor call to FileStream class.</param>
-</member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileStream(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare,System.Int32,System.Boolean)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileStream(System.ReadOnlyMemory{System.Char},System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare,System.Int32,System.Boolean)">
  <summary>
  Calls Win32 API CreateFile() function and encapsulates returned handle.
  </summary>
@@ -965,7 +971,7 @@ Arsenal.ImageMounter
  <param name="BufferSize">Buffer size to specify in constructor call to FileStream class.</param>
  <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileStream(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare,System.Boolean)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileStream(System.ReadOnlyMemory{System.Char},System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare,System.Boolean)">
  <summary>
  Calls Win32 API CreateFile() function and encapsulates returned handle.
  </summary>
@@ -975,7 +981,7 @@ Arsenal.ImageMounter
  <param name="CreationDisposition">Open/creation mode.</param>
  <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileStream(System.String,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare,System.IO.FileOptions)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenFileStream(System.ReadOnlyMemory{System.Char},System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare,System.IO.FileOptions)">
  <summary>
  Calls Win32 API CreateFile() function and encapsulates returned handle.
  </summary>
@@ -1037,7 +1043,7 @@ Arsenal.ImageMounter
  </summary>
  <param name="hDevice">Handle to device.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.GetScsiAddress(System.String)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.GetScsiAddress(System.ReadOnlyMemory{System.Char})">
  <summary>
  Retrieves SCSI address.
  </summary>
@@ -1073,13 +1079,13 @@ Arsenal.ImageMounter
  </summary>
  <param name="ntdevice">NT device path, such as \Device\00000001.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.QueryDirectoryJunction(System.String)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.QueryDirectoryJunction(System.ReadOnlyMemory{System.Char})">
  <summary>
  Returns directory junction target path
  </summary>
  <param name="source">Location of directory that is a junction.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.CreateDirectoryJunction(System.String,System.String)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.CreateDirectoryJunction(System.String,System.ReadOnlyMemory{System.Char})">
  <summary>
  Creates a directory junction
  </summary>
@@ -1092,7 +1098,7 @@ Arsenal.ImageMounter
  </summary>
  <param name="source">Handle to directory.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.CreateDirectoryJunction(Microsoft.Win32.SafeHandles.SafeFileHandle,System.String)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.CreateDirectoryJunction(Microsoft.Win32.SafeHandles.SafeFileHandle,System.ReadOnlyMemory{System.Char})">
  <summary>
  Creates a directory junction
  </summary>
@@ -1105,7 +1111,7 @@ Arsenal.ImageMounter
  thrown on error, but any exceptions from underlying API calls are logged to trace log.
  </summary>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.UpdateDiskProperties(Arsenal.ImageMounter.IO.NativeStruct.SCSI_ADDRESS)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.UpdateDiskProperties(Arsenal.ImageMounter.IO.SCSI_ADDRESS)">
  <summary>
  Re-enumerates partitions on a disk device with a specified SCSI address. No
  exceptions are thrown on error, but any exceptions from underlying API calls are
@@ -1113,7 +1119,7 @@ Arsenal.ImageMounter
  </summary>
  <returns>Returns a value indicating whether operation was successful or not.</returns>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.UpdateDiskProperties(System.String)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.UpdateDiskProperties(System.ReadOnlyMemory{System.Char})">
  <summary>
  Re-enumerates partitions on a disk device with a specified device path. No
  exceptions are thrown on error, but any exceptions from underlying API calls are
@@ -1121,12 +1127,12 @@ Arsenal.ImageMounter
  </summary>
  <returns>Returns a value indicating whether operation was successful or not.</returns>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenDiskByScsiAddress(Arsenal.ImageMounter.IO.NativeStruct.SCSI_ADDRESS,System.IO.FileAccess)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.OpenDiskByScsiAddress(Arsenal.ImageMounter.IO.SCSI_ADDRESS,System.IO.FileAccess)">
  <summary>
  Opens a disk device with a specified SCSI address and returns both name and an open handle.
  </summary>
 </member>
-<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.GetDeviceNameByScsiAddressAndSize(Arsenal.ImageMounter.IO.NativeStruct.SCSI_ADDRESS,System.Int64)">
+<member name="M:Arsenal.ImageMounter.IO.NativeFileIO.GetDeviceNameByScsiAddressAndSize(Arsenal.ImageMounter.IO.SCSI_ADDRESS,System.Int64)">
  <summary>
  Returns a disk device object name for a specified SCSI address.
  </summary>
@@ -1256,73 +1262,6 @@ Arsenal.ImageMounter
  </summary>
  <returns>Return value from CloseServiceHandle() Win32 API.</returns>
 </member>
-<member name="T:Arsenal.ImageMounter.IO.NativeStruct.SafeFindHandle">
- <summary>
- Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
- </summary>
-</member>
-<member name="M:Arsenal.ImageMounter.IO.NativeStruct.SafeFindHandle.#ctor(System.IntPtr,System.Boolean)">
- <summary>
- Initiates a new instance with an existing open handle.
- </summary>
- <param name="open_handle">Existing open handle.</param>
- <param name="owns_handle">Indicates whether handle should be closed when this
- instance is released.</param>
-</member>
-<member name="M:Arsenal.ImageMounter.IO.NativeStruct.SafeFindHandle.#ctor">
- <summary>
- Creates a new empty instance. This constructor is used by native to managed
- handle marshaller.
- </summary>
-</member>
-<member name="M:Arsenal.ImageMounter.IO.NativeStruct.SafeFindHandle.ReleaseHandle">
- <summary>
- Closes contained handle by calling FindClose() Win32 API.
- </summary>
- <returns>Return value from FindClose() Win32 API.</returns>
-</member>
-<member name="P:Arsenal.ImageMounter.IO.NativeStruct.PARTITION_INFORMATION.IsFTPartition">
- <summary>
- Indicates whether this partition entry represents a Windows NT fault tolerant partition,
- such as mirror or stripe set.
- </summary>
- <value>
- Indicates whether this partition entry represents a Windows NT fault tolerant partition,
- such as mirror or stripe set.
- </value>
- <returns>True if this partition entry represents a Windows NT fault tolerant partition,
- such as mirror or stripe set. False otherwise.</returns>
-</member>
-<member name="P:Arsenal.ImageMounter.IO.NativeStruct.PARTITION_INFORMATION.FTPartitionSubType">
- <summary>
- If this partition entry represents a Windows NT fault tolerant partition, such as mirror or stripe,
- set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
- partitions.
- </summary>
- <value>
- If this partition entry represents a Windows NT fault tolerant partition, such as mirror or stripe,
- set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
- partitions.
- </value>
- <returns>If this partition entry represents a Windows NT fault tolerant partition, such as mirror or
- stripe, set, then this property returns partition subtype, such as PARTITION_IFS for NTFS or HPFS
- partitions.</returns>
-</member>
-<member name="P:Arsenal.ImageMounter.IO.NativeStruct.PARTITION_INFORMATION.IsContainerPartition">
- <summary>
- Indicates whether this partition entry represents a container partition, also known as extended
- partition, where an extended partition table can be found in first sector.
- </summary>
- <value>
- Indicates whether this partition entry represents a container partition.
- </value>
- <returns>True if this partition entry represents a container partition. False otherwise.</returns>
-</member>
-<member name="T:Arsenal.ImageMounter.IO.NativeStruct.SRB_IO_CONTROL">
- <summary>
- SRB_IO_CONTROL header, as defined in NTDDDISK.
- </summary>
-</member>
 <member name="M:Arsenal.ImageMounter.IO.NativeStruct.GetOffsetByFileExt(System.String)">
  <summary>
  Checks if filename contains a known extension for which PhDskMnt knows of a constant offset value. That value can be
@@ -1451,7 +1390,7 @@ Arsenal.ImageMounter
  Retrieves a list of DeviceProperties objects for each virtual disk on this adapter.
  </summary>
 </member>
-<member name="M:Arsenal.ImageMounter.ScsiAdapter.CreateDevice(System.Int64,System.UInt32,System.Int64,Arsenal.ImageMounter.DeviceFlags,System.String,System.Boolean,System.UInt32@)">
+<member name="M:Arsenal.ImageMounter.ScsiAdapter.CreateDevice(System.Int64,System.UInt32,System.Int64,Arsenal.ImageMounter.DeviceFlags,System.ReadOnlyMemory{System.Char},System.Boolean,System.UInt32@)">
  <summary>
  Creates a new virtual disk.
  </summary>
@@ -1474,7 +1413,7 @@ Arsenal.ImageMounter
 
  Out: Device number for created device.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.ScsiAdapter.CreateDevice(System.Int64,System.UInt32,System.Int64,Arsenal.ImageMounter.DeviceFlags,System.String,System.Boolean,System.String,System.Boolean,System.UInt32@)">
+<member name="M:Arsenal.ImageMounter.ScsiAdapter.CreateDevice(System.Int64,System.UInt32,System.Int64,Arsenal.ImageMounter.DeviceFlags,System.ReadOnlyMemory{System.Char},System.Boolean,System.ReadOnlyMemory{System.Char},System.Boolean,System.UInt32@)">
  <summary>
  Creates a new virtual disk.
  </summary>
@@ -1646,7 +1585,7 @@ Arsenal.ImageMounter
  This device path can be used even if there is no functional driver attached to the device stack.
  </summary>
 </member>
-<member name="M:Arsenal.ImageMounter.ScsiAdapter.GetPnPDeviceName(System.UInt32,Arsenal.ImageMounter.IO.NativeStruct.CmDevNodeRegistryProperty)">
+<member name="M:Arsenal.ImageMounter.ScsiAdapter.GetPnPDeviceName(System.UInt32,Arsenal.ImageMounter.IO.CmDevNodeRegistryProperty)">
  <summary>
  Returns a PnP registry property for the device object that SCSI port driver has created for a mounted device.
  </summary>

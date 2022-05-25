@@ -25,14 +25,8 @@ Imports Microsoft.Win32.SafeHandles
 ''' API for manipulating flag values, issuing SCSI bus rescans, manage write filter driver and similar tasks.
 ''' </summary>
 <ComVisible(False)>
-<SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+<SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
 Public NotInheritable Class API
-
-#If WINDOWS Then
-    Friend Const SUPPORTED_WINDOWS_PLATFORM = "windows7.0"
-#Else
-    Friend Const SUPPORTED_WINDOWS_PLATFORM = "windows"
-#End If
 
     Private Sub New()
     End Sub
@@ -83,8 +77,8 @@ Public NotInheritable Class API
     ''' </summary>
     Public Shared Iterator Function EnumerateAdapterDevicePaths(HwndParent As IntPtr) As IEnumerable(Of String)
 
-        Dim devinstances As IEnumerable(Of String) = Nothing
-        Dim status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", devinstances)
+        Dim devinstances As IEnumerable(Of ReadOnlyMemory(Of Char)) = Nothing
+        Dim status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt".AsMemory(), devinstances)
 
         If status <> 0 OrElse devinstances Is Nothing Then
 
@@ -94,10 +88,10 @@ Public NotInheritable Class API
 
         For Each devinstname In devinstances
 
-            Using DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevs(NativeConstants.SerenumBusEnumeratorGuid,
-                                                                         devinstname,
-                                                                         HwndParent,
-                                                                         NativeConstants.DIGCF_DEVICEINTERFACE Or NativeConstants.DIGCF_PRESENT)
+            Using DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevsW(NativeConstants.SerenumBusEnumeratorGuid,
+                                                                                     devinstname.MakeNullTerminated(),
+                                                                                     HwndParent,
+                                                                                     NativeConstants.DIGCF_DEVICEINTERFACE Or NativeConstants.DIGCF_PRESENT)
 
                 If DevInfoSet.IsInvalid Then
                     Throw New Win32Exception
@@ -105,15 +99,15 @@ Public NotInheritable Class API
 
                 Dim i = 0UI
                 Do
-                    Dim DeviceInterfaceData As New SP_DEVICE_INTERFACE_DATA
-                    DeviceInterfaceData.Initialize()
-                    If NativeFileIO.UnsafeNativeMethods.SetupDiEnumDeviceInterfaces(DevInfoSet, IntPtr.Zero, NativeConstants.SerenumBusEnumeratorGuid, i, DeviceInterfaceData) = False Then
+                    Dim DeviceInterfaceData = SP_DEVICE_INTERFACE_DATA.GetNew()
+
+                    If NativeFileIO.UnsafeNativeMethods.SetupDiEnumDeviceInterfacesW(DevInfoSet, IntPtr.Zero, NativeConstants.SerenumBusEnumeratorGuid, i, DeviceInterfaceData) = False Then
                         Exit Do
                     End If
 
                     Dim DeviceInterfaceDetailData As New SP_DEVICE_INTERFACE_DETAIL_DATA
-                    DeviceInterfaceDetailData.Initialize()
-                    If NativeFileIO.UnsafeNativeMethods.SetupDiGetDeviceInterfaceDetail(DevInfoSet, DeviceInterfaceData, DeviceInterfaceDetailData, CUInt(Marshal.SizeOf(DeviceInterfaceData)), 0, IntPtr.Zero) = True Then
+
+                    If NativeFileIO.UnsafeNativeMethods.SetupDiGetDeviceInterfaceDetailW(DevInfoSet, DeviceInterfaceData, DeviceInterfaceDetailData, CUInt(Marshal.SizeOf(DeviceInterfaceData)), 0, IntPtr.Zero) = True Then
                         Yield DeviceInterfaceDetailData.DevicePath
                     End If
 
@@ -144,7 +138,7 @@ Public NotInheritable Class API
     ''' Builds a list of setup device ids for active Arsenal Image Mounter
     ''' objects. Device ids are used in calls to plug-and-play setup functions.
     ''' </summary>
-    Public Shared Iterator Function EnumerateAdapterDeviceInstances() As IEnumerable(Of UInt32)
+    Public Shared Iterator Function EnumerateAdapterDeviceInstances() As IEnumerable(Of UInteger)
 
         Dim devinstances = EnumerateAdapterDeviceInstanceNames()
 
@@ -153,7 +147,9 @@ Public NotInheritable Class API
         End If
 
         For Each devinstname In devinstances
+#If DEBUG Then
             Trace.WriteLine($"Found adapter instance '{devinstname}'")
+#End If
 
             Dim devInst = NativeFileIO.GetDevInst(devinstname)
 
@@ -170,11 +166,11 @@ Public NotInheritable Class API
     ''' Builds a list of setup device ids for active Arsenal Image Mounter
     ''' objects. Device ids are used in calls to plug-and-play setup functions.
     ''' </summary>
-    Public Shared Function EnumerateAdapterDeviceInstanceNames() As IEnumerable(Of String)
+    Public Shared Function EnumerateAdapterDeviceInstanceNames() As IEnumerable(Of ReadOnlyMemory(Of Char))
 
-        Dim devinstances As IEnumerable(Of String) = Nothing
+        Dim devinstances As IEnumerable(Of ReadOnlyMemory(Of Char)) = Nothing
 
-        Dim status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", devinstances)
+        Dim status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt".AsMemory(), devinstances)
 
         If status <> 0 OrElse devinstances Is Nothing Then
 
@@ -208,7 +204,7 @@ Public NotInheritable Class API
 
     Private Const NonRemovableSuffix As String = ":$NonRemovable"
 
-    Public Shared Function EnumeratePhysicalDeviceObjectPaths(devinstAdapter As UInt32, DeviceNumber As UInt32) As IEnumerable(Of String)
+    Public Shared Function EnumeratePhysicalDeviceObjectPaths(devinstAdapter As UInteger, DeviceNumber As UInteger) As IEnumerable(Of String)
 
         Return _
             From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
@@ -220,7 +216,7 @@ Public NotInheritable Class API
 
     End Function
 
-    Public Shared Function EnumerateDeviceProperty(devinstAdapter As UInt32, DeviceNumber As UInt32, prop As CmDevNodeRegistryProperty) As IEnumerable(Of String)
+    Public Shared Function EnumerateDeviceProperty(devinstAdapter As UInteger, DeviceNumber As UInteger, prop As CmDevNodeRegistryProperty) As IEnumerable(Of String)
 
         Return _
             From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
@@ -237,15 +233,15 @@ Public NotInheritable Class API
         RegisterWriteOverlayImage(devInst, OverlayImagePath:=Nothing, FakeNonRemovable:=False)
     End Sub
 
-    Public Shared Sub RegisterWriteOverlayImage(devInst As UInteger, OverlayImagePath As String)
+    Public Shared Sub RegisterWriteOverlayImage(devInst As UInteger, OverlayImagePath As ReadOnlyMemory(Of Char))
         RegisterWriteOverlayImage(devInst, OverlayImagePath, FakeNonRemovable:=False)
     End Sub
 
-    Public Shared Sub RegisterWriteOverlayImage(devInst As UInteger, OverlayImagePath As String, FakeNonRemovable As Boolean)
+    Public Shared Sub RegisterWriteOverlayImage(devInst As UInteger, OverlayImagePath As ReadOnlyMemory(Of Char), FakeNonRemovable As Boolean)
 
         Dim nativepath As String
 
-        If Not String.IsNullOrWhiteSpace(OverlayImagePath) Then
+        If Not OverlayImagePath.Span.IsWhiteSpace() Then
             nativepath = NativeFileIO.GetNtPath(OverlayImagePath)
         Else
             OverlayImagePath = Nothing
@@ -317,7 +313,10 @@ Public NotInheritable Class API
 
         Next
 
-        Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(AddressOf NativeFileIO.FormatProcessName).ToArray()
+        Dim in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).
+            Take(10).
+            Select(AddressOf NativeFileIO.FormatProcessName).
+            ToArray()
 
         If in_use_apps.Length = 0 AndAlso last_error <> 0 Then
             Throw New NotSupportedException("Write filter driver not attached to device", New Win32Exception(last_error))
@@ -336,7 +335,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
     End Sub
 
-    Public Shared Sub RegisterWriteFilter(devinstAdapter As UInt32, DeviceNumber As UInt32, operation As RegisterWriteFilterOperation)
+    Public Shared Sub RegisterWriteFilter(devinstAdapter As UInteger, DeviceNumber As UInteger, operation As RegisterWriteFilterOperation)
 
         For Each dev In
             From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
@@ -404,12 +403,11 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
     End Sub
 
-#If NET45_OR_GREATER OrElse NETCOREAPP OrElse NETSTANDARD Then
-    Public Shared Async Function RegisterWriteOverlayImageAsync(devInst As UInteger, OverlayImagePath As String, FakeNonRemovable As Boolean, cancel As CancellationToken) As Task
+    Public Shared Async Function RegisterWriteOverlayImageAsync(devInst As UInteger, OverlayImagePath As ReadOnlyMemory(Of Char), FakeNonRemovable As Boolean, cancel As CancellationToken) As Task
 
         Dim nativepath As String
 
-        If Not String.IsNullOrWhiteSpace(OverlayImagePath) Then
+        If Not OverlayImagePath.Span.IsWhiteSpace() Then
             nativepath = NativeFileIO.GetNtPath(OverlayImagePath)
         Else
             OverlayImagePath = Nothing
@@ -452,7 +450,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
             If nativepath Is Nothing AndAlso last_error = NativeConstants.NO_ERROR Then
 
                 Trace.WriteLine("Filter driver not yet unloaded, retrying...")
-                Await Task.Delay(300, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+                Await Task.Delay(300, cancel).ConfigureAwait(False)
                 Continue For
 
             ElseIf nativepath IsNot Nothing AndAlso (last_error = NativeConstants.ERROR_INVALID_FUNCTION OrElse
@@ -460,7 +458,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
                 last_error = NativeConstants.ERROR_NOT_SUPPORTED) Then
 
                 Trace.WriteLine("Filter driver not yet loaded, retrying...")
-                Await Task.Delay(300, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+                Await Task.Delay(300, cancel).ConfigureAwait(False)
                 Continue For
 
             ElseIf (nativepath IsNot Nothing AndAlso last_error <> NativeConstants.NO_ERROR) OrElse
@@ -500,7 +498,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
     End Function
 
-    Public Shared Async Function RegisterWriteFilterAsync(devinstAdapter As UInt32, DeviceNumber As UInt32, operation As RegisterWriteFilterOperation, cancel As CancellationToken) As Task
+    Public Shared Async Function RegisterWriteFilterAsync(devinstAdapter As UInteger, DeviceNumber As UInteger, operation As RegisterWriteFilterOperation, cancel As CancellationToken) As Task
 
         For Each dev In
             From devinstChild In NativeFileIO.EnumerateChildDevices(devinstAdapter)
@@ -535,7 +533,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
                 If last_error = NativeConstants.ERROR_INVALID_FUNCTION Then
                     Trace.WriteLine("Filter driver not loaded, retrying...")
-                    Await Task.Delay(200, cancel).ConfigureAwait(continueOnCapturedContext:=False)
+                    Await Task.Delay(200, cancel).ConfigureAwait(False)
                     Continue For
                 ElseIf last_error <> NativeConstants.NO_ERROR Then
                     Throw New NotSupportedException("Error checking write filter driver status", New Win32Exception)
@@ -568,8 +566,6 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
     End Function
 
-#End If
-
     Public Enum RegisterWriteFilterOperation
         Register
         Unregister
@@ -599,7 +595,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
     ''' <returns>Returns 0 on success or Win32 error code on failure</returns>
     Public Shared Function GetWriteOverlayStatus(hDevice As SafeFileHandle, <Out> ByRef Statistics As WriteFilterStatistics) As Integer
 
-        Statistics = WriteFilterStatistics.Initialize()
+        Statistics = WriteFilterStatistics.GetNew()
 
         If UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0, Statistics, Statistics.Version, Nothing, Nothing) Then
             Return NativeConstants.NO_ERROR
@@ -643,7 +639,7 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
     End Function
 
-    <SupportedOSPlatform(API.SUPPORTED_WINDOWS_PLATFORM)>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Private NotInheritable Class UnsafeNativeMethods
 
         Private Sub New()
@@ -655,22 +651,22 @@ Currently, the following application{If(in_use_apps.Length <> 1, "s", "")} hold{
 
         Public Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
-              dwIoControlCode As UInt32,
+              dwIoControlCode As UInteger,
               lpInBuffer As IntPtr,
-              nInBufferSize As UInt32,
+              nInBufferSize As UInteger,
               <Out> ByRef lpOutBuffer As WriteFilterStatistics,
-              nOutBufferSize As UInt32,
-              <Out> ByRef lpBytesReturned As UInt32,
+              nOutBufferSize As UInteger,
+              <Out> ByRef lpBytesReturned As UInteger,
               lpOverlapped As IntPtr) As Boolean
 
         Public Declare Function DeviceIoControl Lib "kernel32" (
               hDevice As SafeFileHandle,
-              dwIoControlCode As UInt32,
+              dwIoControlCode As UInteger,
               lpInBuffer As IntPtr,
-              nInBufferSize As UInt32,
+              nInBufferSize As UInteger,
               lpOutBuffer As IntPtr,
-              nOutBufferSize As UInt32,
-              <Out> ByRef lpBytesReturned As UInt32,
+              nOutBufferSize As UInteger,
+              <Out> ByRef lpBytesReturned As UInteger,
               lpOverlapped As IntPtr) As Boolean
 
     End Class

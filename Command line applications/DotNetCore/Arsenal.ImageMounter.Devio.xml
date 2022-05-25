@@ -358,7 +358,7 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProvider(System.String,System.IO.FileAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file. This does not create a DevioServiceBase
  object that can actually serve incoming requests, it just creates the provider object that can
  be used with a later created DevioServiceBase object.
@@ -369,7 +369,7 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProvider(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file. This does not create a DevioServiceBase
  object that can actually serve incoming requests, it just creates the provider object that can
  be used with a later created DevioServiceBase object.
@@ -407,7 +407,7 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderDiscUtils(System.String,System.IO.FileAccess)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file using DiscUtils library.
  </summary>
  <param name="Imagefile">Image file.</param>
@@ -415,7 +415,7 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderDiscUtils(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file using DiscUtils library.
  </summary>
  <param name="Imagefile">Image file.</param>
@@ -423,7 +423,7 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderMultiPartRaw(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified set of multi-part raw image files.
  </summary>
  <param name="Imagefile">First part image file.</param>
@@ -431,7 +431,7 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderMultiPartRaw(System.String,System.IO.FileAccess)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified set of multi-part raw image files.
  </summary>
  <param name="Imagefile">First part image file.</param>
@@ -439,23 +439,39 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderMultiPartRaw(System.String,System.IO.FileAccess,System.IO.FileShare)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified set of multi-part raw image files.
  </summary>
  <param name="Imagefile">First part image file.</param>
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
 </member>
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderLibQcow(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
+ <summary>
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
+ for servicing I/O requests to a specified image file using libewf library.
+ </summary>
+ <param name="Imagefile">Image file.</param>
+ <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+</member>
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderLibQcow(System.String,System.IO.FileAccess)">
+ <summary>
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
+ for servicing I/O requests to a specified image file using libqcow library.
+ </summary>
+ <param name="Imagefile">Image file.</param>
+ <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
+</member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderLibEwf(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
- for servicing I/O requests to a specified image file using libewf library.
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
+ for servicing I/O requests to a specified image file using libqcow library.
  </summary>
  <param name="Imagefile">Image file.</param>
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderLibEwf(System.String,System.IO.FileAccess)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file using libewf library.
  </summary>
  <param name="Imagefile">Image file.</param>
@@ -463,7 +479,7 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderLibAFF4(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file using libaff4 library.
  </summary>
  <param name="Imagefile">Image file.</param>
@@ -471,7 +487,7 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderLibAFF4(System.String,System.IO.FileAccess)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file using libaff4 library.
  </summary>
  <param name="Imagefile">Image file.</param>
@@ -479,14 +495,14 @@ Arsenal.ImageMounter.Devio
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderLibAFF4(System.String)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file using libaff4 library.
  </summary>
  <param name="Imagefile">Image file.</param>
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderLibAFF4(System.String,System.Int32)">
  <summary>
- Creates an object, of a IDevioProvider implementing class, to support devio proxy server end
+ Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file using libaff4 library.
  </summary>
  <param name="containerfile">Container file containing image to mount.</param>
@@ -517,6 +533,15 @@ Arsenal.ImageMounter.Devio
  </summary>
  <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
 </member>
+<member name="M:Arsenal.ImageMounter.Devio.Server.Services.DevioNoneService.#ctor(System.String,System.Int64,System.IO.FileAccess)">
+ <summary>
+ Creates a DevioServiceBase compatible object, but without providing a proxy service.
+ Instead, it just passes a disk image file name for direct mounting internally in
+ SCSI Adapter.
+ </summary>
+ <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+ <param name="length">Disk size to initialize dummy provider instance</param>
+</member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Services.DevioNoneService.#ctor(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
  <summary>
  Creates a DevioServiceBase compatible object, but without providing a proxy service.
@@ -524,6 +549,15 @@ Arsenal.ImageMounter.Devio
  SCSI Adapter.
  </summary>
  <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+</member>
+<member name="M:Arsenal.ImageMounter.Devio.Server.Services.DevioNoneService.#ctor(System.String,System.Int64,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
+ <summary>
+ Creates a DevioServiceBase compatible object, but without providing a proxy service.
+ Instead, it just passes a disk image file name for direct mounting internally in
+ SCSI Adapter.
+ </summary>
+ <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+ <param name="length">Disk size to initialize dummy provider instance</param>
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Services.DevioNoneService.#ctor(System.Int64)">
  <summary>

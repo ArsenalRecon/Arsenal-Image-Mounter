@@ -10,6 +10,7 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
+Imports System.Buffers
 Imports System.Runtime.InteropServices
 
 Namespace Server.GenericProviders
@@ -70,62 +71,19 @@ Namespace Server.GenericProviders
         ''' <returns>Returns number of bytes read from device that were stored in byte array.</returns>
         Public MustOverride Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
 
-        Private ReadOnly _buffers As New List(Of WeakReference)
-
-        Private Function GetByteBuffer(size As Integer) As Byte()
-
-#If TRACE_PERFORMANCE Then
-            Static tid As String = Thread.CurrentThread.ManagedThreadId.ToString()
-            Static counter As Long
-            Static alloc_counter As Long
-            Static free_counter As Long
-
-            counter += 1
-#End If
-
-            Dim buffer = _buffers.
-                Select(Function(ref) TryCast(ref.Target, Byte())).
-                FirstOrDefault(Function(buf) buf IsNot Nothing AndAlso buf.Length >= size)
-
-            If buffer Is Nothing Then
-
-#If TRACE_PERFORMANCE Then
-                alloc_counter += 1
-#End If
-
-                buffer = New Byte(0 To size - 1) {}
-
-                Dim wr = _buffers.FirstOrDefault(Function(ref) Not ref.IsAlive)
-
-                If wr Is Nothing Then
-
-                    _buffers.Add(New WeakReference(buffer))
-
-                Else
-
-                    wr.Target = buffer
-
-#If TRACE_PERFORMANCE Then
-                    free_counter += 1
-                    Trace.WriteLine($"[{tid}] Reallocated freed buffer ({size} bytes) {alloc_counter}/{counter}. Freed {free_counter}")
-#End If
-
-                End If
-
-            End If
-
-            Return buffer
-
-        End Function
-
         Private Function Read(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
 
-            Dim _byte_buffer = GetByteBuffer(count)
+            Dim _byte_buffer = ArrayPool(Of Byte).Shared.Rent(count)
+            Try
+                Dim readlen = Read(_byte_buffer, 0, count, fileoffset)
+                Marshal.Copy(_byte_buffer, 0, buffer + bufferoffset, readlen)
 
-            Dim readlen = Read(_byte_buffer, 0, count, fileoffset)
-            Marshal.Copy(_byte_buffer, 0, buffer + bufferoffset, readlen)
+                Return readlen
 
-            Return readlen
+            Finally
+                ArrayPool(Of Byte).Shared.Return(_byte_buffer)
+
+            End Try
 
         End Function
 
@@ -141,11 +99,16 @@ Namespace Server.GenericProviders
 
         Private Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
 
-            Dim _byte_buffer = GetByteBuffer(count)
+            Dim _byte_buffer = ArrayPool(Of Byte).Shared.Rent(count)
+            Try
+                Marshal.Copy(buffer + bufferoffset, _byte_buffer, 0, count)
 
-            Marshal.Copy(buffer + bufferoffset, _byte_buffer, 0, count)
+                Return Write(_byte_buffer, 0, count, fileoffset)
 
-            Return Write(_byte_buffer, 0, count, fileoffset)
+            Finally
+                ArrayPool(Of Byte).Shared.Return(_byte_buffer)
+
+            End Try
 
         End Function
 

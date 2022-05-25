@@ -10,9 +10,9 @@ Arsenal Image Mounter and does not need to be installed separately.
 
 Sources for DiscUtils are based on the repository at
 https://github.com/DiscUtils/DiscUtils and forked into a version with added
-features for analyzing NTFS internal structures etc. The forked version is
-maintained here:
-https://github.com/LTRData/DiscUtils
+features for analyzing NTFS internal structures, several modernizations and
+optimizations of the code etc. The forked version is maintained here:
+https://github.com/LTRData/DiscUtils/tree/LTRData.DiscUtils-initial
 
 libewf.dll
 ----------

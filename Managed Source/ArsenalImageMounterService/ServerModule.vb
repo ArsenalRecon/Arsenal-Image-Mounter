@@ -28,6 +28,7 @@ Imports Microsoft.Win32.SafeHandles
 Imports System.Net
 Imports System.Runtime.Versioning
 
+#Disable Warning IDE0079 ' Remove unnecessary suppression
 #Disable Warning CA1416 ' Validate platform compatibility
 
 Public Module ServerModule
@@ -36,32 +37,7 @@ Public Module ServerModule
 
     Private Function GetArchitectureLibPath() As String
 
-#If NET471_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
-
         Return RuntimeInformation.ProcessArchitecture.ToString()
-
-#Else
-
-        Static architectureLibPath As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
-            {"i386", "x86"},
-            {"AMD64", "x64"}
-        }
-
-        Dim architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
-
-        If String.IsNullOrWhiteSpace(architecture) Then
-            Return String.Empty
-        End If
-
-        Dim path As String = Nothing
-
-        If architectureLibPath.TryGetValue(architecture, path) Then
-            Return path
-        Else
-            Return architecture
-        End If
-
-#End If
 
     End Function
 
@@ -81,11 +57,7 @@ Public Module ServerModule
                 assemblyPaths(i) = Path.Combine(appPath, assemblyPaths(i))
             Next
 
-#If NET471_OR_GREATER OrElse NETSTANDARD OrElse NETCOREAPP Then
             Dim native_dll_paths = assemblyPaths.Append(Environment.GetEnvironmentVariable("PATH"))
-#Else
-            Dim native_dll_paths = assemblyPaths.Concat({Environment.GetEnvironmentVariable("PATH")})
-#End If
 
             Environment.SetEnvironmentVariable("PATH", String.Join(";", native_dll_paths))
 
@@ -123,7 +95,7 @@ Public Module ServerModule
                         .Arguments = cmdline
                     }
 
-#If NETCOREAPP Then
+#If NET6_0_OR_GREATER Then
                     pstart.FileName = Environment.ProcessPath
 #Else
                     pstart.FileName = Process.GetCurrentProcess().MainModule.FileName
@@ -217,6 +189,7 @@ Please see EULA.txt for license information.")
         Dim listen_address As IPAddress = IPAddress.Any
         Dim listen_port As Integer
         Dim buffer_size As Long = DevioShmService.DefaultBufferSize
+        Dim disk_size As Long? = Nothing
         Dim disk_access As FileAccess = FileAccess.ReadWrite
         Dim mount As Boolean = False
         Dim provider_name As String = "DiscUtils"
@@ -257,6 +230,8 @@ Please see EULA.txt for license information.")
                 listen_address = IPAddress.Parse(cmd.Value(0))
             ElseIf arg.Equals("port", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
                 listen_port = Integer.Parse(cmd.Value(0))
+            ElseIf arg.Equals("disksize", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+                disk_size = Long.Parse(cmd.Value(0))
             ElseIf arg.Equals("buffersize", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
                 buffer_size = Long.Parse(cmd.Value(0))
             ElseIf arg.Equals("filename", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
@@ -358,7 +333,7 @@ Image Mounter virtual SCSI miniport driver.
 
 Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
 
-Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01) or AFF4 forensic disk images, you must make the Libewf (libewf.dll) and LibAFF4 (libaff4.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-original mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
+Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01), AFF4 forensic disk images or QEMU Qcow images, you must make the Libewf (libewf.dll), LibAFF4 (libaff4.dll) and Libqcow (libqcow.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-original mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
 {asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly] [--fakesig] [--fakembr] --filename=imagefilename --provider={providers} [--writeoverlay=differencingimagefile [--autodelete]] [--background]
@@ -556,6 +531,10 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
             End Try
 
+            If disk_size.HasValue Then
+                service.DiskSize = disk_size.Value
+            End If
+
             service.StartServiceThreadAndMount(adapter, device_flags)
 
             If auto_delete Then
@@ -697,7 +676,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
                             (outputImage.StartsWith("\\?\", StringComparison.Ordinal) OrElse
                             outputImage.StartsWith("\\.\", StringComparison.Ordinal)) Then
 
-                            provider.WriteToPhysicalDisk(outputImage, completionPosition, cancel.Token)
+                            provider.WriteToPhysicalDisk(outputImage.AsMemory(), completionPosition, cancel.Token)
 
                             Return
 
@@ -749,7 +728,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
     End Sub
 
-    <SupportedOSPlatform("windows")>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub ListDevices()
 
         Dim adapters = API.EnumerateAdapterDeviceInstanceNames()
@@ -785,7 +764,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                 Using h = NativeFileIO.NtCreateFile(dev.path, NtObjectAttributes.OpenIf, 0, FileShare.ReadWrite, NtCreateDisposition.Open, NtCreateOptions.NonDirectoryFile Or NtCreateOptions.SynchronousIoNonAlert, FileAttributes.Normal, Nothing, Nothing)
                     Dim prop = NativeFileIO.GetStorageStandardProperties(h)
-                    Console.WriteLine("")
+                    Console.WriteLine(prop?.ToMembersString())
                 End Using
 
 #End If

@@ -1,6 +1,6 @@
 // Arsenal.ImageMounter.IO.PinnedBuffer
 using System;
-using System.Runtime.CompilerServices;
+using System.Buffers;
 using System.Runtime.InteropServices;
 
 namespace Arsenal.ImageMounter.IO;
@@ -47,36 +47,6 @@ public class PinnedBuffer : SafeBuffer
     /// </summary>
     /// <param name="instance">Existing object to marshal to unmanaged memory.</param>
     public static PinnedBuffer<T> Create<T>(T[] instance) where T : struct => new(instance);
-
-    /// <summary>
-    /// Serializes a value structure as into a new byte array
-    /// </summary>
-    /// <typeparam name="T">Type of managed strucute to serialize</typeparam>
-    /// <param name="instance">Instance of managed structure to serialize</param>
-    /// <returns></returns>
-    public static PinnedBuffer<byte> Serialize<T>(in T instance) where T : struct
-    {
-        var pinnedBuffer = new PinnedBuffer<byte>(PinnedBuffer<T>.TypeSize);
-        pinnedBuffer.Write(0uL, instance);
-        return pinnedBuffer;
-    }
-
-    /// <summary>
-    /// Deserializes a managed value structure from a byte array
-    /// </summary>
-    /// <typeparam name="T">Type of managed structure to deserialize</typeparam>
-    /// <param name="buffer">Byte array containing data to form the managed structure</param>
-    /// <returns></returns>
-    /// <exception cref="ArgumentException"><paramref name="buffer"/> is null or too small</exception>
-    public static T Deserialize<T>(byte[] buffer) where T : struct
-    {
-        if (buffer == null || buffer.Length < PinnedBuffer<T>.TypeSize)
-        {
-            throw new ArgumentException("Invalid input buffer", nameof(buffer));
-        }
-        using var pinned = Create(buffer);
-        return pinned.Read<T>(0uL);
-    }
 
     /// <summary>
     /// Creates a new pinning for an offset into the existing pinned buffer.
@@ -180,44 +150,42 @@ public class PinnedBuffer : SafeBuffer
 /// </summary>
 /// <typeparam name="T">Type of elements in array.</typeparam>
 [ComVisible(false)]
-public class PinnedBuffer<T> : PinnedBuffer where T : struct
+public class PinnedBuffer<T> : PinnedBuffer, IMemoryOwner<T> where T : struct
 {
     /// <summary>
     /// Returns associated object of this instance.
     /// </summary>
     public new T[] Target => (T[])GCHandle.Target;
 
-#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
     /// <summary>
-    /// Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+    /// Creates a <see cref="Memory{T}"/> representing the array pinned by this instance.
     /// </summary>
-    public Memory<T> AsMemory() => MemoryMarshal.CreateFromPinnedArray(Target, 0, Target.Length);
+    public Memory<T> Memory => MemoryMarshal.CreateFromPinnedArray(Target, 0, Target.Length);
 
     /// <summary>
-    /// Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+    /// Creates a <see cref="Memory{T}"/> representing a portion of the array pinned by this instance.
     /// </summary>
-    public Memory<T> AsMemory(int start) => MemoryMarshal.CreateFromPinnedArray(Target, start, checked(Target.Length - start));
+    public Memory<T> Slice(int start) => MemoryMarshal.CreateFromPinnedArray(Target, start, checked(Target.Length - start));
 
     /// <summary>
-    /// Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+    /// Creates a <see cref="Memory{T}"/> representing a portion of the array pinned by this instance.
     /// </summary>
-    public Memory<T> AsMemory(int start, int length) => MemoryMarshal.CreateFromPinnedArray(Target, start, length);
+    public Memory<T> Slice(int start, int length) => MemoryMarshal.CreateFromPinnedArray(Target, start, length);
 
     /// <summary>
-    /// Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+    /// Creates a <see cref="Span{T}"/> representing the array pinned by this instance.
     /// </summary>
     public Span<T> AsSpan() => new(Target, 0, Target.Length);
 
     /// <summary>
-    /// Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+    /// Creates a <see cref="Span{T}"/> representing a portion of the array pinned by this instance.
     /// </summary>
     public Span<T> AsSpan(int start) => new(Target, start, checked(Target.Length - start));
 
     /// <summary>
-    /// Creates a Memory&lt;T&gt; representing the array pinned by this instance.
+    /// Creates a <see cref="Span{T}"/> representing a portion of the array pinned by this instance.
     /// </summary>
     public Span<T> AsSpan(int start, int length) => new(Target, start, length);
-#endif
 
     /// <summary>
     /// Initializes a new instance with an new type T array and pins memory
@@ -241,11 +209,7 @@ public class PinnedBuffer<T> : PinnedBuffer where T : struct
             return 2;
         }
 
-#if NETFRAMEWORK && !NET451_OR_GREATER
-		return Marshal.SizeOf(typeof(T));
-#else
         return Marshal.SizeOf<T>();
-#endif
     }
 
     /// <summary>
