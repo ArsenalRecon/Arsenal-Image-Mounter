@@ -27,7 +27,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\How-to-build.txt = ..\How-to-build.txt
 		..\LICENSE.md = ..\LICENSE.md
 		..\News.txt = ..\News.txt
-		..\Public-API-reference.txt = ..\Public-API-reference.txt
 		..\README.md = ..\README.md
 		..\Third-party-dependencies.txt = ..\Third-party-dependencies.txt
 	EndProjectSection
@@ -46,6 +45,20 @@ EndProject
 Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "Arsenal.ImageMounter.Interaction", "Arsenal.ImageMounter.Interaction\Arsenal.ImageMounter.Interaction.vbproj", "{03121C3F-C689-4969-85B5-E1DC25E1A5C6}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arsenal.ImageMounter.Dialogs", "Arsenal.ImageMounter.Dialogs\Arsenal.ImageMounter.Dialogs.csproj", "{F998CD56-902E-406E-A074-130B577F2864}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Third-Party-Licenses", "Third-Party-Licenses", "{4040A625-9F19-4E99-9293-A2E151852630}"
+	ProjectSection(SolutionItems) = preProject
+		..\Third-Party-Licenses\bzip2.txt = ..\Third-Party-Licenses\bzip2.txt
+		..\Third-Party-Licenses\DiscUtils.txt = ..\Third-Party-Licenses\DiscUtils.txt
+		..\Third-Party-Licenses\dokan.txt = ..\Third-Party-Licenses\dokan.txt
+		..\Third-Party-Licenses\DotNetZip.txt = ..\Third-Party-Licenses\DotNetZip.txt
+		..\Third-Party-Licenses\gpl-3.0.txt = ..\Third-Party-Licenses\gpl-3.0.txt
+		..\Third-Party-Licenses\lgpl-3.0.txt = ..\Third-Party-Licenses\lgpl-3.0.txt
+		..\Third-Party-Licenses\libaff4.txt = ..\Third-Party-Licenses\libaff4.txt
+		..\Third-Party-Licenses\libewf.txt = ..\Third-Party-Licenses\libewf.txt
+		..\Third-Party-Licenses\libqcow.txt = ..\Third-Party-Licenses\libqcow.txt
+		..\Third-Party-Licenses\zlib.txt = ..\Third-Party-Licenses\zlib.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -210,6 +223,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4040A625-9F19-4E99-9293-A2E151852630} = {CCDE959C-C0CA-4F98-B379-64931C7C91D0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {63D0EDE0-8625-4ED8-8DAA-BCABDF7695E1}
