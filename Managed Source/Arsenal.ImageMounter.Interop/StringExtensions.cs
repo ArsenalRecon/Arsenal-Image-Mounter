@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 
@@ -21,6 +22,60 @@ namespace Arsenal.ImageMounter.IO;
 /// </summary>
 public static class StringExtensions
 {
+    /// <summary>
+    /// Workaround for Visual Basic Span consumers
+    /// </summary>
+    /// <typeparam name="T">Type of elements of span</typeparam>
+    /// <param name="span">span</param>
+    /// <param name="index">index of element in span to return</param>
+    /// <returns>Copy of element at position</returns>
+    public static T GetItem<T>(this ReadOnlySpan<T> span, int index) => span[index];
+
+    /// <summary>
+    /// Workaround for Visual Basic Span consumers
+    /// </summary>
+    /// <typeparam name="T">Type of elements of span</typeparam>
+    /// <param name="span">span</param>
+    /// <param name="index">index of element in span to return</param>
+    /// <returns>Copy of element at position</returns>
+    public static T GetItem<T>(this Span<T> span, int index) => span[index];
+
+    /// <summary>
+    /// Workaround for Visual Basic Span consumers
+    /// </summary>
+    /// <typeparam name="T">Type of elements of span</typeparam>
+    /// <param name="memory">span</param>
+    /// <param name="index">index of element in span to set</param>
+    /// <param name="item">reference to item to assign to index in span</param>
+    public static void SetItem<T>(this Memory<T> memory, int index, in T item) => memory.Span[index] = item;
+
+    /// <summary>
+    /// Workaround for Visual Basic Span consumers
+    /// </summary>
+    /// <typeparam name="T">Type of elements of span</typeparam>
+    /// <param name="span">span</param>
+    /// <param name="index">index of element in span to set</param>
+    /// <param name="item">reference to item to assign to index in span</param>
+    public static void SetItem<T>(this Span<T> span, int index, in T item) => span[index] = item;
+
+    /// <summary>
+    /// Workaround for Visual Basic Span consumers
+    /// </summary>
+    /// <typeparam name="T">Type of elements of span</typeparam>
+    /// <param name="memory">span</param>
+    /// <param name="index">index of element in span to return</param>
+    /// <returns>Copy of element at position</returns>
+    public static T GetItem<T>(this ReadOnlyMemory<T> memory, int index) => memory.Span[index];
+
+    /// <summary>
+    /// Workaround for Visual Basic Span consumers
+    /// </summary>
+    /// <typeparam name="T">Type of elements of span</typeparam>
+    /// <param name="memory">span</param>
+    /// <param name="index">index of element in span to return</param>
+    /// <returns>Copy of element at position</returns>
+    public static T GetItem<T>(this Memory<T> memory, int index) => memory.Span[index];
+
     /// <summary>
     /// Parses a multi-string where each string is terminated by null char
     /// and the whole buffer is terminated by double null chars.
@@ -125,6 +180,15 @@ public static class StringExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ReadNullTerminatedUnicodeString(byte[] buffer, int offset)
         => ReadNullTerminatedUnicodeString(MemoryMarshal.Cast<byte, char>(buffer.AsSpan(offset)));
+
+    /// <summary>
+    /// Reads null terminated Unicode string from byte buffer.
+    /// </summary>
+    /// <param name="buffer">Byte buffer</param>
+    /// <returns>Managed string</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string ReadNullTerminatedUnicodeString(this Span<byte> buffer)
+        => ReadNullTerminatedUnicodeString(MemoryMarshal.Cast<byte, char>(buffer));
 
     /// <summary>
     /// Reads null terminated Unicode string from byte buffer.

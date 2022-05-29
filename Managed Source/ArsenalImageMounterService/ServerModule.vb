@@ -78,15 +78,15 @@ Public Module ServerModule
 
                     Dim cmdline =
                         String.Join(" ", commands.SelectMany(
-                        Function(cmd)
-                            If cmd.Key.Equals("background", StringComparison.OrdinalIgnoreCase) Then
-                                Return Enumerable.Empty(Of String)()
-                            ElseIf cmd.Value.Length = 0 Then
-                                Return {$"--{cmd.Key}"}
-                            Else
-                                Return cmd.Value.Select(Function(value) $"--{cmd.Key}=""{value}""")
-                            End If
-                        End Function))
+                            Function(cmd)
+                                If cmd.Key.Equals("background", StringComparison.OrdinalIgnoreCase) Then
+                                    Return Enumerable.Empty(Of String)()
+                                ElseIf cmd.Value.Length = 0 Then
+                                    Return {$"--{cmd.Key}"}
+                                Else
+                                    Return cmd.Value.Select(Function(value) $"--{cmd.Key}=""{value}""")
+                                End If
+                            End Function))
 
                     cmdline = $"{cmdline} --detach={ready_wait.SafeWaitHandle.DangerousGetHandle()}"
 

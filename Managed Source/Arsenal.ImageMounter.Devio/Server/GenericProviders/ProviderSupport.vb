@@ -29,9 +29,11 @@ Namespace Server.GenericProviders
 
         Public Function GetMultiSegmentFiles(FirstFile As String) As String()
 
-            Dim pathpart = Path.GetDirectoryName(FirstFile)
-            Dim filepart = Path.GetFileNameWithoutExtension(FirstFile)
-            Dim extension = Path.GetExtension(FirstFile)
+#If NETSTANDARD2_1_OR_GREATER OrElse NETCOREAPP Then
+
+            Dim pathpart = Path.GetDirectoryName(FirstFile.AsSpan())
+            Dim filepart = Path.GetFileNameWithoutExtension(FirstFile.AsSpan())
+            Dim extension = Path.GetExtension(FirstFile.AsSpan())
             Dim foundfiles As String() = Nothing
 
             If extension.EndsWith("01", StringComparison.Ordinal) OrElse
@@ -39,16 +41,16 @@ Namespace Server.GenericProviders
 
                 Dim start = extension.Length - 3
 
-                While start >= 0 AndAlso Char.IsDigit(extension, start)
+                While start >= 0 AndAlso Char.IsDigit(extension.GetItem(start))
                     start -= 1
                 End While
 
                 start += 1
 
-                Dim segmentnumberchars = New String("?"c, extension.Length - start)
-                Dim namebase = filepart & extension.Remove(start)
-                Dim pathbase = Path.Combine(Path.GetDirectoryName(FirstFile), namebase)
-                Dim dir_name = Path.GetDirectoryName(FirstFile)
+                Dim segmentnumberchars As New String("?"c, extension.Length - start)
+                Dim namebase = String.Concat(filepart, extension.Slice(0, start))
+                Dim pathbase = Path.Join(pathpart, namebase)
+                Dim dir_name = pathpart.ToString()
                 Dim dir_pattern = namebase & segmentnumberchars
 
                 If String.IsNullOrWhiteSpace(dir_name) Then
@@ -82,6 +84,63 @@ Namespace Server.GenericProviders
             End If
 
             Return foundfiles
+
+#Else
+
+            Dim pathpart = Path.GetDirectoryName(FirstFile)
+            Dim filepart = Path.GetFileNameWithoutExtension(FirstFile)
+            Dim extension = Path.GetExtension(FirstFile)
+            Dim foundfiles As String() = Nothing
+
+            If extension.EndsWith("01", StringComparison.Ordinal) OrElse
+                extension.EndsWith("00", StringComparison.Ordinal) Then
+
+                Dim start = extension.Length - 3
+
+                While start >= 0 AndAlso Char.IsDigit(extension, start)
+                    start -= 1
+                End While
+
+                start += 1
+
+                Dim segmentnumberchars As New String("?"c, extension.Length - start)
+                Dim namebase = String.Concat(filepart, extension.Remove(start))
+                Dim pathbase = Path.Combine(pathpart, namebase)
+                Dim dir_name = pathpart
+                Dim dir_pattern = String.Concat(namebase, segmentnumberchars)
+
+                If String.IsNullOrWhiteSpace(dir_name) Then
+                    dir_name = "."
+                End If
+
+                Try
+                    foundfiles = Directory.GetFiles(dir_name, dir_pattern)
+
+                Catch ex As Exception
+                    Throw New Exception($"Failed enumerating files '{dir_pattern}' in directory '{dir_name}'", ex)
+
+                End Try
+
+                For i = 0 To foundfiles.Length - 1
+                    foundfiles(i) = Path.GetFullPath(foundfiles(i))
+                Next
+
+                Array.Sort(foundfiles, StringComparer.Ordinal)
+
+            Else
+
+                If File.Exists(FirstFile) Then
+                    foundfiles = {FirstFile}
+                End If
+
+            End If
+
+            If foundfiles Is Nothing OrElse foundfiles.Length = 0 Then
+                Throw New FileNotFoundException("Image file not found", FirstFile)
+            End If
+
+            Return foundfiles
+#End If
 
         End Function
 

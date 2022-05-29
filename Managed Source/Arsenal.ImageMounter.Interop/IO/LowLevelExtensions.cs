@@ -369,8 +369,47 @@ public static partial class LowLevelExtensions
     /// </summary>
     /// <param name="first">First span</param>
     /// <param name="second">Second span</param>
+    /// <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
+    /// If lengths are equal and byte sequences are equal, true is returned.</returns>
+    public static bool BinaryEqual(this Span<byte> first, ReadOnlySpan<byte> second)
+    {
+        if (first.IsEmpty && second.IsEmpty)
+        {
+            return true;
+        }
+
+        if (first.Length != second.Length)
+        {
+            return false;
+        }
+
+        return first == second ||
+            memcmp(first[0], second[0], new IntPtr(first.Length)) == 0;
+    }
+
+    /// <summary>
+    /// Compares two byte spans using C runtime memcmp function.
+    /// </summary>
+    /// <param name="first">First span</param>
+    /// <param name="second">Second span</param>
     /// <returns>Result of memcmp comparison.</returns>
     public static int BinaryCompare(this ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)
+    {
+        if ((first.IsEmpty && second.IsEmpty) || first == second)
+        {
+            return 0;
+        }
+
+        return memcmp(first[0], second[0], new IntPtr(first.Length));
+    }
+
+    /// <summary>
+    /// Compares two byte spans using C runtime memcmp function.
+    /// </summary>
+    /// <param name="first">First span</param>
+    /// <param name="second">Second span</param>
+    /// <returns>Result of memcmp comparison.</returns>
+    public static int BinaryCompare(this Span<byte> first, ReadOnlySpan<byte> second)
     {
         if ((first.IsEmpty && second.IsEmpty) || first == second)
         {
