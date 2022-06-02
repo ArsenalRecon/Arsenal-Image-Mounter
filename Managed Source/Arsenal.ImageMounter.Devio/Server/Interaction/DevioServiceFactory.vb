@@ -1033,6 +1033,10 @@ Namespace Server.Interaction
                 Return New Raw.Disk(diskstream, Ownership.Dispose)
             End If
 
+            If imagepath.EndsWith(".ova", StringComparison.OrdinalIgnoreCase) Then
+                Return OpenOVA(imagepath, FileAccess.Read)
+            End If
+
             Dim disk = VirtualDisk.OpenDisk(imagepath, FileAccess.Read)
             If disk Is Nothing Then
                 disk = New Raw.Disk(imagepath, FileAccess.Read)

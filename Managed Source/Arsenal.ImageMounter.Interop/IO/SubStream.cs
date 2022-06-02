@@ -117,7 +117,7 @@ public class SubStream : Stream
 
         if (Position >= _length)
         {
-            return LowLevelExtensions.ZeroCompletedTask;
+            return AsyncExtensions.ZeroCompletedTask;
         }
 
         return Parent.ReadAsync(buffer, offset, (int)Math.Min(count, checked(_length - Position)), cancellationToken);

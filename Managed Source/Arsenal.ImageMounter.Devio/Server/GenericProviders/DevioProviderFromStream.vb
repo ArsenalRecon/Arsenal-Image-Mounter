@@ -14,6 +14,7 @@
 
 Imports System.IO
 Imports System.Runtime.InteropServices
+Imports Arsenal.ImageMounter.Devio.Extensions
 Imports Arsenal.ImageMounter.Extensions
 
 Namespace Server.GenericProviders
@@ -104,8 +105,7 @@ Namespace Server.GenericProviders
 
             End If
 
-            Dim mem = LowLevelExtensions.AsSpan(buffer + bufferoffset, count)
-
+            Dim mem = ImageMounter.Extensions.BufferExtensions.AsSpan(buffer + bufferoffset, count)
             Return _BaseStream.Read(mem)
 
         End Function
@@ -113,7 +113,8 @@ Namespace Server.GenericProviders
         Public Overloads Overrides Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
             _BaseStream.Position = fileoffset
-            Dim mem = LowLevelExtensions.AsReadOnlySpan(buffer + bufferoffset, count)
+
+            Dim mem = ImageMounter.Extensions.BufferExtensions.AsReadOnlySpan(buffer + bufferoffset, count)
             _BaseStream.Write(mem)
             Return count
 

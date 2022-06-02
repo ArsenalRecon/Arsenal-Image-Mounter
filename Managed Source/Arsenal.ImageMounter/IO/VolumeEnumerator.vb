@@ -1,6 +1,7 @@
 ﻿Imports System.ComponentModel
 Imports System.Runtime.InteropServices
 Imports System.Runtime.Versioning
+Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO.NativeConstants
 Imports Arsenal.ImageMounter.IO.NativeFileIO
 Imports Arsenal.ImageMounter.IO.NativeFileIO.UnsafeNativeMethods

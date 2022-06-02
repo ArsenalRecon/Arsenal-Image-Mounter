@@ -4,6 +4,263 @@
         <name>Arsenal.ImageMounter.Interop</name>
     </assembly>
     <members>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.GetItem``1(System.ReadOnlySpan{``0},System.Int32)">
+            <summary>
+            Workaround for Visual Basic Span consumers
+            </summary>
+            <typeparam name="T">Type of elements of span</typeparam>
+            <param name="span">span</param>
+            <param name="index">index of element in span to return</param>
+            <returns>Copy of element at position</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.GetItem``1(System.Span{``0},System.Int32)">
+            <summary>
+            Workaround for Visual Basic Span consumers
+            </summary>
+            <typeparam name="T">Type of elements of span</typeparam>
+            <param name="span">span</param>
+            <param name="index">index of element in span to return</param>
+            <returns>Copy of element at position</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.SetItem``1(System.Memory{``0},System.Int32,``0@)">
+            <summary>
+            Workaround for Visual Basic Span consumers
+            </summary>
+            <typeparam name="T">Type of elements of span</typeparam>
+            <param name="memory">span</param>
+            <param name="index">index of element in span to set</param>
+            <param name="item">reference to item to assign to index in span</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.SetItem``1(System.Span{``0},System.Int32,``0@)">
+            <summary>
+            Workaround for Visual Basic Span consumers
+            </summary>
+            <typeparam name="T">Type of elements of span</typeparam>
+            <param name="span">span</param>
+            <param name="index">index of element in span to set</param>
+            <param name="item">reference to item to assign to index in span</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.GetItem``1(System.ReadOnlyMemory{``0},System.Int32)">
+            <summary>
+            Workaround for Visual Basic Span consumers
+            </summary>
+            <typeparam name="T">Type of elements of span</typeparam>
+            <param name="memory">span</param>
+            <param name="index">index of element in span to return</param>
+            <returns>Copy of element at position</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.GetItem``1(System.Memory{``0},System.Int32)">
+            <summary>
+            Workaround for Visual Basic Span consumers
+            </summary>
+            <typeparam name="T">Type of elements of span</typeparam>
+            <param name="memory">span</param>
+            <param name="index">index of element in span to return</param>
+            <returns>Copy of element at position</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ParseDoubleTerminatedString(System.Memory{System.Byte})">
+            <summary>
+            Parses a multi-string where each string is terminated by null char
+            and the whole buffer is terminated by double null chars.
+            </summary>
+            <param name="bytes">Memory that contains the double null terminated string</param>
+            <returns>Each individual string in the buffer</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ParseDoubleTerminatedString(System.ReadOnlyMemory{System.Byte})">
+            <summary>
+            Parses a multi-string where each string is terminated by null char
+            and the whole buffer is terminated by double null chars.
+            </summary>
+            <param name="bytes">Memory that contains the double null terminated string</param>
+            <returns>Each individual string in the buffer</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ParseDoubleTerminatedString(System.Memory{System.Char})">
+            <summary>
+            Parses a multi-string where each string is terminated by null char
+            and the whole buffer is terminated by double null chars.
+            </summary>
+            <param name="chars">Memory that contains the double null terminated string</param>
+            <returns>Each individual string in the buffer</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ParseDoubleTerminatedString(System.ReadOnlyMemory{System.Char})">
+            <summary>
+            Parses a multi-string where each string is terminated by null char
+            and the whole buffer is terminated by double null chars.
+            </summary>
+            <param name="chars">Memory that contains the double null terminated string</param>
+            <returns>Each individual string in the buffer</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.IndexOfTerminator``1(System.ReadOnlySpan{``0})">
+            <summary>
+            Return position of first empty element, or the entire span length if
+            no empty elements are found.
+            </summary>
+            <param name="buffer">Span to search</param>
+            <returns>Position of first found empty element or entire span length if none found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.IndexOfTerminator``1(System.Span{``0})">
+            <summary>
+            Return position of first empty element, or the entire span length if
+            no empty elements are found.
+            </summary>
+            <param name="buffer">Span to search</param>
+            <returns>Position of first found empty element or entire span length if none found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedAsciiString(System.Byte[],System.Int32)">
+            <summary>
+            Reads null terminated ASCII string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <param name="offset">Offset in byte buffer where the string starts</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedAsciiString(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Reads null terminated ASCII string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedAsciiString(System.Span{System.Byte})">
+            <summary>
+            Reads null terminated ASCII string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedUnicodeString(System.Byte[],System.Int32)">
+            <summary>
+            Reads null terminated Unicode string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <param name="offset">Offset in byte buffer where the string starts</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedUnicodeString(System.Span{System.Byte})">
+            <summary>
+            Reads null terminated Unicode string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Reads null terminated Unicode string from byte buffer.
+            </summary>
+            <param name="buffer">Byte buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlySpan{System.Char})">
+            <summary>
+            Reads null terminated Unicode string from char buffer.
+            </summary>
+            <param name="chars">Buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedUnicodeString(System.Span{System.Char})">
+            <summary>
+            Reads null terminated Unicode string from char buffer.
+            </summary>
+            <param name="chars">Buffer</param>
+            <returns>Managed string</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlyMemory{System.Char})">
+            <summary>
+            Reads null terminated Unicode string from char buffer.
+            </summary>
+            <param name="chars">Buffer</param>
+            <returns>Memory region up to null terminator</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ReadNullTerminatedUnicodeString(System.Memory{System.Char})">
+            <summary>
+            Reads null terminated Unicode string from char buffer.
+            </summary>
+            <param name="chars">Buffer</param>
+            <returns>Memory region up to null terminator</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.NullCheck``1(``0,System.String)">
+            <summary>
+            Checks if reference is null and in that case throws an <see cref="T:System.ArgumentNullException"/> with supplied argument name.
+            </summary>
+            <typeparam name="T">Type of reference to check</typeparam>
+            <param name="obj">Reference to check</param>
+            <param name="param">Name of parameter in calling code</param>
+            <returns>Reference in <paramref name="obj"/> parameter, if not null.</returns>
+            <exception cref="T:System.ArgumentNullException"><paramref name="obj"/> is null</exception>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.SetBit(System.Span{System.Byte},System.Int32)">
+            <summary>
+            Sets a bit to 1 in a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to set to 1</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.ClearBit(System.Span{System.Byte},System.Int32)">
+            <summary>
+            Sets a bit to 0 in a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to set to 0</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.GetBit(System.ReadOnlySpan{System.Byte},System.Int32)">
+            <summary>
+            Gets a bit from a bit field.
+            </summary>
+            <param name="data">Bit field</param>
+            <param name="bitnumber">Bit number to get</param>
+            <returns>True if value of specified bit is 1, false if 0.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.BinaryEqual(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Compares two byte spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
+            If lengths are equal and byte sequences are equal, true is returned.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.BinaryEqual(System.Span{System.Byte},System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Compares two byte spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
+            If lengths are equal and byte sequences are equal, true is returned.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.BinaryCompare(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Compares two byte spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>Result of memcmp comparison.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.BinaryCompare(System.Span{System.Byte},System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Compares two byte spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>Result of memcmp comparison.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.BinaryEqual``1(System.ReadOnlySpan{``0},System.ReadOnlySpan{``0})">
+            <summary>
+            Compares two spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
+            If lengths are equal and byte sequences are equal, true is returned.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.BinaryCompare``1(System.ReadOnlySpan{``0},System.ReadOnlySpan{``0})">
+            <summary>
+            Compares two spans using C runtime memcmp function.
+            </summary>
+            <param name="first">First span</param>
+            <param name="second">Second span</param>
+            <returns>Result of memcmp comparison.</returns>
+        </member>
         <member name="T:Arsenal.ImageMounter.IO.IMAGE_FILE_HEADER">
             <summary>
             PE image header
@@ -322,111 +579,6 @@
         <member name="P:Arsenal.ImageMounter.IO.REPARSE_DATA_BUFFER.PrintNameLength">
             
         </member>
-        <member name="T:Arsenal.ImageMounter.IO.StringExtensions">
-            <summary>
-            Low-level string manipulation methods
-            </summary>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ParseDoubleTerminatedString(System.ReadOnlyMemory{System.Byte})">
-            <summary>
-            Parses a multi-string where each string is terminated by null char
-            and the whole buffer is terminated by double null chars.
-            </summary>
-            <param name="chars">Memory that contains the double null terminated string</param>
-            <returns>Each individual string in the buffer</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ParseDoubleTerminatedString(System.ReadOnlyMemory{System.Char})">
-            <summary>
-            Parses a multi-string where each string is terminated by null char
-            and the whole buffer is terminated by double null chars.
-            </summary>
-            <param name="chars">Memory that contains the double null terminated string</param>
-            <returns>Each individual string in the buffer</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.IndexOfTerminator``1(System.ReadOnlySpan{``0})">
-            <summary>
-            Return position of first empty element, or the entire span length if
-            no empty elements are found.
-            </summary>
-            <param name="buffer">Span to search</param>
-            <returns>Position of first found empty element or entire span length if none found</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.IndexOfTerminator``1(System.Span{``0})">
-            <summary>
-            Return position of first empty element, or the entire span length if
-            no empty elements are found.
-            </summary>
-            <param name="buffer">Span to search</param>
-            <returns>Position of first found empty element or entire span length if none found</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedAsciiString(System.Byte[],System.Int32)">
-            <summary>
-            Reads null terminated ASCII string from byte buffer.
-            </summary>
-            <param name="buffer">Byte buffer</param>
-            <param name="offset">Offset in byte buffer where the string starts</param>
-            <returns>Managed string</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedAsciiString(System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Reads null terminated ASCII string from byte buffer.
-            </summary>
-            <param name="buffer">Byte buffer</param>
-            <returns>Managed string</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.Byte[],System.Int32)">
-            <summary>
-            Reads null terminated Unicode string from byte buffer.
-            </summary>
-            <param name="buffer">Byte buffer</param>
-            <param name="offset">Offset in byte buffer where the string starts</param>
-            <returns>Managed string</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Reads null terminated Unicode string from byte buffer.
-            </summary>
-            <param name="buffer">Byte buffer</param>
-            <returns>Managed string</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlySpan{System.Char})">
-            <summary>
-            Reads null terminated Unicode string from char buffer.
-            </summary>
-            <param name="chars">Buffer</param>
-            <returns>Managed string</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.Span{System.Char})">
-            <summary>
-            Reads null terminated Unicode string from char buffer.
-            </summary>
-            <param name="chars">Buffer</param>
-            <returns>Managed string</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.ReadOnlyMemory{System.Char})">
-            <summary>
-            Reads null terminated Unicode string from char buffer.
-            </summary>
-            <param name="chars">Buffer</param>
-            <returns>Memory region up to null terminator</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.ReadNullTerminatedUnicodeString(System.Memory{System.Char})">
-            <summary>
-            Reads null terminated Unicode string from char buffer.
-            </summary>
-            <param name="chars">Buffer</param>
-            <returns>Memory region up to null terminator</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.StringExtensions.NullCheck``1(``0,System.String)">
-            <summary>
-            Checks if reference is null and in that case throws an <see cref="T:System.ArgumentNullException"/> with supplied argument name.
-            </summary>
-            <typeparam name="T">Type of reference to check</typeparam>
-            <param name="obj">Reference to check</param>
-            <param name="param">Name of parameter in calling code</param>
-            <returns>Reference in <paramref name="obj"/> parameter, if not null.</returns>
-            <exception cref="T:System.ArgumentNullException"><paramref name="obj"/> is null</exception>
-        </member>
         <member name="T:Arsenal.ImageMounter.IO.SafeFindHandle">
             <summary>
             Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
@@ -730,108 +882,52 @@
             </summary>
             <param name="count">Size in characters of managed string to pin in unmanaged memory.</param>
         </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.SetBit(System.Span{System.Byte},System.Int32)">
-            <summary>
-            Sets a bit to 1 in a bit field.
-            </summary>
-            <param name="data">Bit field</param>
-            <param name="bitnumber">Bit number to set to 1</param>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.ClearBit(System.Span{System.Byte},System.Int32)">
-            <summary>
-            Sets a bit to 0 in a bit field.
-            </summary>
-            <param name="data">Bit field</param>
-            <param name="bitnumber">Bit number to set to 0</param>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.GetBit(System.ReadOnlySpan{System.Byte},System.Int32)">
-            <summary>
-            Gets a bit from a bit field.
-            </summary>
-            <param name="data">Bit field</param>
-            <param name="bitnumber">Bit number to get</param>
-            <returns>True if value of specified bit is 1, false if 0.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.BinaryEqual(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Compares two byte spans using C runtime memcmp function.
-            </summary>
-            <param name="first">First span</param>
-            <param name="second">Second span</param>
-            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
-            If lengths are equal and byte sequences are equal, true is returned.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.BinaryCompare(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Compares two byte spans using C runtime memcmp function.
-            </summary>
-            <param name="first">First span</param>
-            <param name="second">Second span</param>
-            <returns>Result of memcmp comparison.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.BinaryEqual``1(System.ReadOnlySpan{``0},System.ReadOnlySpan{``0})">
-            <summary>
-            Compares two spans using C runtime memcmp function.
-            </summary>
-            <param name="first">First span</param>
-            <param name="second">Second span</param>
-            <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
-            If lengths are equal and byte sequences are equal, true is returned.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.LowLevelExtensions.BinaryCompare``1(System.ReadOnlySpan{``0},System.ReadOnlySpan{``0})">
-            <summary>
-            Compares two spans using C runtime memcmp function.
-            </summary>
-            <param name="first">First span</param>
-            <param name="second">Second span</param>
-            <returns>Result of memcmp comparison.</returns>
-        </member>
-        <member name="T:Arsenal.ImageMounter.SystemNeeded">
+        <member name="T:Arsenal.ImageMounter.IO.SystemNeeded">
             <summary>
             Makes sure that screen stays on or computer does not go into sleep
             during some work
             </summary>
         </member>
-        <member name="T:Arsenal.ImageMounter.SystemNeeded.ExecutionState">
+        <member name="T:Arsenal.ImageMounter.IO.SystemNeeded.ExecutionState">
             <summary>
             Flags indicating what system resource and interface are required
             </summary>
         </member>
-        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.SystemRequired">
+        <member name="F:Arsenal.ImageMounter.IO.SystemNeeded.ExecutionState.SystemRequired">
             <summary>
             </summary>
         </member>
-        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.DisplayRequired">
+        <member name="F:Arsenal.ImageMounter.IO.SystemNeeded.ExecutionState.DisplayRequired">
             <summary>
             </summary>
         </member>
-        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.UserPresent">
+        <member name="F:Arsenal.ImageMounter.IO.SystemNeeded.ExecutionState.UserPresent">
             <summary>
             </summary>
         </member>
-        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.AwaymodeRequired">
+        <member name="F:Arsenal.ImageMounter.IO.SystemNeeded.ExecutionState.AwaymodeRequired">
             <summary>
             </summary>
         </member>
-        <member name="F:Arsenal.ImageMounter.SystemNeeded.ExecutionState.Continuous">
+        <member name="F:Arsenal.ImageMounter.IO.SystemNeeded.ExecutionState.Continuous">
             <summary>
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.SystemNeeded.#ctor">
+        <member name="M:Arsenal.ImageMounter.IO.SystemNeeded.#ctor">
             <summary>
             Initializes a block of code that is done with SystemRequired and Continous requirements
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.SystemNeeded.#ctor(Arsenal.ImageMounter.SystemNeeded.ExecutionState)">
+        <member name="M:Arsenal.ImageMounter.IO.SystemNeeded.#ctor(Arsenal.ImageMounter.IO.SystemNeeded.ExecutionState)">
             <summary>
             Initializes a block of code that is done with certain resource and interface requirements
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.SystemNeeded.Dispose(System.Boolean)">
+        <member name="M:Arsenal.ImageMounter.IO.SystemNeeded.Dispose(System.Boolean)">
             <summary>
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.SystemNeeded.Dispose">
+        <member name="M:Arsenal.ImageMounter.IO.SystemNeeded.Dispose">
             <summary>
             </summary>
         </member>

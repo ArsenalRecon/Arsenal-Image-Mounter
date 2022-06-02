@@ -40,7 +40,7 @@ Namespace IO
                                                                                            NamesSize,
                                                                                            filename.MakeNullTerminated())
 
-                For Each name In StringExtensions.ParseDoubleTerminatedString(sectionnames.AsMemory(0, size))
+                For Each name In sectionnames.AsMemory(0, size).ParseDoubleTerminatedString()
                     Yield name.ToString()
                 Next
 
@@ -63,7 +63,7 @@ Namespace IO
                                                                                       ValuesSize,
                                                                                       filename.MakeNullTerminated())
 
-                For Each valuepair In StringExtensions.ParseDoubleTerminatedString(valuepairs.AsMemory(0, size))
+                For Each valuepair In valuepairs.AsMemory(0, size).ParseDoubleTerminatedString()
 
                     Dim pos = valuepair.Span.IndexOf("="c)
 

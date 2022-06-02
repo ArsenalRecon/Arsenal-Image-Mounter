@@ -4,30 +4,6 @@
         <name>Arsenal.ImageMounter.Devio.Interop</name>
     </assembly>
     <members>
-        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.IsBufferZero(System.Byte[])">
-            <summary>
-            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
-            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
-            </summary>
-            <param name="buffer"></param>
-            <returns>If all bytes are zero, buffer is empty or buffer is null, true is returned, false otherwise.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.IsBufferZero(System.Span{System.Byte})">
-            <summary>
-            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
-            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
-            </summary>
-            <param name="buffer"></param>
-            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Extensions.BufferExtensions.IsBufferZero(System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
-            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
-            </summary>
-            <param name="buffer"></param>
-            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
-        </member>
         <member name="T:Arsenal.ImageMounter.Devio.Client.DevioDirectStream">
             <summary>
             Base class for classes that implement Stream for client side of Devio protocol.
@@ -172,6 +148,30 @@
             <summary>
             Default required alignment for I/O operations.
             </summary>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Extensions.BufferExtensions.IsBufferZero(System.Byte[])">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty or buffer is null, true is returned, false otherwise.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Extensions.BufferExtensions.IsBufferZero(System.Span{System.Byte})">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.Devio.Extensions.BufferExtensions.IsBufferZero(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
+            otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+            </summary>
+            <param name="buffer"></param>
+            <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
         </member>
         <member name="T:Arsenal.ImageMounter.Devio.Server.GenericProviders.IDevioProvider">
             <summary>

@@ -16,6 +16,7 @@ Imports System.Runtime.InteropServices
 Imports System.Runtime.Versioning
 Imports System.Security.Cryptography
 Imports System.Threading
+Imports Arsenal.ImageMounter.Devio.Extensions
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO

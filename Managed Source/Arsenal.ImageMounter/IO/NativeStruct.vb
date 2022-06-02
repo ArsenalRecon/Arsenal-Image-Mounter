@@ -2,6 +2,7 @@
 Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
 Imports System.Threading
+Imports Arsenal.ImageMounter.Extensions
 
 #Disable Warning IDE0079 ' Remove unnecessary suppression
 #Disable Warning CA1069 ' Enums values should not be duplicated

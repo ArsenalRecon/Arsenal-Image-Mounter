@@ -410,7 +410,7 @@ public class CombinedSeekStream : Stream
         return offset;
     }
 
-    public override void Close()
+    protected override void Dispose(bool disposing)
     {
         if (_streams != null)
         {

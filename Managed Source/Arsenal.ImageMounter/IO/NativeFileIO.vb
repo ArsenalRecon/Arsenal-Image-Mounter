@@ -2882,7 +2882,7 @@ Currently, the following application has files open on this volume:
                     Return
                 End If
 
-                For Each name In StringExtensions.ParseDoubleTerminatedString(TargetPath.AsMemory(0, length))
+                For Each name In TargetPath.AsMemory(0, length).ParseDoubleTerminatedString()
                     Yield name.ToString()
                 Next
 
@@ -2911,7 +2911,7 @@ Currently, the following application has files open on this volume:
                     Return
                 End If
 
-                For Each name In StringExtensions.ParseDoubleTerminatedString(TargetPath.AsMemory(0, length))
+                For Each name In TargetPath.AsMemory(0, length).ParseDoubleTerminatedString()
                     Yield name.ToString()
                 Next
 
@@ -3715,7 +3715,7 @@ Currently, the following application has files open on this volume:
                                                                         length) AndAlso
                     length > 2 Then
 
-                    For Each s In StringExtensions.ParseDoubleTerminatedString(TargetPath.AsMemory(0, length))
+                    For Each s In TargetPath.AsMemory(0, length).ParseDoubleTerminatedString()
                         Yield s.ToString()
                     Next
 
@@ -3912,7 +3912,7 @@ Currently, the following application has files open on this volume:
                 Return status
             End If
 
-            instances = StringExtensions.ParseDoubleTerminatedString(Buffer.AsMemory(0, length))
+            instances = Buffer.AsMemory(0, length).ParseDoubleTerminatedString()
 
             Return status
 
@@ -3935,7 +3935,7 @@ Currently, the following application has files open on this volume:
                 Return status
             End If
 
-            instances = StringExtensions.ParseDoubleTerminatedString(Buffer.AsMemory(0, length))
+            instances = Buffer.AsMemory(0, length).ParseDoubleTerminatedString()
 
             Return status
 
@@ -4215,7 +4215,7 @@ Currently, the following application has files open on this volume:
                     Return Nothing
                 End If
 
-                Dim name = StringExtensions.ParseDoubleTerminatedString(buffer.AsMemory(0, buffersize))
+                Dim name = buffer.AsMemory(0, buffersize).ParseDoubleTerminatedString()
 
                 Return name
 
@@ -4253,7 +4253,7 @@ Currently, the following application has files open on this volume:
                     Throw New IOException(msg)
                 End If
 
-                Return StringExtensions.ParseDoubleTerminatedString(buffer.AsMemory(0, buffersize))
+                Return buffer.AsMemory(0, buffersize).ParseDoubleTerminatedString()
 
             Finally
                 ArrayPool(Of Byte).Shared.Return(buffer)

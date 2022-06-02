@@ -17,6 +17,7 @@
 
 using System.IO;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
