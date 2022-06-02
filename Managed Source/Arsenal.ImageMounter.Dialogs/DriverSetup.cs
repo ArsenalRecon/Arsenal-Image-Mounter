@@ -349,7 +349,7 @@ public static class DriverSetup
 	/// </summary>
 	internal static void RemoveDriver()
 	{
-		using (var scm = NativeFileIO.UnsafeNativeMethods.OpenSCManagerW(IntPtr.Zero, IntPtr.Zero, 983103))
+		using (var scm = NativeFileIO.UnsafeNativeMethods.OpenSCManager(IntPtr.Zero, IntPtr.Zero, 983103))
 		{
 			if (scm.IsInvalid)
 			{
@@ -358,10 +358,10 @@ public static class DriverSetup
 			var array = new[] { "phdskmnt", "aimwrfltr" };
 			for (var i = 0; i < array.Length; i++)
 			{
-				using var svc = NativeFileIO.UnsafeNativeMethods.OpenServiceW(scm, array[i].AsSpan()[0], 983103);
+				using var svc = NativeFileIO.UnsafeNativeMethods.OpenService(scm, array[i].AsSpan()[0], 983103);
 				if (svc.IsInvalid)
 				{
-					throw new Win32Exception("OpenService");
+					throw new Exception("OpenService", new Win32Exception());
 				}
 				NativeFileIO.UnsafeNativeMethods.DeleteService(svc);
 			}
@@ -371,7 +371,7 @@ public static class DriverSetup
 		
 		for (var j = 0; j < array2.Length; j++)
 		{
-			var driverSysFile = Path.Combine(path2: $"drivers\\{array2[j]}.sys", path1: Environment.GetFolderPath(Environment.SpecialFolder.System, Environment.SpecialFolderOption.DoNotVerify));
+            var driverSysFile = Path.Combine(path2: $@"drivers\{array2[j]}.sys", path1: Environment.GetFolderPath(Environment.SpecialFolder.System, Environment.SpecialFolderOption.DoNotVerify));
 			if (File.Exists(driverSysFile))
 			{
 				File.Delete(driverSysFile);

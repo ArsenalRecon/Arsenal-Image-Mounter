@@ -79,7 +79,7 @@ Namespace Reflection
 
         Public Shared Function GetProcAddress(moduleName As ReadOnlyMemory(Of Char), procedureName As String, delegateType As Type) As [Delegate]
 
-            Dim hModule = Win32Try(UnsafeNativeMethods.LoadLibraryW(moduleName.MakeNullTerminated()))
+            Dim hModule = Win32Try(UnsafeNativeMethods.LoadLibrary(moduleName.MakeNullTerminated()))
 
             Return Marshal.GetDelegateForFunctionPointer(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)), delegateType)
 
@@ -87,7 +87,7 @@ Namespace Reflection
 
         Public Shared Function GetProcAddressNoThrow(moduleName As ReadOnlyMemory(Of Char), procedureName As String) As IntPtr
 
-            Dim hModule = UnsafeNativeMethods.LoadLibraryW(moduleName.MakeNullTerminated())
+            Dim hModule = UnsafeNativeMethods.LoadLibrary(moduleName.MakeNullTerminated())
 
             If hModule = Nothing Then
                 Return Nothing

@@ -88,7 +88,7 @@ Public NotInheritable Class API
 
         For Each devinstname In devinstances
 
-            Using DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevsW(NativeConstants.SerenumBusEnumeratorGuid,
+            Using DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevs(NativeConstants.SerenumBusEnumeratorGuid,
                                                                                      devinstname.MakeNullTerminated(),
                                                                                      HwndParent,
                                                                                      NativeConstants.DIGCF_DEVICEINTERFACE Or NativeConstants.DIGCF_PRESENT)
@@ -101,13 +101,13 @@ Public NotInheritable Class API
                 Do
                     Dim DeviceInterfaceData = SP_DEVICE_INTERFACE_DATA.GetNew()
 
-                    If NativeFileIO.UnsafeNativeMethods.SetupDiEnumDeviceInterfacesW(DevInfoSet, IntPtr.Zero, NativeConstants.SerenumBusEnumeratorGuid, i, DeviceInterfaceData) = False Then
+                    If NativeFileIO.UnsafeNativeMethods.SetupDiEnumDeviceInterfaces(DevInfoSet, IntPtr.Zero, NativeConstants.SerenumBusEnumeratorGuid, i, DeviceInterfaceData) = False Then
                         Exit Do
                     End If
 
                     Dim DeviceInterfaceDetailData As New SP_DEVICE_INTERFACE_DETAIL_DATA
 
-                    If NativeFileIO.UnsafeNativeMethods.SetupDiGetDeviceInterfaceDetailW(DevInfoSet, DeviceInterfaceData, DeviceInterfaceDetailData, CUInt(Marshal.SizeOf(DeviceInterfaceData)), 0, IntPtr.Zero) = True Then
+                    If NativeFileIO.UnsafeNativeMethods.SetupDiGetDeviceInterfaceDetail(DevInfoSet, DeviceInterfaceData, DeviceInterfaceDetailData, CUInt(Marshal.SizeOf(DeviceInterfaceData)), 0, IntPtr.Zero) = True Then
                         Yield DeviceInterfaceDetailData.DevicePath
                     End If
 

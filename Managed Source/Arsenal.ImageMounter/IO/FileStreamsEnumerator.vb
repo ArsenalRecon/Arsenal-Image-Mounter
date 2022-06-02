@@ -64,7 +64,7 @@ Namespace IO
                 End If
 
                 If _SafeHandle Is Nothing Then
-                    _SafeHandle = FindFirstStreamW(_FilePath.MakeNullTerminated(), 0, _current, 0)
+                    _SafeHandle = FindFirstStream(_FilePath.MakeNullTerminated(), 0, _current, 0)
                     If Not _SafeHandle.IsInvalid Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_HANDLE_EOF Then
@@ -73,7 +73,7 @@ Namespace IO
                         Throw New Win32Exception
                     End If
                 Else
-                    If FindNextStreamW(_SafeHandle, _current) Then
+                    If FindNextStream(_SafeHandle, _current) Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_HANDLE_EOF Then
                         Return False

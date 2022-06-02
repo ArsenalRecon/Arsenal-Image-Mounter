@@ -8,10 +8,10 @@
     ".NETCoreApp,Version=v6.0": {
       "aim_cli/1.0.0": {
         "dependencies": {
-          "Arsenal.ImageMounter": "3.9.204",
-          "Arsenal.ImageMounter.Devio": "3.9.204",
-          "Arsenal.ImageMounter.Devio.Interop": "3.9.204",
-          "Arsenal.ImageMounter.Interop": "3.9.204"
+          "Arsenal.ImageMounter": "3.9.205",
+          "Arsenal.ImageMounter.Devio": "3.9.205",
+          "Arsenal.ImageMounter.Devio.Interop": "3.9.205",
+          "Arsenal.ImageMounter.Interop": "3.9.205"
         },
         "runtime": {
           "aim_cli.dll": {}
@@ -498,9 +498,9 @@
       },
       "System.Threading.Tasks.Extensions/4.5.4": {},
       "System.ValueTuple/4.5.0": {},
-      "Arsenal.ImageMounter/3.9.204": {
+      "Arsenal.ImageMounter/3.9.205": {
         "dependencies": {
-          "Arsenal.ImageMounter.Interop": "3.9.204",
+          "Arsenal.ImageMounter.Interop": "3.9.205",
           "Microsoft.Win32.Registry": "5.0.0",
           "System.Buffers": "4.5.1",
           "System.IO.FileSystem.AccessControl": "5.0.0",
@@ -510,11 +510,11 @@
           "Arsenal.ImageMounter.dll": {}
         }
       },
-      "Arsenal.ImageMounter.Devio/3.9.204": {
+      "Arsenal.ImageMounter.Devio/3.9.205": {
         "dependencies": {
-          "Arsenal.ImageMounter": "3.9.204",
-          "Arsenal.ImageMounter.Devio.Interop": "3.9.204",
-          "Arsenal.ImageMounter.Interop": "3.9.204",
+          "Arsenal.ImageMounter": "3.9.205",
+          "Arsenal.ImageMounter.Devio.Interop": "3.9.205",
+          "Arsenal.ImageMounter.Interop": "3.9.205",
           "LTRData.DiscUtils.Core": "1.0.1",
           "LTRData.DiscUtils.Dmg": "1.0.1",
           "LTRData.DiscUtils.Fat": "1.0.1",
@@ -532,17 +532,17 @@
           "Arsenal.ImageMounter.Devio.dll": {}
         }
       },
-      "Arsenal.ImageMounter.Devio.Interop/3.9.204": {
+      "Arsenal.ImageMounter.Devio.Interop/3.9.205": {
         "dependencies": {
-          "Arsenal.ImageMounter": "3.9.204",
-          "Arsenal.ImageMounter.Interop": "3.9.204",
+          "Arsenal.ImageMounter": "3.9.205",
+          "Arsenal.ImageMounter.Interop": "3.9.205",
           "System.ValueTuple": "4.5.0"
         },
         "runtime": {
           "Arsenal.ImageMounter.Devio.Interop.dll": {}
         }
       },
-      "Arsenal.ImageMounter.Interop/3.9.204": {
+      "Arsenal.ImageMounter.Interop/3.9.205": {
         "dependencies": {
           "LTRData.DiscUtils.Streams": "1.0.1",
           "System.Memory": "4.5.5",
@@ -987,22 +987,22 @@
       "path": "system.valuetuple/4.5.0",
       "hashPath": "system.valuetuple.4.5.0.nupkg.sha512"
     },
-    "Arsenal.ImageMounter/3.9.204": {
+    "Arsenal.ImageMounter/3.9.205": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Arsenal.ImageMounter.Devio/3.9.204": {
+    "Arsenal.ImageMounter.Devio/3.9.205": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Arsenal.ImageMounter.Devio.Interop/3.9.204": {
+    "Arsenal.ImageMounter.Devio.Interop/3.9.205": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Arsenal.ImageMounter.Interop/3.9.204": {
+    "Arsenal.ImageMounter.Interop/3.9.205": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

@@ -62,7 +62,7 @@ Namespace IO
                 End If
 
                 If _SafeHandle Is Nothing Then
-                    _SafeHandle = FindFirstVolumeMountPointW(_volumePath.MakeNullTerminated(), _sb(0), _sb.Length)
+                    _SafeHandle = FindFirstVolumeMountPoint(_volumePath.MakeNullTerminated(), _sb(0), _sb.Length)
                     If Not _SafeHandle.IsInvalid Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_NO_MORE_FILES Then
@@ -71,7 +71,7 @@ Namespace IO
                         Throw New Win32Exception
                     End If
                 Else
-                    If FindNextVolumeMountPointW(_SafeHandle, _sb(0), _sb.Length) Then
+                    If FindNextVolumeMountPoint(_SafeHandle, _sb(0), _sb.Length) Then
                         Return True
                     ElseIf Marshal.GetLastWin32Error() = ERROR_NO_MORE_FILES Then
                         Return False
