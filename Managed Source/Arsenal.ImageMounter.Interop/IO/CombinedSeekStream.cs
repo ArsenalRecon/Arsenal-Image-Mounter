@@ -414,10 +414,13 @@ public class CombinedSeekStream : Stream
     {
         if (_streams != null)
         {
-            _streams.Values.AsParallel().ForAll(stream => stream.Dispose());
+            if (disposing)
+            {
+                _streams.Values.AsParallel().ForAll(stream => stream.Dispose());
+            }
             _streams.Clear();
         }
 
-        base.Close();
+        base.Dispose(disposing);
     }
 }
