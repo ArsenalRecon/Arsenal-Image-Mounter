@@ -119,7 +119,8 @@ Namespace Server.GenericProviders
             Return count
 
         End Function
-#Else
+#End If
+
         Public Overloads Overrides Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
             _BaseStream.Position = fileoffset
@@ -142,7 +143,6 @@ Namespace Server.GenericProviders
             Return count
 
         End Function
-#End If
 
         Protected Overrides Sub Dispose(disposing As Boolean)
 

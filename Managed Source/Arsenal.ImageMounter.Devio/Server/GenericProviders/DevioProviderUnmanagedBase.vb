@@ -60,7 +60,7 @@ Namespace Server.GenericProviders
         ''' <returns>Sector size of virtual disk.</returns>
         Public MustOverride ReadOnly Property SectorSize As UInteger Implements IDevioProvider.SectorSize
 
-        Private Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
+        Public Overridable Function Read(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
 
             If buffer Is Nothing Then
                 Throw New ArgumentNullException(NameOf(buffer))
@@ -89,7 +89,7 @@ Namespace Server.GenericProviders
         ''' <returns>Returns number of bytes read from device that were stored at specified memory position.</returns>
         Public MustOverride Function Read(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Read
 
-        Private Function Write(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
+        Public Overridable Function Write(buffer As Byte(), bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer Implements IDevioProvider.Write
 
             If buffer Is Nothing Then
                 Throw New ArgumentNullException(NameOf(buffer))

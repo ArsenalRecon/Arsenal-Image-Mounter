@@ -713,6 +713,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                         Loop
 
+                        Console.Write($"Converting ({100.0:0.0}%)...{vbCr}")
+
                     Finally
                         Console.WriteLine()
 
