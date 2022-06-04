@@ -485,6 +485,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         End If
 
+        Console.WriteLine($"Image virtual size is {FormatBytes(provider.Length)}")
+
         Dim service As DevioServiceBase
 
         If Not String.IsNullOrWhiteSpace(ObjectName) Then
