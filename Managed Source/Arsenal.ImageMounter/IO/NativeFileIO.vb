@@ -2982,7 +2982,7 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Public Shared Function GetFileVersion(exe As Stream) As Version
+        Public Shared Function GetFileVersion(exe As Stream) As FixedFileVerInfo
 
             If exe.CanSeek Then
 
@@ -2991,7 +2991,7 @@ Currently, the following application has files open on this volume:
                 Dim buffer = ArrayPool(Of Byte).Shared.Rent(CInt(exe.Length))
                 Try
                     Dim span = buffer.AsSpan(0, exe.Read(buffer, 0, CInt(exe.Length)))
-                    Return NativePE.GetFixedFileVerInfo(span).FileVersion
+                    Return NativePE.GetFixedFileVerInfo(span)
 
                 Finally
                     ArrayPool(Of Byte).Shared.Return(buffer)
@@ -3004,7 +3004,7 @@ Currently, the following application has files open on this volume:
 
                     exe.CopyTo(buffer)
 
-                    Return NativePE.GetFixedFileVerInfo(buffer.AsSpan()).FileVersion
+                    Return NativePE.GetFixedFileVerInfo(buffer.AsSpan())
 
                 End Using
 
@@ -3046,7 +3046,7 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        Public Shared Function GetFileVersion(exepath As String) As Version
+        Public Shared Function GetFileVersion(exepath As String) As FixedFileVerInfo
 
             Using exe As New FileStream(exepath, FileMode.Open, FileAccess.Read, FileShare.Read Or FileShare.Delete, bufferSize:=4096, useAsync:=True)
 

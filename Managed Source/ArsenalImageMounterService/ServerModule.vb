@@ -151,7 +151,7 @@ Public Module ServerModule
     Public Sub ShowVersionInfo()
 
         Dim asm_file = Assembly.GetExecutingAssembly().Location
-        Dim file_ver = FileVersionInfo.GetVersionInfo(asm_file).FileVersion
+        Dim file_ver = NativeFileIO.GetFileVersion(asm_file).FileVersion
 
         Dim driver_ver As String
 
