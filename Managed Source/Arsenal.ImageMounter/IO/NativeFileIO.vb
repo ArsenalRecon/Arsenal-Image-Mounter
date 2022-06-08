@@ -47,35 +47,35 @@ Namespace IO
         Public NotInheritable Class SafeNativeMethods
 
 #Disable Warning CA1401 ' P/Invokes should not be visible
-            Public Declare Auto Function AllocConsole Lib "kernel32" (
+            Public Declare Unicode Function AllocConsole Lib "kernel32" (
               ) As Boolean
 
-            Public Declare Auto Function FreeConsole Lib "kernel32" (
+            Public Declare Unicode Function FreeConsole Lib "kernel32" (
               ) As Boolean
 
-            Public Declare Auto Function GetConsoleWindow Lib "kernel32" (
+            Public Declare Unicode Function GetConsoleWindow Lib "kernel32" (
               ) As IntPtr
 
-            Public Declare Auto Function GetLogicalDrives Lib "kernel32" (
+            Public Declare Unicode Function GetLogicalDrives Lib "kernel32" (
               ) As UInteger
 
-            Public Declare Auto Function GetFileAttributes Lib "kernel32" (
+            Public Declare Unicode Function GetFileAttributesW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpFileName As Char
               ) As FileAttributes
 
-            Public Declare Auto Function SetFileAttributes Lib "kernel32" (
+            Public Declare Unicode Function SetFileAttributesW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpFileName As Char,
               dwFileAttributes As FileAttributes
               ) As Boolean
 
-            Public Declare Auto Function GetTickCount64 Lib "kernel32" () As Long
+            Public Declare Unicode Function GetTickCount64 Lib "kernel32" () As Long
 #Enable Warning CA1401 ' P/Invokes should not be visible
 
         End Class
 
         Public NotInheritable Class UnsafeNativeMethods
 
-            Friend Declare Auto Function DuplicateHandle Lib "kernel32" (
+            Friend Declare Unicode Function DuplicateHandle Lib "kernel32" (
                 hSourceProcessHandle As IntPtr,
                 hSourceHandle As IntPtr,
                 hTargetProcessHandle As IntPtr,
@@ -84,19 +84,19 @@ Namespace IO
                 bInheritHandle As Boolean,
                 dwOptions As UInteger) As Boolean
 
-            Friend Declare Auto Function SetEvent Lib "kernel32" (
+            Friend Declare Unicode Function SetEvent Lib "kernel32" (
                 hEvent As SafeWaitHandle) As Boolean
 
-            Friend Declare Auto Function SetHandleInformation Lib "kernel32" (
+            Friend Declare Unicode Function SetHandleInformation Lib "kernel32" (
                 h As SafeHandle,
                 mask As UInteger,
                 flags As UInteger) As Boolean
 
-            Friend Declare Auto Function GetHandleInformation Lib "kernel32" (
+            Friend Declare Unicode Function GetHandleInformation Lib "kernel32" (
                 h As SafeHandle,
                 <Out> ByRef flags As UInteger) As Boolean
 
-            Friend Declare Auto Function NtCreateFile Lib "ntdll" (
+            Friend Declare Unicode Function NtCreateFile Lib "ntdll" (
                 <Out> ByRef hFile As SafeFileHandle,
                 AccessMask As FileSystemRights,
                 <[In], IsReadOnly> ByRef ObjectAttributes As ObjectAttributes,
@@ -109,72 +109,72 @@ Namespace IO
                 EaBuffer As IntPtr,
                 EaLength As UInteger) As Integer
 
-            Friend Declare Auto Function NtOpenEvent Lib "ntdll" (
+            Friend Declare Unicode Function NtOpenEvent Lib "ntdll" (
                 <Out> ByRef hEvent As SafeWaitHandle,
                 AccessMask As UInteger,
                 <[In], IsReadOnly> ByRef ObjectAttributes As ObjectAttributes) As Integer
 
-            Friend Declare Auto Function GetFileInformationByHandle Lib "kernel32" (
+            Friend Declare Unicode Function GetFileInformationByHandle Lib "kernel32" (
                 hFile As SafeFileHandle,
                 <Out> ByRef lpFileInformation As ByHandleFileInformation) As Boolean
 
-            Friend Declare Auto Function GetFileTime Lib "kernel32" (
+            Friend Declare Unicode Function GetFileTime Lib "kernel32" (
                 hFile As SafeFileHandle,
                 <Out, [Optional]> ByRef lpCreationTime As Long,
                 <Out, [Optional]> ByRef lpLastAccessTime As Long,
                 <Out, [Optional]> ByRef lpLastWriteTime As Long) As Boolean
 
-            Friend Declare Auto Function GetFileTime Lib "kernel32" (
+            Friend Declare Unicode Function GetFileTime Lib "kernel32" (
                 hFile As SafeFileHandle,
                 <Out, [Optional]> ByRef lpCreationTime As Long,
                 lpLastAccessTime As IntPtr,
                 <Out, [Optional]> ByRef lpLastWriteTime As Long) As Boolean
 
-            Friend Declare Auto Function GetFileTime Lib "kernel32" (
+            Friend Declare Unicode Function GetFileTime Lib "kernel32" (
                 hFile As SafeFileHandle,
                 lpCreationTime As IntPtr,
                 lpLastAccessTime As IntPtr,
                 <Out, [Optional]> ByRef lpLastWriteTime As Long) As Boolean
 
-            Friend Declare Auto Function GetFileTime Lib "kernel32" (
+            Friend Declare Unicode Function GetFileTime Lib "kernel32" (
                 hFile As SafeFileHandle,
                 <Out, [Optional]> ByRef lpCreationTime As Long,
                 lpLastAccessTime As IntPtr,
                 lpLastWriteTime As IntPtr) As Boolean
 
-            Friend Declare Auto Function FindFirstStream Lib "kernel32" Alias "FindFirstStreamW" (
+            Friend Declare Unicode Function FindFirstStreamW Lib "kernel32" Alias "FindFirstStreamW" (
               <[In], IsReadOnly> ByRef lpFileName As Char,
               InfoLevel As UInteger,
               <[Out]> ByRef lpszVolumeMountPoint As FindStreamData,
               dwFlags As UInteger) As SafeFindHandle
 
-            Friend Declare Auto Function FindNextStream Lib "kernel32" Alias "FindNextStreamW" (
+            Friend Declare Unicode Function FindNextStream Lib "kernel32" Alias "FindNextStreamW" (
               hFindStream As SafeFindHandle,
               <[Out]> ByRef lpszVolumeMountPoint As FindStreamData) As Boolean
 
-            Friend Declare Auto Function FindFirstVolumeMountPoint Lib "kernel32" (
+            Friend Declare Unicode Function FindFirstVolumeMountPointW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpszRootPathName As Char,
               <Out> ByRef lpszVolumeMountPoint As Char,
               cchBufferLength As Integer) As SafeFindVolumeMountPointHandle
 
-            Friend Declare Auto Function FindNextVolumeMountPoint Lib "kernel32" (
+            Friend Declare Unicode Function FindNextVolumeMountPointW Lib "kernel32" (
               hFindVolumeMountPoint As SafeFindVolumeMountPointHandle,
               <Out> ByRef lpszVolumeMountPoint As Char,
               cchBufferLength As Integer) As Boolean
 
-            Friend Declare Auto Function FindFirstVolume Lib "kernel32" (
+            Friend Declare Unicode Function FindFirstVolumeW Lib "kernel32" (
               <Out> ByRef lpszVolumeName As Char,
               cchBufferLength As Integer) As SafeFindVolumeHandle
 
-            Friend Declare Auto Function FindNextVolume Lib "kernel32" (
+            Friend Declare Unicode Function FindNextVolumeW Lib "kernel32" (
               hFindVolumeMountPoint As SafeFindVolumeHandle,
               <Out> ByRef lpszVolumeName As Char,
               cchBufferLength As Integer) As Boolean
 
-            Friend Declare Auto Function DeleteVolumeMountPoint Lib "kernel32" (
+            Friend Declare Unicode Function DeleteVolumeMountPointW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpszVolumeMountPoint As Char) As Boolean
 
-            Friend Declare Auto Function SetVolumeMountPoint Lib "kernel32" (
+            Friend Declare Unicode Function SetVolumeMountPointW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpszVolumeMountPoint As Char,
               <[In], IsReadOnly> ByRef lpszVolumeName As Char) As Boolean
 
@@ -190,17 +190,17 @@ Namespace IO
               ptr_new_file_pointer As IntPtr,
               move_method As UInteger) As Boolean
 
-            Friend Declare Auto Function OpenSCManager Lib "advapi32" (
+            Friend Declare Unicode Function OpenSCManagerW Lib "advapi32" (
               lpMachineName As IntPtr,
               lpDatabaseName As IntPtr,
               dwDesiredAccess As Integer) As SafeServiceHandle
 
-            Friend Declare Auto Function OpenSCManager Lib "advapi32" (
+            Friend Declare Unicode Function OpenSCManagerW Lib "advapi32" (
               <[In], IsReadOnly> ByRef lpMachineName As Char,
               lpDatabaseName As IntPtr,
               dwDesiredAccess As Integer) As SafeServiceHandle
 
-            Friend Declare Auto Function CreateService Lib "advapi32" (
+            Friend Declare Unicode Function CreateServiceW Lib "advapi32" (
               hSCManager As SafeServiceHandle,
               <[In], IsReadOnly> ByRef lpServiceName As Char,
               <[In], IsReadOnly> ByRef lpDisplayName As Char,
@@ -215,31 +215,31 @@ Namespace IO
               <[In], IsReadOnly> ByRef lp As Char,
               <[In], IsReadOnly> ByRef lpPassword As Char) As SafeServiceHandle
 
-            Friend Declare Auto Function OpenService Lib "advapi32" (
+            Friend Declare Unicode Function OpenServiceW Lib "advapi32" (
               hSCManager As SafeServiceHandle,
               <[In], IsReadOnly> ByRef lpServiceName As Char,
               dwDesiredAccess As Integer) As SafeServiceHandle
 
-            Friend Declare Auto Function ControlService Lib "advapi32" (
+            Friend Declare Unicode Function ControlService Lib "advapi32" (
               hSCManager As SafeServiceHandle,
               dwControl As Integer,
               ByRef lpServiceStatus As SERVICE_STATUS) As Boolean
 
-            Friend Declare Auto Function DeleteService Lib "advapi32" (
+            Friend Declare Unicode Function DeleteService Lib "advapi32" (
               hSCObject As SafeServiceHandle) As Boolean
 
-            Friend Declare Auto Function StartService Lib "advapi32" (
+            Friend Declare Unicode Function StartServiceW Lib "advapi32" (
               hService As SafeServiceHandle,
               dwNumServiceArgs As Integer,
               lpServiceArgVectors As IntPtr) As Boolean
 
-            Friend Declare Auto Function GetModuleHandle Lib "kernel32" (
+            Friend Declare Unicode Function GetModuleHandleW Lib "kernel32" (
               <[In], IsReadOnly> ByRef ModuleName As Char) As IntPtr
 
-            Friend Declare Auto Function LoadLibrary Lib "kernel32" (
+            Friend Declare Unicode Function LoadLibraryW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpFileName As Char) As IntPtr
 
-            Friend Declare Auto Function FreeLibrary Lib "kernel32" (
+            Friend Declare Unicode Function FreeLibrary Lib "kernel32" (
               hModule As IntPtr) As Boolean
 
             Friend Declare Function GetFileType Lib "kernel32" (handle As IntPtr) As Win32FileType
@@ -252,46 +252,46 @@ Namespace IO
 
             Friend Declare Function GetConsoleScreenBufferInfo Lib "kernel32" (hConsoleOutput As SafeFileHandle, <Out> ByRef lpConsoleScreenBufferInfo As CONSOLE_SCREEN_BUFFER_INFO) As Boolean
 
-            Friend Declare Auto Function DefineDosDevice Lib "kernel32" (
+            Friend Declare Unicode Function DefineDosDeviceW Lib "kernel32" (
               dwFlags As DEFINE_DOS_DEVICE_FLAGS,
               <[In], IsReadOnly> ByRef lpDeviceName As Char,
               <[In], IsReadOnly> ByRef lpTargetPath As Char) As Boolean
 
-            Friend Declare Auto Function QueryDosDevice Lib "kernel32" (
+            Friend Declare Unicode Function QueryDosDeviceW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpDeviceName As Char,
               <Out> ByRef lpTargetPath As Char,
               ucchMax As Integer) As Integer
 
-            Friend Declare Auto Function QueryDosDevice Lib "kernel32" (
+            Friend Declare Unicode Function QueryDosDeviceW Lib "kernel32" (
               lpDeviceName As IntPtr,
               <Out> ByRef lpTargetPath As Char,
               ucchMax As Integer) As Integer
 
-            Friend Declare Auto Function GetVolumePathNamesForVolumeName Lib "kernel32" (
+            Friend Declare Unicode Function GetVolumePathNamesForVolumeNameW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpszVolumeName As Char,
               <Out> ByRef lpszVolumePathNames As Char,
               cchBufferLength As Integer,
               <Out> ByRef lpcchReturnLength As Integer) As Boolean
 
-            Friend Declare Auto Function GetVolumeNameForVolumeMountPoint Lib "kernel32" (
+            Friend Declare Unicode Function GetVolumeNameForVolumeMountPointW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpszVolumeName As Char,
               <Out> ByRef DestinationInfFileName As Char,
               DestinationInfFileNameSize As Integer) As Boolean
 
-            Friend Declare Auto Function GetCommTimeouts Lib "kernel32" (
+            Friend Declare Unicode Function GetCommTimeouts Lib "kernel32" (
               hFile As SafeFileHandle,
               <Out> ByRef lpCommTimeouts As COMMTIMEOUTS) As Boolean
 
-            Friend Declare Auto Function SetCommTimeouts Lib "kernel32" (
+            Friend Declare Unicode Function SetCommTimeouts Lib "kernel32" (
               hFile As SafeFileHandle,
               <[In], IsReadOnly> ByRef lpCommTimeouts As COMMTIMEOUTS) As Boolean
 
-            Friend Declare Auto Function GetVolumePathName Lib "kernel32" (
+            Friend Declare Unicode Function GetVolumePathNameW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpszFileName As Char,
               <Out> ByRef lpszVolumePathName As Char,
               cchBufferLength As Integer) As Boolean
 
-            Friend Declare Auto Function CreateFile Lib "kernel32" (
+            Friend Declare Unicode Function CreateFileW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpFileName As Char,
               dwDesiredAccess As FileSystemRights,
               dwShareMode As FileShare,
@@ -307,10 +307,10 @@ Namespace IO
               hFile As SafeFileHandle,
               <Out> ByRef liFileSize As Long) As Boolean
 
-            Friend Declare Function GetFileAttributes Lib "kernel32" (
+            Friend Declare Function GetFileAttributesW Lib "kernel32" (
               <[In], IsReadOnly> ByRef path As Char) As FileAttributes
 
-            Friend Declare Auto Function GetDiskFreeSpace Lib "kernel32" (
+            Friend Declare Unicode Function GetDiskFreeSpaceW Lib "kernel32" (
               <[In], IsReadOnly> ByRef lpRootPathName As Char,
               <Out> ByRef lpSectorsPerCluster As UInteger,
               <Out> ByRef lpBytesPerSector As UInteger,
@@ -517,7 +517,7 @@ Namespace IO
               <Out> ByRef lpBytesReturned As UInteger,
               lpOverlapped As IntPtr) As Boolean
 
-            Friend Declare Auto Function GetModuleFileName Lib "kernel32" (
+            Friend Declare Unicode Function GetModuleFileNameW Lib "kernel32" (
               hModule As IntPtr,
               <Out> ByRef lpFilename As Char,
               nSize As Integer) As Integer
@@ -531,7 +531,7 @@ Namespace IO
               hModule As IntPtr,
               ordinal As IntPtr) As IntPtr
 
-            Friend Declare Auto Function RtlDosPathNameToNtPathName_U Lib "ntdll" (
+            Friend Declare Unicode Function RtlDosPathNameToNtPathName_U Lib "ntdll" (
               <[In], IsReadOnly> ByRef DosName As Char,
               <Out> ByRef NtName As UNICODE_STRING,
               DosFilePath As IntPtr,
@@ -543,30 +543,30 @@ Namespace IO
             Friend Declare Function RtlNtStatusToDosError Lib "ntdll" (
               NtStatus As Integer) As Integer
 
-            Friend Declare Auto Function GetPrivateProfileSectionNames Lib "kernel32" (
+            Friend Declare Unicode Function GetPrivateProfileSectionNamesW Lib "kernel32" (
               <Out> ByRef Names As Char,
               NamesSize As Integer,
               <[In], IsReadOnly> ByRef FileName As Char) As Integer
 
-            Friend Declare Auto Function GetPrivateProfileSection Lib "kernel32" (
+            Friend Declare Unicode Function GetPrivateProfileSectionW Lib "kernel32" (
               <[In], IsReadOnly> ByRef SectionName As Char,
               <[In], IsReadOnly> ByRef Values As Char,
               ValuesSize As Integer,
               <[In], IsReadOnly> ByRef FileName As Char) As Integer
 
-            Friend Declare Auto Function WritePrivateProfileString Lib "kernel32" (
+            Friend Declare Unicode Function WritePrivateProfileStringW Lib "kernel32" (
               <[In], IsReadOnly> ByRef SectionName As Char,
               <[In], IsReadOnly> ByRef SettingName As Char,
               <[In], IsReadOnly> ByRef Value As Char,
               <[In], IsReadOnly> ByRef FileName As Char) As Boolean
 
-            Friend Declare Auto Sub InstallHinfSection Lib "setupapi" (
+            Friend Declare Unicode Sub InstallHinfSectionW Lib "setupapi" (
               hwndOwner As IntPtr,
               hModule As IntPtr,
               <[In], IsReadOnly> ByRef lpCmdLine As Char,
               nCmdShow As Integer)
 
-            Friend Declare Auto Function SetupCopyOEMInf Lib "setupapi" (
+            Friend Declare Unicode Function SetupCopyOEMInfW Lib "setupapi" (
               <[In], IsReadOnly> ByRef SourceInfFileName As Char,
               <[In], IsReadOnly> ByRef OEMSourceMediaLocation As Char,
               OEMSourceMediaType As UInteger,
@@ -576,33 +576,33 @@ Namespace IO
               <Out> ByRef RequiredSize As UInteger,
               DestinationInfFileNameComponent As IntPtr) As Boolean
 
-            Friend Declare Auto Function DriverPackagePreinstall Lib "difxapi" (
+            Friend Declare Unicode Function DriverPackagePreinstallW Lib "difxapi" (
               <[In], IsReadOnly> ByRef SourceInfFileName As Char,
               Options As UInteger) As Integer
 
-            Friend Declare Auto Function DriverPackageInstall Lib "difxapi" (
+            Friend Declare Unicode Function DriverPackageInstallW Lib "difxapi" (
               <[In], IsReadOnly> ByRef SourceInfFileName As Char,
               Options As UInteger,
               pInstallerInfo As IntPtr,
               <Out> ByRef pNeedReboot As Boolean) As Integer
 
-            Friend Declare Auto Function DriverPackageUninstall Lib "difxapi" (
+            Friend Declare Unicode Function DriverPackageUninstallW Lib "difxapi" (
               <[In], IsReadOnly> ByRef SourceInfFileName As Char,
               Options As UInteger,
               pInstallerInfo As IntPtr,
               <Out> ByRef pNeedReboot As Boolean) As Integer
 
-            Friend Declare Auto Function MapFileAndCheckSum Lib "imagehlp" (
+            Friend Declare Unicode Function MapFileAndCheckSumW Lib "imagehlp" (
               <[In], IsReadOnly> ByRef file As Char,
               <Out> ByRef headerSum As Integer,
               <Out> ByRef checkSum As Integer) As Integer
 
-            Friend Declare Auto Function CM_Locate_DevNode Lib "setupapi" (
+            Friend Declare Unicode Function CM_Locate_DevNodeW Lib "setupapi" (
               ByRef devInst As UInteger,
               <[In], IsReadOnly> ByRef rootid As Char,
               Flags As UInteger) As UInteger
 
-            Friend Declare Auto Function CM_Get_DevNode_Registry_Property Lib "setupapi" (
+            Friend Declare Unicode Function CM_Get_DevNode_Registry_PropertyW Lib "setupapi" (
               DevInst As UInteger,
               Prop As CmDevNodeRegistryProperty,
               <Out> ByRef RegDataType As RegistryValueKind,
@@ -610,14 +610,14 @@ Namespace IO
               <[In], IsReadOnly, Out> ByRef BufferLength As Integer,
               Flags As UInteger) As UInteger
 
-            Friend Declare Auto Function CM_Set_DevNode_Registry_Property Lib "setupapi" (
+            Friend Declare Unicode Function CM_Set_DevNode_Registry_PropertyW Lib "setupapi" (
               DevInst As UInteger,
               Prop As CmDevNodeRegistryProperty,
               <[In], IsReadOnly> ByRef Buffer As Byte,
               length As Integer,
               Flags As UInteger) As UInteger
 
-            Friend Declare Auto Function CM_Get_Class_Registry_Property Lib "setupapi" (
+            Friend Declare Unicode Function CM_Get_Class_Registry_PropertyW Lib "setupapi" (
               <[In], IsReadOnly> ByRef ClassGuid As Guid,
               Prop As CmClassRegistryProperty,
               <Out> ByRef RegDataType As RegistryValueKind,
@@ -626,7 +626,7 @@ Namespace IO
               Flags As UInteger,
               Optional hMachine As IntPtr = Nothing) As UInteger
 
-            Friend Declare Auto Function CM_Set_Class_Registry_Property Lib "setupapi" (
+            Friend Declare Unicode Function CM_Set_Class_Registry_PropertyW Lib "setupapi" (
               <[In], IsReadOnly> ByRef ClassGuid As Guid,
               Prop As CmClassRegistryProperty,
               <[In], IsReadOnly> ByRef Buffer As Byte,
@@ -634,12 +634,12 @@ Namespace IO
               Flags As UInteger,
               Optional hMachine As IntPtr = Nothing) As UInteger
 
-            Friend Declare Auto Function CM_Get_Child Lib "setupapi" (
+            Friend Declare Unicode Function CM_Get_Child Lib "setupapi" (
               <Out> ByRef dnDevInst As UInteger,
               DevInst As UInteger,
               Flags As UInteger) As UInteger
 
-            Friend Declare Auto Function CM_Get_Sibling Lib "setupapi" (
+            Friend Declare Unicode Function CM_Get_Sibling Lib "setupapi" (
               <Out> ByRef dnDevInst As UInteger,
               DevInst As UInteger,
               Flags As UInteger) As UInteger
@@ -648,21 +648,21 @@ Namespace IO
               devInst As UInteger,
               Flags As UInteger) As UInteger
 
-            Friend Declare Auto Function CM_Get_Device_ID_List_Size Lib "setupapi" (
+            Friend Declare Unicode Function CM_Get_Device_ID_List_SizeW Lib "setupapi" (
               ByRef Length As Integer,
               <[In], IsReadOnly> ByRef filter As Char,
               Flags As UInteger) As UInteger
 
-            Friend Declare Auto Function CM_Get_Device_ID_List Lib "setupapi" (
+            Friend Declare Unicode Function CM_Get_Device_ID_ListW Lib "setupapi" (
               <[In], IsReadOnly> ByRef filter As Char,
               <Out> ByRef Buffer As Char,
               BufferLength As UInteger,
               Flags As UInteger) As UInteger
 
-            Friend Declare Auto Function SetupSetNonInteractiveMode Lib "setupapi" (
+            Friend Declare Unicode Function SetupSetNonInteractiveMode Lib "setupapi" (
               state As Boolean) As Boolean
 
-            Friend Declare Auto Function SetupOpenInfFile Lib "setupapi" (
+            Friend Declare Unicode Function SetupOpenInfFileW Lib "setupapi" (
               <[In], IsReadOnly> ByRef FileName As Char,
               <[In], IsReadOnly> ByRef InfClass As Char,
               InfStyle As UInteger,
@@ -673,7 +673,7 @@ Namespace IO
                                                        Param1 As UIntPtr,
                                                        Param2 As UIntPtr) As UInteger
 
-            Friend Declare Auto Function SetupInstallFromInfSection Lib "setupapi" (
+            Friend Declare Unicode Function SetupInstallFromInfSectionW Lib "setupapi" (
               hWnd As IntPtr,
               InfHandle As SafeInfHandle,
               <[In], IsReadOnly> ByRef SectionName As Char,
@@ -686,7 +686,7 @@ Namespace IO
               DeviceInfoSet As IntPtr,
               DeviceInfoData As IntPtr) As Boolean
 
-            Friend Declare Auto Function SetupInstallFromInfSection Lib "setupapi" (
+            Friend Declare Unicode Function SetupInstallFromInfSectionW Lib "setupapi" (
               hWnd As IntPtr,
               InfHandle As SafeInfHandle,
               <[In], IsReadOnly> ByRef SectionName As Char,
@@ -699,89 +699,89 @@ Namespace IO
               DeviceInfoSet As IntPtr,
               DeviceInfoData As IntPtr) As Boolean
 
-            Friend Declare Auto Function SetupDiGetINFClass Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiGetINFClassW Lib "setupapi" (
               <[In], IsReadOnly> ByRef InfPath As Char,
               <Out> ByRef ClassGuid As Guid,
               <Out> ByRef ClassName As Char,
               ClassNameSize As UInteger,
               <Out> ByRef RequiredSize As UInteger) As Boolean
 
-            Friend Declare Auto Function SetupDiOpenDeviceInfo Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiOpenDeviceInfoW Lib "setupapi" (
               DevInfoSet As SafeDeviceInfoSetHandle,
               <[In], IsReadOnly> ByRef Enumerator As Char,
               hWndParent As IntPtr,
               Flags As UInteger,
               DeviceInfoData As IntPtr) As Boolean
 
-            Friend Declare Auto Function SetupDiOpenDeviceInfo Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiOpenDeviceInfoW Lib "setupapi" (
               DevInfoSet As SafeDeviceInfoSetHandle,
               ByRef Enumerator As Byte,
               hWndParent As IntPtr,
               Flags As UInteger,
               DeviceInfoData As IntPtr) As Boolean
 
-            Friend Declare Auto Function SetupDiGetClassDevs Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiGetClassDevsW Lib "setupapi" (
               <[In], IsReadOnly> ByRef ClassGuid As Guid,
               <[In], IsReadOnly> ByRef Enumerator As Char,
               hWndParent As IntPtr,
               Flags As UInteger) As SafeDeviceInfoSetHandle
 
-            Friend Declare Auto Function SetupDiGetClassDevs Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiGetClassDevsW Lib "setupapi" (
               ClassGuid As IntPtr,
               <[In], IsReadOnly> ByRef Enumerator As Char,
               hWndParent As IntPtr,
               Flags As UInteger) As SafeDeviceInfoSetHandle
 
-            Friend Declare Auto Function SetupDiEnumDeviceInfo Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiEnumDeviceInfo Lib "setupapi" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               MemberIndex As UInteger,
               <[Out]> ByRef DeviceInterfaceData As SP_DEVINFO_DATA) As Boolean
 
-            Friend Declare Auto Function SetupDiRestartDevices Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiRestartDevices Lib "setupapi" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               <[In], IsReadOnly, [Out]> ByRef DeviceInterfaceData As SP_DEVINFO_DATA) As Boolean
 
-            Friend Declare Auto Function SetupDiSetClassInstallParams Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiSetClassInstallParamsW Lib "setupapi" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               <[In], IsReadOnly, Out> ByRef DeviceInfoData As SP_DEVINFO_DATA,
               <[In], IsReadOnly> ByRef ClassInstallParams As SP_PROPCHANGE_PARAMS,
               ClassInstallParamsSize As Integer) As Boolean
 
-            Friend Declare Auto Function SetupDiEnumDeviceInterfaces Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiEnumDeviceInterfaces Lib "setupapi" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               DeviceInfoData As IntPtr,
               <[In], IsReadOnly> ByRef ClassGuid As Guid,
               MemberIndex As UInteger,
               <[Out]> ByRef DeviceInterfaceData As SP_DEVICE_INTERFACE_DATA) As Boolean
 
-            Friend Declare Auto Function SetupDiEnumDeviceInterfaces Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiEnumDeviceInterfaces Lib "setupapi" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               DeviceInfoData As IntPtr,
               ClassGuid As IntPtr,
               MemberIndex As UInteger,
               <[Out]> ByRef DeviceInterfaceData As SP_DEVICE_INTERFACE_DATA) As Boolean
 
-            Friend Declare Auto Function SetupDiCreateDeviceInfoListEx Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiCreateDeviceInfoListExW Lib "setupapi" (
               <[In], IsReadOnly> ByRef ClassGuid As Guid,
               hwndParent As IntPtr,
               <[In], IsReadOnly> ByRef MachineName As Char,
               Reserved As IntPtr) As SafeDeviceInfoSetHandle
 
-            Friend Declare Auto Function SetupDiCreateDeviceInfoListEx Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiCreateDeviceInfoListExW Lib "setupapi" (
               ClassGuid As IntPtr,
               hwndParent As IntPtr,
               <[In], IsReadOnly> ByRef MachineName As Char,
               Reserved As IntPtr) As SafeDeviceInfoSetHandle
 
-            Friend Declare Auto Function SetupDiCreateDeviceInfoList Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiCreateDeviceInfoList Lib "setupapi" (
               <[In], IsReadOnly> ByRef ClassGuid As Guid,
               hwndParent As IntPtr) As SafeDeviceInfoSetHandle
 
-            Friend Declare Auto Function SetupDiCreateDeviceInfoList Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiCreateDeviceInfoList Lib "setupapi" (
               ClassGuid As IntPtr,
               hwndParent As IntPtr) As SafeDeviceInfoSetHandle
 
-            Friend Declare Auto Function SetupDiGetDeviceInterfaceDetail Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiGetDeviceInterfaceDetailW Lib "setupapi" (
               DeviceInfoSet As SafeDeviceInfoSetHandle,
               <[In], IsReadOnly> ByRef DeviceInterfaceData As SP_DEVICE_INTERFACE_DATA,
               <[Out](), MarshalAs(UnmanagedType.LPStruct, SizeParamIndex:=3)> DeviceInterfaceDetailData As SP_DEVICE_INTERFACE_DETAIL_DATA,
@@ -789,11 +789,11 @@ Namespace IO
               <Out> ByRef RequiredSize As UInteger,
               DeviceInfoData As IntPtr) As Boolean
 
-            Friend Declare Auto Function SetupDiGetDeviceInfoListDetail Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiGetDeviceInfoListDetailW Lib "setupapi" (
               devinfo As SafeDeviceInfoSetHandle,
               <Out> DeviceInfoDetailData As SP_DEVINFO_LIST_DETAIL_DATA) As Boolean
 
-            Friend Declare Auto Function SetupDiCreateDeviceInfo Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiCreateDeviceInfoW Lib "setupapi" (
               hDevInfo As SafeDeviceInfoSetHandle,
               <[In], IsReadOnly> ByRef DeviceName As Char,
               <[In], IsReadOnly> ByRef ClassGuid As Guid,
@@ -802,52 +802,52 @@ Namespace IO
               CreationFlags As UInteger,
               <Out> ByRef DeviceInfoData As SP_DEVINFO_DATA) As Boolean
 
-            Friend Declare Auto Function SetupDiSetDeviceRegistryProperty Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiSetDeviceRegistryPropertyW Lib "setupapi" (
               hDevInfo As SafeDeviceInfoSetHandle,
               ByRef DeviceInfoData As SP_DEVINFO_DATA,
               [Property] As UInteger,
               <[In], IsReadOnly> ByRef PropertyBuffer As Byte,
               PropertyBufferSize As UInteger) As Boolean
 
-            Friend Declare Auto Function SetupDiCallClassInstaller Lib "setupapi" (
+            Friend Declare Unicode Function SetupDiCallClassInstaller Lib "setupapi" (
               InstallFunction As UInteger,
               hDevInfo As SafeDeviceInfoSetHandle,
               <[In], IsReadOnly> ByRef DeviceInfoData As SP_DEVINFO_DATA) As Boolean
 
-            Friend Declare Auto Function UpdateDriverForPlugAndPlayDevices Lib "newdev" (
+            Friend Declare Unicode Function UpdateDriverForPlugAndPlayDevicesW Lib "newdev" (
               owner As IntPtr,
               <[In], IsReadOnly> ByRef HardwareId As Char,
               <[In], IsReadOnly> ByRef InfPath As Char,
               InstallFlags As UInteger,
               <MarshalAs(UnmanagedType.Bool), Out> ByRef RebootRequired As Boolean) As Boolean
 
-            Friend Declare Auto Function ExitWindowsEx Lib "user32" (
+            Friend Declare Unicode Function ExitWindowsEx Lib "user32" (
               flags As ShutdownFlags,
               reason As ShutdownReasons) As Boolean
 
-            Friend Declare Auto Function RtlGetVersion Lib "ntdll" (
+            Friend Declare Unicode Function RtlGetVersion Lib "ntdll" (
               <[In], IsReadOnly, Out> os_version As OSVERSIONINFO) As Integer
 
-            Friend Declare Auto Function RtlGetVersion Lib "ntdll" (
+            Friend Declare Unicode Function RtlGetVersion Lib "ntdll" (
               <[In], IsReadOnly, Out> os_version As OSVERSIONINFOEX) As Integer
 
-            Friend Declare Auto Function LookupPrivilegeValue Lib "advapi32" (
+            Friend Declare Unicode Function LookupPrivilegeValueW Lib "advapi32" (
               <[In], IsReadOnly> ByRef lpSystemName As Char,
               <[In], IsReadOnly> ByRef lpName As Char,
               <Out> ByRef lpLuid As Long) As Boolean
 
-            Friend Declare Auto Function OpenThreadToken Lib "advapi32" (
+            Friend Declare Unicode Function OpenThreadToken Lib "advapi32" (
               <[In], IsReadOnly> hThread As IntPtr,
               <[In], IsReadOnly> dwAccess As UInteger,
               <[In], IsReadOnly> openAsSelf As Boolean,
               <Out> ByRef lpTokenHandle As SafeFileHandle) As Boolean
 
-            Friend Declare Auto Function OpenProcessToken Lib "advapi32" (
+            Friend Declare Unicode Function OpenProcessToken Lib "advapi32" (
               <[In], IsReadOnly> hProcess As IntPtr,
               <[In], IsReadOnly> dwAccess As UInteger,
               <Out> ByRef lpTokenHandle As SafeFileHandle) As Boolean
 
-            Friend Declare Auto Function AdjustTokenPrivileges Lib "advapi32" (
+            Friend Declare Unicode Function AdjustTokenPrivileges Lib "advapi32" (
               <[In], IsReadOnly> TokenHandle As SafeFileHandle,
               <[In], IsReadOnly> DisableAllPrivileges As Boolean,
               <[In], IsReadOnly> ByRef NewStates As Byte,
@@ -855,20 +855,20 @@ Namespace IO
               <Out> ByRef PreviousState As Byte,
               <Out> ByRef ReturnLength As Integer) As Boolean
 
-            Friend Declare Auto Function NtQuerySystemInformation Lib "ntdll" (
+            Friend Declare Unicode Function NtQuerySystemInformation Lib "ntdll" (
               <[In], IsReadOnly> SystemInformationClass As SystemInformationClass,
               <[In], IsReadOnly> pSystemInformation As SafeBuffer,
               <[In], IsReadOnly> uSystemInformationLength As Integer,
               <Out> ByRef puReturnLength As Integer) As Integer
 
-            Friend Declare Auto Function NtQueryObject Lib "ntdll" (
+            Friend Declare Unicode Function NtQueryObject Lib "ntdll" (
               <[In], IsReadOnly> ObjectHandle As SafeFileHandle,
               <[In], IsReadOnly> ObjectInformationClass As ObjectInformationClass,
               <[In], IsReadOnly> ObjectInformation As SafeBuffer,
               <[In], IsReadOnly> ObjectInformationLength As Integer,
               <Out> ByRef puReturnLength As Integer) As Integer
 
-            Friend Declare Auto Function NtDuplicateObject Lib "ntdll" (
+            Friend Declare Unicode Function NtDuplicateObject Lib "ntdll" (
               <[In], IsReadOnly> SourceProcessHandle As SafeHandle,
               <[In], IsReadOnly> SourceHandle As IntPtr,
               <[In], IsReadOnly> TargetProcessHandle As IntPtr,
@@ -877,20 +877,20 @@ Namespace IO
               <[In], IsReadOnly> HandleAttributes As UInteger,
               <[In], IsReadOnly> Options As UInteger) As Integer
 
-            Friend Declare Auto Function GetCurrentProcess Lib "kernel32" () As IntPtr
+            Friend Declare Unicode Function GetCurrentProcess Lib "kernel32" () As IntPtr
 
-            Friend Declare Auto Function GetCurrentThread Lib "kernel32" () As IntPtr
+            Friend Declare Unicode Function GetCurrentThread Lib "kernel32" () As IntPtr
 
-            Friend Declare Auto Function OpenProcess Lib "kernel32" (
+            Friend Declare Unicode Function OpenProcess Lib "kernel32" (
               <[In], IsReadOnly> DesiredAccess As UInteger,
               <[In], IsReadOnly> InheritHandle As Boolean,
               <[In], IsReadOnly> ProcessId As Integer) As SafeFileHandle
 
-            Friend Declare Auto Function CreateHardLink Lib "kernel32" (<[In], IsReadOnly> ByRef newlink As Char, <[In], IsReadOnly> ByRef existing As Char, security As IntPtr) As Boolean
+            Friend Declare Unicode Function CreateHardLinkW Lib "kernel32" (<[In], IsReadOnly> ByRef newlink As Char, <[In], IsReadOnly> ByRef existing As Char, security As IntPtr) As Boolean
 
-            Friend Declare Auto Function MoveFile Lib "kernel32" (<[In], IsReadOnly> ByRef existing As Char, <[In], IsReadOnly> ByRef newname As Char) As Boolean
+            Friend Declare Unicode Function MoveFileW Lib "kernel32" (<[In], IsReadOnly> ByRef existing As Char, <[In], IsReadOnly> ByRef newname As Char) As Boolean
 
-            Friend Declare Auto Function RtlCompareMemoryUlong Lib "ntdll" (<[In], IsReadOnly> ByRef buffer As Byte, length As IntPtr, v As Integer) As IntPtr
+            Friend Declare Unicode Function RtlCompareMemoryUlong Lib "ntdll" (<[In], IsReadOnly> ByRef buffer As Byte, length As IntPtr, v As Integer) As IntPtr
         End Class
 #End Region
 
@@ -1371,7 +1371,7 @@ Currently, the following application has files open on this volume:
 
                     Dim luid As Long
 
-                    If UnsafeNativeMethods.LookupPrivilegeValue(Nothing, MemoryMarshal.GetReference(privilege.AsSpan()), luid) Then
+                    If UnsafeNativeMethods.LookupPrivilegeValueW(Nothing, MemoryMarshal.GetReference(privilege.AsSpan()), luid) Then
 
                         Dim luid_and_attribs As New LUID_AND_ATTRIBUTES(
                             LUID:=luid,
@@ -1727,7 +1727,7 @@ Currently, the following application has files open on this volume:
               <Out> ByRef lpNumberOfFreeClusters As UInteger,
               <Out> ByRef lpTotalNumberOfClusters As UInteger) As Boolean
 
-            Return UnsafeNativeMethods.GetDiskFreeSpace(
+            Return UnsafeNativeMethods.GetDiskFreeSpaceW(
                 lpRootPathName.MakeNullTerminated(),
                 lpSectorsPerCluster,
                 lpBytesPerSector,
@@ -1862,7 +1862,7 @@ Currently, the following application has files open on this volume:
               FlagsAndAttributes As Integer,
               TemplateFile As IntPtr) As SafeFileHandle
 
-            Dim handle = UnsafeNativeMethods.CreateFile(FileName.MakeNullTerminated(), DesiredAccess, ShareMode, SecurityAttributes, CreationDisposition, FlagsAndAttributes, TemplateFile)
+            Dim handle = UnsafeNativeMethods.CreateFileW(FileName.MakeNullTerminated(), DesiredAccess, ShareMode, SecurityAttributes, CreationDisposition, FlagsAndAttributes, TemplateFile)
 
             If handle.IsInvalid Then
                 Throw New IOException($"Cannot open '{FileName}'", New Win32Exception)
@@ -1914,7 +1914,7 @@ Currently, the following application has files open on this volume:
                 NativeFlagsAndAttributes = NativeFlagsAndAttributes Or CType(NativeConstants.FILE_FLAG_OVERLAPPED, FileAttributes)
             End If
 
-            Dim Handle = UnsafeNativeMethods.CreateFile(FileName.MakeNullTerminated(),
+            Dim Handle = UnsafeNativeMethods.CreateFileW(FileName.MakeNullTerminated(),
                                                          NativeDesiredAccess,
                                                          ShareMode,
                                                          IntPtr.Zero,
@@ -1990,7 +1990,7 @@ Currently, the following application has files open on this volume:
 
             NativeFlagsAndAttributes = NativeFlagsAndAttributes Or CType(Options, FileAttributes)
 
-            Dim Handle = UnsafeNativeMethods.CreateFile(FileName.MakeNullTerminated(),
+            Dim Handle = UnsafeNativeMethods.CreateFileW(FileName.MakeNullTerminated(),
                                                          NativeDesiredAccess,
                                                          ShareMode,
                                                          IntPtr.Zero,
@@ -2150,7 +2150,7 @@ Currently, the following application has files open on this volume:
             Dim NativeFlagsAndAttributes = CType(NativeConstants.FILE_FLAG_BACKUP_SEMANTICS, FileAttributes)
 
             Dim Handle =
-                UnsafeNativeMethods.CreateFile(FilePath.MakeNullTerminated(),
+                UnsafeNativeMethods.CreateFileW(FilePath.MakeNullTerminated(),
                                                 NativeDesiredAccess,
                                                 ShareMode,
                                                 IntPtr.Zero,
@@ -2211,7 +2211,7 @@ Currently, the following application has files open on this volume:
             Dim NativeFlagsAndAttributes = CType(NativeConstants.FILE_FLAG_BACKUP_SEMANTICS, FileAttributes)
 
             Dim Handle =
-                UnsafeNativeMethods.CreateFile(FilePath.MakeNullTerminated(),
+                UnsafeNativeMethods.CreateFileW(FilePath.MakeNullTerminated(),
                                                 NativeDesiredAccess,
                                                 ShareMode,
                                                 IntPtr.Zero,
@@ -2337,7 +2337,7 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function TryGetFileAttributes(Filename As ReadOnlyMemory(Of Char), <Out> ByRef attributes As FileAttributes) As Boolean
 
-            attributes = UnsafeNativeMethods.GetFileAttributes(Filename.MakeNullTerminated())
+            attributes = UnsafeNativeMethods.GetFileAttributesW(Filename.MakeNullTerminated())
 
             Return attributes <> -1
 
@@ -2345,7 +2345,7 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function TryGetFileAttributes(Filename As String, <Out> ByRef attributes As FileAttributes) As Boolean
 
-            attributes = UnsafeNativeMethods.GetFileAttributes(MemoryMarshal.GetReference(Filename.AsSpan()))
+            attributes = UnsafeNativeMethods.GetFileAttributesW(MemoryMarshal.GetReference(Filename.AsSpan()))
 
             Return attributes <> -1
 
@@ -2365,7 +2365,7 @@ Currently, the following application has files open on this volume:
 
             Dim FileSize As Long
 
-            If UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_GET_LENGTH_INFO, IntPtr.Zero, 0UI, FileSize, CUInt(Marshal.SizeOf(FileSize)), 0UI, IntPtr.Zero) Then
+            If UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_GET_LENGTH_INFO, IntPtr.Zero, 0UI, FileSize, 8UI, 0UI, IntPtr.Zero) Then
 
                 Return FileSize
 
@@ -2876,7 +2876,7 @@ Currently, the following application has files open on this volume:
 
             Dim TargetPath = ArrayPool(Of Char).Shared.Rent(UcchMax)
             Try
-                Dim length = UnsafeNativeMethods.QueryDosDevice(IntPtr.Zero, TargetPath(0), UcchMax)
+                Dim length = UnsafeNativeMethods.QueryDosDeviceW(IntPtr.Zero, TargetPath(0), UcchMax)
 
                 If length < 2 Then
                     Return
@@ -2905,7 +2905,7 @@ Currently, the following application has files open on this volume:
 
             Dim TargetPath = ArrayPool(Of Char).Shared.Rent(UcchMax)
             Try
-                Dim length = UnsafeNativeMethods.QueryDosDevice(DosDevice.MakeNullTerminated(), TargetPath(0), UcchMax)
+                Dim length = UnsafeNativeMethods.QueryDosDeviceW(DosDevice.MakeNullTerminated(), TargetPath(0), UcchMax)
 
                 If length < 2 Then
                     Return
@@ -2948,11 +2948,11 @@ Currently, the following application has files open on this volume:
         End Function
 
         Public Shared Sub DeleteVolumeMountPoint(VolumeMountPoint As ReadOnlyMemory(Of Char))
-            Win32Try(UnsafeNativeMethods.DeleteVolumeMountPoint(VolumeMountPoint.MakeNullTerminated()))
+            Win32Try(UnsafeNativeMethods.DeleteVolumeMountPointW(VolumeMountPoint.MakeNullTerminated()))
         End Sub
 
         Public Shared Sub SetVolumeMountPoint(VolumeMountPoint As ReadOnlyMemory(Of Char), VolumeName As ReadOnlyMemory(Of Char))
-            Win32Try(UnsafeNativeMethods.SetVolumeMountPoint(VolumeMountPoint.MakeNullTerminated(),
+            Win32Try(UnsafeNativeMethods.SetVolumeMountPointW(VolumeMountPoint.MakeNullTerminated(),
                                                              VolumeName.MakeNullTerminated()))
         End Sub
 
@@ -3127,7 +3127,7 @@ Currently, the following application has files open on this volume:
             Dim partition_info As PARTITION_INFORMATION = Nothing
 
             If UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX,
-                                          IntPtr.Zero, 0, partition_info, CUInt(Marshal.SizeOf(partition_info)),
+                                          IntPtr.Zero, 0, partition_info, CUInt(Marshal.SizeOf(Of PARTITION_INFORMATION)()),
                                           0, IntPtr.Zero) Then
                 Return partition_info
             Else
@@ -3151,7 +3151,7 @@ Currently, the following application has files open on this volume:
             Dim partition_info As PARTITION_INFORMATION_EX = Nothing
 
             If UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX,
-                                          IntPtr.Zero, 0, partition_info, CUInt(Marshal.SizeOf(partition_info)),
+                                          IntPtr.Zero, 0, partition_info, CUInt(Marshal.SizeOf(Of PARTITION_INFORMATION_EX)()),
                                           0, IntPtr.Zero) Then
                 Return partition_info
             Else
@@ -3473,7 +3473,7 @@ Currently, the following application has files open on this volume:
 
             Dim str = ArrayPool(Of Char).Shared.Rent(32768)
             Try
-                Dim PathLength = UnsafeNativeMethods.GetModuleFileName(hModule, str(0), str.Length)
+                Dim PathLength = UnsafeNativeMethods.GetModuleFileNameW(hModule, str(0), str.Length)
                 If PathLength = 0 Then
                     Throw New Win32Exception
                 End If
@@ -3509,7 +3509,7 @@ Currently, the following application has files open on this volume:
 
             Dim str = ArrayPool(Of Char).Shared.Rent(50)
             Try
-                If UnsafeNativeMethods.GetVolumeNameForVolumeMountPoint(MountPoint.MakeNullTerminated(), str(0), str.Length) AndAlso
+                If UnsafeNativeMethods.GetVolumeNameForVolumeMountPointW(MountPoint.MakeNullTerminated(), str(0), str.Length) AndAlso
                     str(0) <> Nothing Then
 
                     Return str.AsSpan().ReadNullTerminatedUnicodeString()
@@ -3565,7 +3565,7 @@ Currently, the following application has files open on this volume:
 
             Dim result = ArrayPool(Of Char).Shared.Rent(CchBufferLength)
             Try
-                If Not UnsafeNativeMethods.GetVolumePathName(path.MakeNullTerminated(),
+                If Not UnsafeNativeMethods.GetVolumePathNameW(path.MakeNullTerminated(),
                                                              result(0),
                                                              CchBufferLength) Then
 
@@ -3587,7 +3587,7 @@ Currently, the following application has files open on this volume:
 
             Dim result = ArrayPool(Of Char).Shared.Rent(CchBufferLength)
             Try
-                If Not UnsafeNativeMethods.GetVolumePathName(path.MakeNullTerminated(),
+                If Not UnsafeNativeMethods.GetVolumePathNameW(path.MakeNullTerminated(),
                                                              result(0),
                                                              CchBufferLength) Then
 
@@ -3709,7 +3709,7 @@ Currently, the following application has files open on this volume:
             Try
                 Dim length As Integer
 
-                If UnsafeNativeMethods.GetVolumePathNamesForVolumeName(VolumeName.MakeNullTerminated(),
+                If UnsafeNativeMethods.GetVolumePathNamesForVolumeNameW(VolumeName.MakeNullTerminated(),
                                                                         TargetPath(0),
                                                                         CchBufferLength,
                                                                         length) AndAlso
@@ -3866,7 +3866,7 @@ Currently, the following application has files open on this volume:
 
             Dim devInst As UInteger
 
-            Dim status = UnsafeNativeMethods.CM_Locate_DevNode(devInst, rootid.MakeNullTerminated(), 0)
+            Dim status = UnsafeNativeMethods.CM_Locate_DevNodeW(devInst, rootid.MakeNullTerminated(), 0)
 
             If status <> 0 Then
                 Return status
@@ -3880,7 +3880,7 @@ Currently, the following application has files open on this volume:
 
             Dim devInst As UInteger
 
-            Dim status = UnsafeNativeMethods.CM_Locate_DevNode(devInst, devinstName.MakeNullTerminated(), 0)
+            Dim status = UnsafeNativeMethods.CM_Locate_DevNodeW(devInst, devinstName.MakeNullTerminated(), 0)
 
             If status <> 0 Then
                 Trace.WriteLine($"Device '{devinstName}' error 0x{status:X}")
@@ -3898,13 +3898,13 @@ Currently, the following application has files open on this volume:
         Public Shared Function EnumerateDeviceInstancesForService(service As ReadOnlyMemory(Of Char), <Out> ByRef instances As IEnumerable(Of ReadOnlyMemory(Of Char))) As UInteger
 
             Dim length As Integer
-            Dim status = UnsafeNativeMethods.CM_Get_Device_ID_List_Size(length, service.MakeNullTerminated(), NativeConstants.CM_GETIDLIST_FILTER_SERVICE)
+            Dim status = UnsafeNativeMethods.CM_Get_Device_ID_List_SizeW(length, service.MakeNullTerminated(), NativeConstants.CM_GETIDLIST_FILTER_SERVICE)
             If status <> 0 Then
                 Return status
             End If
 
             Dim Buffer(0 To length - 1) As Char
-            status = UnsafeNativeMethods.CM_Get_Device_ID_List(service.MakeNullTerminated(),
+            status = UnsafeNativeMethods.CM_Get_Device_ID_ListW(service.MakeNullTerminated(),
                                                                 Buffer(0),
                                                                 CUInt(Buffer.Length),
                                                                 NativeConstants.CM_GETIDLIST_FILTER_SERVICE)
@@ -3921,13 +3921,13 @@ Currently, the following application has files open on this volume:
         Public Shared Function EnumerateDeviceInstancesForSetupClass(service As ReadOnlyMemory(Of Char), <Out> ByRef instances As IEnumerable(Of ReadOnlyMemory(Of Char))) As UInteger
 
             Dim length As Integer
-            Dim status = UnsafeNativeMethods.CM_Get_Device_ID_List_Size(length, service.MakeNullTerminated(), NativeConstants.CM_GETIDLIST_FILTER_SERVICE)
+            Dim status = UnsafeNativeMethods.CM_Get_Device_ID_List_SizeW(length, service.MakeNullTerminated(), NativeConstants.CM_GETIDLIST_FILTER_SERVICE)
             If status <> 0 Then
                 Return status
             End If
 
             Dim Buffer(0 To length - 1) As Char
-            status = UnsafeNativeMethods.CM_Get_Device_ID_List(service.MakeNullTerminated(),
+            status = UnsafeNativeMethods.CM_Get_Device_ID_ListW(service.MakeNullTerminated(),
                                                                 Buffer(0),
                                                                 CUInt(Buffer.Length),
                                                                 NativeConstants.CM_GETIDLIST_FILTER_SERVICE)
@@ -3944,7 +3944,7 @@ Currently, the following application has files open on this volume:
         Public Shared Sub RestartDevice(devclass As Guid, devinst As UInteger)
 
             '' get a list of devices which support the given interface
-            Using devinfo = UnsafeNativeMethods.SetupDiGetClassDevs(devclass,
+            Using devinfo = UnsafeNativeMethods.SetupDiGetClassDevsW(devclass,
                 Nothing,
                 Nothing,
                 NativeConstants.DIGCF_PROFILE Or
@@ -3955,7 +3955,7 @@ Currently, the following application has files open on this volume:
                     Throw New Exception("Device not found")
                 End If
 
-                Dim devInfoData = SP_DEVINFO_DATA.GetNew()
+                Dim devInfoData As New SP_DEVINFO_DATA
 
                 '' step through the list of devices for this handle
                 '' get device info at index deviceIndex, the function returns FALSE
@@ -3972,7 +3972,7 @@ Currently, the following application has files open on this volume:
                             scope:=NativeConstants.DICS_FLAG_CONFIGSPECIFIC,
                             stateChange:=NativeConstants.DICS_PROPCHANGE)
 
-                        If UnsafeNativeMethods.SetupDiSetClassInstallParams(devinfo, devInfoData, pcp, PinnedBuffer(Of SP_PROPCHANGE_PARAMS).TypeSize) AndAlso
+                        If UnsafeNativeMethods.SetupDiSetClassInstallParamsW(devinfo, devInfoData, pcp, PinnedBuffer(Of SP_PROPCHANGE_PARAMS).TypeSize) AndAlso
                             UnsafeNativeMethods.SetupDiCallClassInstaller(NativeConstants.DIF_PROPERTYCHANGE, devinfo, devInfoData) Then
 
                             Return
@@ -4009,7 +4009,7 @@ Currently, the following application has files open on this volume:
                 Throw New FileNotFoundException("File not found", InfPath)
             End If
 
-            UnsafeNativeMethods.InstallHinfSection(OwnerWindow,
+            UnsafeNativeMethods.InstallHinfSectionW(OwnerWindow,
                                                     Nothing,
                                                     MemoryMarshal.GetReference(cmdLine.AsSpan()),
                                                     0)
@@ -4029,7 +4029,7 @@ Currently, the following application has files open on this volume:
             End If
 
             Dim ErrorLine As UInteger
-            Dim hInf = UnsafeNativeMethods.SetupOpenInfFile(MemoryMarshal.GetReference(InfPath.AsSpan()),
+            Dim hInf = UnsafeNativeMethods.SetupOpenInfFileW(MemoryMarshal.GetReference(InfPath.AsSpan()),
                                                              Nothing,
                                                              &H2UI,
                                                              ErrorLine)
@@ -4039,7 +4039,7 @@ Currently, the following application has files open on this volume:
 
             Using hInf
 
-                Win32Try(UnsafeNativeMethods.SetupInstallFromInfSection(OwnerWindow,
+                Win32Try(UnsafeNativeMethods.SetupInstallFromInfSectionW(OwnerWindow,
                                                                          hInf,
                                                                          MemoryMarshal.GetReference(InfSection.AsSpan()),
                                                                          &H1FFUI,
@@ -4080,7 +4080,7 @@ Currently, the following application has files open on this volume:
             ''
             Dim ClassGUID As Guid
             Dim ClassName(0 To 31) As Char
-            Win32Try(UnsafeNativeMethods.SetupDiGetINFClass(MemoryMarshal.GetReference(InfPath.AsSpan()),
+            Win32Try(UnsafeNativeMethods.SetupDiGetINFClassW(MemoryMarshal.GetReference(InfPath.AsSpan()),
                                                              ClassGUID,
                                                              ClassName(0),
                                                              32UI,
@@ -4102,9 +4102,9 @@ Currently, the following application has files open on this volume:
                 '' Now create the element.
                 '' Use the Class GUID and Name from the INF file.
                 ''
-                Dim DeviceInfoData = SP_DEVINFO_DATA.GetNew()
+                Dim DeviceInfoData As New SP_DEVINFO_DATA
 
-                Win32Try(UnsafeNativeMethods.SetupDiCreateDeviceInfo(DeviceInfoSet,
+                Win32Try(UnsafeNativeMethods.SetupDiCreateDeviceInfoW(DeviceInfoSet,
                                                                      ClassName(0),
                                                                      ClassGUID,
                                                                      Nothing,
@@ -4115,7 +4115,7 @@ Currently, the following application has files open on this volume:
                 ''
                 '' Add the HardwareID to the Device's HardwareID property.
                 ''
-                Win32Try(UnsafeNativeMethods.SetupDiSetDeviceRegistryProperty(DeviceInfoSet,
+                Win32Try(UnsafeNativeMethods.SetupDiSetDeviceRegistryPropertyW(DeviceInfoSet,
                                                                                DeviceInfoData,
                                                                                &H1UI,
                                                                                MemoryMarshal.GetReference(hwIdList),
@@ -4179,7 +4179,7 @@ Currently, the following application has files open on this volume:
             Dim buffersize = 518
             Dim buffer = ArrayPool(Of Byte).Shared.Rent(buffersize)
             Try
-                Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, CmDevNodeRegistryProperty.CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, regtype, buffer(0), buffersize, 0)
+                Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_PropertyW(devInst, CmDevNodeRegistryProperty.CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, regtype, buffer(0), buffersize, 0)
 
                 If rc <> 0 Then
                     Trace.WriteLine($"Error getting registry property for device {devInst}. Status=0x{rc:X}")
@@ -4208,7 +4208,7 @@ Currently, the following application has files open on this volume:
             Dim buffersize = 518
             Dim buffer = ArrayPool(Of Byte).Shared.Rent(buffersize)
             Try
-                Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, prop, regtype, buffer(0), buffersize, 0)
+                Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_PropertyW(devInst, prop, regtype, buffer(0), buffersize, 0)
 
                 If rc <> 0 Then
                     Trace.WriteLine($"Error getting registry property for device {devInst}. Status=0x{rc:X}")
@@ -4244,7 +4244,7 @@ Currently, the following application has files open on this volume:
             Dim buffersize = 65536
             Dim buffer = ArrayPool(Of Byte).Shared.Rent(buffersize)
             Try
-                Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_Property(devInst, CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer(0), buffersize, 0)
+                Dim rc = UnsafeNativeMethods.CM_Get_DevNode_Registry_PropertyW(devInst, CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS, regtype, buffer(0), buffersize, 0)
 
                 If rc = NativeConstants.CR_NO_SUCH_VALUE Then
                     Return Enumerable.Empty(Of String)()
@@ -4262,7 +4262,7 @@ Currently, the following application has files open on this volume:
 
         End Function
 
-        '' Switched to querying registry directly instead. CM_Get_Class_Registry_Property seems to
+        '' Switched to querying registry directly instead. CM_Get_Class_Registry_PropertyW seems to
         '' return 0x13 CR_FAILURE on Win7.
 #If USE_CM_API Then
 
@@ -4273,7 +4273,7 @@ Currently, the following application has files open on this volume:
             Dim buffer(0 To 65535) As Byte
             Dim buffersize = buffer.Length
 
-            Dim rc = Win32API.CM_Get_Class_Registry_Property(devClass, Win32API.CmClassRegistryProperty.CM_CRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
+            Dim rc = Win32API.CM_Get_Class_Registry_PropertyW(devClass, Win32API.CmClassRegistryProperty.CM_CRP_UPPERFILTERS, regtype, buffer, buffersize, 0)
 
             If rc <> 0 Then
                 Dim msg = $"Error getting registry property for device class {devClass}. Status=0x{rc:X}"
@@ -4305,7 +4305,7 @@ Currently, the following application has files open on this volume:
             Dim buffer = MemoryMarshal.AsBytes(str.AsSpan())
             Dim buffersize = buffer.Length
 
-            Dim rc = UnsafeNativeMethods.CM_Set_DevNode_Registry_Property(devInst,
+            Dim rc = UnsafeNativeMethods.CM_Set_DevNode_Registry_PropertyW(devInst,
                                                                            CmDevNodeRegistryProperty.CM_DRP_UPPERFILTERS,
                                                                            MemoryMarshal.GetReference(buffer),
                                                                            buffersize,
@@ -4323,7 +4323,7 @@ Currently, the following application has files open on this volume:
             Dim buffer = MemoryMarshal.AsBytes(str.AsSpan())
             Dim buffersize = buffer.Length
 
-            Dim rc = UnsafeNativeMethods.CM_Set_Class_Registry_Property(devClass,
+            Dim rc = UnsafeNativeMethods.CM_Set_Class_Registry_PropertyW(devClass,
                                                                          CmClassRegistryProperty.CM_CRP_UPPERFILTERS,
                                                                          MemoryMarshal.GetReference(buffer),
                                                                          buffersize,
@@ -4472,7 +4472,7 @@ Currently, the following application has files open on this volume:
 
             Using DeviceInfoSet
 
-                If Not UnsafeNativeMethods.SetupDiOpenDeviceInfo(DeviceInfoSet,
+                If Not UnsafeNativeMethods.SetupDiOpenDeviceInfoW(DeviceInfoSet,
                                                                   hwid.MakeNullTerminated(),
                                                                   OwnerWindow,
                                                                   0,
@@ -4480,7 +4480,7 @@ Currently, the following application has files open on this volume:
                     Return 0
                 End If
 
-                Dim DeviceInfoData = SP_DEVINFO_DATA.GetNew()
+                Dim DeviceInfoData As New SP_DEVINFO_DATA
 
                 Dim i As UInteger
                 Dim done As Integer
@@ -4519,7 +4519,7 @@ Currently, the following application has files open on this volume:
             ''
             '' make use of UpdateDriverForPlugAndPlayDevices
             ''
-            Win32Try(UnsafeNativeMethods.UpdateDriverForPlugAndPlayDevices(OwnerWindow,
+            Win32Try(UnsafeNativeMethods.UpdateDriverForPlugAndPlayDevicesW(OwnerWindow,
                                                                             hwid.MakeNullTerminated(),
                                                                             MemoryMarshal.GetReference(InfPath.AsSpan()),
                                                                             If(forceReplaceExisting, &H1UI, &H0UI),
@@ -4540,7 +4540,7 @@ Currently, the following application has files open on this volume:
             Dim destName = ArrayPool(Of Char).Shared.Rent(260)
             Try
 
-                Win32Try(UnsafeNativeMethods.SetupCopyOEMInf(MemoryMarshal.GetReference(InfPath.AsSpan()),
+                Win32Try(UnsafeNativeMethods.SetupCopyOEMInfW(MemoryMarshal.GetReference(InfPath.AsSpan()),
                                                               Nothing,
                                                               0,
                                                               If(NoOverwrite, &H8UI, &H0UI),
@@ -4568,7 +4568,7 @@ Currently, the following application has files open on this volume:
                 Throw New FileNotFoundException("File not found", InfPath)
             End If
 
-            Dim errcode = UnsafeNativeMethods.DriverPackagePreinstall(MemoryMarshal.GetReference(InfPath.AsSpan()), 1)
+            Dim errcode = UnsafeNativeMethods.DriverPackagePreinstallW(MemoryMarshal.GetReference(InfPath.AsSpan()), 1)
             If errcode <> 0 Then
                 Throw New Win32Exception(errcode)
             End If
@@ -4585,7 +4585,7 @@ Currently, the following application has files open on this volume:
                 Throw New FileNotFoundException("File not found", InfPath)
             End If
 
-            Dim errcode = UnsafeNativeMethods.DriverPackageInstall(MemoryMarshal.GetReference(InfPath.AsSpan()), 1, Nothing, NeedReboot)
+            Dim errcode = UnsafeNativeMethods.DriverPackageInstallW(MemoryMarshal.GetReference(InfPath.AsSpan()), 1, Nothing, NeedReboot)
             If errcode <> 0 Then
                 Throw New Win32Exception(errcode)
             End If
@@ -4602,7 +4602,7 @@ Currently, the following application has files open on this volume:
                 Throw New FileNotFoundException("File not found", InfPath)
             End If
 
-            Dim errcode = UnsafeNativeMethods.DriverPackageUninstall(MemoryMarshal.GetReference(InfPath.AsSpan()), Flags, Nothing, NeedReboot)
+            Dim errcode = UnsafeNativeMethods.DriverPackageUninstallW(MemoryMarshal.GetReference(InfPath.AsSpan()), Flags, Nothing, NeedReboot)
             If errcode <> 0 Then
                 Throw New Win32Exception(errcode)
             End If
@@ -4611,7 +4611,7 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function MapFileAndCheckSum(file As ReadOnlyMemory(Of Char), <Out> ByRef headerSum As Integer, <Out> ByRef checkSum As Integer) As Boolean
 
-            Return UnsafeNativeMethods.MapFileAndCheckSum(file.MakeNullTerminated(), headerSum, checkSum) = 0
+            Return UnsafeNativeMethods.MapFileAndCheckSumW(file.MakeNullTerminated(), headerSum, checkSum) = 0
 
         End Function
 
@@ -4865,7 +4865,7 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function TestFileOpen(path As ReadOnlyMemory(Of Char)) As Boolean
 
-            Using handle = UnsafeNativeMethods.CreateFile(path.MakeNullTerminated(),
+            Using handle = UnsafeNativeMethods.CreateFileW(path.MakeNullTerminated(),
                        FileSystemRights.ReadAttributes,
                        0,
                        IntPtr.Zero,
@@ -4887,13 +4887,13 @@ Currently, the following application has files open on this volume:
 
         Public Shared Sub CreateHardLink(existing As ReadOnlyMemory(Of Char), newlink As ReadOnlyMemory(Of Char))
 
-            Win32Try(UnsafeNativeMethods.CreateHardLink(newlink.MakeNullTerminated(), existing.MakeNullTerminated(), Nothing))
+            Win32Try(UnsafeNativeMethods.CreateHardLinkW(newlink.MakeNullTerminated(), existing.MakeNullTerminated(), Nothing))
 
         End Sub
 
         Public Shared Sub MoveFile(existing As ReadOnlyMemory(Of Char), newname As ReadOnlyMemory(Of Char))
 
-            Win32Try(UnsafeNativeMethods.MoveFile(existing.MakeNullTerminated(), newname.MakeNullTerminated()))
+            Win32Try(UnsafeNativeMethods.MoveFileW(existing.MakeNullTerminated(), newname.MakeNullTerminated()))
 
         End Sub
 
@@ -4921,7 +4921,7 @@ Currently, the following application has files open on this volume:
         Public NotInheritable Class SafeServiceHandle
             Inherits SafeHandleZeroOrMinusOneIsInvalid
 
-            Private Declare Auto Function CloseServiceHandle Lib "advapi32" (
+            Private Declare Unicode Function CloseServiceHandle Lib "advapi32" (
               hSCObject As IntPtr) As Boolean
 
             ''' <summary>
@@ -4960,7 +4960,7 @@ Currently, the following application has files open on this volume:
         Public NotInheritable Class SafeFindVolumeHandle
             Inherits SafeHandleMinusOneIsInvalid
 
-            Private Declare Auto Function FindVolumeClose Lib "kernel32" (
+            Private Declare Unicode Function FindVolumeClose Lib "kernel32" (
               h As IntPtr) As Boolean
 
             ''' <summary>
@@ -4999,7 +4999,7 @@ Currently, the following application has files open on this volume:
         Public NotInheritable Class SafeFindVolumeMountPointHandle
             Inherits SafeHandleMinusOneIsInvalid
 
-            Private Declare Auto Function FindVolumeMountPointClose Lib "kernel32" (
+            Private Declare Unicode Function FindVolumeMountPointClose Lib "kernel32" (
               h As IntPtr) As Boolean
 
             ''' <summary>
@@ -5038,7 +5038,7 @@ Currently, the following application has files open on this volume:
         Public NotInheritable Class SafeInfHandle
             Inherits SafeHandleMinusOneIsInvalid
 
-            Private Declare Auto Sub SetupCloseInfFile Lib "setupapi" (
+            Private Declare Unicode Sub SetupCloseInfFile Lib "setupapi" (
               hInf As IntPtr)
 
             ''' <summary>
@@ -5078,7 +5078,7 @@ Currently, the following application has files open on this volume:
         Public NotInheritable Class SafeDeviceInfoSetHandle
             Inherits SafeHandleMinusOneIsInvalid
 
-            Private Declare Auto Function SetupDiDestroyDeviceInfoList Lib "setupapi" (
+            Private Declare Unicode Function SetupDiDestroyDeviceInfoList Lib "setupapi" (
               handle As IntPtr) As Boolean
 
             ''' <summary>

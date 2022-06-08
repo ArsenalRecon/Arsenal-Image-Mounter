@@ -633,16 +633,14 @@ public unsafe struct PARTITION_INFORMATION_GPT
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 public readonly struct SP_DEVINFO_DATA
 {
-    // as per DDK docs on SetupDiEnumDeviceInfo
-    public unsafe static SP_DEVINFO_DATA GetNew() => new(sizeof(SP_DEVINFO_DATA));
-
-    private SP_DEVINFO_DATA(int size) : this()
+    public unsafe SP_DEVINFO_DATA()
     {
-        _size = size;
+        this = default;
+        // as per DDK docs on SetupDiEnumDeviceInfo
+        Size = sizeof(SP_DEVINFO_DATA);
     }
 
-    private readonly int _size;
-
+    public int Size { get; }
     public Guid ClassGuid { get; }
     public uint DevInst { get; }
     public IntPtr Reserved { get; }
@@ -1563,16 +1561,13 @@ public readonly struct ScsiAddressAndLength : IEquatable<ScsiAddressAndLength>
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct SP_DEVICE_INTERFACE_DATA
 {
-    public unsafe static SP_DEVICE_INTERFACE_DATA GetNew()
-        => new(sizeof(SP_DEVICE_INTERFACE_DATA));
-
-    private SP_DEVICE_INTERFACE_DATA(int size) : this()
+    public unsafe SP_DEVICE_INTERFACE_DATA()
     {
-        _size = size;
+        this = default;
+        Size = sizeof(SP_DEVICE_INTERFACE_DATA);
     }
 
-    private readonly int _size;
-
+    public int Size { get; }
     public Guid InterfaceClassGuid { get; }
     public uint Flags { get; }
     public IntPtr Reserved { get; }

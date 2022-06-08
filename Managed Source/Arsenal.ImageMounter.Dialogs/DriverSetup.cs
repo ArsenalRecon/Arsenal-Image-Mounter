@@ -349,7 +349,7 @@ public static class DriverSetup
 	/// </summary>
 	internal static void RemoveDriver()
 	{
-		using (var scm = NativeFileIO.UnsafeNativeMethods.OpenSCManager(IntPtr.Zero, IntPtr.Zero, 983103))
+		using (var scm = NativeFileIO.UnsafeNativeMethods.OpenSCManagerW(IntPtr.Zero, IntPtr.Zero, 983103))
 		{
 			if (scm.IsInvalid)
 			{
@@ -358,7 +358,7 @@ public static class DriverSetup
 			var array = new[] { "phdskmnt", "aimwrfltr" };
 			for (var i = 0; i < array.Length; i++)
 			{
-				using var svc = NativeFileIO.UnsafeNativeMethods.OpenService(scm, array[i].AsSpan()[0], 983103);
+				using var svc = NativeFileIO.UnsafeNativeMethods.OpenServiceW(scm, array[i].AsSpan()[0], 983103);
 				if (svc.IsInvalid)
 				{
 					throw new Exception("OpenService", new Win32Exception());

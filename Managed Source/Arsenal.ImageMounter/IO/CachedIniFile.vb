@@ -26,7 +26,7 @@ Namespace IO
         ''' </summary>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Sub Flush()
-            NativeFileIO.UnsafeNativeMethods.WritePrivateProfileString(Nothing, Nothing, Nothing, Nothing)
+            NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(Nothing, Nothing, Nothing, Nothing)
         End Sub
 
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
@@ -36,7 +36,7 @@ Namespace IO
 
             Dim sectionnames = ArrayPool(Of Char).Shared.Rent(NamesSize)
             Try
-                Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionNames(sectionnames(0),
+                Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionNamesW(sectionnames(0),
                                                                                            NamesSize,
                                                                                            filename.MakeNullTerminated())
 
@@ -58,7 +58,7 @@ Namespace IO
 
             Dim valuepairs = ArrayPool(Of Char).Shared.Rent(ValuesSize)
             Try
-                Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSection(section.MakeNullTerminated(),
+                Dim size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionW(section.MakeNullTerminated(),
                                                                                       valuepairs(0),
                                                                                       ValuesSize,
                                                                                       filename.MakeNullTerminated())
@@ -95,7 +95,7 @@ Namespace IO
         ''' <param name="Value">Value to save</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Sub SaveValue(FileName As ReadOnlyMemory(Of Char), SectionName As ReadOnlyMemory(Of Char), SettingName As ReadOnlyMemory(Of Char), Value As ReadOnlyMemory(Of Char))
-            NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileString(SectionName.MakeNullTerminated(),
+            NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(SectionName.MakeNullTerminated(),
                                                                                               SettingName.MakeNullTerminated(),
                                                                                               Value.MakeNullTerminated(),
                                                                                               FileName.MakeNullTerminated()))
@@ -111,7 +111,7 @@ Namespace IO
         ''' <param name="Value">Value to save</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Public Shared Sub SaveValue(FileName As String, SectionName As String, SettingName As String, Value As String)
-            NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileString(MemoryMarshal.GetReference(SectionName.AsSpan()),
+            NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(MemoryMarshal.GetReference(SectionName.AsSpan()),
                                                                                               MemoryMarshal.GetReference(SettingName.AsSpan()),
                                                                                               MemoryMarshal.GetReference(Value.AsSpan()),
                                                                                               MemoryMarshal.GetReference(FileName.AsSpan())))

@@ -234,7 +234,8 @@ Please see EULA.txt for license information.")
                 disk_size = Long.Parse(cmd.Value(0))
             ElseIf arg.Equals("buffersize", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
                 buffer_size = Long.Parse(cmd.Value(0))
-            ElseIf arg.Equals("filename", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
+            ElseIf (arg.Equals("filename", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1) OrElse
+                 (arg.Equals("device", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1) Then
                 image_path = cmd.Value(0)
             ElseIf arg.Equals("provider", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 1 Then
                 provider_name = cmd.Value(0)
@@ -655,6 +656,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
                     AddHandler Console.CancelKeyPress,
                         Sub(sender, e)
                             Try
+                                Console.WriteLine()
                                 Console.WriteLine("Stopping...")
                                 cancel.Cancel()
 
