@@ -1239,6 +1239,15 @@ public readonly struct DISK_GEOMETRY
         F3_32M_512 = 0x19
     }
 
+    public DISK_GEOMETRY(long cylinders, MEDIA_TYPE mediaType, int tracksPerCylinder, int sectorsPerTrack, int bytesPerSector)
+    {
+        Cylinders = cylinders;
+        MediaType = mediaType;
+        TracksPerCylinder = tracksPerCylinder;
+        SectorsPerTrack = sectorsPerTrack;
+        BytesPerSector = bytesPerSector;
+    }
+
     public long Cylinders { get; }
     public MEDIA_TYPE MediaType { get; }
     public int TracksPerCylinder { get; }

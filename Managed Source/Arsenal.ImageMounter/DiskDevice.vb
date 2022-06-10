@@ -22,7 +22,6 @@ Imports Microsoft.Win32.SafeHandles
 ''' <summary>
 ''' Represents disk objects, attached to a virtual or physical SCSI adapter.
 ''' </summary>
-<SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
 Public Class DiskDevice
     Inherits DeviceObject
 
@@ -38,6 +37,9 @@ Public Class DiskDevice
     Public ReadOnly Property DevicePath As ReadOnlyMemory(Of Char)
 
     Private Sub AllowExtendedDasdIo()
+        If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+            Return
+        End If
         If Not NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0UI, IntPtr.Zero, 0UI, 0UI, IntPtr.Zero) Then
             Dim errcode = Marshal.GetLastWin32Error()
             If errcode <> NativeConstants.ERROR_INVALID_PARAMETER AndAlso
@@ -109,6 +111,7 @@ Public Class DiskDevice
     ''' </summary>
     ''' <param name="ScsiAddress"></param>
     ''' <param name="AccessMode"></param>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub New(ScsiAddress As SCSI_ADDRESS, AccessMode As FileAccess)
         Me.New(NativeFileIO.OpenDiskByScsiAddress(ScsiAddress, AccessMode), AccessMode)
 
@@ -117,6 +120,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves device number for this disk on the owner SCSI adapter.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property DeviceNumber As UInteger
         Get
             If _CachedAddress Is Nothing Then
@@ -136,6 +140,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves SCSI address for this disk.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property ScsiAddress As SCSI_ADDRESS?
         Get
             Return NativeFileIO.GetScsiAddress(SafeFileHandle)
@@ -145,6 +150,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves storage device type and physical disk number information.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property StorageDeviceNumber As STORAGE_DEVICE_NUMBER?
         Get
             Return NativeFileIO.GetStorageDeviceNumber(SafeFileHandle)
@@ -154,6 +160,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves StorageStandardProperties information.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property StorageStandardProperties As StorageStandardProperties?
         Get
             Return NativeFileIO.GetStorageStandardProperties(SafeFileHandle)
@@ -163,12 +170,14 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves TRIM enabled information.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property TrimEnabled As Boolean?
         Get
             Return NativeFileIO.GetStorageTrimProperties(SafeFileHandle)
         End Get
     End Property
 
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub TrimRange(startingOffset As Long, lengthInBytes As ULong)
         NativeCalls.TrimDiskRange(SafeFileHandle, startingOffset, lengthInBytes)
     End Sub
@@ -176,6 +185,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Enumerates disk volumes that use extents of this disk.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Function EnumerateDiskVolumes() As IEnumerable(Of String)
 
         Dim disk_number = StorageDeviceNumber
@@ -193,6 +203,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Opens SCSI adapter that created this virtual disk.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Function OpenAdapter() As ScsiAdapter
 
         Return New ScsiAdapter(NativeFileIO.GetScsiAddress(SafeFileHandle).Value.PortNumber)
@@ -202,6 +213,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Updates disk properties by re-enumerating partition table.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub UpdateProperties()
 
         NativeFileIO.UpdateDiskProperties(SafeFileHandle, throwOnFailure:=True)
@@ -212,6 +224,7 @@ Public Class DiskDevice
     ''' Retrieves the physical location of a specified volume on one or more disks. 
     ''' </summary>
     ''' <returns></returns>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Function GetVolumeDiskExtents() As DiskExtent()
 
         Return NativeFileIO.GetVolumeDiskExtents(SafeFileHandle)
@@ -395,10 +408,14 @@ Public Class DiskDevice
     ''' Flush buffers for a disk or volume.
     ''' </summary>
     Public Sub FlushBuffers()
-        If _RawDiskStream IsNot Nothing Then
-            _RawDiskStream.Flush()
+        If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+            If _RawDiskStream IsNot Nothing Then
+                _RawDiskStream.Flush()
+            Else
+                NativeFileIO.FlushBuffers(SafeFileHandle)
+            End If
         Else
-            NativeFileIO.FlushBuffers(SafeFileHandle)
+            GetRawDiskStream().Flush()
         End If
     End Sub
 
@@ -406,6 +423,7 @@ Public Class DiskDevice
     ''' Gets or sets physical disk offline attribute. Only valid for
     ''' physical disk objects, not volumes or partitions.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Property DiskPolicyOffline As Boolean?
         Get
             Return NativeFileIO.GetDiskOffline(SafeFileHandle)
@@ -421,6 +439,7 @@ Public Class DiskDevice
     ''' Gets or sets physical disk read only attribute. Only valid for
     ''' physical disk objects, not volumes or partitions.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Property DiskPolicyReadOnly As Boolean?
         Get
             Return NativeFileIO.GetDiskReadOnly(SafeFileHandle)
@@ -436,6 +455,7 @@ Public Class DiskDevice
     ''' Sets disk volume offline attribute. Only valid for logical
     ''' disk volumes, not physical disk drives.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub SetVolumeOffline(value As Boolean)
 
         NativeFileIO.SetVolumeOffline(SafeFileHandle, value)
@@ -447,6 +467,7 @@ Public Class DiskDevice
     ''' partition layout. This property is not available for physical
     ''' disks, only disk partitions are supported.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property PartitionInformation As PARTITION_INFORMATION?
         Get
             Return NativeFileIO.GetPartitionInformation(SafeFileHandle)
@@ -457,6 +478,7 @@ Public Class DiskDevice
     ''' Gets information about a disk partition. This property is not
     ''' available for physical disks, only disk partitions are supported.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property PartitionInformationEx As PARTITION_INFORMATION_EX?
         Get
             Return NativeFileIO.GetPartitionInformationEx(SafeFileHandle)
@@ -467,6 +489,7 @@ Public Class DiskDevice
     ''' Gets information about a disk partitions. This property is available
     ''' for physical disks, not disk partitions.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Property DriveLayoutEx As NativeFileIO.DriveLayoutInformation
         Get
             Return NativeFileIO.GetDriveLayoutEx(SafeFileHandle)
@@ -480,6 +503,7 @@ Public Class DiskDevice
     ''' Initialize a raw disk device for use with Windows. This method is available
     ''' for physical disks, not disk partitions.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub InitializeDisk(PartitionStyle As PARTITION_STYLE)
         NativeCalls.InitializeDisk(SafeFileHandle, PartitionStyle)
     End Sub
@@ -489,6 +513,7 @@ Public Class DiskDevice
     ''' </summary>
     ''' <returns>8 digit hex string for MBR disks or disk GUID for
     ''' GPT disks.</returns>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property DiskId As String
         Get
             Return If(DriveLayoutEx?.ToString(), "(Unknown)")
@@ -507,6 +532,7 @@ Public Class DiskDevice
     ''' <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
     ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
     ''' virtual memory type virtual disk.</param>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub QueryDevice(<Out> ByRef DeviceNumber As UInteger,
                            <Out> ByRef DiskSize As Long,
                            <Out> ByRef BytesPerSector As UInteger,
@@ -544,6 +570,7 @@ Public Class DiskDevice
     ''' <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
     ''' virtual memory type virtual disk.</param>
     ''' <param name="WriteOverlayImagefile">Path to differencing file used in write-temporary mode.</param>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub QueryDevice(<Out> ByRef DeviceNumber As UInteger,
                            <Out> ByRef DiskSize As Long,
                            <Out> ByRef BytesPerSector As UInteger,
@@ -573,6 +600,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Retrieves properties for an existing virtual disk.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Function QueryDevice() As DeviceProperties
 
         Dim scsi_address = ScsiAddress.Value
@@ -588,6 +616,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Removes this virtual disk from adapter.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub RemoveDevice()
 
         Dim scsi_address = ScsiAddress.Value
@@ -605,7 +634,7 @@ Public Class DiskDevice
     ''' </summary>
     Public ReadOnly Property DiskSize As Long?
         Get
-            Return NativeFileIO.GetDiskSize(SafeFileHandle)
+            Return NativeStruct.GetDiskSize(SafeFileHandle)
         End Get
     End Property
 
@@ -613,6 +642,7 @@ Public Class DiskDevice
     ''' Retrieves partition information.
     ''' </summary>
     ''' <returns></returns>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property VolumeSizeInformation As FILE_FS_FULL_SIZE_INFORMATION?
         Get
             Return NativeCalls.GetVolumeSizeInformation(SafeFileHandle)
@@ -622,6 +652,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Determines whether disk is writable or read-only.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property IsDiskWritable As Boolean
         Get
             Return NativeFileIO.IsDiskWritable(SafeFileHandle)
@@ -634,7 +665,7 @@ Public Class DiskDevice
     ''' </summary>
     Public ReadOnly Property Geometry As DISK_GEOMETRY?
         Get
-            Return NativeFileIO.GetDiskGeometry(SafeFileHandle)
+            Return NativeStruct.GetDiskGeometry(SafeFileHandle)
         End Get
     End Property
 
@@ -646,6 +677,7 @@ Public Class DiskDevice
     ''' <param name="Force">Indicates if True that volume should be immediately dismounted even if it
     ''' cannot be locked. This causes all open handles to files on the volume to become invalid. If False,
     ''' successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub DismountVolumeFilesystem(Force As Boolean)
 
         NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(SafeFileHandle, Force))
@@ -660,6 +692,7 @@ Public Class DiskDevice
     ''' <param name="Force">Indicates if True that volume should be immediately dismounted even if it
     ''' cannot be locked. This causes all open handles to files on the volume to become invalid. If False,
     ''' successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Async Function DismountVolumeFilesystemAsync(Force As Boolean, cancel As CancellationToken) As Task
 
         NativeFileIO.Win32Try(Await NativeFileIO.DismountVolumeFilesystemAsync(SafeFileHandle, Force, cancel).ConfigureAwait(False))
@@ -669,6 +702,7 @@ Public Class DiskDevice
     ''' <summary>
     ''' Get live statistics from write filter driver.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public ReadOnly Property WriteOverlayStatus As WriteFilterStatistics?
         Get
             Dim statistics As WriteFilterStatistics = Nothing
@@ -686,6 +720,7 @@ Public Class DiskDevice
     ''' silently ignore flush requests to improve performance when integrity of the write
     ''' overlay image is not needed for future sessions.
     ''' </summary>
+    <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
     Public Sub SetWriteOverlayDeleteOnClose()
         Dim rc = API.SetWriteOverlayDeleteOnClose(SafeFileHandle)
         If rc <> NativeConstants.NO_ERROR Then

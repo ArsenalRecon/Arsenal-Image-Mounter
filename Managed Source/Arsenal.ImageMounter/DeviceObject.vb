@@ -18,7 +18,6 @@ Imports Microsoft.Win32.SafeHandles
 ''' <summary>
 ''' Base class that represents Arsenal Image Mounter SCSI miniport created device objects.
 ''' </summary>
-<SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
 Public MustInherit Class DeviceObject
     Implements IDisposable
 
@@ -32,7 +31,7 @@ Public MustInherit Class DeviceObject
     ''' </summary>
     ''' <param name="Path">Path to pass to CreateFile API</param>
     Protected Sub New(Path As ReadOnlyMemory(Of Char))
-        Me.New(NativeFileIO.OpenFileHandle(Path, 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False), 0)
+        Me.New(NativeStruct.OpenFileHandle(Path, 0, FileShare.ReadWrite, FileMode.Open, Overlapped:=False), 0)
     End Sub
 
     ''' <summary>
@@ -42,7 +41,7 @@ Public MustInherit Class DeviceObject
     ''' <param name="Path">Path to pass to CreateFile API</param>
     ''' <param name="AccessMode">Access mode for opening and for underlying FileStream</param>
     Protected Sub New(Path As ReadOnlyMemory(Of Char), AccessMode As FileAccess)
-        Me.New(NativeFileIO.OpenFileHandle(Path, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped:=False), AccessMode)
+        Me.New(NativeStruct.OpenFileHandle(Path, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped:=False), AccessMode)
     End Sub
 
     ''' <summary>

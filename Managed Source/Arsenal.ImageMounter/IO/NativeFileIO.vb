@@ -1880,12 +1880,11 @@ Currently, the following application has files open on this volume:
         ''' <param name="ShareMode">Share mode to request.</param>
         ''' <param name="CreationDisposition">Open/creation mode.</param>
         ''' <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
-        Public Shared Function OpenFileHandle(
-          FileName As ReadOnlyMemory(Of Char),
-          DesiredAccess As FileAccess,
-          ShareMode As FileShare,
-          CreationDisposition As FileMode,
-          Overlapped As Boolean) As SafeFileHandle
+        Public Shared Function OpenFileHandle(FileName As ReadOnlyMemory(Of Char),
+                                              DesiredAccess As FileAccess,
+                                              ShareMode As FileShare,
+                                              CreationDisposition As FileMode,
+                                              Overlapped As Boolean) As SafeFileHandle
 
             If FileName.Span.IsWhiteSpace() Then
                 Throw New ArgumentNullException(NameOf(FileName))

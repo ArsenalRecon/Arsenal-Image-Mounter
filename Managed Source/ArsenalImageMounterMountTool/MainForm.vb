@@ -592,26 +592,26 @@ Public Class MainForm
         btnMountLibEwf.Click, btnMountDiscUtils.Click, btnMountMultiPartRaw.Click,
         btnMountLibAFF4.Click, btnMountLibQCow.Click
 
-        Dim ProxyType As DevioServiceFactory.ProxyType
+        Dim providerType As DevioServiceFactory.ProviderType
 
         If sender Is btnMountRaw Then
-            ProxyType = DevioServiceFactory.ProxyType.None
+            providerType = DevioServiceFactory.ProviderType.None
         ElseIf sender Is btnMountMultiPartRaw Then
-            ProxyType = DevioServiceFactory.ProxyType.MultiPartRaw
+            providerType = DevioServiceFactory.ProviderType.MultiPartRaw
         ElseIf sender Is btnMountDiscUtils Then
-            ProxyType = DevioServiceFactory.ProxyType.DiscUtils
+            providerType = DevioServiceFactory.ProviderType.DiscUtils
         ElseIf sender Is btnMountLibEwf Then
             If Not LibewfVerify.VerifyLibewf(Me) Then
                 Return
             End If
-            ProxyType = DevioServiceFactory.ProxyType.LibEwf
-        ElseIf sender Is btnMountLibQcow Then
+            providerType = DevioServiceFactory.ProviderType.LibEwf
+        ElseIf sender Is btnMountLibQCow Then
             If Not LibqcowVerify.VerifyLibqcow(Me) Then
                 Return
             End If
-            ProxyType = DevioServiceFactory.ProxyType.LibQcow
+            providerType = DevioServiceFactory.ProviderType.LibQcow
         ElseIf sender Is btnMountLibAFF4 Then
-            ProxyType = DevioServiceFactory.ProxyType.LibAFF4
+            providerType = DevioServiceFactory.ProviderType.LibAFF4
         Else
             Return
         End If
@@ -651,7 +651,7 @@ Public Class MainForm
 
                 With FormMountOptions
 
-                    .SetSupportedAccessModes(DevioServiceFactory.GetSupportedVirtualDiskAccess(ProxyType, Imagefile)
+                    .SetSupportedAccessModes(DevioServiceFactory.GetSupportedVirtualDiskAccess(providerType, Imagefile)
 )
                     If Flags.HasFlag(DeviceFlags.ReadOnly) Then
                         .SelectedReadOnly = True
@@ -659,7 +659,7 @@ Public Class MainForm
                         .SelectedReadOnly = False
                     End If
 
-                    Using service = DevioServiceFactory.GetService(Imagefile, FileAccess.Read, ProxyType)
+                    Using service = DevioServiceFactory.GetService(Imagefile, FileAccess.Read, providerType)
                         .SelectedSectorSize = service.SectorSize
                     End Using
 
@@ -693,7 +693,7 @@ Public Class MainForm
 
             Using New AsyncMessageBox("Please wait...")
 
-                Dim Service = DevioServiceFactory.GetService(Imagefile, DiskAccess, ProxyType)
+                Dim Service = DevioServiceFactory.GetService(Imagefile, DiskAccess, providerType)
 
                 Service.SectorSize = SectorSize
 

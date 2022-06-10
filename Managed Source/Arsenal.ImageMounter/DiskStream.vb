@@ -21,7 +21,6 @@ Imports Microsoft.Win32.SafeHandles
 ''' where FileStream base implementation rely on file API not directly compatible with disk device
 ''' objects.
 ''' </summary>
-<SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
 Public Class DiskStream
     Inherits AligningStream
 
@@ -32,7 +31,7 @@ Public Class DiskStream
     ''' <param name="AccessMode">Access to request for stream.</param>
     Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess)
         MyBase.New(New FileStream(SafeFileHandle, AccessMode, bufferSize:=1),
-                   Alignment:=If(NativeFileIO.GetDiskGeometry(SafeFileHandle)?.BytesPerSector, 512),
+                   Alignment:=If(NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector, 512),
                    ownsBaseStream:=True)
     End Sub
 
@@ -46,7 +45,7 @@ Public Class DiskStream
     ''' <param name="DiskSize">Size that should be returned by Length property</param>
     Protected Friend Sub New(SafeFileHandle As SafeFileHandle, AccessMode As FileAccess, DiskSize As Long)
         MyBase.New(New FileStream(SafeFileHandle, AccessMode, bufferSize:=1),
-                   Alignment:=If(NativeFileIO.GetDiskGeometry(SafeFileHandle)?.BytesPerSector, 512),
+                   Alignment:=If(NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector, 512),
                    ownsBaseStream:=True)
 
         _CachedLength = DiskSize
@@ -63,7 +62,7 @@ Public Class DiskStream
     ''' </summary>
     Public Overrides ReadOnly Property Length As Long
         Get
-            _CachedLength = If(_CachedLength, NativeFileIO.GetDiskSize(SafeFileHandle))
+            _CachedLength = If(_CachedLength, NativeStruct.GetDiskSize(SafeFileHandle))
 
             Return _CachedLength.Value
         End Get
@@ -82,7 +81,7 @@ Public Class DiskStream
                     Throw New NotSupportedException
                 End If
             Else
-                _CachedLength = NativeFileIO.GetDiskSize(SafeFileHandle)
+                _CachedLength = NativeStruct.GetDiskSize(SafeFileHandle)
                 If Not _CachedLength.HasValue Then
                     Throw New NotSupportedException
                 End If
@@ -103,7 +102,7 @@ Public Class DiskStream
     ''' </summary>
     Public Function GetVBRPartitionLength() As Long?
 
-        Dim bytesPerSector = NativeFileIO.GetDiskGeometry(SafeFileHandle).Value.BytesPerSector
+        Dim bytesPerSector = NativeStruct.GetDiskGeometry(SafeFileHandle).Value.BytesPerSector
         Dim vbr = ArrayPool(Of Byte).Shared.Rent(bytesPerSector)
         Try
             Position = 0

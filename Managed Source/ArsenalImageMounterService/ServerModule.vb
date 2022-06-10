@@ -29,7 +29,6 @@ Imports System.Net
 Imports System.Runtime.Versioning
 
 #Disable Warning IDE0079 ' Remove unnecessary suppression
-#Disable Warning CA1416 ' Validate platform compatibility
 
 Public Module ServerModule
 
@@ -148,10 +147,10 @@ Public Module ServerModule
 
     End Function
 
-    Public Sub ShowVersionInfo()
+    Public ReadOnly AssemblyLocation As String = Assembly.GetExecutingAssembly().Location
+    Public ReadOnly AssemblyFileVersion As Version = NativeFileIO.GetFileVersion(AssemblyLocation).FileVersion
 
-        Dim asm_file = Assembly.GetExecutingAssembly().Location
-        Dim file_ver = NativeFileIO.GetFileVersion(asm_file).FileVersion
+    Public Sub ShowVersionInfo()
 
         Dim driver_ver As String
 
@@ -169,7 +168,7 @@ Public Module ServerModule
             $"Integrated command line interface to Arsenal Image Mounter virtual
 SCSI miniport driver.
 
-Application version {file_ver}
+Application version {AssemblyFileVersion}
 
 {driver_ver}
             
@@ -192,7 +191,7 @@ Please see EULA.txt for license information.")
         Dim disk_size As Long? = Nothing
         Dim disk_access As FileAccess = FileAccess.ReadWrite
         Dim mount As Boolean = False
-        Dim provider_name As String = "DiscUtils"
+        Dim provider_name As String = Nothing
         Dim show_help As Boolean = False
         Dim verbose As Boolean
         Dim device_flags As DeviceFlags
@@ -329,8 +328,7 @@ Please see EULA.txt for license information.")
 
             Dim msg = $"{asmname}
 
-Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to the Arsenal 
-Image Mounter virtual SCSI miniport driver.
+Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to the Arsenal Image Mounter virtual SCSI miniport driver.
 
 Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
 
@@ -456,7 +454,13 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         End If
 
-        Console.WriteLine($"Opening image file '{image_path}'...")
+        If String.IsNullOrWhiteSpace(provider_name) Then
+
+            provider_name = DevioServiceFactory.GetProviderTypeFromFileName(image_path).ToString()
+
+        End If
+
+        Console.WriteLine($"Opening image file '{image_path}' with format provider '{provider_name}'...")
 
         If StringComparer.OrdinalIgnoreCase.Equals(provider_name, "libewf") Then
 
@@ -471,6 +475,18 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
         End If
 
         Dim provider = DevioServiceFactory.GetProvider(image_path, disk_access, provider_name)
+
+        If provider Is Nothing Then
+
+            Throw New NotSupportedException("Unknown image file format. Try with another format provider!")
+
+        End If
+
+        If provider.Length <= 0 Then
+
+            Throw New NotSupportedException("Unknown size of source device")
+
+        End If
 
         If Not String.IsNullOrWhiteSpace(debug_compare) Then
 
@@ -504,7 +520,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
         ElseIf output_image IsNot Nothing Then
 
-            provider.ConvertToImage(output_image, output_image_variant, detach_event)
+            provider.ConvertToImage(image_path, output_image, output_image_variant, detach_event)
 
             Return 0
 
@@ -635,7 +651,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
     End Function
 
     <Extension>
-    Private Sub ConvertToImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, detachEvent As SafeWaitHandle)
+    Private Sub ConvertToImage(provider As IDevioProvider, sourcePath As String, outputImage As String, OutputImageVariant As String, detachEvent As SafeWaitHandle)
 
         Using provider
 
@@ -673,6 +689,10 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                 Dim image_type = Path.GetExtension(outputImage).TrimStart("."c).ToUpperInvariant()
 
+                Dim metafile As StreamWriter = Nothing
+
+                Dim hashResults As Dictionary(Of String, Byte()) = Nothing
+
                 Dim t = Task.Factory.StartNew(
                     Sub()
 
@@ -686,47 +706,87 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
 
                         End If
 
+                        Dim metafilename = $"{outputImage}.txt"
+                        metafile = New StreamWriter(metafilename, append:=False)
+
+                        metafile.WriteLine($"Created by Arsenal Image Mounter version {AssemblyFileVersion}")
+                        metafile.WriteLine($"Running on machine '{Environment.MachineName}' with {RuntimeInformation.OSDescription} and {RuntimeInformation.FrameworkDescription}")
+                        metafile.WriteLine($"Saved from '{sourcePath}'")
+                        metafile.WriteLine($"Disk size: {provider.Length} bytes")
+                        metafile.WriteLine($"Bytes per sector: {provider.SectorSize}")
+                        metafile.WriteLine()
+                        metafile.WriteLine($"Start time: {Date.Now}")
+                        metafile.Flush()
+
+                        hashResults = New Dictionary(Of String, Byte())(StringComparer.OrdinalIgnoreCase) From {
+                            {"MD5", Nothing},
+                            {"SHA1", Nothing},
+                            {"SHA256", Nothing}
+                        }
+
                         Select Case image_type
 
                             Case "DD", "RAW", "IMG", "IMA", "ISO", "BIN", "001"
-                                provider.ConvertToRawImage(outputImage, OutputImageVariant, completionPosition, cancel.Token)
+                                provider.ConvertToRawImage(outputImage, OutputImageVariant, hashResults, completionPosition, cancel.Token)
 
                             Case "E01"
-                                provider.ConvertToLibEwfImage(outputImage, completionPosition, cancel.Token)
+                                provider.ConvertToLibEwfImage(outputImage, hashResults, completionPosition, cancel.Token)
 
                             Case Else
-                                provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, completionPosition, cancel.Token)
+                                provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, hashResults, completionPosition, cancel.Token)
 
                         End Select
 
                     End Sub, cancel.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default)
 
-                If completionPosition Is Nothing Then
+                Using metafile
 
-                    t.Wait()
+                    If completionPosition Is Nothing Then
 
-                Else
+                        t.Wait()
 
-                    Dim update_time = TimeSpan.FromMilliseconds(400)
+                    Else
 
-                    Try
-                        Do Until t.Wait(update_time)
+                        Dim update_time = TimeSpan.FromMilliseconds(400)
 
-                            Dim percent = 100D * completionPosition.LengthComplete / provider.Length
-                            Console.Write($"Converting ({percent:0.0}%)...{vbCr}")
+                        Try
+                            Do Until t.Wait(update_time)
 
-                        Loop
+                                Dim percent = 100D * completionPosition.LengthComplete / provider.Length
+                                Console.Write($"Converting ({percent:0.0}%)...{vbCr}")
 
-                        Console.Write($"Converting ({100.0:0.0}%)...{vbCr}")
+                            Loop
 
-                    Finally
-                        Console.WriteLine()
+                            Console.Write($"Converting ({100.0:0.0}%)...{vbCr}")
 
-                    End Try
+                            If metafile IsNot Nothing Then
 
-                    Console.WriteLine("Image converted successfully.")
+                                metafile.WriteLine($"Finish time: {Date.Now}")
+                                metafile.WriteLine()
 
-                End If
+                                If hashResults IsNot Nothing Then
+                                    metafile.WriteLine($"Calculated checksums:")
+
+                                    For Each hash In hashResults
+                                        metafile.WriteLine($"{hash.Key}: {hash.Value.ToHexString()}")
+                                    Next
+
+                                    metafile.WriteLine()
+                                End If
+
+                                metafile.Flush()
+                            End If
+
+                        Finally
+                            Console.WriteLine()
+
+                        End Try
+
+                        Console.WriteLine("Image converted successfully.")
+
+                    End If
+
+                End Using
 
             End Using
 

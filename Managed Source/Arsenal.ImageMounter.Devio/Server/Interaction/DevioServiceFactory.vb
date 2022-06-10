@@ -36,7 +36,7 @@ Namespace Server.Interaction
         ''' <summary>
         ''' Supported proxy types.
         ''' </summary>
-        Public Enum ProxyType
+        Public Enum ProviderType
             None
 
             LibEwf
@@ -51,7 +51,7 @@ Namespace Server.Interaction
         End Enum
 
         ''' <summary>
-        ''' Virtual disk access modes. A list of supported modes for a particular ProxyType
+        ''' Virtual disk access modes. A list of supported modes for a particular ProviderType
         ''' is obtained by calling GetSupportedVirtualDiskAccess().
         ''' </summary>
         Public Enum VirtualDiskAccess
@@ -68,32 +68,32 @@ Namespace Server.Interaction
 
         End Enum
 
-        Private Shared ReadOnly SupportedVirtualDiskAccess As New Dictionary(Of ProxyType, ReadOnlyCollection(Of VirtualDiskAccess)) From
+        Private Shared ReadOnly SupportedVirtualDiskAccess As New Dictionary(Of ProviderType, ReadOnlyCollection(Of VirtualDiskAccess)) From
             {
-                {ProxyType.None,
+                {ProviderType.None,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOriginal,
                                    VirtualDiskAccess.ReadOnlyFileSystem,
                                    VirtualDiskAccess.ReadWriteFileSystem})},
-                {ProxyType.MultiPartRaw,
+                {ProviderType.MultiPartRaw,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOriginal,
                                    VirtualDiskAccess.ReadOnlyFileSystem,
                                    VirtualDiskAccess.ReadWriteFileSystem})},
-                {ProxyType.DiscUtils,
+                {ProviderType.DiscUtils,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOriginal,
                                    VirtualDiskAccess.ReadWriteOverlay,
                                    VirtualDiskAccess.ReadOnlyFileSystem,
                                    VirtualDiskAccess.ReadWriteFileSystem})},
-                {ProxyType.LibEwf,
+                {ProviderType.LibEwf,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadWriteOverlay,
                                    VirtualDiskAccess.ReadOnlyFileSystem})},
-                {ProxyType.LibAFF4,
+                {ProviderType.LibAFF4,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadOnlyFileSystem})},
-                {ProxyType.LibQcow,
+                {ProviderType.LibQcow,
                  Array.AsReadOnly({VirtualDiskAccess.ReadOnly,
                                    VirtualDiskAccess.ReadOnlyFileSystem})}
             }
@@ -119,7 +119,7 @@ Namespace Server.Interaction
         ''' this could specify a flag for read-only mounting.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProxyType, Flags As DeviceFlags, DiskAccess As VirtualDiskAccess) As DevioServiceBase
+        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProviderType, Flags As DeviceFlags, DiskAccess As VirtualDiskAccess) As DevioServiceBase
 
             If Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) OrElse
                 Imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) OrElse
@@ -148,7 +148,7 @@ Namespace Server.Interaction
         ''' this could specify a flag for read-only mounting.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProxyType, Flags As DeviceFlags) As DevioServiceBase
+        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProviderType, Flags As DeviceFlags) As DevioServiceBase
 
             Dim DiskAccess As FileAccess
 
@@ -173,19 +173,29 @@ Namespace Server.Interaction
 
         End Function
 
-        Public Shared Function GetSupportedVirtualDiskAccess(Proxy As ProxyType, imagePath As String) As ReadOnlyCollection(Of VirtualDiskAccess)
+        Public Shared Function GetSupportedVirtualDiskAccess(Proxy As ProviderType, imagePath As String) As ReadOnlyCollection(Of VirtualDiskAccess)
 
             GetSupportedVirtualDiskAccess = Nothing
             If Not SupportedVirtualDiskAccess.TryGetValue(Proxy, GetSupportedVirtualDiskAccess) Then
                 Throw New ArgumentException($"Proxy type not supported: {Proxy}", NameOf(Proxy))
             End If
 
-            If Proxy = ProxyType.DiscUtils AndAlso
+            If Proxy = ProviderType.DiscUtils AndAlso
                 NotSupportedFormatsForWriteOverlay.Contains(
                     Path.GetExtension(imagePath), StringComparer.OrdinalIgnoreCase) Then
 
                 GetSupportedVirtualDiskAccess = GetSupportedVirtualDiskAccess.
                     Where(Function(acc) acc <> VirtualDiskAccess.ReadWriteOverlay).
+                    ToList().
+                    AsReadOnly()
+
+            End If
+
+            If File.GetAttributes(imagePath).HasFlag(FileAttributes.ReadOnly) Then
+
+                GetSupportedVirtualDiskAccess = GetSupportedVirtualDiskAccess.
+                    Where(Function(acc) acc <> VirtualDiskAccess.ReadWriteFileSystem AndAlso
+                        acc <> VirtualDiskAccess.ReadWriteOriginal).
                     ToList().
                     AsReadOnly()
 
@@ -202,13 +212,13 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        Public Shared Function GetDiscUtilsVirtualDisk(Imagefile As String, DiskAccess As FileAccess, Proxy As ProxyType) As VirtualDisk
+        Public Shared Function GetDiscUtilsVirtualDisk(Imagefile As String, DiskAccess As FileAccess, Proxy As ProviderType) As VirtualDisk
 
             Dim virtualdisk As VirtualDisk
 
             Select Case Proxy
 
-                Case ProxyType.DiscUtils
+                Case ProviderType.DiscUtils
                     If Imagefile.EndsWith(".ova", StringComparison.OrdinalIgnoreCase) Then
                         virtualdisk = OpenOVA(Imagefile, DiskAccess)
                     Else
@@ -272,7 +282,7 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, Proxy As ProxyType) As IDevioProvider
+        Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, Proxy As ProviderType) As IDevioProvider
 
             Dim GetProviderFunc As Func(Of String, FileAccess, IDevioProvider) = Nothing
 
@@ -295,21 +305,23 @@ Namespace Server.Interaction
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function GetProvider(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType) As IDevioProvider
+        Public Shared Function GetProvider(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProviderType) As IDevioProvider
 
             Dim device_number As UInteger
 
             Dim attributes As FileAttributes
 
-            If UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
 
                 Return GetProviderPhysical(device_number, DiskAccess)
 
-            ElseIf (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
+            ElseIf Imagefile.StartsWith("/dev/", StringComparison.Ordinal) OrElse
+                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
                 Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
                 (Not NativeFileIO.TryGetFileAttributes(Imagefile, attributes) OrElse
-                attributes.HasFlag(FileAttributes.Directory)) Then
+                attributes.HasFlag(FileAttributes.Directory))) Then
 
                 Return GetProviderPhysical(Imagefile, DiskAccess)
 
@@ -327,21 +339,32 @@ Namespace Server.Interaction
 
         End Function
 
-        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
+
+        Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess) As IDevioProvider
+
+            Dim provider = GetProviderTypeFromFileName(Imagefile)
+
+            Return GetProvider(Imagefile, DiskAccess, provider)
+
+        End Function
+
         Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, ProviderName As String) As IDevioProvider
 
             Dim device_number As UInteger
 
             Dim attributes As FileAttributes
 
-            If UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
 
                 Return GetProviderPhysical(device_number, DiskAccess)
 
-            ElseIf (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
+            ElseIf Imagefile.StartsWith("/dev/", StringComparison.Ordinal) OrElse
+                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
                 Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
                 (Not NativeFileIO.TryGetFileAttributes(Imagefile, attributes) OrElse
-                attributes.HasFlag(FileAttributes.Directory)) Then
+                attributes.HasFlag(FileAttributes.Directory))) Then
 
                 Return GetProviderPhysical(Imagefile, DiskAccess)
 
@@ -366,7 +389,6 @@ Namespace Server.Interaction
 
         End Function
 
-        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
 
             Return GetProviderPhysical(DevicePath, GetDirectFileAccessFlags(DiskAccess))
@@ -388,7 +410,6 @@ Namespace Server.Interaction
 
         End Function
 
-        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
         Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As FileAccess) As DevioProviderFromStream
 
             Dim disk As New DiskDevice(DevicePath, DiskAccess)
@@ -415,22 +436,22 @@ Namespace Server.Interaction
 
         End Function
 
-        Public Shared ReadOnly Property InstalledProvidersByProxyValueAndVirtualDiskAccess As New Dictionary(Of ProxyType, Func(Of String, VirtualDiskAccess, IDevioProvider))() From {
-            {ProxyType.DiscUtils, AddressOf GetProviderDiscUtils},
-            {ProxyType.LibEwf, AddressOf GetProviderLibEwf},
-            {ProxyType.LibAFF4, AddressOf GetProviderLibAFF4},
-            {ProxyType.LibQcow, AddressOf GetProviderLibQcow},
-            {ProxyType.MultiPartRaw, AddressOf GetProviderMultiPartRaw},
-            {ProxyType.None, AddressOf GetProviderRaw}
+        Public Shared ReadOnly Property InstalledProvidersByProxyValueAndVirtualDiskAccess As New Dictionary(Of ProviderType, Func(Of String, VirtualDiskAccess, IDevioProvider))() From {
+            {ProviderType.DiscUtils, AddressOf GetProviderDiscUtils},
+            {ProviderType.LibEwf, AddressOf GetProviderLibEwf},
+            {ProviderType.LibAFF4, AddressOf GetProviderLibAFF4},
+            {ProviderType.LibQcow, AddressOf GetProviderLibQcow},
+            {ProviderType.MultiPartRaw, AddressOf GetProviderMultiPartRaw},
+            {ProviderType.None, AddressOf GetProviderRaw}
         }
 
-        Public Shared ReadOnly Property InstalledProvidersByProxyValueAndFileAccess As New Dictionary(Of ProxyType, Func(Of String, FileAccess, IDevioProvider))() From {
-            {ProxyType.DiscUtils, AddressOf GetProviderDiscUtils},
-            {ProxyType.LibEwf, AddressOf GetProviderLibEwf},
-            {ProxyType.LibAFF4, AddressOf GetProviderLibAFF4},
-            {ProxyType.LibQcow, AddressOf GetProviderLibQcow},
-            {ProxyType.MultiPartRaw, AddressOf GetProviderMultiPartRaw},
-            {ProxyType.None, AddressOf GetProviderRaw}
+        Public Shared ReadOnly Property InstalledProvidersByProxyValueAndFileAccess As New Dictionary(Of ProviderType, Func(Of String, FileAccess, IDevioProvider))() From {
+            {ProviderType.DiscUtils, AddressOf GetProviderDiscUtils},
+            {ProviderType.LibEwf, AddressOf GetProviderLibEwf},
+            {ProviderType.LibAFF4, AddressOf GetProviderLibAFF4},
+            {ProviderType.LibQcow, AddressOf GetProviderLibQcow},
+            {ProviderType.MultiPartRaw, AddressOf GetProviderMultiPartRaw},
+            {ProviderType.None, AddressOf GetProviderRaw}
         }
 
         Public Shared ReadOnly Property InstalledProvidersByNameAndVirtualDiskAccess As New Dictionary(Of String, Func(Of String, VirtualDiskAccess, IDevioProvider))(StringComparer.OrdinalIgnoreCase) From {
@@ -482,7 +503,7 @@ Namespace Server.Interaction
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType) As DevioServiceBase
+        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProviderType) As DevioServiceBase
 
             Return GetService(Imagefile, DiskAccess, Proxy, FakeMBR:=False)
 
@@ -496,13 +517,13 @@ Namespace Server.Interaction
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProxyType, FakeMBR As Boolean) As DevioServiceBase
+        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProviderType, FakeMBR As Boolean) As DevioServiceBase
 
-            If Proxy = ProxyType.None AndAlso Not FakeMBR Then
+            If Proxy = ProviderType.None AndAlso Not FakeMBR Then
 
                 Return New DevioNoneService(Imagefile, DiskAccess)
 
-            ElseIf Proxy = ProxyType.DiscUtils AndAlso Not FakeMBR AndAlso
+            ElseIf Proxy = ProviderType.DiscUtils AndAlso Not FakeMBR AndAlso
                     (DiskAccess And Not FileAccess.ReadWrite) = 0 AndAlso
                     (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) OrElse
                     Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase)) Then
@@ -535,13 +556,13 @@ Namespace Server.Interaction
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
         ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function GetService(Imagefile As String, DiskAccess As FileAccess, Proxy As ProxyType) As DevioServiceBase
+        Public Shared Function GetService(Imagefile As String, DiskAccess As FileAccess, Proxy As ProviderType) As DevioServiceBase
 
             Dim Service As DevioServiceBase
 
             Select Case Proxy
 
-                Case ProxyType.None
+                Case ProviderType.None
                     If Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) OrElse
                         Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase) Then
 
@@ -624,7 +645,7 @@ Namespace Server.Interaction
 
             Trace.WriteLine($"Opening image {Imagefile}")
 
-            Dim Disk = GetDiscUtilsVirtualDisk(Imagefile, FileAccess, ProxyType.DiscUtils)
+            Dim Disk = GetDiscUtilsVirtualDisk(Imagefile, FileAccess, ProviderType.DiscUtils)
 
             If Disk Is Nothing Then
                 Dim fs As New FileStream(Imagefile, FileMode.Open, FileAccess, FileShare.Read Or FileShare.Delete, bufferSize:=1, useAsync:=True)
@@ -1100,6 +1121,39 @@ Namespace Server.Interaction
                         Console.WriteLine($"Unknown image file extension '{arg}', using raw device data.")
                         Return New FileStream(arg, FileMode.Open, FileAccess.Read, FileShare.Read)
                     End If
+
+            End Select
+
+        End Function
+
+        Public Shared Function GetProviderTypeFromFileName(arg As String) As ProviderType
+
+            Select Case Path.GetExtension(arg).ToLowerInvariant()
+
+                Case ".vhd", ".vdi", ".vmdk", ".vhdx", ".dmg", ".ova"
+                    Return ProviderType.DiscUtils
+
+                Case ".001"
+                    If File.Exists(Path.ChangeExtension(arg, ".002")) Then
+                        Return ProviderType.MultiPartRaw
+                    Else
+                        Return ProviderType.None
+                    End If
+
+                Case ".raw", ".dd", ".img", ".ima", ".iso", ".bin", ".nrg"
+                    Return ProviderType.None
+
+                Case ".e01", ".aff", ".ex01", ".lx01"
+                    Return ProviderType.LibEwf
+
+                Case ".qcow", ".qcow2", ".qcow2c"
+                    Return ProviderType.LibQcow
+
+                Case ".aff4"
+                    Return ProviderType.LibAFF4
+
+                Case Else
+                    Return ProviderType.None
 
             End Select
 

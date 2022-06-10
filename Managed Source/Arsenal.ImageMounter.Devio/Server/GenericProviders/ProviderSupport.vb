@@ -17,6 +17,7 @@ Imports System.Runtime.Versioning
 Imports System.Security.Cryptography
 Imports System.Threading
 Imports Arsenal.ImageMounter.Devio.Extensions
+Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.Devio.Server.SpecializedProviders
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO
@@ -146,18 +147,24 @@ Namespace Server.GenericProviders
         End Function
 
         <Extension>
-        Public Sub ConvertToDiscUtilsImage(provider As IDevioProvider, outputImage As String, type As String, OutputImageVariant As String, completionPosition As CompletionPosition, cancel As CancellationToken)
+        Public Sub ConvertToDiscUtilsImage(provider As IDevioProvider, outputImage As String, type As String, OutputImageVariant As String, hashResults As Dictionary(Of String, Byte()), completionPosition As CompletionPosition, cancel As CancellationToken)
+
+            If Not DevioServiceFactory.DiscUtilsInitialized Then
+
+                Throw New NotSupportedException("DiscUtils libraries not available")
+
+            End If
 
             Using builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize)), Nothing)
 
-                provider.WriteToSkipEmptyBlocks(builder.Content, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=Nothing, completionPosition:=completionPosition, cancel:=cancel)
+                provider.WriteToSkipEmptyBlocks(builder.Content, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=hashResults, completionPosition:=completionPosition, cancel:=cancel)
 
             End Using
 
         End Sub
 
         <Extension>
-        Public Sub ConvertToRawImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, completionPosition As CompletionPosition, cancel As CancellationToken)
+        Public Sub ConvertToRawImage(provider As IDevioProvider, outputImage As String, OutputImageVariant As String, hashResults As Dictionary(Of String, Byte()), completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Using target As New FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageConversionIoBufferSize)
 
@@ -183,7 +190,7 @@ Namespace Server.GenericProviders
 
                 End If
 
-                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=Nothing, completionPosition:=completionPosition, cancel:=cancel)
+                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=hashResults, completionPosition:=completionPosition, cancel:=cancel)
 
             End Using
 
@@ -201,7 +208,7 @@ Namespace Server.GenericProviders
         End Sub
 
         <Extension>
-        Public Sub ConvertToLibEwfImage(provider As IDevioProvider, outputImage As String, completionPosition As CompletionPosition, cancel As CancellationToken)
+        Public Sub ConvertToLibEwfImage(provider As IDevioProvider, outputImage As String, hashResults As Dictionary(Of String, Byte()), completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Dim imaging_parameters As New DevioProviderLibEwf.ImagingParameters With {
                 .MediaSize = CULng(provider.Length),
@@ -226,23 +233,17 @@ Namespace Server.GenericProviders
 
             End If
 
-            Dim hashes As New Dictionary(Of String, Byte())(StringComparer.OrdinalIgnoreCase) From {
-                {"MD5", Nothing},
-                {"SHA1", Nothing},
-                {"SHA256", Nothing}
-            }
-
             Using target As New DevioProviderLibEwf({Path.ChangeExtension(outputImage, Nothing)}, DevioProviderLibEwf.AccessFlagsWrite)
 
                 target.SetOutputParameters(imaging_parameters)
 
                 Using stream As New Client.DevioDirectStream(target, ownsProvider:=False)
 
-                    provider.WriteToSkipEmptyBlocks(stream, ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=hashes, completionPosition:=completionPosition, cancel:=cancel)
+                    provider.WriteToSkipEmptyBlocks(stream, ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=hashResults, completionPosition:=completionPosition, cancel:=cancel)
 
                 End Using
 
-                For Each hash In hashes
+                For Each hash In hashResults
                     target.SetOutputHashParameter(hash.Key, hash.Value)
                 Next
 

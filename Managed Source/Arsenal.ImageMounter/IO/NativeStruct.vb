@@ -3,6 +3,7 @@ Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
 Imports System.Threading
 Imports Arsenal.ImageMounter.Extensions
+Imports Microsoft.Win32.SafeHandles
 
 #Disable Warning IDE0079 ' Remove unnecessary suppression
 #Disable Warning CA1069 ' Enums values should not be duplicated
@@ -77,11 +78,65 @@ Namespace IO
         End Function
 #End If
 
-        Private ReadOnly KnownFormats As New Dictionary(Of String, Long)(StringComparer.OrdinalIgnoreCase) From
-          {
+        Public Function GetDiskSize(SafeFileHandle As SafeFileHandle) As Long?
+
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+
+                Return NativeFileIO.GetDiskSize(SafeFileHandle)
+
+            Else
+
+                Return NativeUnixIO.GetDiskSize(SafeFileHandle)
+
+            End If
+
+        End Function
+
+        Public Function GetDiskGeometry(SafeFileHandle As SafeFileHandle) As DISK_GEOMETRY?
+
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+
+                Return NativeFileIO.GetDiskGeometry(SafeFileHandle)
+
+            Else
+
+                Return NativeUnixIO.GetDiskGeometry(SafeFileHandle)
+
+            End If
+
+        End Function
+
+        ''' <summary>
+        ''' Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
+        ''' </summary>
+        ''' <param name="FileName">Name of file to open.</param>
+        ''' <param name="DesiredAccess">File access to request.</param>
+        ''' <param name="ShareMode">Share mode to request.</param>
+        ''' <param name="CreationDisposition">Open/creation mode.</param>
+        ''' <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
+        Public Function OpenFileHandle(FileName As ReadOnlyMemory(Of Char),
+                                       DesiredAccess As FileAccess,
+                                       ShareMode As FileShare,
+                                       CreationDisposition As FileMode,
+                                       Overlapped As Boolean) As SafeFileHandle
+
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+
+                Return NativeFileIO.OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped)
+
+            Else
+
+                Return New FileStream(FileName.ToString(), CreationDisposition, DesiredAccess, ShareMode, 1, Overlapped).SafeFileHandle
+
+            End If
+
+        End Function
+
+
+        Private ReadOnly _knownFormatsOffsets As New Dictionary(Of String, Long)(StringComparer.OrdinalIgnoreCase) From {
             {"nrg", 600 << 9},
             {"sdi", 8 << 9}
-          }
+        }
 
         ''' <summary>
         ''' Checks if filename contains a known extension for which PhDskMnt knows of a constant offset value. That value can be
@@ -91,7 +146,7 @@ Namespace IO
         Public Function GetOffsetByFileExt(ImageFile As String) As Long
 
             Dim Offset As Long
-            If KnownFormats.TryGetValue(Path.GetExtension(ImageFile), Offset) Then
+            If _knownFormatsOffsets.TryGetValue(Path.GetExtension(ImageFile), Offset) Then
                 Return Offset
             Else
                 Return 0
