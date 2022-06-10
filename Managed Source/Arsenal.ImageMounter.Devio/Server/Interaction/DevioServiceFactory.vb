@@ -117,9 +117,9 @@ Namespace Server.Interaction
         ''' <param name="Adapter">Open ScsiAdapter object for communication with Arsenal Image Mounter.</param>
         ''' <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
         ''' this could specify a flag for read-only mounting.</param>
-        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        ''' <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProviderType, Flags As DeviceFlags, DiskAccess As VirtualDiskAccess) As DevioServiceBase
+        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, ProviderType As ProviderType, Flags As DeviceFlags, DiskAccess As VirtualDiskAccess) As DevioServiceBase
 
             If Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) OrElse
                 Imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) OrElse
@@ -128,7 +128,7 @@ Namespace Server.Interaction
                 Flags = Flags Or DeviceFlags.DeviceTypeCD
             End If
 
-            Dim Service = GetService(Imagefile, DiskAccess, Proxy)
+            Dim Service = GetService(Imagefile, DiskAccess, ProviderType)
 
             Service.StartServiceThreadAndMount(Adapter, Flags)
 
@@ -146,9 +146,9 @@ Namespace Server.Interaction
         ''' <param name="Adapter">Open ScsiAdapter object for communication with Arsenal Image Mounter.</param>
         ''' <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
         ''' this could specify a flag for read-only mounting.</param>
-        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        ''' <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, Proxy As ProviderType, Flags As DeviceFlags) As DevioServiceBase
+        Public Shared Function AutoMount(Imagefile As String, Adapter As ScsiAdapter, ProviderType As ProviderType, Flags As DeviceFlags) As DevioServiceBase
 
             Dim DiskAccess As FileAccess
 
@@ -165,7 +165,7 @@ Namespace Server.Interaction
                 Flags = Flags Or DeviceFlags.DeviceTypeCD
             End If
 
-            Dim Service = GetService(Imagefile, DiskAccess, Proxy)
+            Dim Service = GetService(Imagefile, DiskAccess, ProviderType)
 
             Service.StartServiceThreadAndMount(Adapter, Flags)
 
@@ -173,14 +173,14 @@ Namespace Server.Interaction
 
         End Function
 
-        Public Shared Function GetSupportedVirtualDiskAccess(Proxy As ProviderType, imagePath As String) As ReadOnlyCollection(Of VirtualDiskAccess)
+        Public Shared Function GetSupportedVirtualDiskAccess(ProviderType As ProviderType, imagePath As String) As ReadOnlyCollection(Of VirtualDiskAccess)
 
             GetSupportedVirtualDiskAccess = Nothing
-            If Not SupportedVirtualDiskAccess.TryGetValue(Proxy, GetSupportedVirtualDiskAccess) Then
-                Throw New ArgumentException($"Proxy type not supported: {Proxy}", NameOf(Proxy))
+            If Not SupportedVirtualDiskAccess.TryGetValue(ProviderType, GetSupportedVirtualDiskAccess) Then
+                Throw New ArgumentException($"Provider type not supported: {ProviderType}", NameOf(ProviderType))
             End If
 
-            If Proxy = ProviderType.DiscUtils AndAlso
+            If ProviderType = ProviderType.DiscUtils AndAlso
                 NotSupportedFormatsForWriteOverlay.Contains(
                     Path.GetExtension(imagePath), StringComparer.OrdinalIgnoreCase) Then
 
@@ -211,12 +211,12 @@ Namespace Server.Interaction
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        Public Shared Function GetDiscUtilsVirtualDisk(Imagefile As String, DiskAccess As FileAccess, Proxy As ProviderType) As VirtualDisk
+        ''' <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
+        Public Shared Function GetDiscUtilsVirtualDisk(Imagefile As String, DiskAccess As FileAccess, ProviderType As ProviderType) As VirtualDisk
 
             Dim virtualdisk As VirtualDisk
 
-            Select Case Proxy
+            Select Case ProviderType
 
                 Case ProviderType.DiscUtils
                     If Imagefile.EndsWith(".ova", StringComparison.OrdinalIgnoreCase) Then
@@ -226,7 +226,7 @@ Namespace Server.Interaction
                     End If
 
                 Case Else
-                    Dim provider = GetProvider(Imagefile, DiskAccess, Proxy)
+                    Dim provider = GetProvider(Imagefile, DiskAccess, ProviderType)
                     Dim geom = Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize))
                     virtualdisk = New Raw.Disk(New Client.DevioDirectStream(provider, ownsProvider:=True), Ownership.Dispose, geom)
 
@@ -281,18 +281,18 @@ Namespace Server.Interaction
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, Proxy As ProviderType) As IDevioProvider
+        ''' <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
+        Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, ProviderType As ProviderType) As IDevioProvider
 
             Dim GetProviderFunc As Func(Of String, FileAccess, IDevioProvider) = Nothing
 
-            If _InstalledProvidersByProxyValueAndFileAccess.TryGetValue(Proxy, GetProviderFunc) Then
+            If _InstalledProvidersByProxyValueAndFileAccess.TryGetValue(ProviderType, GetProviderFunc) Then
 
                 Return GetProviderFunc(Imagefile, DiskAccess)
 
             End If
 
-            Throw New InvalidOperationException($"Proxy {Proxy} not supported.")
+            Throw New InvalidOperationException($"Provider '{ProviderType}' not supported.")
 
         End Function
 
@@ -304,38 +304,18 @@ Namespace Server.Interaction
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
-        Public Shared Function GetProvider(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProviderType) As IDevioProvider
-
-            Dim device_number As UInteger
-
-            Dim attributes As FileAttributes
-
-            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
-                UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
-
-                Return GetProviderPhysical(device_number, DiskAccess)
-
-            ElseIf Imagefile.StartsWith("/dev/", StringComparison.Ordinal) OrElse
-                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
-                (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
-                Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
-                (Not NativeFileIO.TryGetFileAttributes(Imagefile, attributes) OrElse
-                attributes.HasFlag(FileAttributes.Directory))) Then
-
-                Return GetProviderPhysical(Imagefile, DiskAccess)
-
-            End If
+        ''' <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
+        Public Shared Function GetProvider(Imagefile As String, DiskAccess As VirtualDiskAccess, ProviderType As ProviderType) As IDevioProvider
 
             Dim GetProviderFunc As Func(Of String, VirtualDiskAccess, IDevioProvider) = Nothing
 
-            If _InstalledProvidersByProxyValueAndVirtualDiskAccess.TryGetValue(Proxy, GetProviderFunc) Then
+            If _InstalledProvidersByProxyValueAndVirtualDiskAccess.TryGetValue(ProviderType, GetProviderFunc) Then
 
                 Return GetProviderFunc(Imagefile, DiskAccess)
 
             End If
 
-            Throw New InvalidOperationException($"Proxy {Proxy} not supported.")
+            Throw New InvalidOperationException($"Provider '{ProviderType}' not supported.")
 
         End Function
 
@@ -350,26 +330,6 @@ Namespace Server.Interaction
 
         Public Shared Function GetProvider(Imagefile As String, DiskAccess As FileAccess, ProviderName As String) As IDevioProvider
 
-            Dim device_number As UInteger
-
-            Dim attributes As FileAttributes
-
-            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
-                UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
-
-                Return GetProviderPhysical(device_number, DiskAccess)
-
-            ElseIf Imagefile.StartsWith("/dev/", StringComparison.Ordinal) OrElse
-                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
-                (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
-                Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
-                (Not NativeFileIO.TryGetFileAttributes(Imagefile, attributes) OrElse
-                attributes.HasFlag(FileAttributes.Directory))) Then
-
-                Return GetProviderPhysical(Imagefile, DiskAccess)
-
-            End If
-
             Dim GetProviderFunc As Func(Of String, FileAccess, IDevioProvider) = Nothing
 
             If _InstalledProvidersByNameAndFileAccess.TryGetValue(ProviderName, GetProviderFunc) Then
@@ -379,19 +339,6 @@ Namespace Server.Interaction
             End If
 
             Throw New NotSupportedException($"Provider '{ProviderName}' not supported. Valid values are: {String.Join(", ", _InstalledProvidersByNameAndFileAccess.Keys)}.")
-
-        End Function
-
-        <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Private Shared Function GetProviderPhysical(DeviceNumber As UInteger, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
-
-            Return GetProviderPhysical(DeviceNumber, GetDirectFileAccessFlags(DiskAccess))
-
-        End Function
-
-        Private Shared Function GetProviderPhysical(DevicePath As String, DiskAccess As VirtualDiskAccess) As DevioProviderFromStream
-
-            Return GetProviderPhysical(DevicePath, GetDirectFileAccessFlags(DiskAccess))
 
         End Function
 
@@ -427,6 +374,26 @@ Namespace Server.Interaction
         End Function
 
         Private Shared Function GetProviderRaw(Imagefile As String, DiskAccess As FileAccess) As DevioProviderFromStream
+
+            Dim device_number As UInteger
+
+            Dim attributes As FileAttributes
+
+            If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                UInteger.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, device_number) Then
+
+                Return GetProviderPhysical(device_number, DiskAccess)
+
+            ElseIf Imagefile.StartsWith("/dev/", StringComparison.Ordinal) OrElse
+                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
+                Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
+                (Not NativeFileIO.TryGetFileAttributes(Imagefile, attributes) OrElse
+                attributes.HasFlag(FileAttributes.Directory))) Then
+
+                Return GetProviderPhysical(Imagefile, DiskAccess)
+
+            End If
 
             Dim stream As New FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read Or FileShare.Delete, bufferSize:=1, useAsync:=True)
 
@@ -501,11 +468,11 @@ Namespace Server.Interaction
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        ''' <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProviderType) As DevioServiceBase
+        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, ProviderType As ProviderType) As DevioServiceBase
 
-            Return GetService(Imagefile, DiskAccess, Proxy, FakeMBR:=False)
+            Return GetService(Imagefile, DiskAccess, ProviderType, FakeMBR:=False)
 
         End Function
 
@@ -515,15 +482,15 @@ Namespace Server.Interaction
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        ''' <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, Proxy As ProviderType, FakeMBR As Boolean) As DevioServiceBase
+        Public Shared Function GetService(Imagefile As String, DiskAccess As VirtualDiskAccess, ProviderType As ProviderType, FakeMBR As Boolean) As DevioServiceBase
 
-            If Proxy = ProviderType.None AndAlso Not FakeMBR Then
+            If ProviderType = ProviderType.None AndAlso Not FakeMBR Then
 
                 Return New DevioNoneService(Imagefile, DiskAccess)
 
-            ElseIf Proxy = ProviderType.DiscUtils AndAlso Not FakeMBR AndAlso
+            ElseIf ProviderType = ProviderType.DiscUtils AndAlso Not FakeMBR AndAlso
                     (DiskAccess And Not FileAccess.ReadWrite) = 0 AndAlso
                     (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) OrElse
                     Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase)) Then
@@ -532,7 +499,7 @@ Namespace Server.Interaction
 
             End If
 
-            Dim Provider = GetProvider(Imagefile, DiskAccess, Proxy)
+            Dim Provider = GetProvider(Imagefile, DiskAccess, ProviderType)
 
             If FakeMBR Then
 
@@ -554,13 +521,13 @@ Namespace Server.Interaction
         ''' </summary>
         ''' <param name="Imagefile">Image file.</param>
         ''' <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-        ''' <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+        ''' <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
         <SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)>
-        Public Shared Function GetService(Imagefile As String, DiskAccess As FileAccess, Proxy As ProviderType) As DevioServiceBase
+        Public Shared Function GetService(Imagefile As String, DiskAccess As FileAccess, ProviderType As ProviderType) As DevioServiceBase
 
             Dim Service As DevioServiceBase
 
-            Select Case Proxy
+            Select Case ProviderType
 
                 Case ProviderType.None
                     If Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) OrElse
@@ -575,7 +542,7 @@ Namespace Server.Interaction
                     End If
 
                 Case Else
-                    Service = New DevioShmService(GetProvider(Imagefile, DiskAccess, Proxy), OwnsProvider:=True)
+                    Service = New DevioShmService(GetProvider(Imagefile, DiskAccess, ProviderType), OwnsProvider:=True)
 
             End Select
 

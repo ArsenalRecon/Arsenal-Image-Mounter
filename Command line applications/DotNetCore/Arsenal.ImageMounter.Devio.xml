@@ -300,18 +300,18 @@ Arsenal.ImageMounter.Devio
  Support routines for creating provider and service instances given a known proxy provider.
  </summary>
 </member>
-<member name="T:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType">
+<member name="T:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType">
  <summary>
  Supported proxy types.
  </summary>
 </member>
 <member name="T:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess">
  <summary>
- Virtual disk access modes. A list of supported modes for a particular ProxyType
+ Virtual disk access modes. A list of supported modes for a particular ProviderType
  is obtained by calling GetSupportedVirtualDiskAccess().
  </summary>
 </member>
-<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.AutoMount(System.String,Arsenal.ImageMounter.ScsiAdapter,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType,Arsenal.ImageMounter.DeviceFlags,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.AutoMount(System.String,Arsenal.ImageMounter.ScsiAdapter,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType,Arsenal.ImageMounter.DeviceFlags,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess)">
  <summary>
  Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
  for servicing I/O requests to a specified image file. Once that is done, this method
@@ -322,9 +322,9 @@ Arsenal.ImageMounter.Devio
  <param name="Adapter">Open ScsiAdapter object for communication with Arsenal Image Mounter.</param>
  <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
  this could specify a flag for read-only mounting.</param>
- <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+ <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.AutoMount(System.String,Arsenal.ImageMounter.ScsiAdapter,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType,Arsenal.ImageMounter.DeviceFlags)">
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.AutoMount(System.String,Arsenal.ImageMounter.ScsiAdapter,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType,Arsenal.ImageMounter.DeviceFlags)">
  <summary>
  Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
  for servicing I/O requests to a specified image file. Once that is done, this method
@@ -335,9 +335,9 @@ Arsenal.ImageMounter.Devio
  <param name="Adapter">Open ScsiAdapter object for communication with Arsenal Image Mounter.</param>
  <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
  this could specify a flag for read-only mounting.</param>
- <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+ <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetDiscUtilsVirtualDisk(System.String,System.IO.FileAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType)">
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetDiscUtilsVirtualDisk(System.String,System.IO.FileAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType)">
  <summary>
  Creates an object, of a DiscUtils.VirtualDisk derived class, for any supported image files format.
  For image formats not directly supported by DiscUtils.dll, this creates a devio provider first which
@@ -346,7 +346,7 @@ Arsenal.ImageMounter.Devio
  </summary>
  <param name="Imagefile">Image file.</param>
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
- <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+ <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.OpenOVA(System.String,System.IO.FileAccess)">
  <summary>
@@ -356,7 +356,7 @@ Arsenal.ImageMounter.Devio
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
  <returns></returns>
 </member>
-<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProvider(System.String,System.IO.FileAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType)">
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProvider(System.String,System.IO.FileAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType)">
  <summary>
  Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file. This does not create a DevioServiceBase
@@ -365,9 +365,9 @@ Arsenal.ImageMounter.Devio
  </summary>
  <param name="Imagefile">Image file.</param>
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
- <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+ <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProvider(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType)">
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProvider(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType)">
  <summary>
  Creates an object, of an IDevioProvider implementing class, to support devio proxy server end
  for servicing I/O requests to a specified image file. This does not create a DevioServiceBase
@@ -376,34 +376,34 @@ Arsenal.ImageMounter.Devio
  </summary>
  <param name="Imagefile">Image file.</param>
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
- <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+ <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetService(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType)">
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetService(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType)">
  <summary>
  Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
  for servicing I/O requests to a specified image file.
  </summary>
  <param name="Imagefile">Image file.</param>
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
- <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+ <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetService(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType,System.Boolean)">
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetService(System.String,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType,System.Boolean)">
  <summary>
  Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
  for servicing I/O requests to a specified image file.
  </summary>
  <param name="Imagefile">Image file.</param>
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
- <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+ <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
 </member>
-<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetService(System.String,System.IO.FileAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProxyType)">
+<member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetService(System.String,System.IO.FileAccess,Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType)">
  <summary>
  Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
  for servicing I/O requests to a specified image file.
  </summary>
  <param name="Imagefile">Image file.</param>
  <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
- <param name="Proxy">One of known image libraries that can handle specified image file.</param>
+ <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
 </member>
 <member name="M:Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.GetProviderDiscUtils(System.String,System.IO.FileAccess)">
  <summary>

@@ -1262,6 +1262,16 @@ Arsenal.ImageMounter
  </summary>
  <returns>Return value from CloseServiceHandle() Win32 API.</returns>
 </member>
+<member name="M:Arsenal.ImageMounter.IO.NativeStruct.OpenFileHandle(System.ReadOnlyMemory{System.Char},System.IO.FileAccess,System.IO.FileShare,System.IO.FileMode,System.Boolean)">
+ <summary>
+ Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
+ </summary>
+ <param name="FileName">Name of file to open.</param>
+ <param name="DesiredAccess">File access to request.</param>
+ <param name="ShareMode">Share mode to request.</param>
+ <param name="CreationDisposition">Open/creation mode.</param>
+ <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
+</member>
 <member name="M:Arsenal.ImageMounter.IO.NativeStruct.GetOffsetByFileExt(System.String)">
  <summary>
  Checks if filename contains a known extension for which PhDskMnt knows of a constant offset value. That value can be
