@@ -2370,7 +2370,7 @@ Currently, the following application has files open on this volume:
 
             Else
 
-                Return Nothing
+                Return GetPartitionInformationEx(SafeFileHandle)?.PartitionLength
 
             End If
 
@@ -3137,7 +3137,7 @@ Currently, the following application has files open on this volume:
 
         Public Shared Function GetPartitionInformationEx(DevicePath As ReadOnlyMemory(Of Char)) As PARTITION_INFORMATION_EX?
 
-            Using devicehandle = OpenFileHandle(DevicePath, FileAccess.Read, FileShare.ReadWrite, FileMode.Open, 0)
+            Using devicehandle = OpenFileHandle(DevicePath, 0, FileShare.ReadWrite, FileMode.Open, 0)
 
                 Return GetPartitionInformationEx(devicehandle)
 

@@ -1210,7 +1210,7 @@ public static class BufferExtensions
         }
 
         var delimiter_length = delimiter.Length;
-        var str = new string('\0', bytes.Length << 1 + delimiter_length * (bytes.Length - 1));
+        var str = new string('\0', (bytes.Length << 1) + delimiter_length * (bytes.Length - 1));
 
         var target = MemoryMarshal.AsMemory(str.AsMemory()).Span;
 

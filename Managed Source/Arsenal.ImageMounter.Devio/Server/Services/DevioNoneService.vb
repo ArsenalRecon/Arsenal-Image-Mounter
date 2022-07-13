@@ -44,7 +44,7 @@ Namespace Server.Services
         ''' </summary>
         ''' <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
         Public Sub New(Imagefile As String, DiskAccess As FileAccess)
-            Me.New(Imagefile, New FileInfo(Imagefile).Length, DiskAccess)
+            Me.New(Imagefile, NativeStruct.GetFileOrDiskSize(Imagefile), DiskAccess)
 
         End Sub
 

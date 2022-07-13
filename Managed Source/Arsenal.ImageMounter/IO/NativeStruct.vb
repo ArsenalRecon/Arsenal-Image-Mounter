@@ -14,10 +14,10 @@ Namespace IO
 
         Public ReadOnly Property IsOsWindows As Boolean = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
 
-        Public Function GetFileSize(path As ReadOnlyMemory(Of Char)) As Long
+        Public Function GetFileSize(path As String) As Long
 
             If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
-                Return New FileInfo(path.ToString()).Length
+                Return New FileInfo(path).Length
             End If
 
             Return NativeFileIO.GetFileSize(path)
@@ -76,7 +76,46 @@ Namespace IO
             End Using
 
         End Function
+
 #End If
+
+        Public Function GetFileOrDiskSize(imagefile As String) As Long
+
+            Dim attributes As FileAttributes = Nothing
+
+            If imagefile.StartsWith("/dev/", StringComparison.Ordinal) OrElse
+                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                (imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
+                imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
+                (Not NativeFileIO.TryGetFileAttributes(imagefile, attributes) OrElse
+                attributes.HasFlag(FileAttributes.Directory))) Then
+
+                Return GetDiskSize(imagefile)
+            Else
+
+                Return GetFileSize(imagefile)
+
+            End If
+
+        End Function
+
+        Public Function GetDiskSize(imagefile As String) As Long
+
+            Using disk As New DiskDevice(imagefile, FileAccess.Read)
+
+                Dim diskSize = disk.DiskSize
+
+                If Not diskSize.HasValue Then
+
+                    Throw New NotSupportedException($"Failed to identify size of device '{imagefile}'")
+
+                End If
+
+                Return diskSize.Value
+
+            End Using
+
+        End Function
 
         Public Function GetDiskSize(SafeFileHandle As SafeFileHandle) As Long?
 
