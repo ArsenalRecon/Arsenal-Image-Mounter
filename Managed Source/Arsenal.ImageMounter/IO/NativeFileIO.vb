@@ -3803,11 +3803,7 @@ Currently, the following application has files open on this volume:
             If DeviceObject.EndsWith("}"c) AndAlso
                 DeviceObject.StartsWith("\Device\Volume{", StringComparison.Ordinal) Then
 
-#If NET6_0_OR_GREATER Then
-                Return Enumerable.Append(Enumerable.Empty(Of String), String.Concat("\\?\", DeviceObject.AsSpan("\Device\".Length), "\"))
-#Else
                 Return {$"\\?\{DeviceObject.Substring("\Device\".Length)}\"}
-#End If
 
             End If
 

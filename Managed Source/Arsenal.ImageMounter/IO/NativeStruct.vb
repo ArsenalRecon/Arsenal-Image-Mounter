@@ -87,6 +87,7 @@ Namespace IO
                 (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
                 (imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
                 imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
+                Not HasExtension(imagefile) AndAlso
                 (Not NativeFileIO.TryGetFileAttributes(imagefile, attributes) OrElse
                 attributes.HasFlag(FileAttributes.Directory))) Then
 
@@ -96,6 +97,16 @@ Namespace IO
                 Return GetFileSize(imagefile)
 
             End If
+
+        End Function
+
+        Public Function HasExtension(filepath As String) As Boolean
+
+#If NETSTANDARD2_1_OR_GREATER OrElse NETCOREAPP Then
+            Return Not Path.GetExtension(filepath.AsSpan()).IsEmpty
+#Else
+            Return Not String.IsNullOrEmpty(Path.GetExtension(filepath))
+#End If
 
         End Function
 

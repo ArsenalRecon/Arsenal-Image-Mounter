@@ -388,6 +388,7 @@ Namespace Server.Interaction
                 (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
                 (Imagefile.StartsWith("\\?\", StringComparison.OrdinalIgnoreCase) OrElse
                 Imagefile.StartsWith("\\.\", StringComparison.OrdinalIgnoreCase)) AndAlso
+                Not HasExtension(Imagefile) AndAlso
                 (Not NativeFileIO.TryGetFileAttributes(Imagefile, attributes) OrElse
                 attributes.HasFlag(FileAttributes.Directory))) Then
 
@@ -991,7 +992,7 @@ Namespace Server.Interaction
             If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
                 (imagepath.StartsWith("\\?\", StringComparison.Ordinal) OrElse
                 imagepath.StartsWith("\\.\", StringComparison.Ordinal)) AndAlso
-                String.IsNullOrWhiteSpace(Path.GetExtension(imagepath)) Then
+                Not HasExtension(imagepath) Then
 
                 Dim vdisk As New DiskDevice(imagepath.AsMemory(), FileAccess.Read)
                 Dim diskstream = vdisk.GetRawDiskStream()
