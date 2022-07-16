@@ -92,7 +92,11 @@ public class AligningStream : Stream
         while (count > 0)
         {
             BaseStream.Position = Position;
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+            var blockSize = await BaseStream.ReadAsync(buffer.AsMemory(offset, count), token).ConfigureAwait(false);
+#else
             var blockSize = await BaseStream.ReadAsync(buffer, offset, count, token).ConfigureAwait(false);
+#endif
             Position = BaseStream.Position;
 
             if (blockSize == 0)
@@ -475,7 +479,11 @@ public class AligningStream : Stream
             }
 
             BaseStream.Position = Position;
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+            await BaseStream.WriteAsync(buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
+#else
             await BaseStream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+#endif
             Position = BaseStream.Position;
 
             if (suffix > 0)

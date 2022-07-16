@@ -157,7 +157,7 @@ Namespace Server.GenericProviders
 
             Using builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, CInt(provider.SectorSize)), Nothing)
 
-                provider.WriteToSkipEmptyBlocks(builder.Content, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=hashResults, completionPosition:=completionPosition, cancel:=cancel)
+                provider.WriteToSkipEmptyBlocks(builder.Content, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=hashResults, adjustTargetSize:=False, completionPosition:=completionPosition, cancel:=cancel)
 
             End Using
 
@@ -190,7 +190,7 @@ Namespace Server.GenericProviders
 
                 End If
 
-                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=hashResults, completionPosition:=completionPosition, cancel:=cancel)
+                provider.WriteToSkipEmptyBlocks(target, ImageConversionIoBufferSize, skipWriteZeroBlocks:=True, hashResults:=hashResults, adjustTargetSize:=True, completionPosition:=completionPosition, cancel:=cancel)
 
             End Using
 
@@ -201,7 +201,7 @@ Namespace Server.GenericProviders
 
             Using disk As New DiskDevice(outputDevice, FileAccess.ReadWrite)
 
-                provider.WriteToSkipEmptyBlocks(disk.GetRawDiskStream(), ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=Nothing, completionPosition:=completionPosition, cancel:=cancel)
+                provider.WriteToSkipEmptyBlocks(disk.GetRawDiskStream(), ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=Nothing, adjustTargetSize:=False, completionPosition:=completionPosition, cancel:=cancel)
 
             End Using
 
@@ -239,7 +239,7 @@ Namespace Server.GenericProviders
 
                 Using stream As New Client.DevioDirectStream(target, ownsProvider:=False)
 
-                    provider.WriteToSkipEmptyBlocks(stream, ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=hashResults, completionPosition:=completionPosition, cancel:=cancel)
+                    provider.WriteToSkipEmptyBlocks(stream, ImageConversionIoBufferSize, skipWriteZeroBlocks:=False, hashResults:=hashResults, adjustTargetSize:=False, completionPosition:=completionPosition, cancel:=cancel)
 
                 End Using
 
@@ -252,7 +252,7 @@ Namespace Server.GenericProviders
         End Sub
 
         <Extension>
-        Public Sub WriteToSkipEmptyBlocks(source As IDevioProvider, target As Stream, buffersize As Integer, skipWriteZeroBlocks As Boolean, hashResults As Dictionary(Of String, Byte()), completionPosition As CompletionPosition, cancel As CancellationToken)
+        Public Sub WriteToSkipEmptyBlocks(source As IDevioProvider, target As Stream, buffersize As Integer, skipWriteZeroBlocks As Boolean, adjustTargetSize As Boolean, hashResults As Dictionary(Of String, Byte()), completionPosition As CompletionPosition, cancel As CancellationToken)
 
             Using hashProviders As New DisposableDictionary(Of String, HashAlgorithm)(StringComparer.OrdinalIgnoreCase)
 
@@ -312,7 +312,8 @@ Namespace Server.GenericProviders
 
                 Loop
 
-                If target.Length <> target.Position Then
+                If adjustTargetSize AndAlso
+                    target.Length <> target.Position Then
 
                     target.SetLength(target.Position)
 
