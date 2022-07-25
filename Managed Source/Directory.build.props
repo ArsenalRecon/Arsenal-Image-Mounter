@@ -23,8 +23,8 @@
     <Product>Arsenal Image Mounter</Product>
     <Copyright>Copyright © Arsenal Recon, 2015 - 2022</Copyright>
     <Trademark />
-    <FileVersion>3.9.213.0</FileVersion>
-    <ProductVersion>3.9.213.0</ProductVersion>
+    <FileVersion>3.9.217.0</FileVersion>
+    <ProductVersion>3.9.217.0</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
 
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -32,6 +32,9 @@
     <Company>Arsenal Recon</Company>
     <PackageVersion>$(FileVersion)</PackageVersion>
     <PackageOutputPath>$(LocalNuGetPath)</PackageOutputPath>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
   </PropertyGroup>
 
