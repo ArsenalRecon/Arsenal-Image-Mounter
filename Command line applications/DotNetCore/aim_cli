@@ -1,2 +1,2 @@
 #!/bin/sh
-exec dotnet $0.dll $@
+exec dotnet $0.dll "$@"
