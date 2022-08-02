@@ -187,22 +187,6 @@
             <param name="value"></param>
             <param name="valueKind"></param>
         </member>
-        <member name="T:Arsenal.ImageMounter.Dialogs.InputBox">
-            <summary>
-            Simple InputBox implementation for C#.
-            Based on: https://stackoverflow.com/questions/97097/what-is-the-c-sharp-version-of-vb-nets-inputdialog
-            </summary>
-        </member>
-        <member name="M:Arsenal.ImageMounter.Dialogs.InputBox.ShowInputDialog(System.Windows.Forms.IWin32Window,System.String,System.String,System.String@)">
-            <summary>
-            Simple InputBox implementation for C#.
-            </summary>
-            <param name="owner">Owning window</param>
-            <param name="input">Input/output string</param>
-            <param name="title">Dialog title</param>
-            <param name="labelText">Text on label in dialog box</param>
-            <returns>DialogResult indicating which button user clicked</returns>
-        </member>
         <member name="T:Arsenal.ImageMounter.Dialogs.NativeWindowHandle">
             <summary>
             Implements <see cref="T:System.Windows.Forms.IWin32Window"/> using a native window handle

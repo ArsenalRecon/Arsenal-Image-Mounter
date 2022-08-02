@@ -923,10 +923,157 @@ public sealed class SafeFindHandle : SafeHandleMinusOneIsInvalid
 
 public enum DeviceType
 {
+    Beep = 0x1,
 
     CdRom = 0x2,
 
-    Disk = 0x7
+    CdRomFileSystem = 0x3,
+
+    Controller = 0x4,
+
+    DataLink = 0x5,
+
+    DFS = 0x6,
+
+    Disk = 0x7,
+
+    DiskFileSystem = 0x8,
+
+    FileSystem = 0x9,
+
+    InportPort = 0xa,
+
+    Keyboard = 0xb,
+
+    MailSlot = 0xc,
+
+    MidiIn = 0xd,
+
+    MidiOut = 0xe,
+
+    Mouse = 0xf,
+
+    MultiUncProvider = 0x10,
+
+    NamedPipe = 0x11,
+
+    Network = 0x12,
+
+    NetworkBrowser = 0x13,
+
+    NetworkFileSystem = 0x14,
+
+    Null = 0x15,
+
+    ParallelPort = 0x16,
+
+    PhysicalNetcard = 0x17,
+
+    Printer = 0x18,
+
+    Scanner = 0x19,
+
+    SerialMousePort = 0x1a,
+
+    SerialPort = 0x1b,
+
+    Screen = 0x1c,
+
+    Sound = 0x1d,
+
+    Streams = 0x1e,
+
+    Tape = 0x1f,
+
+    TapeFileSystem = 0x20,
+
+    Transport = 0x21,
+
+    Unknown = 0x22,
+
+    Video = 0x23,
+
+    VirtualDisk = 0x24,
+
+    WaveIn = 0x25,
+
+    WaveOut = 0x26,
+
+    i8042Port = 0x27,
+
+    NetworkRedirector = 0x28,
+
+    Battery = 0x29,
+
+    BusExtender = 0x2a,
+
+    Modem = 0x2b,
+
+    VDM = 0x2c,
+
+    MassStorage = 0x2d,
+
+    SMB = 0x2e,
+
+    KS = 0x2f,
+
+    Changer = 0x30,
+
+    SmartCard = 0x31,
+
+    ACPI = 0x32,
+
+    DVD = 0x33,
+
+    FullscreenVideo = 0x34,
+
+    DfsFileSystem = 0x35,
+
+    DfsVolume = 0x36,
+
+    SerEnum = 0x37,
+
+    TermSrv = 0x38,
+
+    KSec = 0x39,
+
+    FIPS = 0x3a,
+
+    InfiniBand = 0x3b,
+
+    VMBus = 0x3e,
+
+    CryptProvider = 0x3f,
+
+    WPD = 0x40,
+
+    Bluetooth = 0x41,
+
+    MTComposite = 0x42,
+
+    MTTransport = 0x43,
+
+    Biometric = 0x44,
+
+    PMI = 0x45,
+
+    EhStor = 0x46,
+
+    DevApi = 0x47,
+
+    GPIO = 0x48,
+
+    USBEx = 0x49,
+
+    Console = 0x50,
+
+    NFP = 0x51,
+
+    SysEnv = 0x52,
+
+    VirtualBlock = 0x53,
+
+    PointOfService = 0x54
 
 }
 

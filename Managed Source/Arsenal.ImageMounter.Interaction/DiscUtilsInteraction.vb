@@ -109,9 +109,9 @@ Namespace Server.Interaction
 
         Public Shared Function InteractiveCreateRAMDisk(owner As IWin32Window, adapter As ScsiAdapter) As RAMDiskService
 
-            Dim strsize = "0"
+            Dim strsize = InputBox("Enter size in MB", "RAM disk")
 
-            If InputBox.ShowInputDialog(owner, "Enter size in MB", "RAM disk", strsize) <> DialogResult.OK Then
+            If String.IsNullOrWhiteSpace(strsize) Then
                 Return Nothing
             End If
 
