@@ -8,87 +8,87 @@
     ".NETCoreApp,Version=v6.0": {
       "ArsenalImageMounterMountTool/1.0.0": {
         "dependencies": {
-          "Arsenal.ImageMounter": "3.9.222",
-          "Arsenal.ImageMounter.Devio": "3.9.222",
-          "Arsenal.ImageMounter.Interaction": "3.9.222"
+          "Arsenal.ImageMounter": "3.9.223",
+          "Arsenal.ImageMounter.Devio": "3.9.223",
+          "Arsenal.ImageMounter.Interaction": "3.9.223"
         },
         "runtime": {
           "ArsenalImageMounterMountTool.dll": {}
         }
       },
-      "LTRData.DiscUtils.Core/1.0.6": {
+      "LTRData.DiscUtils.Core/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Streams": "1.0.6",
+          "LTRData.DiscUtils.Streams": "1.0.7",
           "System.Text.Encoding.CodePages": "4.6.0"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Core.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Dmg/1.0.6": {
+      "LTRData.DiscUtils.Dmg/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6",
+          "LTRData.DiscUtils.Core": "1.0.7",
           "lzfse-net": "1.0.15"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Dmg.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Fat/1.0.6": {
+      "LTRData.DiscUtils.Fat/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6",
+          "LTRData.DiscUtils.Core": "1.0.7",
           "System.Text.Encoding.CodePages": "4.6.0"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Fat.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Iso9660/1.0.6": {
+      "LTRData.DiscUtils.Iso9660/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6"
+          "LTRData.DiscUtils.Core": "1.0.7"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Iso9660.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Ntfs/1.0.6": {
+      "LTRData.DiscUtils.Ntfs/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6",
+          "LTRData.DiscUtils.Core": "1.0.7",
           "System.ValueTuple": "4.5.0"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Ntfs.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.OpticalDisk/1.0.6": {
+      "LTRData.DiscUtils.OpticalDisk/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6",
-          "LTRData.DiscUtils.Iso9660": "1.0.6",
-          "LTRData.DiscUtils.Udf": "1.0.6"
+          "LTRData.DiscUtils.Core": "1.0.7",
+          "LTRData.DiscUtils.Iso9660": "1.0.7",
+          "LTRData.DiscUtils.Udf": "1.0.7"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.OpticalDisk.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Streams/1.0.6": {
+      "LTRData.DiscUtils.Streams/1.0.7": {
         "dependencies": {
           "System.Memory": "4.5.5",
           "System.Security.Cryptography.Algorithms": "4.3.1",
@@ -97,74 +97,74 @@
         "runtime": {
           "lib/net6.0/DiscUtils.Streams.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Udf/1.0.6": {
+      "LTRData.DiscUtils.Udf/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6",
-          "LTRData.DiscUtils.Iso9660": "1.0.6"
+          "LTRData.DiscUtils.Core": "1.0.7",
+          "LTRData.DiscUtils.Iso9660": "1.0.7"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Udf.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Vdi/1.0.6": {
+      "LTRData.DiscUtils.Vdi/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6"
+          "LTRData.DiscUtils.Core": "1.0.7"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Vdi.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Vhd/1.0.6": {
+      "LTRData.DiscUtils.Vhd/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6"
+          "LTRData.DiscUtils.Core": "1.0.7"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Vhd.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Vhdx/1.0.6": {
+      "LTRData.DiscUtils.Vhdx/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6"
+          "LTRData.DiscUtils.Core": "1.0.7"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Vhdx.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Vmdk/1.0.6": {
+      "LTRData.DiscUtils.Vmdk/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6"
+          "LTRData.DiscUtils.Core": "1.0.7"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Vmdk.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
-      "LTRData.DiscUtils.Xva/1.0.6": {
+      "LTRData.DiscUtils.Xva/1.0.7": {
         "dependencies": {
-          "LTRData.DiscUtils.Core": "1.0.6"
+          "LTRData.DiscUtils.Core": "1.0.7"
         },
         "runtime": {
           "lib/net6.0/DiscUtils.Xva.dll": {
             "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.6.0"
+            "fileVersion": "1.0.7.0"
           }
         }
       },
@@ -485,9 +485,9 @@
       },
       "System.Threading.Tasks.Extensions/4.5.4": {},
       "System.ValueTuple/4.5.0": {},
-      "Arsenal.ImageMounter/3.9.222": {
+      "Arsenal.ImageMounter/3.9.223": {
         "dependencies": {
-          "Arsenal.ImageMounter.Interop": "3.9.222",
+          "Arsenal.ImageMounter.Interop": "3.9.223",
           "Microsoft.Win32.Registry": "5.0.0",
           "System.Buffers": "4.5.1",
           "System.IO.FileSystem.AccessControl": "5.0.0",
@@ -497,41 +497,41 @@
           "Arsenal.ImageMounter.dll": {}
         }
       },
-      "Arsenal.ImageMounter.Devio/3.9.222": {
+      "Arsenal.ImageMounter.Devio/3.9.223": {
         "dependencies": {
-          "Arsenal.ImageMounter": "3.9.222",
-          "Arsenal.ImageMounter.Devio.Interop": "3.9.222",
-          "Arsenal.ImageMounter.Interop": "3.9.222",
-          "LTRData.DiscUtils.Core": "1.0.6",
-          "LTRData.DiscUtils.Dmg": "1.0.6",
-          "LTRData.DiscUtils.Fat": "1.0.6",
-          "LTRData.DiscUtils.Ntfs": "1.0.6",
-          "LTRData.DiscUtils.OpticalDisk": "1.0.6",
-          "LTRData.DiscUtils.Streams": "1.0.6",
-          "LTRData.DiscUtils.Vdi": "1.0.6",
-          "LTRData.DiscUtils.Vhd": "1.0.6",
-          "LTRData.DiscUtils.Vhdx": "1.0.6",
-          "LTRData.DiscUtils.Vmdk": "1.0.6",
-          "LTRData.DiscUtils.Xva": "1.0.6",
+          "Arsenal.ImageMounter": "3.9.223",
+          "Arsenal.ImageMounter.Devio.Interop": "3.9.223",
+          "Arsenal.ImageMounter.Interop": "3.9.223",
+          "LTRData.DiscUtils.Core": "1.0.7",
+          "LTRData.DiscUtils.Dmg": "1.0.7",
+          "LTRData.DiscUtils.Fat": "1.0.7",
+          "LTRData.DiscUtils.Ntfs": "1.0.7",
+          "LTRData.DiscUtils.OpticalDisk": "1.0.7",
+          "LTRData.DiscUtils.Streams": "1.0.7",
+          "LTRData.DiscUtils.Vdi": "1.0.7",
+          "LTRData.DiscUtils.Vhd": "1.0.7",
+          "LTRData.DiscUtils.Vhdx": "1.0.7",
+          "LTRData.DiscUtils.Vmdk": "1.0.7",
+          "LTRData.DiscUtils.Xva": "1.0.7",
           "System.Memory": "4.5.5"
         },
         "runtime": {
           "Arsenal.ImageMounter.Devio.dll": {}
         }
       },
-      "Arsenal.ImageMounter.Devio.Interop/3.9.222": {
+      "Arsenal.ImageMounter.Devio.Interop/3.9.223": {
         "dependencies": {
-          "Arsenal.ImageMounter": "3.9.222",
-          "Arsenal.ImageMounter.Interop": "3.9.222",
+          "Arsenal.ImageMounter": "3.9.223",
+          "Arsenal.ImageMounter.Interop": "3.9.223",
           "System.ValueTuple": "4.5.0"
         },
         "runtime": {
           "Arsenal.ImageMounter.Devio.Interop.dll": {}
         }
       },
-      "Arsenal.ImageMounter.Dialogs/3.9.222": {
+      "Arsenal.ImageMounter.Dialogs/3.9.223": {
         "dependencies": {
-          "Arsenal.ImageMounter": "3.9.222",
+          "Arsenal.ImageMounter": "3.9.223",
           "Microsoft.Win32.Registry": "5.0.0",
           "System.IO.FileSystem.AccessControl": "5.0.0",
           "System.Memory": "4.5.5",
@@ -541,33 +541,33 @@
           "Arsenal.ImageMounter.Dialogs.dll": {}
         }
       },
-      "Arsenal.ImageMounter.Interaction/3.9.222": {
+      "Arsenal.ImageMounter.Interaction/3.9.223": {
         "dependencies": {
-          "Arsenal.ImageMounter": "3.9.222",
-          "Arsenal.ImageMounter.Devio": "3.9.222",
-          "Arsenal.ImageMounter.Devio.Interop": "3.9.222",
-          "Arsenal.ImageMounter.Dialogs": "3.9.222",
-          "Arsenal.ImageMounter.Interop": "3.9.222",
-          "LTRData.DiscUtils.Core": "1.0.6",
-          "LTRData.DiscUtils.Dmg": "1.0.6",
-          "LTRData.DiscUtils.Fat": "1.0.6",
-          "LTRData.DiscUtils.Ntfs": "1.0.6",
-          "LTRData.DiscUtils.OpticalDisk": "1.0.6",
-          "LTRData.DiscUtils.Streams": "1.0.6",
-          "LTRData.DiscUtils.Vdi": "1.0.6",
-          "LTRData.DiscUtils.Vhd": "1.0.6",
-          "LTRData.DiscUtils.Vhdx": "1.0.6",
-          "LTRData.DiscUtils.Vmdk": "1.0.6",
-          "LTRData.DiscUtils.Xva": "1.0.6",
+          "Arsenal.ImageMounter": "3.9.223",
+          "Arsenal.ImageMounter.Devio": "3.9.223",
+          "Arsenal.ImageMounter.Devio.Interop": "3.9.223",
+          "Arsenal.ImageMounter.Dialogs": "3.9.223",
+          "Arsenal.ImageMounter.Interop": "3.9.223",
+          "LTRData.DiscUtils.Core": "1.0.7",
+          "LTRData.DiscUtils.Dmg": "1.0.7",
+          "LTRData.DiscUtils.Fat": "1.0.7",
+          "LTRData.DiscUtils.Ntfs": "1.0.7",
+          "LTRData.DiscUtils.OpticalDisk": "1.0.7",
+          "LTRData.DiscUtils.Streams": "1.0.7",
+          "LTRData.DiscUtils.Vdi": "1.0.7",
+          "LTRData.DiscUtils.Vhd": "1.0.7",
+          "LTRData.DiscUtils.Vhdx": "1.0.7",
+          "LTRData.DiscUtils.Vmdk": "1.0.7",
+          "LTRData.DiscUtils.Xva": "1.0.7",
           "System.Memory": "4.5.5"
         },
         "runtime": {
           "Arsenal.ImageMounter.Interaction.dll": {}
         }
       },
-      "Arsenal.ImageMounter.Interop/3.9.222": {
+      "Arsenal.ImageMounter.Interop/3.9.223": {
         "dependencies": {
-          "LTRData.DiscUtils.Streams": "1.0.6",
+          "LTRData.DiscUtils.Streams": "1.0.7",
           "System.Memory": "4.5.5",
           "System.Threading.Tasks.Extensions": "4.5.4"
         },
@@ -583,96 +583,96 @@
       "serviceable": false,
       "sha512": ""
     },
-    "LTRData.DiscUtils.Core/1.0.6": {
+    "LTRData.DiscUtils.Core/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-Vj+dc+yUIW9Lbzj4IVNHsx4bqsxwVK/IEsH2FQRrCKTBg80oH7Kg1VNjACXBofChoPZgRhMQ0KGOa6ua4x7c5w==",
-      "path": "ltrdata.discutils.core/1.0.6",
-      "hashPath": "ltrdata.discutils.core.1.0.6.nupkg.sha512"
+      "sha512": "sha512-1te7a00kllX3NHzvFLPWhjl1l1Yz8xi8aoFcbHFfrlZZk07bCU8VOTpdiq65naKTt9TJ183H6YPUAt80msvdEA==",
+      "path": "ltrdata.discutils.core/1.0.7",
+      "hashPath": "ltrdata.discutils.core.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Dmg/1.0.6": {
+    "LTRData.DiscUtils.Dmg/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-ijuhQyEKazHHxr7o50Jf6ZRkFCUFY4kc6Nm7hJL07nuhcomxVgjdcMMqNIJchjfmThjOwvuk84AOd8YEHK8FhA==",
-      "path": "ltrdata.discutils.dmg/1.0.6",
-      "hashPath": "ltrdata.discutils.dmg.1.0.6.nupkg.sha512"
+      "sha512": "sha512-Vgn5vHNqaO2/jGIjQv5r4EXufySqUS70bxfiXxlY6rlmFLwQ5VUY4Ay/SHeKrK05hA3/wfTvNLUbq8exdWyG0g==",
+      "path": "ltrdata.discutils.dmg/1.0.7",
+      "hashPath": "ltrdata.discutils.dmg.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Fat/1.0.6": {
+    "LTRData.DiscUtils.Fat/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-lFR5qNMm06vlheG248m/VsX2DVytWDJYzygQ/ShqFQs6v/tbraMn2bh0ez8anrAb2JVgf+9pyZ0KYeRwv7iAyg==",
-      "path": "ltrdata.discutils.fat/1.0.6",
-      "hashPath": "ltrdata.discutils.fat.1.0.6.nupkg.sha512"
+      "sha512": "sha512-cBK+B4jGg1KKR67O7JlLgJbdNS1AxdOz8Ytbe8LfysOgty5s7YhfRDzFJS4xAIA3nR4jsTwVjl1HLkYAmyRk4A==",
+      "path": "ltrdata.discutils.fat/1.0.7",
+      "hashPath": "ltrdata.discutils.fat.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Iso9660/1.0.6": {
+    "LTRData.DiscUtils.Iso9660/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-HIfFo1xJ7CYCNrIZWOBbwcKHFQa5ST2pb2Xt4ibxVpymr8Vs/6gnaIFLhHAACWrUw7afaPFluWvz23SOxAg+ag==",
-      "path": "ltrdata.discutils.iso9660/1.0.6",
-      "hashPath": "ltrdata.discutils.iso9660.1.0.6.nupkg.sha512"
+      "sha512": "sha512-L/HJLHeWaM3aw5hgjFoE5igsQDxCtQXI47ybasTFjIyhlMtZlXHOWbTyrfDrR/UBWco0HheqTCKV+FETYeb92w==",
+      "path": "ltrdata.discutils.iso9660/1.0.7",
+      "hashPath": "ltrdata.discutils.iso9660.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Ntfs/1.0.6": {
+    "LTRData.DiscUtils.Ntfs/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-Inlr/QekrULLRd6uOEweDVsioSlHrUcXEN6pN7dPuneHHYbmX+bQILKYSVY4qPkth3WS1x3fYA/ECzZ9fxNYJA==",
-      "path": "ltrdata.discutils.ntfs/1.0.6",
-      "hashPath": "ltrdata.discutils.ntfs.1.0.6.nupkg.sha512"
+      "sha512": "sha512-MJLxGmuZDzKmZaNiG3bn/9C85EQRYdy7vsq9ydZQPA4qKAq5zDmbHp/X02qVOa1ghzaQSiczyXQOX24hbh0aKw==",
+      "path": "ltrdata.discutils.ntfs/1.0.7",
+      "hashPath": "ltrdata.discutils.ntfs.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.OpticalDisk/1.0.6": {
+    "LTRData.DiscUtils.OpticalDisk/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-a91c3/CnYDkV0SxbgYWRR2M0YMgwkHYrEyUa3tdd+Q6y2ZRXXfKy134iQU0PZdPQJx0/LA9EAy5Mi+ukSYvAhw==",
-      "path": "ltrdata.discutils.opticaldisk/1.0.6",
-      "hashPath": "ltrdata.discutils.opticaldisk.1.0.6.nupkg.sha512"
+      "sha512": "sha512-3WIQ8iTT//NKCs9UERt5CR09h1s9dznWnWB3HOsPBjbutyOHRdlw6NnB0j8vOdqu980+XbnwqyWT/OP6PI8a5A==",
+      "path": "ltrdata.discutils.opticaldisk/1.0.7",
+      "hashPath": "ltrdata.discutils.opticaldisk.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Streams/1.0.6": {
+    "LTRData.DiscUtils.Streams/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-FwSsI+m01rboWATznXQkHjQGZCc3gYPSKtYEM8TSus1RbG4YP/vVpBUC3g5VG/qPTnXv5PNEm9Rhoqnp5omL/Q==",
-      "path": "ltrdata.discutils.streams/1.0.6",
-      "hashPath": "ltrdata.discutils.streams.1.0.6.nupkg.sha512"
+      "sha512": "sha512-lFhd/xd96dSGe+vHQaUCAa8Iwi9yXq6jUdh7QDhJsEK27XMAG8coZIoxkyO7wCkg0836CSoftTlyrxkqnrASsQ==",
+      "path": "ltrdata.discutils.streams/1.0.7",
+      "hashPath": "ltrdata.discutils.streams.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Udf/1.0.6": {
+    "LTRData.DiscUtils.Udf/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-pa0eoiHiE/6LyX5c4xpxKiYss28YQEWb/RV8R2FJ9RbtBbbhBE8roVfTtevElYAeF8eCoPmq96ZORUBJRafyOQ==",
-      "path": "ltrdata.discutils.udf/1.0.6",
-      "hashPath": "ltrdata.discutils.udf.1.0.6.nupkg.sha512"
+      "sha512": "sha512-DQUw+QvM1yKS/ThIQgN0zRsfYvuhHSo0MADknUQZCIN6/+iNK5FEaI0DxfVA3npm3FTuqU9QfIteGTBUFu9i+g==",
+      "path": "ltrdata.discutils.udf/1.0.7",
+      "hashPath": "ltrdata.discutils.udf.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Vdi/1.0.6": {
+    "LTRData.DiscUtils.Vdi/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-cyt1W0eaoUoZdakl3tjYTbETgOOH0/ztvaAVGILxNSDZJOx1S/VoIic9NqEx/fLw0ljpsZxyC/JiPXoDyGYZmg==",
-      "path": "ltrdata.discutils.vdi/1.0.6",
-      "hashPath": "ltrdata.discutils.vdi.1.0.6.nupkg.sha512"
+      "sha512": "sha512-4o1UXTnyNb3BZbx4TcplVS6wCdoR/HKdMGTnhcmcp/G3Y5BFyxWiPhxBGSyI7JOdl0jpj7ID8Zqn3piGOyI4Hg==",
+      "path": "ltrdata.discutils.vdi/1.0.7",
+      "hashPath": "ltrdata.discutils.vdi.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Vhd/1.0.6": {
+    "LTRData.DiscUtils.Vhd/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-zqR/+eseHQHac8rqsqbSH4kuge9iOBxOciZWYvRMfgigeuFf+Yh8q8Yb1u1T3M00igaj2YnS2651/gFl9sFQag==",
-      "path": "ltrdata.discutils.vhd/1.0.6",
-      "hashPath": "ltrdata.discutils.vhd.1.0.6.nupkg.sha512"
+      "sha512": "sha512-f4vAI9tA9K1yauuwgIMXrnAKa4ezLCZzNzQVaxKkhidRXCjfTHaRbHlotfM2G7v2v2VVEC6HRn493OmwSIVo0Q==",
+      "path": "ltrdata.discutils.vhd/1.0.7",
+      "hashPath": "ltrdata.discutils.vhd.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Vhdx/1.0.6": {
+    "LTRData.DiscUtils.Vhdx/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-lFAKkr30hkwCeDzqqU3PfcAy9JIN1DD/WsoY/iqxhFPAX7LVGLdPi/WDo2pL5yh1kMA7ceDlHbRpkTFDbKN7XA==",
-      "path": "ltrdata.discutils.vhdx/1.0.6",
-      "hashPath": "ltrdata.discutils.vhdx.1.0.6.nupkg.sha512"
+      "sha512": "sha512-2qSTLj7BTGC6XkZ0KoZ4Q55UR58TF/iPjn18uJaJAqPrESC8bt0VipA21T3VTd3XWtLFIkCrEcC4aENO1q0GQQ==",
+      "path": "ltrdata.discutils.vhdx/1.0.7",
+      "hashPath": "ltrdata.discutils.vhdx.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Vmdk/1.0.6": {
+    "LTRData.DiscUtils.Vmdk/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-s3yaNgApewABRRvkZwu0X9U38Ex7zLyeOg/mHS2p3PQ78pL4XElJ5gHs038UwjA7yLf5MGoBGx61h0pdTW+xFg==",
-      "path": "ltrdata.discutils.vmdk/1.0.6",
-      "hashPath": "ltrdata.discutils.vmdk.1.0.6.nupkg.sha512"
+      "sha512": "sha512-i6sBXVUQRqkU77cn5uLf21Kn0tmckH6xUggeFQe4CBe9GUs/grDLCvoHkGM0aRBFS1ZM7FZYJBj/dFd/42pGow==",
+      "path": "ltrdata.discutils.vmdk/1.0.7",
+      "hashPath": "ltrdata.discutils.vmdk.1.0.7.nupkg.sha512"
     },
-    "LTRData.DiscUtils.Xva/1.0.6": {
+    "LTRData.DiscUtils.Xva/1.0.7": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-lvLQ4NUNbXX3tgRjtWKdgGN81WQbExqbYHMbe2aKwR23M5UHsVuyC9uD31bu2WqgzWDkhbaxOFBBc4pqkzc72g==",
-      "path": "ltrdata.discutils.xva/1.0.6",
-      "hashPath": "ltrdata.discutils.xva.1.0.6.nupkg.sha512"
+      "sha512": "sha512-J2sBhf/6YhKEHs09IXJwzWCR1iNJ5gSKbKNaxPrPZrtNTQsie1/FS3lFhaJ9/unqfVzVPRKjshRIV0MaxXA6pA==",
+      "path": "ltrdata.discutils.xva/1.0.7",
+      "hashPath": "ltrdata.discutils.xva.1.0.7.nupkg.sha512"
     },
     "lzfse-net/1.0.15": {
       "type": "package",
@@ -1010,32 +1010,32 @@
       "path": "system.valuetuple/4.5.0",
       "hashPath": "system.valuetuple.4.5.0.nupkg.sha512"
     },
-    "Arsenal.ImageMounter/3.9.222": {
+    "Arsenal.ImageMounter/3.9.223": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Arsenal.ImageMounter.Devio/3.9.222": {
+    "Arsenal.ImageMounter.Devio/3.9.223": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Arsenal.ImageMounter.Devio.Interop/3.9.222": {
+    "Arsenal.ImageMounter.Devio.Interop/3.9.223": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Arsenal.ImageMounter.Dialogs/3.9.222": {
+    "Arsenal.ImageMounter.Dialogs/3.9.223": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Arsenal.ImageMounter.Interaction/3.9.222": {
+    "Arsenal.ImageMounter.Interaction/3.9.223": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Arsenal.ImageMounter.Interop/3.9.222": {
+    "Arsenal.ImageMounter.Interop/3.9.223": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
