@@ -71,6 +71,15 @@ Public Module ServerModule
 
             If commands.ContainsKey("background") Then
 
+                If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+
+                    Console.ForegroundColor = ConsoleColor.Red
+                    Console.Error.WriteLine("The --background switch is only supported on Windows")
+                    Console.ResetColor()
+                    Return -1
+
+                End If
+
                 Using ready_wait As New ManualResetEvent(initialState:=False)
 
                     NativeFileIO.SetInheritable(ready_wait.SafeWaitHandle, inheritable:=True)
@@ -148,21 +157,25 @@ Public Module ServerModule
     End Function
 
     Public ReadOnly AssemblyLocation As String = Assembly.GetExecutingAssembly().Location
-    Public ReadOnly AssemblyFileVersion As Version = NativeFileIO.GetFileVersion(AssemblyLocation).FileVersion
+    Public ReadOnly AssemblyFileVersion As Version = NativePE.GetFixedFileVerInfo(AssemblyLocation).FileVersion
 
     Public Sub ShowVersionInfo()
 
         Dim driver_ver As String
 
-        Try
-            Using adapter As New ScsiAdapter
-                driver_ver = $"Driver version: {adapter.GetDriverSubVersion()}"
-            End Using
+        If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+            Try
+                Using adapter As New ScsiAdapter
+                    driver_ver = $"Driver version: {adapter.GetDriverSubVersion()}"
+                End Using
 
-        Catch ex As Exception
-            driver_ver = $"Error checking driver version: {ex.JoinMessages()}"
+            Catch ex As Exception
+                driver_ver = $"Error checking driver version: {ex.JoinMessages()}"
 
-        End Try
+            End Try
+        Else
+            driver_ver = "Driver is only available on Windows"
+        End If
 
         Console.WriteLine(
             $"Integrated command line interface to Arsenal Image Mounter virtual
@@ -204,6 +217,7 @@ Please see EULA.txt for license information.")
         Dim detach_event As SafeWaitHandle = Nothing
         Dim fake_mbr As Boolean
         Dim auto_delete As Boolean
+        Dim list_devices As Boolean
 
         For Each cmd In commands
 
@@ -305,7 +319,7 @@ Please see EULA.txt for license information.")
                 ShowVersionInfo()
                 Return 0
             ElseIf arg.Equals("list", StringComparison.OrdinalIgnoreCase) AndAlso cmd.Value.Length = 0 Then
-                ListDevices()
+                list_devices = True
                 Return 0
             ElseIf arg.Length = 0 Then
                 Console.WriteLine($"Unsupported command line argument: {cmd.Value.FirstOrDefault()}")
@@ -317,6 +331,23 @@ Please see EULA.txt for license information.")
                 Exit For
             End If
         Next
+
+        If list_devices Then
+
+            If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+
+                Console.ForegroundColor = ConsoleColor.Red
+                Console.Error.WriteLine("The --list switch is only supported on Windows")
+                Console.ResetColor()
+                Return -1
+
+            End If
+
+            ListDevices()
+
+            Return 0
+
+        End If
 
         If _
             show_help OrElse
@@ -367,6 +398,15 @@ Syntax to dismount a mounted device:
         End If
 
         If Not String.IsNullOrWhiteSpace(dismount) Then
+
+            If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+
+                Console.ForegroundColor = ConsoleColor.Red
+                Console.Error.WriteLine("The --dismount switch is only supported on Windows")
+                Console.ResetColor()
+                Return -1
+
+            End If
 
             Dim devicenumber As UInteger
 
@@ -696,7 +736,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
                 Dim t = Task.Factory.StartNew(
                     Sub()
 
-                        If String.IsNullOrWhiteSpace(image_type) AndAlso
+                        If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) AndAlso
+                            String.IsNullOrWhiteSpace(image_type) AndAlso
                             (outputImage.StartsWith("\\?\", StringComparison.Ordinal) OrElse
                             outputImage.StartsWith("\\.\", StringComparison.Ordinal)) Then
 
@@ -842,6 +883,10 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100")
     End Sub
 
     Private Sub CloseConsole(DetachEvent As SafeWaitHandle)
+
+        If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+            Return
+        End If
 
         Using DetachEvent
             NativeFileIO.SetEvent(DetachEvent)

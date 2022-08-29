@@ -1703,7 +1703,7 @@ public readonly struct ScsiAddressAndLength : IEquatable<ScsiAddressAndLength>
 
     public override bool Equals(object obj) => obj is ScsiAddressAndLength length && Equals(length);
 
-    public override int GetHashCode() => ScsiAddress.GetHashCode() ^ Length.GetHashCode();
+    public override int GetHashCode() => HashCode.Combine(ScsiAddress, Length);
 
     public override string ToString() => $"{ScsiAddress}, Length = {Length}";
 

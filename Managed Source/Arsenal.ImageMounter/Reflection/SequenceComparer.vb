@@ -17,15 +17,15 @@ Namespace Reflection
         End Sub
 
         Public Overloads Function Equals(x As IEnumerable(Of T), y As IEnumerable(Of T)) As Boolean Implements IEqualityComparer(Of IEnumerable(Of T)).Equals
-            Return x.SequenceEqual(y, _ItemComparer)
+            Return ReferenceEquals(x, y) OrElse x.SequenceEqual(y, _ItemComparer)
         End Function
 
         Public Overloads Function GetHashCode(obj As IEnumerable(Of T)) As Integer Implements IEqualityComparer(Of IEnumerable(Of T)).GetHashCode
-            Dim result As Integer
+            Dim result As New HashCode
             For Each item In obj
-                result = result Xor _ItemComparer.GetHashCode(item)
+                result.Add(item, _ItemComparer)
             Next
-            Return result
+            Return result.ToHashCode()
         End Function
 
     End Class

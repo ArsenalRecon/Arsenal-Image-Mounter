@@ -9,6 +9,7 @@ Imports DiscUtils.Partitions
 Imports Buffer = System.Buffer
 Imports System.Buffers
 Imports System.Runtime.InteropServices
+Imports System.Diagnostics.CodeAnalysis
 
 Namespace Server.Interaction
 
@@ -107,6 +108,7 @@ Namespace Server.Interaction
 
         End Sub
 
+        <SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification:="Maintain library compatibility")>
         Public Shared Function InteractiveCreateRAMDisk(owner As IWin32Window, adapter As ScsiAdapter) As RAMDiskService
 
             Dim strsize = InputBox("Enter size in MB", "RAM disk")

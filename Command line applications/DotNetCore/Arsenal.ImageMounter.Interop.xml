@@ -296,53 +296,6 @@
             Product version from fixed numeric fields
             </summary>
         </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetImageNtHeaders(System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Gets IMAGE_NT_HEADERS structure from raw PE image
-            </summary>
-            <param name="FileData">Raw exe or dll data</param>
-            <returns>IMAGE_NT_HEADERS structure</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetFixedFileVerInfo(System.ReadOnlySpan{System.Byte})">
-            <summary>
-            Returns a copy of fixed file version fields in a PE image
-            </summary>
-            <param name="FileData">Pointer to raw or mapped exe or dll</param>
-            <returns>Copy of data from located version resource</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetRawFileVersionResource(System.ReadOnlySpan{System.Byte},System.Int32@)">
-            <summary>
-            Locates version resource in a PE image
-            </summary>
-            <param name="FileData">Pointer to raw or mapped exe or dll</param>
-            <param name="ResourceSize">Returns size of found resource</param>
-            <returns>Reference to located version resource</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueInt(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String)">
-            <summary>
-            Gets numeric block from PE version resource
-            </summary>
-            <param name="versionResource">Pointer to version resource</param>
-            <param name="SubBlock">Name of sub block</param>
-            <returns>Located uint value, or null if not found</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueString(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String)">
-            <summary>
-            Gets string block from PE version resource
-            </summary>
-            <param name="versionResource">Pointer to version resource</param>
-            <param name="SubBlock">Name of sub block</param>
-            <returns>Pointer to located string, or null if not found</returns>
-        </member>
-        <member name="M:Arsenal.ImageMounter.IO.NativePE.QueryValueWithTranslation(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String,System.UInt32)">
-            <summary>
-            Gets string block from PE version resource using default or specific language translation for the version resource
-            </summary>
-            <param name="versionResource">Pointer to version resource</param>
-            <param name="strRecordName">Name of string record</param>
-            <param name="dwTranslationCode">Translation language code or MaxValue to use default for version resource</param>
-            <returns>Pointer to located string, or null if not found</returns>
-        </member>
         <member name="T:Arsenal.ImageMounter.IO.NativeFileVersion">
             <summary>
             File version resource information
@@ -373,11 +326,58 @@
             File date from fixed numeric fields, if present
             </summary>
         </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.QueryValueInt(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String)">
+            <summary>
+            Gets numeric block from PE version resource
+            </summary>
+            <param name="versionResource">Pointer to version resource</param>
+            <param name="SubBlock">Name of sub block</param>
+            <returns>Located uint value, or null if not found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.QueryValueString(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String)">
+            <summary>
+            Gets string block from PE version resource
+            </summary>
+            <param name="versionResource">Pointer to version resource</param>
+            <param name="SubBlock">Name of sub block</param>
+            <returns>Pointer to located string, or null if not found</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.QueryValueWithTranslation(Arsenal.ImageMounter.IO.VS_VERSIONINFO@,System.String,System.UInt32)">
+            <summary>
+            Gets string block from PE version resource using default or specific language translation for the version resource
+            </summary>
+            <param name="versionResource">Pointer to version resource</param>
+            <param name="strRecordName">Name of string record</param>
+            <param name="dwTranslationCode">Translation language code or MaxValue to use default for version resource</param>
+            <returns>Pointer to located string, or null if not found</returns>
+        </member>
         <member name="M:Arsenal.ImageMounter.IO.NativeFileVersion.#ctor(System.ReadOnlySpan{System.Byte})">
             <summary>
             Parses raw or mapped file data into a NativeFileVersion structure
             </summary>
             <param name="fileData">Raw or mapped exe or dll file data with a version resource</param>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetImageNtHeaders(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Gets IMAGE_NT_HEADERS structure from raw PE image
+            </summary>
+            <param name="fileData">Raw exe or dll data</param>
+            <returns>IMAGE_NT_HEADERS structure</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetFixedFileVerInfo(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Returns a copy of fixed file version fields in a PE image
+            </summary>
+            <param name="fileData">Pointer to raw or mapped exe or dll</param>
+            <returns>Copy of data from located version resource</returns>
+        </member>
+        <member name="M:Arsenal.ImageMounter.IO.NativePE.GetRawFileVersionResource(System.ReadOnlySpan{System.Byte},System.Int32@)">
+            <summary>
+            Locates version resource in a PE image
+            </summary>
+            <param name="fileData">Pointer to raw or mapped exe or dll</param>
+            <param name="resourceSize">Returns size of found resource</param>
+            <returns>Reference to located version resource</returns>
         </member>
         <member name="T:Arsenal.ImageMounter.IO.UNICODE_STRING">
             <summary>

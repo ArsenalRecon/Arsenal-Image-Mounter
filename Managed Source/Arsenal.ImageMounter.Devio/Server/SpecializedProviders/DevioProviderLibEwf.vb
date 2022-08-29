@@ -565,6 +565,10 @@ Namespace Server.SpecializedProviders
 
         Public Overloads Overrides Function Write(buffer As IntPtr, bufferoffset As Integer, count As Integer, fileoffset As Long) As Integer
 
+            If Not CanWrite Then
+                Throw New InvalidOperationException("Cannot write to read-only ewf image files")
+            End If
+
             Dim sizedone As Integer
 
             Dim size As New IntPtr(count)

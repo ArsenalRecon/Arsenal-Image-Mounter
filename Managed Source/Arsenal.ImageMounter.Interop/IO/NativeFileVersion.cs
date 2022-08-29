@@ -15,8 +15,13 @@ namespace Arsenal.ImageMounter.IO;
 
 using Arsenal.ImageMounter.Extensions;
 using Internal;
+using System.Buffers;
+using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
+using System.Threading;
+using System.Threading.Tasks;
 
 public enum IMAGE_FILE_MACHINE : WORD
 {
@@ -192,184 +197,49 @@ internal static class WindowsSpecific
     public static extern DWORD VerLanguageName(DWORD wLang, out char szLang, DWORD cchLang);
 }
 
-public static class NativePE
+/// <summary>
+/// File version resource information
+/// </summary>
+public class NativeFileVersion
 {
-    private static readonly long _rsrc_id = 0x000000637273722E; // ".rsrc\0\0\0"
-
-    private const int ERROR_RESOURCE_DATA_NOT_FOUND = 1812;
-    private const int ERROR_RESOURCE_TYPE_NOT_FOUND = 1813;
-    private const int ERROR_NO_MORE_ITEMS = 259;
-
-    private const ushort RT_VERSION = 16;
-
-    internal static ushort LOWORD(this int value) => (ushort)(value & 0xffff);
-    internal static ushort HIWORD(this int value) => (ushort)((value >> 16) & 0xffff);
-    internal static ushort LOWORD(this uint value) => (ushort)(value & 0xffff);
-    internal static ushort HIWORD(this uint value) => (ushort)((value >> 16) & 0xffff);
-    internal static long LARGE_INTEGER(uint LowPart, int HighPart) => LowPart | ((long)HighPart << 32);
+    /// <summary>
+    /// Fixed numeric fields
+    /// </summary>
+    public FixedFileVerInfo Fixed { get; }
 
     /// <summary>
-    /// Gets IMAGE_NT_HEADERS structure from raw PE image
+    /// Common string fields, if present
     /// </summary>
-    /// <param name="FileData">Raw exe or dll data</param>
-    /// <returns>IMAGE_NT_HEADERS structure</returns>
-    public static IMAGE_NT_HEADERS GetImageNtHeaders(ReadOnlySpan<byte> FileData)
+    public Dictionary<string, string> Fields { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// File version from fixed numeric fields
+    /// </summary>
+    public Version FileVersion => Fixed.FileVersion;
+
+    /// <summary>
+    /// Product version from fixed numeric fields
+    /// </summary>
+    public Version ProductVersion => Fixed.ProductVersion;
+
+    /// <summary>
+    /// File date from fixed numeric fields, if present
+    /// </summary>
+    public DateTime? FileDate
     {
-        var dos_header = MemoryMarshal.Read<IMAGE_DOS_HEADER>(FileData);
-        var header = MemoryMarshal.Read<IMAGE_NT_HEADERS>(FileData.Slice(dos_header.e_lfanew));
-
-        if (header.Signature != 0x4550 || header.FileHeader.SizeOfOptionalHeader == 0)
+        get
         {
-            throw new BadImageFormatException();
-        }
+            var filetime = NativePE.LARGE_INTEGER(
+                LowPart: Fixed.FileDateLS,
+                HighPart: Fixed.FileDateMS);
 
-        return header;
-    }
-
-    /// <summary>
-    /// Returns a copy of fixed file version fields in a PE image
-    /// </summary>
-    /// <param name="FileData">Pointer to raw or mapped exe or dll</param>
-    /// <returns>Copy of data from located version resource</returns>
-    public static FixedFileVerInfo GetFixedFileVerInfo(ReadOnlySpan<byte> FileData) =>
-        GetRawFileVersionResource(FileData, out _).FixedFileInfo;
-
-    /// <summary>
-    /// Locates version resource in a PE image
-    /// </summary>
-    /// <param name="FileData">Pointer to raw or mapped exe or dll</param>
-    /// <param name="ResourceSize">Returns size of found resource</param>
-    /// <returns>Reference to located version resource</returns>
-    public static unsafe ref readonly VS_VERSIONINFO GetRawFileVersionResource(ReadOnlySpan<byte> FileData, out int ResourceSize)
-    {
-        ResourceSize = 0;
-
-        ref readonly var dos_header = ref FileData.AsRef<IMAGE_DOS_HEADER>();
-
-        var header_ptr = FileData.Slice(dos_header.e_lfanew);
-
-        ref readonly var header = ref header_ptr.AsRef<IMAGE_NT_HEADERS>();
-
-        var sizeOfOptionalHeader = header.FileHeader.SizeOfOptionalHeader;
-
-        if (header.Signature != 0x4550 || sizeOfOptionalHeader == 0)
-        {
-            throw new BadImageFormatException();
-        }
-
-        var optional_header_ptr = FileData.Slice(dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) - sizeof(IMAGE_OPTIONAL_HEADER));
-
-        ref readonly var resource_header = ref FindImageDataDirectory(sizeOfOptionalHeader, optional_header_ptr);
-
-        var section_table = MemoryMarshal.Cast<byte, IMAGE_SECTION_HEADER>(optional_header_ptr.Slice(sizeOfOptionalHeader))
-            .Slice(0, header.FileHeader.NumberOfSections);
-
-        ref readonly var section_header = ref FindResourceSection(section_table);
-
-        var raw = FileData.Slice((int)section_header.PointerToRawData);
-
-        var resource_section = raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress));
-        ref readonly var resource_dir = ref resource_section.AsRef<IMAGE_RESOURCE_DIRECTORY>();
-        var resource_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress) + sizeof(IMAGE_RESOURCE_DIRECTORY)));
-
-        for (var i = 0; i < resource_dir.NumberOfNamedEntries + resource_dir.NumberOfIdEntries; i++)
-        {
-            if (!resource_dir_entry[i].NameIsString &&
-                resource_dir_entry[i].Id == RT_VERSION &&
-                resource_dir_entry[i].DataIsDirectory)
+            if (filetime > 0)
             {
-                ref readonly var found_entry = ref resource_dir_entry[i];
-
-                var found_dir = resource_section.Slice((int)found_entry.OffsetToDirectory);
-                ref readonly var found_dir_header = ref found_dir.AsRef<IMAGE_RESOURCE_DIRECTORY>();
-
-                if ((found_dir_header.NumberOfIdEntries + found_dir_header.NumberOfNamedEntries) == 0)
-                {
-                    continue;
-                }
-
-                var found_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(found_dir.Slice(sizeof(IMAGE_RESOURCE_DIRECTORY)));
-
-                for (var j = 0; j < found_dir_header.NumberOfNamedEntries + found_dir_header.NumberOfIdEntries; j++)
-                {
-                    if (!found_dir_entry[j].DataIsDirectory)
-                    {
-                        continue;
-                    }
-
-                    var found_subdir = resource_section.Slice((int)found_dir_entry[j].OffsetToDirectory);
-                    ref readonly var found_subdir_header = ref found_subdir.AsRef<IMAGE_RESOURCE_DIRECTORY>();
-
-                    if ((found_subdir_header.NumberOfIdEntries + found_subdir_header.NumberOfNamedEntries) == 0)
-                    {
-                        continue;
-                    }
-
-                    var found_subdir_entry = found_subdir.Slice(sizeof(IMAGE_RESOURCE_DIRECTORY));
-                    ref readonly var found_subdir_entry_header = ref found_subdir_entry.AsRef<IMAGE_RESOURCE_DIRECTORY_ENTRY>();
-
-                    if (found_subdir_entry_header.DataIsDirectory)
-                    {
-                        continue;
-                    }
-
-                    var found_data_entry = resource_section.Slice((int)found_subdir_entry_header.OffsetToData);
-                    ref readonly var found_data_entry_header = ref found_data_entry.AsRef<IMAGE_RESOURCE_DATA_ENTRY>();
-
-                    var found_res = raw.Slice((int)(found_data_entry_header.OffsetToData - section_header.VirtualAddress));
-                    ref readonly var found_res_block = ref found_res.AsRef<VS_VERSIONINFO>();
-
-                    if (found_res_block.Type != 0 ||
-                        !MemoryExtensions.Equals(found_res_block.Key, "VS_VERSION_INFO\0".AsSpan(), StringComparison.Ordinal) ||
-                        found_res_block.FixedFileInfo.StructVersion == 0 ||
-                        found_res_block.FixedFileInfo.Signature != FixedFileVerInfo.FixedFileVerSignature)
-                    {
-                        throw new BadImageFormatException("No valid version resource in PE file");
-                    }
-
-                    ResourceSize = (int)found_data_entry_header.Size;
-
-                    return ref found_res_block;
-                }
-            }
-        }
-
-        throw new BadImageFormatException("No version resource in PE file");
-    }
-
-    private static ref readonly IMAGE_SECTION_HEADER FindResourceSection(ReadOnlySpan<IMAGE_SECTION_HEADER> section_table)
-    {
-        for (var i = 0; i < section_table.Length; i++)
-        {
-            if (section_table[i].Name != _rsrc_id)
-            {
-                continue;
+                return DateTime.FromFileTime(filetime);
             }
 
-            return ref section_table[i];
+            return null;
         }
-
-        throw new BadImageFormatException("No resource section found in PE file");
-    }
-
-    private static unsafe ref readonly IMAGE_DATA_DIRECTORY FindImageDataDirectory(ushort sizeOfOptionalHeader, ReadOnlySpan<byte> optional_header_ptr)
-    {
-        if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER32) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
-        {
-            ref readonly var optional_header = ref optional_header_ptr.AsRef<IMAGE_OPTIONAL_HEADER32>();
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER32));
-            var data_directory = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
-            return ref data_directory[2];
-        }
-        else if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
-        {
-            ref readonly var optional_header = ref optional_header_ptr.AsRef<IMAGE_OPTIONAL_HEADER64>();
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER64));
-            var data_directory = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
-            return ref data_directory[2];
-        }
-
-        throw new BadImageFormatException();
     }
 
     /// <summary>
@@ -453,56 +323,21 @@ public static class NativePE
             }
         }
 
-        var SubBlock = $"\\StringFileInfo\\{LOWORD(dwTranslationCode):X4}{HIWORD(dwTranslationCode):X4}\\{strRecordName}";
+        var SubBlock = $"\\StringFileInfo\\{NativePE.LOWORD(dwTranslationCode):X4}{NativePE.HIWORD(dwTranslationCode):X4}\\{strRecordName}";
 
         return QueryValueString(versionResource, SubBlock);
     }
-}
 
-/// <summary>
-/// File version resource information
-/// </summary>
-public class NativeFileVersion
-{
-    /// <summary>
-    /// Fixed numeric fields
-    /// </summary>
-    public FixedFileVerInfo Fixed { get; }
-
-    /// <summary>
-    /// Common string fields, if present
-    /// </summary>
-    public Dictionary<string, string> Fields { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// File version from fixed numeric fields
-    /// </summary>
-    public Version FileVersion => Fixed.FileVersion;
-
-    /// <summary>
-    /// Product version from fixed numeric fields
-    /// </summary>
-    public Version ProductVersion => Fixed.ProductVersion;
-
-    /// <summary>
-    /// File date from fixed numeric fields, if present
-    /// </summary>
-    public DateTime? FileDate
-    {
-        get
-        {
-            var filetime = NativePE.LARGE_INTEGER(
-                LowPart: Fixed.FileDateLS,
-                HighPart: Fixed.FileDateMS);
-
-            if (filetime > 0)
-            {
-                return DateTime.FromFileTime(filetime);
-            }
-
-            return null;
-        }
-    }
+    private static readonly string[] _commonfields = {
+        "CompanyName",
+        "FileDescription",
+        "FileVersion",
+        "InternalName",
+        "LegalCopyright",
+        "OriginalFilename",
+        "ProductName",
+        "ProductVersion"
+    };
 
     /// <summary>
     /// Parses raw or mapped file data into a NativeFileVersion structure
@@ -515,7 +350,7 @@ public class NativeFileVersion
 
         Fixed = ptr.FixedFileInfo;
 
-        var lpdwTranslationCode = NativePE.QueryValueInt(ptr, "\\VarFileInfo\\Translation");
+        var lpdwTranslationCode = QueryValueInt(ptr, "\\VarFileInfo\\Translation");
 
         DWORD dwTranslationCode;
         if (lpdwTranslationCode.HasValue)
@@ -533,20 +368,9 @@ public class NativeFileVersion
             dwTranslationCode = 0x04E40409;
         }
 
-        var commonfields = new[] {
-                    "CompanyName",
-                    "FileDescription",
-                    "FileVersion",
-                    "InternalName",
-                    "LegalCopyright",
-                    "OriginalFilename",
-                    "ProductName",
-                    "ProductVersion"
-                };
-
-        foreach (var fieldname in commonfields)
+        foreach (var fieldname in _commonfields)
         {
-            var fieldvalue = NativePE.QueryValueWithTranslation(ptr, fieldname, dwTranslationCode);
+            var fieldvalue = QueryValueWithTranslation(ptr, fieldname, dwTranslationCode);
 
             if (fieldvalue != null)
             {

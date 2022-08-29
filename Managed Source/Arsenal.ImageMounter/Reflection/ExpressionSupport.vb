@@ -245,8 +245,8 @@ Namespace Reflection
                 End If
             End Function
 
-            Public Overloads Function GetHashCode(obj As MemberInfo) As Integer Implements IEqualityComparer(Of System.Reflection.MemberInfo).GetHashCode
-                Return obj.DeclaringType.MetadataToken Xor obj.MetadataToken
+            Public Overloads Function GetHashCode(obj As MemberInfo) As Integer Implements IEqualityComparer(Of MemberInfo).GetHashCode
+                Return HashCode.Combine(obj.DeclaringType.MetadataToken, obj.MetadataToken)
             End Function
         End Class
 
