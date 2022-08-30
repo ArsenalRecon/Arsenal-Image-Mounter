@@ -115,9 +115,11 @@ public static class NativePE
 
     public static IMAGE_NT_HEADERS GetImageNtHeaders(string exepath)
     {
-        using var mmap = MemoryMappedFile.CreateFromFile(exepath, FileMode.Open, mapName: null, capacity: 65536, MemoryMappedFileAccess.Read);
+        var size = Math.Min(65536, new FileInfo(exepath).Length);
 
-        using var view = mmap.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
+        using var mmap = MemoryMappedFile.CreateFromFile(exepath, FileMode.Open, mapName: null, capacity: 0, MemoryMappedFileAccess.Read);
+
+        using var view = mmap.CreateViewAccessor(0, size, MemoryMappedFileAccess.Read);
 
         return GetImageNtHeaders(view.SafeMemoryMappedViewHandle.AsSpan());
     }
