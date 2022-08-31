@@ -2432,7 +2432,11 @@ Currently, the following application has files open on this volume:
             Dim newpath = GetNtPath(path)
 
             If newpath.StartsWith("\??\", StringComparison.Ordinal) Then
-                newpath = $"\\?\{newpath.AsSpan(4)}"
+#If NETSTANDARD2_1_OR_GREATER OrElse NETCOREAPP Then
+                newpath = String.Concat("\\?\", newpath.AsSpan(4))
+#Else
+                newpath = String.Concat("\\?\", newpath.Substring(4))
+#End If
             End If
 
             Return newpath
