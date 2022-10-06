@@ -42,10 +42,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Update="AsyncMessageBox.resx">
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-  </ItemGroup>
-
 </Project>

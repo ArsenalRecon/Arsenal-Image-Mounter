@@ -3,6 +3,7 @@ Imports System.IO
 Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.Reflection
 
+#Disable Warning IDE0079
 #Disable Warning CA1051 ' Do not declare visible instance fields
 #Disable Warning CA1010 ' Collections should implement generic interface
 #Disable Warning CA1710 ' Identifiers should have correct suffix

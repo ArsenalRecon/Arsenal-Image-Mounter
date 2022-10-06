@@ -91,11 +91,21 @@ public static class NativePE
 
     public static FixedFileVerInfo GetFixedFileVerInfo(string exepath)
     {
-        using var mmap = MemoryMappedFile.CreateFromFile(exepath, FileMode.Open, mapName: null, capacity: 0, MemoryMappedFileAccess.Read);
+        try
+        {
+            using var mmap = MemoryMappedFile.CreateFromFile(exepath, FileMode.Open, mapName: null, capacity: 0, MemoryMappedFileAccess.Read);
 
-        using var view = mmap.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
+            using var view = mmap.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
 
-        return GetFixedFileVerInfo(view.SafeMemoryMappedViewHandle.AsSpan());
+            return GetFixedFileVerInfo(view.SafeMemoryMappedViewHandle.AsSpan());
+        }
+        catch (IOException)
+        {
+        }
+
+        using var file = File.OpenRead(exepath);
+
+        return GetFixedFileVerInfo(file);
     }
 
     public static IMAGE_NT_HEADERS GetImageNtHeaders(Stream exe)
@@ -115,13 +125,23 @@ public static class NativePE
 
     public static IMAGE_NT_HEADERS GetImageNtHeaders(string exepath)
     {
-        var size = Math.Min(65536, new FileInfo(exepath).Length);
+        var size = (int)Math.Min(65536, new FileInfo(exepath).Length);
 
-        using var mmap = MemoryMappedFile.CreateFromFile(exepath, FileMode.Open, mapName: null, capacity: 0, MemoryMappedFileAccess.Read);
+        try
+        {
+            using var mmap = MemoryMappedFile.CreateFromFile(exepath, FileMode.Open, mapName: null, capacity: 0, MemoryMappedFileAccess.Read);
 
-        using var view = mmap.CreateViewAccessor(0, size, MemoryMappedFileAccess.Read);
+            using var view = mmap.CreateViewAccessor(0, size, MemoryMappedFileAccess.Read);
 
-        return GetImageNtHeaders(view.SafeMemoryMappedViewHandle.AsSpan());
+            return GetImageNtHeaders(view.SafeMemoryMappedViewHandle.AsSpan());
+        }
+        catch (IOException)
+        {
+        }
+
+        using var file = File.OpenRead(exepath);
+
+        return GetImageNtHeaders(file);
     }
 
     public static int PadValue(int value, int align) => value + align - 1 & -align;

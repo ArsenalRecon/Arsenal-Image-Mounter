@@ -1,4 +1,5 @@
 ﻿using Arsenal.ImageMounter.Extensions;
+using DiscUtils.Streams.Compatibility;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -103,7 +104,7 @@ public class CombinedSeekStream : Stream
 
         while (_current.Value is not null && count > 0)
         {
-            var r = await _current.Value.ReadAsync(buffer, index, count, cancellationToken).ConfigureAwait(false);
+            var r = await _current.Value.ReadAsync(buffer.AsMemory(index, count), cancellationToken).ConfigureAwait(false);
 
             if (r <= 0)
             {
@@ -238,7 +239,7 @@ public class CombinedSeekStream : Stream
         {
             var current_count = (int)Math.Min(count, _current.Value.Length - _current.Value.Position);
 
-            await _current.Value.WriteAsync(buffer, index, current_count, cancellationToken).ConfigureAwait(false);
+            await _current.Value.WriteAsync(buffer.AsMemory(index, current_count), cancellationToken).ConfigureAwait(false);
 
             Seek(current_count, SeekOrigin.Current);
 
