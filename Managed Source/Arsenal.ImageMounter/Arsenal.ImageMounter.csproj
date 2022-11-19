@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Arsenal Image Mounter Low Level API Library</Description>
+	<TargetFrameworks>net48;net6.0</TargetFrameworks>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
+    <PackageReference Include="System.Buffers" Version="*" />
+    <PackageReference Include="System.Memory" Version="*" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Core" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Dmg" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Fat" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.OpticalDisk" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Streams" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Vdi" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Vmdk" Version="*" />
+    <PackageReference Include="LTRData.DiscUtils.Xva" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.StartsWith(`net4`))'">
+    <Reference Include="System.ServiceProcess" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="*" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="*" />
+    <PackageReference Include="System.IO.FileSystem.AccessControl" Version="*" />
+  </ItemGroup>
+
+</Project>

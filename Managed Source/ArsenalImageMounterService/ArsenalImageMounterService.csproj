@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>aim_cli</AssemblyName>
+    <Title>Arsenal Image Mounter Console Service</Title>
+	<TargetFrameworks>net48;net6.0</TargetFrameworks>
+    <UseWindowsForms>false</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="aim_cli">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net48'">
+      echo Building "..\..\..\..\Command line applications\$(AssemblyName).exe"
+      if exist lzfse.dll del lzfse.dll
+      ILMerge.exe /wildcards /out:"..\..\..\..\Command line applications\$(AssemblyName).exe" $(AssemblyName).exe *.dll || goto err
+      P:\Utils\net48\TestAssembly.exe "..\..\..\..\Command line applications\$(AssemblyName).exe" &gt; nul || goto err
+      signtool.exe sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /fd sha256 /td sha256 /tr "http://sha256timestamp.ws.symantec.com/sha256/timestamp" "..\..\..\..\Command line applications\$(AssemblyName).exe" || goto err
+      goto :eof
+      :err
+      exit %25ERRORLEVEL%25</PostBuildEvent>
+  </PropertyGroup>
+
+  <Target Name="AfterPublishSign" AfterTargets="Publish" Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
+    <Exec Command="signtool.exe sign /a /v /n &quot;Arsenal Consulting, Inc.&quot; /d &quot;Arsenal Image Mounter&quot; /du &quot;http://www.arsenalrecon.com&quot; /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /fd sha256 /td sha256 /tr &quot;http://sha256timestamp.ws.symantec.com/sha256/timestamp&quot; &quot;$(PublishDir)\$(AssemblyName).exe&quot; &quot;$(PublishDir)\$(AssemblyName).dll&quot;" />
+  </Target>
+</Project>

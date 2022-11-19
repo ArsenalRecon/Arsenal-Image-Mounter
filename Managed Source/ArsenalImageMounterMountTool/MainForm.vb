@@ -19,14 +19,16 @@ Imports System.IO
 Imports System.Text
 Imports System.Runtime.InteropServices
 Imports Arsenal.ImageMounter.Extensions
-Imports Arsenal.ImageMounter.PSDisk
-Imports Arsenal.ImageMounter.IO
 Imports Arsenal.ImageMounter.Devio
 Imports System.Diagnostics.CodeAnalysis
 Imports Arsenal.ImageMounter
 Imports System.ComponentModel
 Imports System.Windows.Forms
 Imports System.Drawing
+Imports Arsenal.ImageMounter.Views
+Imports Arsenal.ImageMounter.IO.ConsoleSupport
+Imports Arsenal.ImageMounter.IO.Native
+Imports Arsenal.ImageMounter.IO.Devices
 
 #Disable Warning IDE1006 ' Naming Styles
 
@@ -883,7 +885,7 @@ Public Class MainForm
     Private Sub btnRAMDisk_Click(sender As Object, e As EventArgs) Handles btnRAMDisk.Click
 
         Try
-            Dim ramdisk = DiscUtilsInteraction.InteractiveCreateRAMDisk(Me, Adapter)
+            Dim ramdisk = RAMDiskService.InteractiveCreate(Me, Adapter)
 
             If ramdisk Is Nothing Then
                 Return

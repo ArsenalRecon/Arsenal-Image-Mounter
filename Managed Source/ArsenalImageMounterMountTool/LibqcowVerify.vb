@@ -1,5 +1,5 @@
 ﻿Imports System.Windows.Forms
-Imports Arsenal.ImageMounter.IO
+Imports Arsenal.ImageMounter.IO.Native
 
 Public MustInherit Class LibqcowVerify
 

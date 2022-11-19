@@ -250,7 +250,7 @@ Partial Class MainForm
         '
         'DiskStateViewBindingSource
         '
-        Me.DiskStateViewBindingSource.DataSource = GetType(Arsenal.ImageMounter.PSDisk.DiskStateView)
+        Me.DiskStateViewBindingSource.DataSource = GetType(Arsenal.ImageMounter.Views.DiskStateView)
         '
         'btnRAMDisk
         '

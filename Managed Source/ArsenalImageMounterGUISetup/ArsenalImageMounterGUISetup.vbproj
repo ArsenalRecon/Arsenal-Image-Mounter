@@ -12,11 +12,6 @@
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Arsenal.ImageMounter.Dialogs\Arsenal.ImageMounter.Dialogs.csproj" />
-    <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
-  </ItemGroup>
-
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &lt; 0">
     <Reference Include="System.Configuration" />
   </ItemGroup>
@@ -30,12 +25,19 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Forms\Arsenal.ImageMounter.Forms.csproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.csproj" />
+  </ItemGroup>
+
   <PropertyGroup>
-    <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net40'">
-      echo Building "$(SolutionDir)..\DriverSetup\$(AssemblyName).exe"
-      ILMerge /wildcards /ndebug /copyattrs /keepfirst /out:"$(SolutionDir)..\DriverSetup\$(AssemblyName).exe" $(AssemblyName).exe Arsenal.ImageMounter.dll Arsenal.ImageMounter.Interop.dll DotNetZip.dll || goto err
-      TestAssembly "$(SolutionDir)..\DriverSetup\$(AssemblyName).exe" &gt; nul || goto err
-      signtool sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /t "http://timestamp.comodoca.com/authenticode" "$(SolutionDir)..\DriverSetup\$(AssemblyName).exe" || goto err
+    <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net48'">
+      echo Building "..\..\..\..\DriverSetup\$(AssemblyName).exe"
+      ILMerge /wildcards /ndebug /copyattrs /keepfirst /out:"..\..\..\..\DriverSetup\$(AssemblyName).exe" $(AssemblyName).exe Arsenal.ImageMounter.dll Arsenal.ImageMounter.Forms.dll || goto err
+      echo Verifying "..\..\..\..\DriverSetup\$(AssemblyName).exe"
+      P:\Utils\net48\TestAssembly "..\..\..\..\DriverSetup\$(AssemblyName).exe" &gt; nul || goto err
+      echo Signing "..\..\..\..\DriverSetup\$(AssemblyName).exe"
+      signtool sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /t "http://timestamp.comodoca.com/authenticode" "..\..\..\..\DriverSetup\$(AssemblyName).exe" || goto err
       goto :eof
       :err
       exit %25ERRORLEVEL%25

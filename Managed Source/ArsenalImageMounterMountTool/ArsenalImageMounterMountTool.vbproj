@@ -11,12 +11,6 @@
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Arsenal.ImageMounter.Interaction\Arsenal.ImageMounter.Interaction.vbproj" />
-    <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.vbproj" />
-    <ProjectReference Include="..\Arsenal.ImageMounter.Devio\Arsenal.ImageMounter.Devio.vbproj" />
-  </ItemGroup>
-
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5.0`))' &lt; 0">
     <Reference Include="System.Configuration" />
     <Reference Include="System.Windows.Forms" />
@@ -28,6 +22,11 @@
     <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip">
       <Link>DriverFiles.zip</Link>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Forms\Arsenal.ImageMounter.Forms.csproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

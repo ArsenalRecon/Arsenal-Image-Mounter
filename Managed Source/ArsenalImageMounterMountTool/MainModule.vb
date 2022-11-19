@@ -2,11 +2,11 @@
 Imports System.IO
 Imports System.Threading
 Imports System.Windows.Forms
-Imports Arsenal.ImageMounter.IO
 Imports Arsenal.ImageMounter.Extensions
 Imports System.Reflection
 Imports System.Configuration
 Imports Microsoft.Win32
+Imports Arsenal.ImageMounter.IO.Native
 
 Public Module MainModule
 
@@ -77,7 +77,7 @@ Public Module MainModule
 
         Try
             File.AppendAllText(logfile,
-                                 $"---------------{Environment.NewLine}{Date.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}{msg}{Environment.NewLine}")
+                               $"---------------{Environment.NewLine}{Date.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}{msg}{Environment.NewLine}")
 
         Catch ex As Exception
             Trace.WriteLine($"Exception while logging message: {ex}")
@@ -102,7 +102,9 @@ Public Module MainModule
                                 MessageBoxIcon.Stop)
         Else
             Dim rc =
-                MessageBox.Show($"Unhandled error: {msg}{Environment.NewLine}{Environment.NewLine}Ignore error and continue?",
+                MessageBox.Show($"Unhandled error: {msg}
+
+Ignore error and continue?",
                             e.ExceptionObject.GetType().ToString(),
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Stop)
@@ -123,10 +125,9 @@ Public Module MainModule
         LogMessage(msg)
 
         Dim rc =
-            MessageBox.Show("Error: " & e.Exception.JoinMessages() &
-                            Environment.NewLine &
-                            Environment.NewLine &
-                            "Ignore error and continue?",
+            MessageBox.Show($"Error: {e.Exception.JoinMessages()}
+
+Ignore error and continue?",
                             e.Exception.GetBaseException().GetType().Name,
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Stop)

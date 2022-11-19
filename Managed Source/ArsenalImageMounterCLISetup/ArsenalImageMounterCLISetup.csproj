@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Title>Arsenal Image Mounter Command Line Setup</Title>
+	<TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip">
+      <Link>DriverFiles.zip</Link>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Arsenal.ImageMounter.Forms\Arsenal.ImageMounter.Forms.csproj" />
+    <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net48'">
+      echo Building "..\..\..\..\DriverSetup\$(AssemblyName).exe"
+      ILMerge /wildcards /ndebug /copyattrs /keepfirst /out:"..\..\..\..\DriverSetup\$(AssemblyName).exe" $(AssemblyName).exe Arsenal.ImageMounter.dll Arsenal.ImageMounter.Forms.dll || goto err
+      echo Verifying "..\..\..\..\DriverSetup\$(AssemblyName).exe"
+      P:\Utils\net48\TestAssembly "..\..\..\..\DriverSetup\$(AssemblyName).exe" &gt; nul || goto err
+      echo Signing "..\..\..\..\DriverSetup\$(AssemblyName).exe"
+      signtool sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /t "http://timestamp.comodoca.com/authenticode" "..\..\..\..\DriverSetup\$(AssemblyName).exe" || goto err
+      goto :eof
+      :err
+      exit %25ERRORLEVEL%25
+    </PostBuildEvent>
+  </PropertyGroup>
+
+</Project>

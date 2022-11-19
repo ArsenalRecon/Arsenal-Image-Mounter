@@ -16,15 +16,15 @@
     <DebugType>portable</DebugType>
     <Deterministic>false</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <RollForward>LatestMajor</RollForward>
+    <Nullable>enable</Nullable>
 
     <Title>Arsenal Image Mounter</Title>
     <Company>Arsenal Recon</Company>
     <Product>Arsenal Image Mounter</Product>
     <Copyright>Copyright © Arsenal Recon, 2015 - 2022</Copyright>
     <Trademark />
-    <FileVersion>3.9.228.0</FileVersion>
-    <ProductVersion>3.9.228.0</ProductVersion>
+    <FileVersion>3.9.230.0</FileVersion>
+    <ProductVersion>3.9.230.0</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
 
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>

@@ -1,0 +1,110 @@
+﻿using System;
+using System.Diagnostics;
+
+// '''' DebugProvider.vb
+// '''' 
+// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+// '''' This source code and API are available under the terms of the Affero General Public
+// '''' License v3.
+// ''''
+// '''' Please see LICENSE.txt for full license terms, including the availability of
+// '''' proprietary exceptions.
+// '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// ''''
+
+using System.IO;
+using System.Runtime.InteropServices;
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
+namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
+
+/// <summary>
+/// A class to support test cases to verify that correct data is received through providers
+/// compared to raw image files.
+/// </summary>
+public class DebugProvider : DevioProviderUnmanagedBase
+{
+
+    public IDevioProvider BaseProvider { get; private set; }
+
+    public Stream DebugCompareStream { get; private set; }
+
+    public DebugProvider(IDevioProvider BaseProvider, Stream DebugCompareStream)
+    {
+        if (BaseProvider is null)
+        {
+            throw new ArgumentNullException(nameof(BaseProvider));
+        }
+
+        if (DebugCompareStream is null)
+        {
+            throw new ArgumentNullException(nameof(DebugCompareStream));
+        }
+
+        if (!DebugCompareStream.CanSeek || !DebugCompareStream.CanRead)
+        {
+            throw new ArgumentException("Debug compare stream must support seek and read operations.", nameof(DebugCompareStream));
+        }
+
+        this.BaseProvider = BaseProvider;
+        this.DebugCompareStream = DebugCompareStream;
+
+    }
+
+    public override bool CanWrite => BaseProvider.CanWrite;
+
+    public override long Length => BaseProvider.Length;
+
+    public override uint SectorSize => BaseProvider.SectorSize;
+
+    [DllImport("ntdll")]
+    private static extern IntPtr RtlCompareMemory(IntPtr buf1, byte[] buf2, IntPtr count);
+
+    private byte[]? _Read_buf2;
+
+    public override int Read(IntPtr buf1, int bufferoffset, int count, long fileoffset)
+    {
+
+        if (_Read_buf2 is null || _Read_buf2.Length < count)
+        {
+            Array.Resize(ref _Read_buf2, count);
+        }
+        DebugCompareStream.Position = fileoffset;
+        var compareTask = DebugCompareStream.ReadAsync(_Read_buf2, 0, count);
+
+        var rc1 = BaseProvider.Read(buf1, bufferoffset, count, fileoffset);
+        var rc2 = compareTask.Result;
+
+        if (rc1 != rc2)
+        {
+            Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X)} bytes, returned 0x{rc1:X)} bytes from image provider and 0x{rc2:X} bytes from debug compare stream.");
+        }
+
+        var cmpcount = new IntPtr(Math.Min(rc1, rc2));
+        if (RtlCompareMemory(buf1 + bufferoffset, _Read_buf2, cmpcount) != cmpcount)
+        {
+            Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X} bytes, returned different data from image provider than from debug compare stream.");
+        }
+
+        return rc1;
+
+    }
+
+    public override int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+        => BaseProvider.Write(buffer, bufferoffset, count, fileoffset);
+
+    public override bool SupportsShared => BaseProvider.SupportsShared;
+
+    public override void SharedKeys(IMDPROXY_SHARED_REQ Request, out IMDPROXY_SHARED_RESP Response, out ulong[] Keys)
+        => BaseProvider.SharedKeys(Request, out Response, out Keys);
+
+    protected override void OnDisposed(EventArgs e)
+    {
+        BaseProvider.Dispose();
+        DebugCompareStream.Close();
+
+        base.OnDisposed(e);
+    }
+}
