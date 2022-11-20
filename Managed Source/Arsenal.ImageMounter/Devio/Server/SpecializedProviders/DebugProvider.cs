@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using System;
 using System.Diagnostics;
-
 // '''' DebugProvider.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -14,7 +14,6 @@ using System.Diagnostics;
 
 using System.IO;
 using System.Runtime.InteropServices;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -71,6 +70,7 @@ public class DebugProvider : DevioProviderUnmanagedBase
         {
             Array.Resize(ref _Read_buf2, count);
         }
+
         DebugCompareStream.Position = fileoffset;
         var compareTask = DebugCompareStream.ReadAsync(_Read_buf2, 0, count);
 

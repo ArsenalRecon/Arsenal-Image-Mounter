@@ -1,5 +1,4 @@
 ﻿
-
 // '''' DevioProviderLibEwf.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -11,10 +10,10 @@
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 

@@ -1,5 +1,4 @@
 ﻿
-
 // '''' DevioProviderFromStream.vb
 // '''' Proxy provider that implements devio proxy service with a .NET Stream derived
 // '''' object as storage backend.
@@ -20,7 +19,6 @@ using System.IO;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
-
 
 /// <summary>
 /// Class that implements <see>IDevioProvider</see> interface with a System.IO.Stream

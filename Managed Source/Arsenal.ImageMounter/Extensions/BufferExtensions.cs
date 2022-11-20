@@ -1,7 +1,6 @@
 ﻿using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using Arsenal.ImageMounter.Reflection;
-using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -13,10 +12,8 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
@@ -494,6 +491,7 @@ public static class BufferExtensions
             {
                 result.Append(delimiter);
             }
+
             result.Append(b.ToString("x2", NumberFormatInfo.InvariantInfo));
         }
 
@@ -599,9 +597,8 @@ public static class BufferExtensions
         private readonly bool reverse;
 
         private ReadOnlySpan<char> chars;
-        private ReadOnlySpan<char> current;
 
-        public ReadOnlySpan<char> Current => current;
+        public ReadOnlySpan<char> Current { get; private set; }
 
         public bool MoveNext() => reverse ? MoveNextReverse() : MoveNextForward();
 
@@ -616,7 +613,7 @@ public static class BufferExtensions
                     i = chars.Length;
                 }
 
-                current = chars.Slice(0, i);
+                Current = chars.Slice(0, i);
 
                 if (i < chars.Length)
                 {
@@ -630,11 +627,11 @@ public static class BufferExtensions
 #if NET5_0_OR_GREATER
                 if (options.HasFlag(StringSplitOptions.TrimEntries))
                 {
-                    current = current.Trim();
+                    Current = Current.Trim();
                 }
 #endif
 
-                if (!current.IsEmpty ||
+                if (!Current.IsEmpty ||
                     !options.HasFlag(StringSplitOptions.RemoveEmptyEntries))
                 {
                     return true;
@@ -650,7 +647,7 @@ public static class BufferExtensions
             {
                 var i = chars.LastIndexOf(delimiter);
 
-                current = i >= 0 ? chars.Slice(i + 1) : chars;
+                Current = i >= 0 ? chars.Slice(i + 1) : chars;
 
                 if (i < 0)
                 {
@@ -664,11 +661,11 @@ public static class BufferExtensions
 #if NET5_0_OR_GREATER
                 if (options.HasFlag(StringSplitOptions.TrimEntries))
                 {
-                    current = current.Trim();
+                    Current = Current.Trim();
                 }
 #endif
 
-                if (!current.IsEmpty ||
+                if (!Current.IsEmpty ||
                     !options.HasFlag(StringSplitOptions.RemoveEmptyEntries))
                 {
                     return true;
@@ -678,7 +675,7 @@ public static class BufferExtensions
             return false;
         }
 
-        public ReadOnlySpan<char> First() => MoveNext() ? current : default;
+        public ReadOnlySpan<char> First() => MoveNext() ? Current : default;
 
         public ReadOnlySpan<char> ElementAt(int pos)
         {
@@ -690,7 +687,7 @@ public static class BufferExtensions
                 }
             }
 
-            return current;
+            return Current;
         }
 
         public ReadOnlySpan<char> ElementAtOrDefault(int pos)
@@ -703,14 +700,14 @@ public static class BufferExtensions
                 }
             }
 
-            return current;
+            return Current;
         }
 
         public StringSplitByCharEnumerator GetEnumerator() => this;
 
         public StringSplitByCharEnumerator(ReadOnlySpan<char> chars, char delimiter, StringSplitOptions options, bool reverse)
         {
-            current = default;
+            Current = default;
             this.chars = chars;
             this.delimiter = delimiter;
             this.options = options;
@@ -725,9 +722,8 @@ public static class BufferExtensions
         private readonly bool reverse;
 
         private ReadOnlySpan<char> chars;
-        private ReadOnlySpan<char> current;
 
-        public ReadOnlySpan<char> Current => current;
+        public ReadOnlySpan<char> Current { get; private set; }
 
         public bool MoveNext() => reverse ? MoveNextReverse() : MoveNextForward();
 
@@ -742,7 +738,7 @@ public static class BufferExtensions
                     i = chars.Length;
                 }
 
-                current = chars.Slice(0, i);
+                Current = chars.Slice(0, i);
 
                 if (i + delimiter.Length <= chars.Length)
                 {
@@ -756,11 +752,11 @@ public static class BufferExtensions
 #if NET5_0_OR_GREATER
                 if (options.HasFlag(StringSplitOptions.TrimEntries))
                 {
-                    current = current.Trim();
+                    Current = Current.Trim();
                 }
 #endif
 
-                if (!current.IsEmpty ||
+                if (!Current.IsEmpty ||
                     !options.HasFlag(StringSplitOptions.RemoveEmptyEntries))
                 {
                     return true;
@@ -776,7 +772,7 @@ public static class BufferExtensions
             {
                 var i = chars.LastIndexOf(delimiter);
 
-                current = i >= 0 ? chars.Slice(i + delimiter.Length) : chars;
+                Current = i >= 0 ? chars.Slice(i + delimiter.Length) : chars;
 
                 if (i < 0)
                 {
@@ -790,11 +786,11 @@ public static class BufferExtensions
 #if NET5_0_OR_GREATER
                 if (options.HasFlag(StringSplitOptions.TrimEntries))
                 {
-                    current = current.Trim();
+                    Current = Current.Trim();
                 }
 #endif
 
-                if (!current.IsEmpty ||
+                if (!Current.IsEmpty ||
                     !options.HasFlag(StringSplitOptions.RemoveEmptyEntries))
                 {
                     return true;
@@ -804,7 +800,7 @@ public static class BufferExtensions
             return false;
         }
 
-        public ReadOnlySpan<char> First() => MoveNext() ? current : default;
+        public ReadOnlySpan<char> First() => MoveNext() ? Current : default;
 
         public ReadOnlySpan<char> ElementAt(int pos)
         {
@@ -816,7 +812,7 @@ public static class BufferExtensions
                 }
             }
 
-            return current;
+            return Current;
         }
 
         public ReadOnlySpan<char> ElementAtOrDefault(int pos)
@@ -829,14 +825,14 @@ public static class BufferExtensions
                 }
             }
 
-            return current;
+            return Current;
         }
 
         public StringSplitByStringEnumerator GetEnumerator() => this;
 
         public StringSplitByStringEnumerator(ReadOnlySpan<char> chars, ReadOnlySpan<char> delimiter, StringSplitOptions options, bool reverse)
         {
-            current = default;
+            Current = default;
             this.chars = chars;
             this.delimiter = delimiter;
             this.options = options;
@@ -1269,6 +1265,7 @@ public static class BufferExtensions
             {
                 result.Append(delimiter);
             }
+
             result.Append(b.ToString("x2", NumberFormatInfo.InvariantInfo));
         }
 
@@ -1284,6 +1281,7 @@ public static class BufferExtensions
         {
             result ^= ptr[i] << ((i & 0x3) * 8);
         }
+
         return result;
     }
 

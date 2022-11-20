@@ -12,10 +12,10 @@ public class DiskStateView : INotifyPropertyChanged
     {
     }
 
-    private bool _DetailsVisible;
-    private bool _Selected;
-    private string? _ImagePath;
-    private long? _DiskSizeNumeric;
+    private bool detailsVisible;
+    private bool selected;
+    private string? imagePath;
+    private long? diskSizeNumeric;
 
     public DeviceProperties? DeviceProperties { get; set; }
 
@@ -35,8 +35,8 @@ public class DiskStateView : INotifyPropertyChanged
 
     public string? ImagePath
     {
-        get => _ImagePath ?? (DeviceProperties?.Filename);
-        set => _ImagePath = value;
+        get => imagePath ?? (DeviceProperties?.Filename);
+        set => imagePath = value;
     }
 
     public bool? NativePropertyDiskOffline { get; set; }
@@ -122,16 +122,16 @@ public class DiskStateView : INotifyPropertyChanged
     {
         get
         {
-            if (_DiskSizeNumeric.HasValue)
+            if (diskSizeNumeric.HasValue)
             {
-                return _DiskSizeNumeric;
+                return diskSizeNumeric;
             }
             else
             {
-                return DeviceProperties is not null ? DeviceProperties.DiskSize : (long?)default;
+                return DeviceProperties?.DiskSize;
             }
         }
-        set => _DiskSizeNumeric = value;
+        set => diskSizeNumeric = value;
     }
 
     public string? DiskSize
@@ -195,12 +195,12 @@ public class DiskStateView : INotifyPropertyChanged
 
     public bool DetailsVisible
     {
-        get => _DetailsVisible;
+        get => detailsVisible;
         set
         {
-            if (!(_DetailsVisible == value))
+            if (!(detailsVisible == value))
             {
-                _DetailsVisible = value;
+                detailsVisible = value;
                 NotifyPropertyChanged("DetailsVisible");
                 NotifyPropertyChanged("DetailsHidden");
             }
@@ -209,12 +209,12 @@ public class DiskStateView : INotifyPropertyChanged
 
     public bool DetailsHidden
     {
-        get => !_DetailsVisible;
+        get => !detailsVisible;
         set
         {
-            if (_DetailsVisible == value)
+            if (detailsVisible == value)
             {
-                _DetailsVisible = !value;
+                detailsVisible = !value;
                 NotifyPropertyChanged("DetailsVisible");
                 NotifyPropertyChanged("DetailsHidden");
             }
@@ -223,12 +223,12 @@ public class DiskStateView : INotifyPropertyChanged
 
     public bool Selected
     {
-        get => _Selected;
+        get => selected;
         set
         {
-            if (!(_Selected == value))
+            if (!(selected == value))
             {
-                _Selected = value;
+                selected = value;
                 NotifyPropertyChanged("Selected");
             }
         }

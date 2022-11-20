@@ -80,6 +80,7 @@ public class PinnedBuffer : SafeBuffer
                 throw new IndexOutOfRangeException($"{byteOffset} and {byteLength} must resolve to positions within the array");
             }
         }
+
         Initialize(checked((ulong)byteLength));
         GCHandle = GCHandle.Alloc(instance, GCHandleType.Pinned);
         SetHandle(GCHandle.AddrOfPinnedObject() + byteOffset);

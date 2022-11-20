@@ -184,6 +184,7 @@ public abstract class DevioProviderManagedBase : IDevioProvider
             // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
             // TODO: set large fields to null.
         }
+
         IsDisposed = true;
 
         OnDisposed(EventArgs.Empty);

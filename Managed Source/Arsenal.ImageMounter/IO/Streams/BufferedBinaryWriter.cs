@@ -43,6 +43,7 @@ public class BufferedBinaryWriter : BinaryWriter
             withBlock.SetLength(0L);
             withBlock.Position = 0L;
         }
+
         stream.Flush();
     }
 

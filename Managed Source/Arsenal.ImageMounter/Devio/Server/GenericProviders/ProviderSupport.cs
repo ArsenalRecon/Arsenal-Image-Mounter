@@ -1,7 +1,14 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Collections;
+using Arsenal.ImageMounter.Devio.Server.Interaction;
+using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using Arsenal.ImageMounter.IO.Streams;
+using DiscUtils;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-
 // '''' ProviderSupport.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -15,22 +22,14 @@ using System.Diagnostics;
 
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using Arsenal.ImageMounter.Collections;
-using Arsenal.ImageMounter.Devio.Server.Interaction;
-using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.IO.Streams;
-using DiscUtils;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
-
 
 public static class ProviderSupport
 {
@@ -218,7 +217,7 @@ public static class ProviderSupport
 
     }
 
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static void WriteToPhysicalDisk(this IDevioProvider provider,
                                            ReadOnlyMemory<char> outputDevice,
                                            CompletionPosition? completionPosition,

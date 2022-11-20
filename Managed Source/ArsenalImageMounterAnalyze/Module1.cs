@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿
 // '''' Driver Version / Setup Verify application.
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -11,12 +10,13 @@ using System.Diagnostics;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
-using System.IO;
-using System.Linq;
-using System.Runtime.Versioning;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using Microsoft.Win32.SafeHandles;
+using System;
+using System.IO;
+using System.Linq;
+using System.Runtime.Versioning;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -55,6 +55,7 @@ public static class Module1
                 using (NativeFileIO.OpenFileHandle($@"\\?\{dev}".AsMemory(), FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, false))
                 {
                 }
+
                 Console.WriteLine("Successful.");
             }
 

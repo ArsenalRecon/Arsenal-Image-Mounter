@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.IO.Native;
+using Arsenal.ImageMounter.IO.Streams;
+using DiscUtils.Streams.Compatibility;
+using Microsoft.Win32.SafeHandles;
+using System;
 // '''' DiskDevice.vb
 // '''' Class for controlling Arsenal Image Mounter Disk Devices.
 // '''' 
@@ -21,10 +25,6 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
-using Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.IO.Streams;
-using DiscUtils.Streams.Compatibility;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -36,9 +36,9 @@ namespace Arsenal.ImageMounter.IO.Devices;
 public class DiskDevice : DeviceObject
 {
 
-    private DiskStream? _RawDiskStream;
+    private DiskStream? rawDiskStream;
 
-    private SCSI_ADDRESS? _CachedAddress;
+    private SCSI_ADDRESS? cachedAddress;
 
     /// <summary>
     /// Returns the device path used to open this device object, if opened by name.
@@ -53,6 +53,7 @@ public class DiskDevice : DeviceObject
         {
             return;
         }
+
         if (!NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0U, IntPtr.Zero, 0U, out var arglpBytesReturned, IntPtr.Zero))
         {
             var errcode = Marshal.GetLastWin32Error();
@@ -145,7 +146,7 @@ public class DiskDevice : DeviceObject
     {
         get
         {
-            if (_CachedAddress is null)
+            if (cachedAddress is null)
             {
                 var scsi_address = ScsiAddress
                     ?? throw new KeyNotFoundException("Cannot find SCSI address for this instance");
@@ -154,10 +155,10 @@ public class DiskDevice : DeviceObject
                 {
                 }
 
-                _CachedAddress = scsi_address;
+                cachedAddress = scsi_address;
             }
 
-            return _CachedAddress.Value.DWordDeviceNumber;
+            return cachedAddress.Value.DWordDeviceNumber;
 
         }
     }
@@ -417,9 +418,9 @@ public class DiskDevice : DeviceObject
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            if (_RawDiskStream is not null)
+            if (rawDiskStream is not null)
             {
-                _RawDiskStream.Flush();
+                rawDiskStream.Flush();
             }
             else
             {
@@ -697,9 +698,9 @@ public class DiskDevice : DeviceObject
     public DiskStream GetRawDiskStream()
     {
 
-        _RawDiskStream ??= new DiskStream(SafeFileHandle, AccessMode == 0 ? FileAccess.Read : AccessMode);
+        rawDiskStream ??= new DiskStream(SafeFileHandle, AccessMode == 0 ? FileAccess.Read : AccessMode);
 
-        return _RawDiskStream;
+        return rawDiskStream;
 
     }
 
@@ -709,11 +710,11 @@ public class DiskDevice : DeviceObject
         if (disposing)
         {
 
-            _RawDiskStream?.Dispose();
+            rawDiskStream?.Dispose();
 
         }
 
-        _RawDiskStream = null;
+        rawDiskStream = null;
 
         base.Dispose(disposing);
 

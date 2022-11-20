@@ -85,6 +85,7 @@ public class ConsoleSpinProgress : IDisposable
 
             // TODO: set large fields to null.
         }
+
         disposedValue = true;
     }
 

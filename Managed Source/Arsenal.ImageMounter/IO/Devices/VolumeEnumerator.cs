@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Extensions;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using Arsenal.ImageMounter.Extensions;
 using static Arsenal.ImageMounter.IO.Native.NativeConstants;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO.UnsafeNativeMethods;
@@ -90,6 +90,7 @@ public class VolumeEnumerator : IEnumerable<string>
                 // TODO: set large fields to null.
                 _sb = null!;
             }
+
             disposedValue = true;
         }
 

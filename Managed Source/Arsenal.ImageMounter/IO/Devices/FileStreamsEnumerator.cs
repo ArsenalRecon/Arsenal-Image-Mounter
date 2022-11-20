@@ -106,6 +106,7 @@ public class FileStreamsEnumerator : IEnumerable<FindStreamData>
                 // TODO: set large fields to null.
                 _current = default;
             }
+
             disposedValue = true;
         }
 

@@ -1,3 +1,7 @@
+using Arsenal.ImageMounter.Data;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Native;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,10 +13,6 @@ using System.ServiceProcess;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using Arsenal.ImageMounter.Data;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Native;
-using Microsoft.Win32;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
@@ -38,6 +38,7 @@ public static class DriverSetup
         {
             throw new KeyNotFoundException($"Driver file phdskmnt.sys for {API.Kernel} missing in zip archive.");
         }
+
         using var versionFile = entry.Open();
         return NativePE.GetFixedFileVerInfo(versionFile).FileVersion;
     }
@@ -69,6 +70,7 @@ public static class DriverSetup
         {
             Directory.Delete(temppath, recursive: true);
         }
+
         Directory.CreateDirectory(temppath);
         zipFile.ExtractToDirectory(temppath);
         Install(ownerWindow, temppath);
@@ -178,6 +180,7 @@ public static class DriverSetup
         {
             InstallScsiPortDriver(ownerWindow, setupsource);
         }
+
         StartInstalledServices();
     }
 
@@ -344,6 +347,7 @@ public static class DriverSetup
                 scm.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(3.0));
             }
         }
+
         var thread = new Thread(NativeFileIO.ScanForHardwareChanges);
         thread.Start();
         thread.Join();
@@ -360,6 +364,7 @@ public static class DriverSetup
             {
                 throw new Win32Exception("OpenSCManager");
             }
+
             var array = new[] { "phdskmnt", "aimwrfltr" };
             for (var i = 0; i < array.Length; i++)
             {
@@ -368,6 +373,7 @@ public static class DriverSetup
                 {
                     throw new Exception("OpenService", new Win32Exception());
                 }
+
                 NativeFileIO.UnsafeNativeMethods.DeleteService(svc);
             }
         }

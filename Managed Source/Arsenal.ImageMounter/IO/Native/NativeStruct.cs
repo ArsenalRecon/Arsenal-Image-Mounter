@@ -1,12 +1,13 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -38,7 +39,7 @@ public static class NativeStruct
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
 
-    public async static Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken = default)
+    public static async Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken = default)
     {
 
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -76,7 +77,6 @@ public static class NativeStruct
         !string.IsNullOrEmpty(Path.GetExtension(filepath));
 #endif
 
-
     public static long GetDiskSize(string imagefile)
     {
 
@@ -108,14 +108,14 @@ public static class NativeStruct
             ? NativeFileIO.OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped)
             : new FileStream(FileName.ToString(), CreationDisposition, DesiredAccess, ShareMode, 1, Overlapped).SafeFileHandle;
 
-    private readonly static Dictionary<string, long> _knownFormatsOffsets = new(StringComparer.OrdinalIgnoreCase) { { "nrg", 600 << 9 }, { "sdi", 8 << 9 } };
+    private static readonly Dictionary<string, long> knownFormatsOffsets = new(StringComparer.OrdinalIgnoreCase) { { "nrg", 600 << 9 }, { "sdi", 8 << 9 } };
 
     /// <summary>
     /// Checks if filename contains a known extension for which PhDskMnt knows of a constant offset value. That value can be
     /// later passed as Offset parameter to CreateDevice method.
     /// </summary>
     /// <param name="ImageFile">Name of disk image file.</param>
-    public static long GetOffsetByFileExt(string ImageFile) => _knownFormatsOffsets.TryGetValue(Path.GetExtension(ImageFile), out var Offset) ? Offset : 0L;
+    public static long GetOffsetByFileExt(string ImageFile) => knownFormatsOffsets.TryGetValue(Path.GetExtension(ImageFile), out var Offset) ? Offset : 0L;
 
     /// <summary>
     /// Returns sector size typically used for image file name extensions. Returns 2048 for
@@ -133,7 +133,15 @@ public static class NativeStruct
 
     }
 
-    private readonly static Dictionary<ulong, string> multipliers = new() { { 1UL << 60, " EB" }, { 1UL << 50, " PB" }, { 1UL << 40, " TB" }, { 1UL << 30, " GB" }, { 1UL << 20, " MB" }, { 1UL << 10, " KB" } };
+    private static readonly Dictionary<ulong, string> multipliers = new()
+    {
+        { 1UL << 60, " EB" },
+        { 1UL << 50, " PB" },
+        { 1UL << 40, " TB" },
+        { 1UL << 30, " GB" },
+        { 1UL << 20, " MB" },
+        { 1UL << 10, " KB" }
+    };
 
     public static string FormatBytes(ulong size)
     {
@@ -150,6 +158,8 @@ public static class NativeStruct
 
     }
 
+    private static readonly ConcurrentDictionary<int, string> precisionFormatStrings = new();
+
     public static string FormatBytes(ulong size, int precision)
     {
 
@@ -157,7 +167,11 @@ public static class NativeStruct
         {
             if (size >= m.Key)
             {
-                return $"{(size / (double)m.Key).ToString($"0.{new string('0', precision - 1)}")}{m.Value}";
+                var precisionFormatString =
+                    precisionFormatStrings.GetOrAdd(precision,
+                                                    precision => $"0.{new string('0', precision - 1)}");
+
+                return $"{(size / (double)m.Key).ToString(precisionFormatString)}{m.Value}";
             }
         }
 

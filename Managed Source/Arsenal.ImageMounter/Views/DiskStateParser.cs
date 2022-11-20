@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Versioning;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 

@@ -1,5 +1,5 @@
-﻿using System;
-
+﻿using Arsenal.ImageMounter.Extensions;
+using System;
 // '''' DevioStream.vb
 // '''' Client side component for use with devio proxy services from other clients
 // '''' than actual Arsenal Image Mounter driver. This could be useful for example
@@ -18,7 +18,6 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Arsenal.ImageMounter.Extensions;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 

@@ -155,6 +155,7 @@ public class ConsoleProgressBar : IDisposable
 
             // TODO: set large fields to null.
         }
+
         disposedValue = true;
     }
 

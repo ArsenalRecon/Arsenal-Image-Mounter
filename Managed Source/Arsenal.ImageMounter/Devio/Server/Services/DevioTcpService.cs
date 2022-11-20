@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using System;
 using System.Diagnostics;
-
 // '''' DevioTcpService.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -18,12 +18,10 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
-
 
 /// <summary>
 /// Class that implements server end of Devio TCP/IP based communication protocol.
@@ -118,8 +116,6 @@ public class DevioTcpService : DevioServiceBase
             using (var Reader = new BinaryReader(TcpStream, Encoding.Default))
             using (var Writer = new BinaryWriter(new MemoryStream(), Encoding.Default))
             {
-
-
 
                 InternalShutdownRequestAction = new Action(() =>
                 {
@@ -229,6 +225,7 @@ public class DevioTcpService : DevioServiceBase
         {
             Array.Resize(ref Data, ReadLength);
         }
+
         ulong WriteLength;
         ulong ErrorCode;
 
@@ -298,6 +295,7 @@ public class DevioTcpService : DevioServiceBase
             {
                 EndPoint = new IPEndPoint(IPAddress.Loopback, EndPoint.Port);
             }
+
             return EndPoint.ToString();
         }
     }

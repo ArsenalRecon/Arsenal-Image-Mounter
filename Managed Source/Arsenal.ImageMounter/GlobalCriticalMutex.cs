@@ -72,6 +72,7 @@ public sealed class GlobalCriticalMutex : IDisposable
             // TODO: set large fields to null.
             mutex = null!;
         }
+
         disposedValue = true;
     }
 

@@ -8,6 +8,7 @@
     <Title>Arsenal Image Mounter Console Service</Title>
 	<TargetFrameworks>net48;net6.0</TargetFrameworks>
     <UseWindowsForms>false</UseWindowsForms>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,8 +24,7 @@
   <PropertyGroup>
     <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net48'">
       echo Building "..\..\..\..\Command line applications\$(AssemblyName).exe"
-      if exist lzfse.dll del lzfse.dll
-      ILMerge.exe /wildcards /out:"..\..\..\..\Command line applications\$(AssemblyName).exe" $(AssemblyName).exe *.dll || goto err
+      ILMerge.exe /wildcards /out:"..\..\..\..\Command line applications\$(AssemblyName).exe" $(AssemblyName).exe Arsenal.ImageMounter.dll DiscUtils.*.dll lzfse-net.dll Microsoft.*.dll System.*.dll || goto err
       P:\Utils\net48\TestAssembly.exe "..\..\..\..\Command line applications\$(AssemblyName).exe" &gt; nul || goto err
       signtool.exe sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /fd sha256 /td sha256 /tr "http://sha256timestamp.ws.symantec.com/sha256/timestamp" "..\..\..\..\Command line applications\$(AssemblyName).exe" || goto err
       goto :eof

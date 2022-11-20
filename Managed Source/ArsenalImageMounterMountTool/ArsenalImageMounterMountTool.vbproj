@@ -9,6 +9,7 @@
 	<TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
     <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
     <NeutralLanguage>en</NeutralLanguage>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5.0`))' &lt; 0">
@@ -32,8 +33,7 @@
   <PropertyGroup>
     <PostBuildEvent Condition="'$(Configuration)' == 'Release' and '$(TargetFramework)' == 'net48'">
       echo Building "..\..\..\..\MountTool\$(AssemblyName).exe"
-      if exist lzfse.dll del lzfse.dll
-      ILMerge.exe /wildcards /out:"..\..\..\..\MountTool\$(AssemblyName).exe" $(AssemblyName).exe *.dll || goto err
+      ILMerge.exe /wildcards /out:"..\..\..\..\MountTool\$(AssemblyName).exe" $(AssemblyName).exe Arsenal.*.dll DiscUtils.*.dll lzfse-net.dll Microsoft.*.dll System.*.dll || goto err
       P:\Utils\net48\TestAssembly.exe "..\..\..\..\MountTool\$(AssemblyName).exe" &gt; nul || goto err
       signtool.exe sign /a /v /n "Arsenal Consulting, Inc." /d "Arsenal Image Mounter" /du "http://www.arsenalrecon.com" /ac \\OLOF\Z$\Kod\cert\MSCV-GlobalSign.cer /fd sha256 /td sha256 /tr "http://sha256timestamp.ws.symantec.com/sha256/timestamp" "..\..\..\..\MountTool\$(AssemblyName).exe" || goto err
       goto :eof

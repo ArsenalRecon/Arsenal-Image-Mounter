@@ -1,17 +1,12 @@
 ﻿using Arsenal.ImageMounter.Extensions;
 using Microsoft.Win32.SafeHandles;
 using System;
-using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
-using System.Text;
 using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
@@ -19,6 +14,7 @@ using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable CA1069 // Enums values should not be duplicated
 #pragma warning disable IDE0032 // Use auto property
+#pragma warning disable IDE1006 // Naming Styles
 
 namespace Arsenal.ImageMounter.IO.Native;
 
@@ -199,7 +195,7 @@ public readonly struct IMSCSI_DEVICE_CONFIGURATION
         DiskSize = diskSize;
         BytesPerSector = bytesPerSector;
         WriteOverlayFileNameLength = writeOverlayFileNameLength;
-        Reserved = reserved;
+        this.reserved = reserved;
         ImageOffset = imageOffset;
         Flags = flags;
         FileNameLength = fileNameLength;
@@ -219,7 +215,7 @@ public readonly struct IMSCSI_DEVICE_CONFIGURATION
     public ushort WriteOverlayFileNameLength { get; }
 
     /// Padding if none of flag specific fields are in use.
-    private readonly ushort Reserved;
+    private readonly ushort reserved;
 
     /// The byte offset in image file where the virtual disk data begins.
     public long ImageOffset { get; }
@@ -851,6 +847,7 @@ public class HGlobalBuffer : SafeBuffer
         {
             Marshal.FreeHGlobal(handle);
         }
+
         handle = Marshal.AllocHGlobal(newSize);
         Initialize((ulong)newSize);
     }
@@ -861,6 +858,7 @@ public class HGlobalBuffer : SafeBuffer
         {
             Marshal.FreeHGlobal(handle);
         }
+
         handle = Marshal.AllocHGlobal(newSize);
         Initialize((ulong)newSize);
     }
@@ -1197,7 +1195,7 @@ public readonly struct DEVICE_MANAGE_DATA_SET_ATTRIBUTES
     }
 
     public int Size { get; }                   // Size of structure DEVICE_MANAGE_DATA_SET_ATTRIBUTES
-    DEVICE_DATA_MANAGEMENT_SET_ACTION Action { get; }
+    private DEVICE_DATA_MANAGEMENT_SET_ACTION Action { get; }
 
     public int Flags { get; }                  // Global flags across all actions
 

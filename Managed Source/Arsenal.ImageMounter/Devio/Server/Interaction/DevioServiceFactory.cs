@@ -1,4 +1,14 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Devio.Client;
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.Devio.Server.Services;
+using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.ConsoleSupport;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using DiscUtils;
+using DiscUtils.Streams;
+using System;
 using System.Collections.Generic;
 // '''' DevioServiceFactory.vb
 // '''' Support routines for creating provider and service instances given a known
@@ -21,21 +31,10 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using Arsenal.ImageMounter.Devio.Client;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Devio.Server.Services;
-using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.ConsoleSupport;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
-using DiscUtils;
-using DiscUtils.Streams;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.Interaction;
-
 
 /// <summary>
 /// Support routines for creating provider and service instances given a known proxy provider.
@@ -104,11 +103,13 @@ public static class DevioServiceFactory
     /// this could specify a flag for read-only mounting.</param>
     /// <param name="DiskAccess"></param>
     /// <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static DevioServiceBase AutoMount(string Imagefile, ScsiAdapter Adapter, ProviderType ProviderType, DeviceFlags Flags, VirtualDiskAccess DiskAccess)
     {
 
-        if (Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || Imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) || Imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
+        if (Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase)
+            || Imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase)
+            || Imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
         {
 
             Flags |= DeviceFlags.DeviceTypeCD;
@@ -133,7 +134,7 @@ public static class DevioServiceFactory
     /// <param name="Flags">Additional flags to pass to ScsiAdapter.CreateDevice(). For example,
     /// this could specify a flag for read-only mounting.</param>
     /// <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static DevioServiceBase AutoMount(string Imagefile, ScsiAdapter Adapter, ProviderType ProviderType, DeviceFlags Flags)
     {
 
@@ -310,7 +311,6 @@ public static class DevioServiceFactory
             ? GetProviderFunc(Imagefile, DiskAccess)
             : throw new InvalidOperationException($"Provider '{ProviderType}' not supported.");
 
-
     public static IDevioProvider? GetProvider(string Imagefile, FileAccess DiskAccess)
     {
 
@@ -325,7 +325,7 @@ public static class DevioServiceFactory
             ? GetProviderFunc(Imagefile, DiskAccess)
             : throw new NotSupportedException($"Provider '{ProviderName}' not supported. Valid values are: {string.Join(", ", InstalledProvidersByNameAndFileAccess.Keys)}.");
 
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     private static DevioProviderFromStream GetProviderPhysical(uint DeviceNumber, FileAccess DiskAccess)
     {
 
@@ -357,8 +357,6 @@ public static class DevioServiceFactory
 
     private static DevioProviderFromStream GetProviderRaw(string Imagefile, FileAccess DiskAccess)
     {
-
-
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && uint.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out var device_number))
         {
@@ -445,6 +443,7 @@ public static class DevioServiceFactory
             DiscUtils.Setup.SetupHelper.RegisterAssembly(asm);
             done = true;
         }
+
         return done;
     }
 
@@ -455,7 +454,7 @@ public static class DevioServiceFactory
     /// <param name="Imagefile">Image file.</param>
     /// <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
     /// <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static DevioServiceBase GetService(string Imagefile, VirtualDiskAccess DiskAccess, ProviderType ProviderType)
         => GetService(Imagefile, DiskAccess, ProviderType, FakeMBR: false);
 
@@ -507,7 +506,7 @@ public static class DevioServiceFactory
     /// <param name="Imagefile">Image file.</param>
     /// <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
     /// <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static DevioServiceBase GetService(string Imagefile, FileAccess DiskAccess, ProviderType ProviderType)
     {
 
@@ -540,7 +539,7 @@ public static class DevioServiceFactory
                         ?? throw new NotSupportedException($"Cannot open '{Imagefile}' with provider {ProviderType}");
 
                     Service = new DevioShmService(provider, OwnsProvider: true);
-                    
+
                     break;
                 }
         }
@@ -1108,6 +1107,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                     {
                         Trace.WriteLine("DiscUtils not available!");
                     }
+
                     var provider = GetProviderDiscUtils(imageFile, FileAccess.Read)
                         ?? throw new NotSupportedException($"Cannot open '{imageFile}' with provider DiscUtils");
 

@@ -40,6 +40,7 @@ public static class MembersStringSetter
                 {
                     return null;
                 }
+
                 member = Expression.Field(param_this, field_info);
             }
             else if (member_info is PropertyInfo property_info)
@@ -48,6 +49,7 @@ public static class MembersStringSetter
                 {
                     return null;
                 }
+
                 member = Expression.Property(param_this, property_info);
             }
             else
@@ -83,6 +85,7 @@ public static class MembersStringSetter
                     assign_value = Expression.Convert(param_value, member.Type);
                 }
             }
+
             assign_value = Expression.Condition(Expression.ReferenceEqual(param_value, Expression.Constant(null)), Expression.Default(member.Type), assign_value);
 
             var assign = Expression.Assign(member, assign_value);                // ' i.e., 'this.member_name = value'

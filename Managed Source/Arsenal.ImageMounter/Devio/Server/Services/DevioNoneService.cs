@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.Devio.Server.Interaction;
+using Arsenal.ImageMounter.IO.Native;
+using DiscUtils;
+using System;
 // '''' DevioNoneService.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -11,10 +15,7 @@
 // ''''
 
 using System.IO;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Devio.Server.Interaction;
-using Arsenal.ImageMounter.IO.Native;
-using DiscUtils;
+using System.Runtime.Versioning;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -25,7 +26,7 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// it just passes a disk image file name or RAM disk information for direct mounting
 /// internally in Arsenal Image Mounter SCSI Adapter.
 /// </summary>
-[System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public class DevioNoneService : DevioServiceBase
 {
 

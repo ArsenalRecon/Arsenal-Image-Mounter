@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 
 // '''' DevioProviderUnmanagedBase.vb
 // '''' 
@@ -11,8 +10,6 @@ using System.Runtime.CompilerServices;
 // '''' proprietary exceptions.
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
-
-using System.Runtime.InteropServices;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -164,6 +161,7 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
             // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
             // TODO: set large fields to null.
         }
+
         IsDisposed = true;
 
         OnDisposed(EventArgs.Empty);

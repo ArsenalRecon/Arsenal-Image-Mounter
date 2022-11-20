@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-
 namespace Arsenal.ImageMounter.IO.Streams;
 
 public class CombinedSeekStream : Stream
@@ -413,6 +412,7 @@ public class CombinedSeekStream : Stream
             {
                 _streams.Values.AsParallel().ForAll(stream => stream.Dispose());
             }
+
             _streams.Clear();
         }
 

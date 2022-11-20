@@ -1,7 +1,7 @@
+using Arsenal.ImageMounter.IO.Native;
 using System;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using Arsenal.ImageMounter.IO.Native;
 
 namespace Arsenal.ImageMounter.IO.Devices;
 

@@ -162,7 +162,7 @@ internal static class ImageConversions
                 var metafilename = $"{outputImage}.txt";
                 metafile = new StreamWriter(metafilename, append: false);
 
-                metafile.WriteLine($"Created by Arsenal Image Mounter version {Program.AssemblyFileVersion}");
+                metafile.WriteLine($"Created by Arsenal Image Mounter version {Program.assemblyFileVersion}");
                 metafile.WriteLine($"Running on machine '{Environment.MachineName}' with {RuntimeInformation.OSDescription} and {RuntimeInformation.FrameworkDescription}");
                 metafile.WriteLine($"Saved from '{sourcePath}'");
                 metafile.WriteLine($"Disk size: {provider.Length} bytes");

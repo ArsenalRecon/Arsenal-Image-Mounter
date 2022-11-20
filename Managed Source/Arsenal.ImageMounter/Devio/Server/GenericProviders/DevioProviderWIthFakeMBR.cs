@@ -1,5 +1,4 @@
-﻿using System;
-using Buffer = System.Buffer;
+﻿using Arsenal.ImageMounter.Extensions;
 
 // '''' DevioProviderUnmanagedBase.vb
 // '''' 
@@ -12,13 +11,12 @@ using Buffer = System.Buffer;
 // '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 // ''''
 
-using System.Buffers;
-using System.Runtime.InteropServices;
-using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Partitions;
-using Arsenal.ImageMounter.IO.Native;
-using System.Linq;
+using System;
+using System.Runtime.InteropServices;
+using Buffer = System.Buffer;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -494,6 +492,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
             // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
             // TODO: set large fields to null.
         }
+
         IsDisposed = true;
 
         OnDisposed(EventArgs.Empty);

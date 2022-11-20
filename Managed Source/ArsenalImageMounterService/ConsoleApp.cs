@@ -1,5 +1,4 @@
-﻿using Arsenal.ImageMounter;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
@@ -24,7 +23,7 @@ namespace Arsenal.ImageMounter;
 internal static class ConsoleApp
 {
 
-    private static readonly string[] DefaultChecksumAlgorithms = { "MD5", "SHA1", "SHA256" };
+    private static readonly string[] defaultChecksumAlgorithms = { "MD5", "SHA1", "SHA256" };
 
     /// <summary>
     /// Lists mounted devices to console
@@ -114,7 +113,7 @@ Operating system: {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchi
 .NET runtime: {RuntimeInformation.FrameworkDescription}
 Process CPU architecture: {RuntimeInformation.ProcessArchitecture}
 
-Arsenal Image Mounter version {Program.AssemblyFileVersion}
+Arsenal Image Mounter version {Program.assemblyFileVersion}
 
 {driver_ver}
             
@@ -185,6 +184,7 @@ Please see EULA.txt for license information.");
                         Console.WriteLine("Switches --trace and --background cannot be combined");
                         return -1;
                     }
+
                     Trace.Listeners.Add(new ConsoleTraceListener(true));
                 }
                 else
@@ -195,6 +195,7 @@ Please see EULA.txt for license information.");
                         Trace.Listeners.Add(new TextWriterTraceListener(tracefile));
                     }
                 }
+
                 verbose = true;
             }
             else if (arg.Equals("name", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
@@ -250,6 +251,7 @@ Please see EULA.txt for license information.");
                     show_help = true;
                     break;
                 }
+
                 auto_delete = true;
             }
             else if (arg.Equals("mount", StringComparison.OrdinalIgnoreCase))
@@ -292,7 +294,7 @@ Please see EULA.txt for license information.");
 
                 if (checksum.Length == 0)
                 {
-                    checksum = DefaultChecksumAlgorithms;
+                    checksum = defaultChecksumAlgorithms;
                 }
 
                 disk_access = FileAccess.Read;

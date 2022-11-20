@@ -1,5 +1,4 @@
-﻿using System;
-
+﻿
 // '''' DevioDirectStream.vb
 // '''' Client side component for use with devio proxy services provider objects created
 // '''' directly within the same process. This could be useful for example for directly
@@ -15,10 +14,10 @@
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
-using System.IO;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO;
+using System;
+using System.IO;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 

@@ -1,4 +1,9 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
+using System;
 using System.Collections.Generic;
 // '''' API.vb
 // '''' API for manipulating flag values, issuing SCSI bus rescans and similar
@@ -21,12 +26,6 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
-using Microsoft.Win32;
-using Microsoft.Win32.SafeHandles;
-using static System.Net.WebRequestMethods;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -697,7 +696,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
     public static int GetWriteOverlayStatus(SafeFileHandle hDevice, out WriteFilterStatistics Statistics)
     {
 
-        Statistics = WriteFilterStatistics.GetNew();
+        Statistics = new();
 
         return UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0U, out Statistics, Statistics.Version, out var arglpBytesReturned, default)
             ? (int)NativeConstants.NO_ERROR

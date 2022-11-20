@@ -11,11 +11,11 @@ namespace Arsenal.ImageMounter.Dialogs;
 [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed")]
 public partial class AsyncMessageBox : Form
 {
-    private static readonly Font MaxFont = new("Tahoma", 96f);
-    private Brush? m_ForegroundBrush;
-    private Brush? m_BackgroundBrush;
+    private static readonly Font maxFont = new("Tahoma", 96f);
+    private Brush? foregroundBrush;
+    private Brush? backgroundBrush;
 
-    private RectangleF TextRectangle;
+    private RectangleF textRectangle;
 
     public AsyncMessageBox()
     {
@@ -45,32 +45,33 @@ public partial class AsyncMessageBox : Form
 
     public string? MsgText
     {
-        get => m_Text;
+        get => text;
         set
         {
-            m_Text = value;
-            if (m_CurrentFont is not null)
+            text = value;
+            if (currentFont is not null)
             {
-                m_CurrentFont.Dispose();
-                m_CurrentFont = null;
+                currentFont.Dispose();
+                currentFont = null;
             }
+
             OnResize(EventArgs.Empty);
         }
     }
 
-    private string? m_Text;
-    private Font? m_CurrentFont;
-    private bool m_Sized;
+    private string? text;
+    private Font? currentFont;
+    private bool sized;
 
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
 
-        if (m_Sized == false)
+        if (sized == false)
         {
             Size = new(Screen.FromControl(this).Bounds.Size.Width / 4, Screen.FromControl(this).Bounds.Size.Height / 8);
             Location = new((Screen.FromControl(this).Bounds.Size.Width - Width) / 2, (Screen.FromControl(this).Bounds.Size.Height - Height) / 2);
-            m_Sized = true;
+            sized = true;
         }
 
         // ' Yes, properties assigned to themselves. Just triggers properties changed events.
@@ -107,49 +108,51 @@ public partial class AsyncMessageBox : Form
         Update();
     }
 
-    private Image? m_ImageBuffer;
+    private Image? imageBuffer;
 
     protected override void OnResize(EventArgs e)
     {
-        for(; ;)
+        for (; ; )
         {
             try
             {
                 base.OnResize(e);
 
-                if (m_ForegroundBrush is null || m_BackgroundBrush is null)
+                if (foregroundBrush is null || backgroundBrush is null)
                 {
                     break;
                 }
 
-                m_ImageBuffer = new Bitmap(ClientSize.Width, ClientSize.Height);
-                TextRectangle = new(ClientRectangle.Width / 12, ClientRectangle.Height / 8, ClientRectangle.Width * 10 / 12, ClientRectangle.Height * 6 / 8);
+                imageBuffer = new Bitmap(ClientSize.Width, ClientSize.Height);
+                textRectangle = new(ClientRectangle.Width / 12, ClientRectangle.Height / 8, ClientRectangle.Width * 10 / 12, ClientRectangle.Height * 6 / 8);
 
-                using var g = Graphics.FromImage(m_ImageBuffer);
+                using var g = Graphics.FromImage(imageBuffer);
 
                 g.PageUnit = GraphicsUnit.Pixel;
 
-                g.FillRectangle(m_BackgroundBrush, new(Point.Empty, m_ImageBuffer.Size));
+                g.FillRectangle(backgroundBrush, new(Point.Empty, imageBuffer.Size));
 
-                if (m_CurrentFont is not null)
+                if (currentFont is not null)
                 {
-                    m_CurrentFont.Dispose();
-                    m_CurrentFont = null;
+                    currentFont.Dispose();
+                    currentFont = null;
                 }
 
-                if (m_Text is null || string.IsNullOrEmpty(m_Text))
-                {
-                    return;
-                }
-
-                m_CurrentFont = FindLargestFont(g, MaxFont.FontFamily, MaxFont.Size, MaxFont.Style, MaxFont.Unit, TextRectangle, m_Text);
-
-                if (m_CurrentFont is null)
+                if (text is null || string.IsNullOrEmpty(text))
                 {
                     return;
                 }
 
-                g.DrawString(m_Text, m_CurrentFont, m_ForegroundBrush, TextRectangle, sftCentered);
+                currentFont = FindLargestFont(g, maxFont.FontFamily, maxFont.Size, maxFont.Style, maxFont.Unit, textRectangle, text);
+
+                if (currentFont is null)
+                {
+                    return;
+                }
+
+                g.DrawString(text, currentFont, foregroundBrush, textRectangle, sftCentered);
+
+                return;
             }
             catch
             {
@@ -185,13 +188,13 @@ public partial class AsyncMessageBox : Form
     {
         try
         {
-            if (m_ImageBuffer is null)
+            if (imageBuffer is null)
             {
                 base.OnPaintBackground(e);
                 return;
             }
 
-            e.Graphics.DrawImage(m_ImageBuffer, Point.Empty);
+            e.Graphics.DrawImage(imageBuffer, Point.Empty);
         }
 
         catch
@@ -204,7 +207,7 @@ public partial class AsyncMessageBox : Form
     {
         try
         {
-            if (m_ImageBuffer is null)
+            if (imageBuffer is null)
             {
                 base.OnPaint(e);
                 return;
@@ -223,13 +226,14 @@ public partial class AsyncMessageBox : Form
         get => base.ForeColor;
         set
         {
-            if (m_ForegroundBrush is not null)
+            if (foregroundBrush is not null)
             {
-                m_ForegroundBrush.Dispose();
-                m_ForegroundBrush = null;
+                foregroundBrush.Dispose();
+                foregroundBrush = null;
             }
+
             base.ForeColor = value;
-            m_ForegroundBrush = new SolidBrush(value);
+            foregroundBrush = new SolidBrush(value);
         }
     }
 
@@ -238,13 +242,14 @@ public partial class AsyncMessageBox : Form
         get => base.BackColor;
         set
         {
-            if (m_BackgroundBrush is not null)
+            if (backgroundBrush is not null)
             {
-                m_BackgroundBrush.Dispose();
-                m_BackgroundBrush = null;
+                backgroundBrush.Dispose();
+                backgroundBrush = null;
             }
+
             base.BackColor = value;
-            m_BackgroundBrush = new SolidBrush(value);
+            backgroundBrush = new SolidBrush(value);
         }
     }
 
@@ -270,9 +275,9 @@ public partial class AsyncMessageBox : Form
     {
         base.OnClosed(e);
 
-        m_CurrentFont?.Dispose();
-        m_ForegroundBrush?.Dispose();
-        m_BackgroundBrush?.Dispose();
-        m_ImageBuffer?.Dispose();
+        currentFont?.Dispose();
+        foregroundBrush?.Dispose();
+        backgroundBrush?.Dispose();
+        imageBuffer?.Dispose();
     }
 }

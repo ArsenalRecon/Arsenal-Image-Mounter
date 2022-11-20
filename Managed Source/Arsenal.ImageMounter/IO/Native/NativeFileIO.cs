@@ -1,4 +1,9 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Collections;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
+using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,18 +13,12 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Arsenal.ImageMounter.Collections;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Microsoft.Win32;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -1158,8 +1157,10 @@ Currently, the following application has files open on this volume:
                 {
                     processHandle = null;
                 }
+
                 processHandleList.Add(handle.ProcessId, processHandle);
             }
+
             if (processHandle is null)
             {
                 continue;
@@ -1190,6 +1191,7 @@ Currently, the following application has files open on this volume:
                         {
                             return null;
                         }
+
                         break;
                     }
 
@@ -1223,6 +1225,7 @@ Currently, the following application has files open on this volume:
                         {
                             continue;
                         }
+
                         break;
                     }
                     while (true);
@@ -1381,6 +1384,7 @@ Currently, the following application has files open on this volume:
         {
             NativeDesiredAccess |= FileSystemRights.Read;
         }
+
         if (DesiredAccess.HasFlag(FileAccess.Write))
         {
             NativeDesiredAccess |= FileSystemRights.Write;
@@ -1674,6 +1678,7 @@ Currently, the following application has files open on this volume:
         {
             NativeDesiredAccess |= FileSystemRights.Read;
         }
+
         if (DesiredAccess.HasFlag(FileAccess.Write))
         {
             NativeDesiredAccess |= FileSystemRights.Write;
@@ -1714,7 +1719,7 @@ Currently, the following application has files open on this volume:
                 }
         }
 
-        FileAttributes NativeFlagsAndAttributes = (FileAttributes)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
+        var NativeFlagsAndAttributes = (FileAttributes)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FilePath.MakeNullTerminated(),
                                                                                                        NativeDesiredAccess,
@@ -1751,6 +1756,7 @@ Currently, the following application has files open on this volume:
         {
             NativeDesiredAccess |= FileSystemRights.Read;
         }
+
         if (DesiredAccess.HasFlag(FileAccess.Write))
         {
             NativeDesiredAccess |= FileSystemRights.Write;
@@ -1791,7 +1797,7 @@ Currently, the following application has files open on this volume:
                 }
         }
 
-        FileAttributes NativeFlagsAndAttributes = (FileAttributes)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
+        var NativeFlagsAndAttributes = (FileAttributes)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FilePath.MakeNullTerminated(),
                                                      NativeDesiredAccess,
@@ -1856,7 +1862,7 @@ Currently, the following application has files open on this volume:
             1,
             Options.HasFlag(FileOptions.Asynchronous));
 
-    unsafe private static void SetFileCompressionState(SafeFileHandle SafeFileHandle, ushort State)
+    private static unsafe void SetFileCompressionState(SafeFileHandle SafeFileHandle, ushort State)
         => Win32Try(UnsafeNativeMethods.DeviceIoControl(SafeFileHandle,
                                                         NativeConstants.FSCTL_SET_COMPRESSION,
                                                         new IntPtr(&State),
@@ -2031,6 +2037,7 @@ Currently, the following application has files open on this volume:
                     Paths.Remove(AddPath);
                 }
             }
+
             Paths.InsertRange(0, AddPathsArray);
         }
         else

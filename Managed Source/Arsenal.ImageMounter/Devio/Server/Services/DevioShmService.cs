@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Collections;
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.IO.Native;
+using System;
 using System.Diagnostics;
-
 // '''' DevioShmService.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -17,14 +19,10 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.Collections;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
-
 
 /// <summary>
 /// Class that implements server end of Devio shared memory based communication
@@ -172,6 +170,7 @@ public class DevioShmService : DevioServiceBase
             {
                 Exception = ex;
             }
+
             var message = $"Service thread initialization failed: {Exception}.";
             Trace.WriteLine(message);
             OnServiceInitFailed(EventArgs.Empty);
@@ -207,6 +206,7 @@ public class DevioShmService : DevioServiceBase
             {
                 Exception = ex;
             }
+
             var message = $"Service thread initialization failed: {Exception}.";
             Trace.WriteLine(message);
             OnServiceInitFailed(EventArgs.Empty);
@@ -241,8 +241,6 @@ public class DevioShmService : DevioServiceBase
             Trace.WriteLine("Client connected, waiting for request.");
 
             var request_shutdown = false;
-
-
 
             InternalShutdownRequestAction = new Action(() =>
             {
@@ -369,6 +367,7 @@ public class DevioShmService : DevioServiceBase
 
                 ReadLength = MaxTransferSize;
             }
+
             Response.length = (ulong)DevioProvider.Read(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, ReadLength, Offset);
             Response.errorno = 0UL;
         }
@@ -411,6 +410,7 @@ public class DevioShmService : DevioServiceBase
                 {
                     throw new Exception($"Requested write length {WriteLength}. Buffer size is {MaxTransferSize} bytes.");
                 }
+
                 var WrittenLength = DevioProvider.Write(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, WriteLength, Offset);
                 if (WrittenLength < 0)
                 {
@@ -419,6 +419,7 @@ public class DevioShmService : DevioServiceBase
                     Response.length = 0UL;
                     break;
                 }
+
                 Response.length = (ulong)WrittenLength;
                 Response.errorno = 0UL;
             }

@@ -1,5 +1,8 @@
-﻿using System;
-
+﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.Reflection;
+using Microsoft.Win32.SafeHandles;
+using System;
 // '''' DevioProviderLibQcow.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -18,10 +21,6 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.Reflection;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -231,6 +230,7 @@ public class DevioProviderLibQcow : DevioProviderUnmanagedBase
             pipe.Dispose();
             ThrowError(errobj, $"Error opening named pipe {pipename}.");
         }
+
         pipe.WaitForConnection();
         return pipe;
     }
@@ -243,7 +243,6 @@ public class DevioProviderLibQcow : DevioProviderUnmanagedBase
     public DevioProviderLibQcow(string filenames, byte Flags)
     {
         this.Flags = Flags;
-
 
         if (libqcow_file_initialize(out var safeHandle, out var errobj) != 1 || safeHandle.IsInvalid || Failed(errobj))
         {
@@ -302,7 +301,6 @@ public class DevioProviderLibQcow : DevioProviderUnmanagedBase
             var LengthRet = 0L;
             LengthRet = 0L;
 
-
             var RC = libqcow_file_get_media_size(SafeHandle, out LengthRet, out var errobj);
             if (RC < 0 || Failed(errobj))
             {
@@ -324,7 +322,6 @@ public class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
         while (done_count < count)
         {
-
 
             var offset = libqcow_file_seek_offset(SafeHandle, fileoffset, Whence.Set, out var errobj);
 

@@ -1,12 +1,12 @@
-﻿Imports System.Runtime.InteropServices
+﻿Imports System.Configuration
 Imports System.IO
+Imports System.Reflection
+Imports System.Runtime.InteropServices
 Imports System.Threading
 Imports System.Windows.Forms
 Imports Arsenal.ImageMounter.Extensions
-Imports System.Reflection
-Imports System.Configuration
-Imports Microsoft.Win32
 Imports Arsenal.ImageMounter.IO.Native
+Imports Microsoft.Win32
 
 Public Module MainModule
 

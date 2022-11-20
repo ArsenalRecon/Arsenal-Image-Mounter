@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.IO.Native;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using static Arsenal.ImageMounter.API;
-
 // '''' MainModule.vb
 // '''' Console driver setup application, for scripting and similar.
 // '''' 
@@ -17,8 +18,6 @@ using static Arsenal.ImageMounter.API;
 // ''''
 
 using static Arsenal.ImageMounter.DriverSetup;
-using Arsenal.ImageMounter.IO.Native;
-using System.Collections.Generic;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -27,7 +26,7 @@ namespace Arsenal.ImageMounter;
 public static class MainModule
 {
 
-    private readonly static Dialogs.NativeWindowHandle ownerWindow = new(NativeFileIO.SafeNativeMethods.GetConsoleWindow());
+    private static readonly Dialogs.NativeWindowHandle ownerWindow = new(NativeFileIO.SafeNativeMethods.GetConsoleWindow());
 
     public static int Main(params string[] args)
     {
@@ -66,6 +65,7 @@ public static class MainModule
             {
                 Trace.WriteLine($"Win32 error: {win32exception.NativeErrorCode}");
             }
+
             Trace.WriteLine(ex.ToString());
             return -1;
         }

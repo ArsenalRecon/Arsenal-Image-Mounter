@@ -11,9 +11,6 @@
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
-using System.Buffers;
-using System.Runtime.InteropServices;
-
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
@@ -114,6 +111,7 @@ public abstract class DevioProviderSpanBase : IDevioProvider
             // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
             // TODO: set large fields to null.
         }
+
         IsDisposed = true;
 
         OnDisposed(EventArgs.Empty);

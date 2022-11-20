@@ -38,7 +38,6 @@ public static class NativeLib
             return default;
         }
 
-
         return !NativeLibrary.TryGetExport(hModule, procedureName, out var address) ? default : address;
     }
 

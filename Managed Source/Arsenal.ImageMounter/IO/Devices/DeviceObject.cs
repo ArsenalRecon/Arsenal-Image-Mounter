@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.IO.Native;
+using Microsoft.Win32.SafeHandles;
+using System;
 // '''' DeviceObject.vb
 // '''' Base class for Arsenal Image Mounter SCSI Miniport objects.
 // '''' 
@@ -12,8 +14,6 @@
 // ''''
 
 using System.IO;
-using Arsenal.ImageMounter.IO.Native;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -80,6 +80,7 @@ public abstract class DeviceObject : IDisposable
             // TODO: set large fields to null.
             SafeFileHandle = null!;
         }
+
         disposedValue = true;
     }
 

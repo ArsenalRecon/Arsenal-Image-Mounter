@@ -16,7 +16,7 @@ public static class ConsoleSupport
 
     public static string GetConsoleOutputDeviceName() => NativeLib.IsWindows ? "CONOUT$" : "/dev/tty";
 
-    internal readonly static object ConsoleSync = new();
+    internal static readonly object ConsoleSync = new();
 
     public static string LineFormat(this string message, int IndentWidth = 0, int? LineWidth = default, char WordDelimiter = ' ', char FillChar = ' ')
     {
@@ -59,6 +59,7 @@ public static class ConsoleSupport
                     result.AppendLine(Word.ToString());
                     continue;
                 }
+
                 if (Word.Length + line.Length >= Width)
                 {
                     result.AppendLine(line.ToString());
@@ -69,6 +70,7 @@ public static class ConsoleSupport
                 {
                     line.Append(WordDelimiter);
                 }
+
                 line.Append(Word);
             }
 

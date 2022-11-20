@@ -1,5 +1,5 @@
-﻿using System;
-
+﻿using Microsoft.Win32.SafeHandles;
+using System;
 // '''' DevioProviderDLLWrapperBase.vb
 // '''' Proxy provider that implements devio proxy service with an unmanaged DLL written
 // '''' for use with devio.exe command line tool.
@@ -16,12 +16,10 @@
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
-
 
 /// <summary>
 /// Class that implements <see>IDevioProvider</see> interface with an unmanaged DLL

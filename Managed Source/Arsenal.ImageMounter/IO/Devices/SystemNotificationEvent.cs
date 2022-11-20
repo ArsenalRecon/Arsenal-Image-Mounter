@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.IO.Native;
+using System;
 using System.Collections.Generic;
 // '''' SystemNotificationEvent.vb
 // '''' Represents a system notification event object. Well known paths are available as constants of SystemNotificationEvent class.
@@ -15,7 +16,6 @@ using System.Collections.Generic;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Threading;
-using Arsenal.ImageMounter.IO.Native;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -125,7 +125,8 @@ public class WaitEventHandler
                                }
                            });
     }
-    void OnSignalled(object sender, EventArgs e)
+
+    private void OnSignalled(object sender, EventArgs e)
         => _event_handlers.ForEach(handler => handler.EventHandler?.Invoke(sender, e));
 
 }

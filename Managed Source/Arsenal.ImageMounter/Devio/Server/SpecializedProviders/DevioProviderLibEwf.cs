@@ -1,5 +1,9 @@
-﻿using System;
-
+﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Native;
+using Arsenal.ImageMounter.Reflection;
+using Microsoft.Win32.SafeHandles;
+using System;
 // '''' DevioProviderLibEwf.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -18,16 +22,10 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.Reflection;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
-
 
 public class DevioProviderLibEwf : DevioProviderUnmanagedBase
 {
@@ -221,7 +219,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, SetLastError = true, ThrowOnUnmappableChar = true)]
     private static extern int libewf_handle_get_chunk_size(SafeLibEwfFileHandle safeLibEwfHandle, out uint ChunkSize, out SafeLibEwfErrorObjectHandle errobj);
 
-
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, SetLastError = true, ThrowOnUnmappableChar = true)]
     private static extern int libewf_handle_get_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorsPerChunk, out SafeLibEwfErrorObjectHandle errobj);
 
@@ -335,6 +332,7 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
             pipe.Dispose();
             ThrowError(errobj, $"Error opening named pipe {pipename}.");
         }
+
         pipe.WaitForConnection();
         return pipe;
     }
@@ -348,7 +346,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
     {
 
         this.Flags = Flags;
-
 
         if (libewf_handle_initialize(out var safeHandle, out var errobj) != 1 || safeHandle.IsInvalid || Failed(errobj))
         {
@@ -439,7 +436,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
             var LengthRet = 0L;
             LengthRet = 0L;
 
-
             var RC = libewf_handle_get_media_size(SafeHandle, out LengthRet, out var errobj);
             if (RC < 0 || Failed(errobj))
             {
@@ -459,7 +455,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         while (done_count < count)
         {
-
 
             var offset = libewf_handle_seek_offset(SafeHandle, fileoffset, Whence.Set, out var errobj);
 
@@ -546,7 +541,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         var size = new IntPtr(count);
 
-
         var offset = libewf_handle_seek_offset(SafeHandle, fileoffset, Whence.Set, out var errobj);
         if (offset != fileoffset || Failed(errobj))
         {
@@ -605,7 +599,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
             return;
         }
 
-
         var retval = libewf_handle_set_utf16_header_value(SafeHandle, identifier, new IntPtr(identifier.Length), value, new IntPtr(value.Length), out var errobj);
 
         if (retval != 1 || Failed(errobj))
@@ -626,7 +619,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         Trace.WriteLine($"{identifier} = {valuestr}");
 
-
         var retval = libewf_handle_set_utf8_hash_value(SafeHandle, identifier, new IntPtr(identifier.Length), valuestr, new IntPtr(valuestr.Length), out var errobj);
 
         if (retval != 1 || Failed(errobj))
@@ -637,7 +629,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     private void SetOutputValueParameter<TValue>(libewf_handle_set_header_value_func<TValue> func, TValue value) where TValue : struct
     {
-
 
         var retval = func(SafeHandle, value, out var errobj);
 
@@ -651,7 +642,6 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
         where TValue1 : struct
         where TValue2 : struct
     {
-
 
         var retval = func(SafeHandle, value1, value2, out var errobj);
 

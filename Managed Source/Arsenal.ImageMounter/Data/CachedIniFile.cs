@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Collections;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Native;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
@@ -6,9 +9,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
-using Arsenal.ImageMounter.Collections;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Native;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -158,6 +158,7 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
         {
             throw new InvalidOperationException("Filename property not set on this object.");
         }
+
         SaveValue(SectionName, SettingName, this[SectionName]?[SettingName], Filename);
     }
 
@@ -204,6 +205,7 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
 
             WriteSectionTo(SectionKey, Writer);
         }
+
         Writer.Flush();
     }
 
@@ -388,7 +390,7 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
             {
                 var CurrentSection = this[string.Empty];
 
-                for(; ; )
+                for (; ; )
                 {
                     var Linestr = Stream.ReadLine();
 

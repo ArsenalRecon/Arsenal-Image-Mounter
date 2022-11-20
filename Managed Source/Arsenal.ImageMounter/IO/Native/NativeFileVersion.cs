@@ -1,10 +1,13 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Extensions;
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using WORD = System.UInt16;
+using System.Runtime.Versioning;
+using BYTE = System.Byte;
 using DWORD = System.UInt32;
 using LONG = System.Int32;
-using BYTE = System.Byte;
+using WORD = System.UInt16;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable 0649
@@ -12,16 +15,6 @@ using BYTE = System.Byte;
 #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.Extensions;
-using Internal;
-using System.Buffers;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.CompilerServices;
-using System.Runtime.Versioning;
-using System.Threading;
-using System.Threading.Tasks;
-
 public enum IMAGE_FILE_MACHINE : WORD
 {
     UNKNOWN = 0,

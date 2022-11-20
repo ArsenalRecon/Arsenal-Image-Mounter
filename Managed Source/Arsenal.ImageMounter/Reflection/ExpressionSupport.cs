@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -62,6 +61,7 @@ public static class ExpressionSupport
         {
             newCall = Expression.Not(newCall);
         }
+
         var enumerableStaticDelegate = Expression.Lambda(newCall, sourceObject).Compile();
 
         if (RuntimeMethodDetection)
@@ -115,6 +115,7 @@ public static class ExpressionSupport
         {
             return null;
         }
+
         Expression callExpr;
         if (FindStaticMethod)
         {
@@ -124,10 +125,12 @@ public static class ExpressionSupport
         {
             callExpr = Expression.Call(Expression.TypeAs(Instance, dynMethod.DeclaringType!), dynMethod, Args);
         }
+
         if (InvertResult)
         {
             callExpr = Expression.Not(callExpr);
         }
+
         return Expression.Lambda(callExpr, Instance).Compile();
 
     }
@@ -341,7 +344,7 @@ public static class ExpressionSupport
             return expression;
         }
 
-        LambdaExpression expr = (LambdaExpression)((UnaryExpression)expression).Operand;
+        var expr = (LambdaExpression)((UnaryExpression)expression).Operand;
 
         parameters = expr.Parameters;
 

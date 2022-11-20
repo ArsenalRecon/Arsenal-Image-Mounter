@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.IO.Streams;
+using System;
 using System.Diagnostics;
 // '''' MultiPartFileStream.vb
 // '''' 
@@ -13,8 +15,6 @@ using System.Diagnostics;
 
 using System.IO;
 using System.Linq;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.IO.Streams;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -41,6 +41,7 @@ public class MultiPartFileStream : CombinedSeekStream
         {
             throw new ArgumentNullException(nameof(Imagefiles));
         }
+
         if (Imagefiles.Length == 0)
         {
             throw new ArgumentException("No image file names provided.", nameof(Imagefiles));

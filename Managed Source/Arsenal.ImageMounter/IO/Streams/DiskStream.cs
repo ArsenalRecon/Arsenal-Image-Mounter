@@ -1,4 +1,10 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.IO.Native;
+using DiscUtils.Streams.Compatibility;
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+
 // '''' DiskStream.vb
 // '''' Stream implementation for direct access to raw disk data.
 // '''' 
@@ -10,13 +16,6 @@
 // '''' proprietary exceptions.
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
-
-using System.Buffers;
-using System.IO;
-using System.Runtime.InteropServices;
-using Arsenal.ImageMounter.IO.Native;
-using DiscUtils.Streams.Compatibility;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -95,6 +94,7 @@ public class DiskStream : AligningStream
                     throw new NotSupportedException();
                 }
             }
+
             _size_from_vbr = value;
         }
     }

@@ -1,7 +1,7 @@
-﻿using WORD = System.UInt16;
+﻿using BYTE = System.Byte;
 using DWORD = System.UInt32;
-using BYTE = System.Byte;
 using ULONGLONG = System.UInt64;
+using WORD = System.UInt16;
 
 #pragma warning disable 0649
 
@@ -114,7 +114,7 @@ internal readonly struct IMAGE_RESOURCE_DIRECTORY
 
 internal readonly struct IMAGE_RESOURCE_DIRECTORY_ENTRY
 {
-    readonly DWORD NameId;
+    private readonly DWORD NameId;
     public uint OffsetToData { get; }
 
     public bool NameIsString => (NameId & 0x80000000) != 0;

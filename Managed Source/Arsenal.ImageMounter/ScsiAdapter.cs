@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using Microsoft.Win32.SafeHandles;
+using System;
 // '''' ScsiAdapter.vb
 // '''' Class for controlling Arsenal Image Mounter Devices.
 // '''' 
@@ -19,13 +23,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
-using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -104,6 +103,7 @@ public class ScsiAdapter : DeviceObject
 
                     }
                 }
+
                 handle.Dispose();
                 return null;
             }
@@ -114,6 +114,7 @@ public class ScsiAdapter : DeviceObject
                 {
                     Trace.WriteLine($"Error code 0x{win32exception.NativeErrorCode:X8}");
                 }
+
                 Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error checking driver version: {ex.JoinMessages()}");
                 handle.Dispose();
                 return null;
@@ -125,22 +126,7 @@ public class ScsiAdapter : DeviceObject
 
     }
 
-    private sealed class AdapterDeviceInstance
-    {
-
-        public ReadOnlyMemory<char> DevInstName { get; }
-
-        public uint DevInst { get; }
-
-        public SafeFileHandle SafeHandle { get; }
-
-        public AdapterDeviceInstance(ReadOnlyMemory<char> devInstName, uint devInst, SafeFileHandle safeHhandle)
-        {
-            DevInstName = devInstName;
-            DevInst = devInst;
-            SafeHandle = safeHhandle;
-        }
-    }
+    private record class AdapterDeviceInstance(ReadOnlyMemory<char> DevInstName, uint DevInst, SafeFileHandle SafeHandle);
 
     /// <summary>
     /// Retrieves a handle to first found adapter, or null if error occurs.
@@ -987,48 +973,4 @@ public class ScsiAdapter : DeviceObject
     public IEnumerable<string> GetPnPDeviceName(uint DeviceNumber, CmDevNodeRegistryProperty prop)
         => API.EnumerateDeviceProperty(DeviceInstance, DeviceNumber, prop);
 
-}
-
-/// <summary>
-/// Object storing properties for a virtual disk device. Returned by
-/// QueryDevice() method.
-/// </summary>
-public sealed class DeviceProperties
-{
-    private string? filename;
-
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public DeviceProperties(ScsiAdapter adapter, uint deviceNumber)
-    {
-
-        adapter.QueryDevice(deviceNumber, out var diskSize, out var bytesPerSector, out var imageOffset, out var flags, out var filename, out var writeOverlayImageFile);
-
-        DeviceNumber = deviceNumber;
-        DiskSize = diskSize;
-        BytesPerSector = bytesPerSector;
-        ImageOffset = imageOffset;
-        Flags = flags;
-        Filename = filename;
-        WriteOverlayImageFile = writeOverlayImageFile;
-    }
-
-    /// <summary>Device number of virtual disk.</summary>
-    public uint DeviceNumber { get; }
-
-    /// <summary>Size of virtual disk.</summary>
-    public long DiskSize { get; }
-    /// <summary>Number of bytes per sector for virtual disk geometry.</summary>
-    public uint BytesPerSector { get; }
-    /// <summary>A skip offset if virtual disk data does not begin immediately at start of disk image file.
-    /// Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter
-    /// or Windows filesystem drivers.</summary>
-    public long ImageOffset { get; }
-    /// <summary>Flags specifying properties for virtual disk. See comments for each flag value.</summary>
-    public DeviceFlags Flags { get; }
-    /// <summary>Name of disk image file holding storage for file type virtual disk or used to create a
-    /// virtual memory type virtual disk.</summary>
-    public string? Filename { get => filename; set => filename = value; }
-
-    /// <summary>Path to differencing file used in write-temporary mode.</summary>
-    public string? WriteOverlayImageFile { get; }
 }

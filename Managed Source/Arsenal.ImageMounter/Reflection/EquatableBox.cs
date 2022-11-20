@@ -22,15 +22,9 @@ public sealed class EquatableBox<T> : IEquatable<T>, IEquatable<EquatableBox<T>>
 
     public void ClearValue() => Value = new T();
 
-    public static implicit operator EquatableBox<T>(T value)
-    {
-        return new EquatableBox<T>(value);
-    }
+    public static implicit operator EquatableBox<T>(T value) => new(value);
 
-    public static implicit operator T(EquatableBox<T> box)
-    {
-        return box.Value;
-    }
+    public static implicit operator T(EquatableBox<T> box) => box.Value;
 
     public override string? ToString() => Value.ToString();
 

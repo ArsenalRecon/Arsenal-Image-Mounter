@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using System;
 // '''' DevioServiceBase.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -16,15 +20,10 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
-
 
 /// <summary>
 /// Base class for classes that implement functionality for acting as server end of
@@ -287,7 +286,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// proxy operation and which proxy communication protocol to use, which therefore do not
     /// need to be specified in this parameter. A common value to pass however, is DeviceFlags.ReadOnly
     /// to create a read-only virtual disk device.</param>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual void StartServiceThreadAndMount(ScsiAdapter ScsiAdapter, DeviceFlags Flags)
     {
 
@@ -326,7 +325,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// Dismounts an Arsenal Image Mounter Disk Device created by StartServiceThreadAndMount() and waits
     /// for service thread of this instance to exit.
     /// </summary>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual void DismountAndStopServiceThread()
     {
 
@@ -341,7 +340,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// for service thread of this instance to exit.
     /// </summary>
     /// <param name="timeout">Timeout value to wait for service thread exit, or Timeout.Infinite to wait infinitely.</param>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual bool DismountAndStopServiceThread(TimeSpan timeout)
     {
 
@@ -480,7 +479,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// Opens a DiskDevice object for direct access to a mounted device provided by
     /// this service instance.
     /// </summary>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual DiskDevice? OpenDiskDevice(FileAccess access)
         => ScsiAdapter?.OpenDevice(DiskDeviceNumber, access);
 
@@ -498,7 +497,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// overlay image is not needed for future sessions.
     /// </summary>
     /// <returns>Returns 0 on success or Win32 error code on failure</returns>
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public int SetWriteOverlayDeleteOnClose()
     {
         using var disk = OpenDiskDevice(FileAccess.ReadWrite)
@@ -517,11 +516,11 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// forcefully removed if a crash occurs in service thread of this instance. Default is True.</returns>
     public virtual bool ForceRemoveDiskDeviceOnCrash { get; set; } = true;
 
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual void RemoveDevice()
         => ScsiAdapter?.RemoveDevice(DiskDeviceNumber);
 
-    [System.Runtime.Versioning.SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual void RemoveDeviceSafe()
         => ScsiAdapter?.RemoveDeviceSafe(DiskDeviceNumber);
 
