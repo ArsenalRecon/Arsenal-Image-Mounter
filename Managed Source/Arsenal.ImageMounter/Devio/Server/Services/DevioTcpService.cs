@@ -112,98 +112,90 @@ public class DevioTcpService : DevioServiceBase
             Listener.Stop();
             Trace.WriteLine($"Connection from {TcpSocket.RemoteEndPoint}");
 
-            using (var TcpStream = new NetworkStream(TcpSocket, ownsSocket: true))
-            using (var Reader = new BinaryReader(TcpStream, Encoding.Default))
-            using (var Writer = new BinaryWriter(new MemoryStream(), Encoding.Default))
+            using var TcpStream = new NetworkStream(TcpSocket, ownsSocket: true);
+            using var Reader = new BinaryReader(TcpStream, Encoding.Default);
+            using var Writer = new BinaryWriter(new MemoryStream(), Encoding.Default);
+
+            InternalShutdownRequestAction = new Action(() =>
+            {
+                try
+                {
+                    Reader.Dispose();
+                }
+                catch { }
+            });
+
+            byte[]? ManagedBuffer = null;
+
+            for (; ; )
             {
 
-                InternalShutdownRequestAction = new Action(() =>
+                IMDPROXY_REQ RequestCode;
+
+                try
                 {
-                    try
-                    {
-                        Reader.Dispose();
-                    }
-                    catch { }
-                });
-
-                byte[]? ManagedBuffer = null;
-
-                do
+                    RequestCode = (IMDPROXY_REQ)Reader.ReadUInt64();
+                }
+                catch (EndOfStreamException)
                 {
-
-                    IMDPROXY_REQ RequestCode;
-
-                    try
-                    {
-                        RequestCode = (IMDPROXY_REQ)Reader.ReadUInt64();
-                    }
-                    catch (EndOfStreamException)
-                    {
-                        break;
-                    }
-
-                    // Trace.WriteLine("Got client request: " & RequestCode.ToString())
-
-                    switch (RequestCode)
-                    {
-
-                        case IMDPROXY_REQ.IMDPROXY_REQ_INFO:
-                            {
-                                SendInfo(Writer);
-                                break;
-                            }
-
-                        case IMDPROXY_REQ.IMDPROXY_REQ_READ:
-                            {
-                                ReadData(Reader, Writer, ref ManagedBuffer);
-                                break;
-                            }
-
-                        case IMDPROXY_REQ.IMDPROXY_REQ_WRITE:
-                            {
-                                WriteData(Reader, Writer, ref ManagedBuffer);
-                                break;
-                            }
-
-                        case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
-                            {
-                                Trace.WriteLine("Closing connection.");
-                                return;
-                            }
-
-                        default:
-                            {
-                                Trace.WriteLine($"Unsupported request code: {RequestCode}");
-                                return;
-                            }
-                    }
-
-                    // Trace.WriteLine("Sending response and waiting for next request.")
-
-                    Writer.Seek(0, SeekOrigin.Begin);
-                    {
-                        var withBlock = (MemoryStream)Writer.BaseStream;
-                        withBlock.WriteTo(TcpStream);
-                        withBlock.SetLength(0L);
-                    }
+                    break;
                 }
 
-                while (true);
+                // Trace.WriteLine("Got client request: " & RequestCode.ToString())
+
+                switch (RequestCode)
+                {
+
+                    case IMDPROXY_REQ.IMDPROXY_REQ_INFO:
+                        {
+                            SendInfo(Writer);
+                            break;
+                        }
+
+                    case IMDPROXY_REQ.IMDPROXY_REQ_READ:
+                        {
+                            ReadData(Reader, Writer, ref ManagedBuffer);
+                            break;
+                        }
+
+                    case IMDPROXY_REQ.IMDPROXY_REQ_WRITE:
+                        {
+                            WriteData(Reader, Writer, ref ManagedBuffer);
+                            break;
+                        }
+
+                    case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
+                        {
+                            Trace.WriteLine("Closing connection.");
+                            return;
+                        }
+
+                    default:
+                        {
+                            Trace.WriteLine($"Unsupported request code: {RequestCode}");
+                            return;
+                        }
+                }
+
+                // Trace.WriteLine("Sending response and waiting for next request.")
+
+                Writer.Seek(0, SeekOrigin.Begin);
+                {
+                    var withBlock = (MemoryStream)Writer.BaseStream;
+                    withBlock.WriteTo(TcpStream);
+                    withBlock.SetLength(0L);
+                }
             }
-
-            Trace.WriteLine("Client disconnected.");
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine($"Unhandled exception in service thread: {ex}");
             OnServiceUnhandledException(new ThreadExceptionEventArgs(ex));
         }
-
         finally
         {
+            Trace.WriteLine("Client disconnected.");
             OnServiceShutdown(EventArgs.Empty);
-
         }
     }
 

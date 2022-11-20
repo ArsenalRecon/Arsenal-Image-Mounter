@@ -36,6 +36,63 @@ public static class ProviderSupport
 
     public static int ImageConversionIoBufferSize { get; set; } = 2 << 20;
 
+    public static long GetVBRPartitionLength(this IDevioProvider baseProvider)
+    {
+
+        baseProvider.NullCheck(nameof(baseProvider));
+
+        var bytesPerSector = (int)baseProvider.SectorSize;
+
+        var vbr = bytesPerSector <= 512
+            ? stackalloc byte[bytesPerSector]
+            : new byte[bytesPerSector];
+
+        if (baseProvider.Read(vbr, 0L) < bytesPerSector)
+        {
+            return 0L;
+        }
+
+        var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
+
+        if (vbr_sector_size <= 0)
+        {
+            return 0L;
+        }
+
+        var sector_bits = 0;
+        var sector_shift = vbr_sector_size;
+        while ((sector_shift & 1) == 0)
+        {
+            sector_shift >>= 1;
+            sector_bits++;
+        }
+
+        if (sector_shift != 1)
+        {
+            throw new InvalidDataException($"Invalid VBR sector size: {vbr_sector_size} bytes");
+        }
+
+        long total_sectors;
+
+        total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
+
+        if (total_sectors == 0L)
+        {
+
+            total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
+
+        }
+
+        if (total_sectors == 0L)
+        {
+
+            total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
+
+        }
+
+        return total_sectors < 0L ? 0L : (total_sectors << sector_bits);
+    }
+
     public static string[] GetMultiSegmentFiles(string FirstFile)
     {
 

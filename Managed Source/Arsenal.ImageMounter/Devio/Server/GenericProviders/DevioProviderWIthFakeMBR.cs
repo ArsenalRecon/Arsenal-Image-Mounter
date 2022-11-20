@@ -43,52 +43,8 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
     internal byte[] SuffixBuffer { get; private set; }
 
-    public static long GetVBRPartitionLength(IDevioProvider baseProvider)
-    {
-
-        baseProvider.NullCheck(nameof(baseProvider));
-
-        var bytesPerSector = (int)baseProvider.SectorSize;
-
-        var vbr = bytesPerSector <= 512
-            ? stackalloc byte[bytesPerSector]
-            : new byte[bytesPerSector];
-
-        if (baseProvider.Read(vbr, 0L) < bytesPerSector)
-        {
-            return 0L;
-        }
-
-        var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
-
-        if (vbr_sector_size <= 0)
-        {
-            return 0L;
-        }
-
-        long total_sectors;
-
-        total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
-
-        if (total_sectors == 0L)
-        {
-
-            total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
-
-        }
-
-        if (total_sectors == 0L)
-        {
-
-            total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
-
-        }
-
-        return total_sectors < 0L ? 0L : total_sectors * vbr_sector_size;
-    }
-
     public DevioProviderWithFakeMBR(IDevioProvider BaseProvider)
-        : this(BaseProvider, GetVBRPartitionLength(BaseProvider))
+        : this(BaseProvider, BaseProvider.GetVBRPartitionLength())
     {
 
     }
@@ -100,7 +56,9 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
         PartitionLength = Math.Max(BaseProvider.Length, PartitionLength);
 
-        SuffixBuffer = new byte[(int)(PartitionLength - BaseProvider.Length - 1L) + 1];
+        var suffixLength = PartitionLength - BaseProvider.Length;
+
+        SuffixBuffer = new byte[suffixLength];
 
         var virtual_length = PrefixLength + PartitionLength;
 

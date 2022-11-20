@@ -49,7 +49,7 @@ public class DevioShmService : DevioServiceBase
     /// </summary>
     public int MaxTransferSize { get; private set; }
 
-    private Action? InternalShutdownRequestAction;
+    private Action? internalShutdownRequestAction;
 
     /// <summary>
     /// Buffer size that will be automatically selected on this platform when
@@ -242,7 +242,7 @@ public class DevioShmService : DevioServiceBase
 
             var request_shutdown = false;
 
-            InternalShutdownRequestAction = new Action(() =>
+            internalShutdownRequestAction = new Action(() =>
             {
                 try
                 {
@@ -289,7 +289,7 @@ public class DevioShmService : DevioServiceBase
                     case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
                         {
                             Trace.WriteLine("Closing connection.");
-                            break;
+                            return;
                         }
 
                     case IMDPROXY_REQ.IMDPROXY_REQ_SHARED:
@@ -301,7 +301,7 @@ public class DevioShmService : DevioServiceBase
                     default:
                         {
                             Trace.WriteLine($"Unsupported request code: {RequestCode}");
-                            break;
+                            return;
                         }
                 }
 
@@ -312,8 +312,6 @@ public class DevioShmService : DevioServiceBase
                     Trace.WriteLine("Synchronization failed.");
                 }
             }
-
-            Trace.WriteLine("Client disconnected.");
         }
         catch (Exception ex)
         {
@@ -322,6 +320,7 @@ public class DevioShmService : DevioServiceBase
         }
         finally
         {
+            Trace.WriteLine("Client disconnected.");
             OnServiceShutdown(EventArgs.Empty);
         }
     }
@@ -340,7 +339,7 @@ public class DevioShmService : DevioServiceBase
 
     }
 
-    private int _ReadData_largest_request = default;
+    private int readData_largest_request = default;
 
     private void ReadData(SafeBuffer MapView)
     {
@@ -349,10 +348,10 @@ public class DevioShmService : DevioServiceBase
 
         var Offset = (long)Request.offset;
         var ReadLength = (int)Request.length;
-        if (ReadLength > _ReadData_largest_request)
+        if (ReadLength > readData_largest_request)
         {
-            _ReadData_largest_request = ReadLength;
-            Trace.WriteLine($"Largest requested read size is now: {_ReadData_largest_request} bytes");
+            readData_largest_request = ReadLength;
+            Trace.WriteLine($"Largest requested read size is now: {readData_largest_request} bytes");
         }
 
         var Response = default(IMDPROXY_READ_RESP);
@@ -385,7 +384,7 @@ public class DevioShmService : DevioServiceBase
 
     }
 
-    private int _WriteData_largest_request = default;
+    private int writeData_largest_request = default;
 
     private void WriteData(SafeBuffer MapView)
     {
@@ -394,10 +393,10 @@ public class DevioShmService : DevioServiceBase
 
         var Offset = (long)Request.offset;
         var WriteLength = (int)Request.length;
-        if (WriteLength > _WriteData_largest_request)
+        if (WriteLength > writeData_largest_request)
         {
-            _WriteData_largest_request = WriteLength;
-            Trace.WriteLine($"Largest requested write size is now: {_WriteData_largest_request} bytes");
+            writeData_largest_request = WriteLength;
+            Trace.WriteLine($"Largest requested write size is now: {writeData_largest_request} bytes");
         }
 
         var Response = default(IMDPROXY_WRITE_RESP);
@@ -439,8 +438,6 @@ public class DevioShmService : DevioServiceBase
 
     }
 
-    private static readonly int SizeOfULong = PinnedBuffer<ulong>.TypeSize;
-
     private void SharedKeys(SafeBuffer MapView)
     {
 
@@ -457,7 +454,7 @@ public class DevioShmService : DevioServiceBase
             }
             else
             {
-                Response.length = (ulong)(Keys.Length * SizeOfULong);
+                Response.length = (ulong)(Keys.Length * sizeof(ulong));
                 MapView.WriteArray(IMDPROXY_HEADER_SIZE, Keys, 0, Keys.Length);
             }
         }
@@ -478,6 +475,6 @@ public class DevioShmService : DevioServiceBase
 
     protected override DeviceFlags ProxyModeFlags => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeSharedMemory;
 
-    protected override void EmergencyStopServiceThread() => InternalShutdownRequestAction?.Invoke();
+    protected override void EmergencyStopServiceThread() => internalShutdownRequestAction?.Invoke();
 
 }
