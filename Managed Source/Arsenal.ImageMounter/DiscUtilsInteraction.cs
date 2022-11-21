@@ -30,7 +30,7 @@ public static class DiscUtilsInteraction
 
     public static int RAMDiskEndOfDiskFreeSpace { get; set; } = 1 << 20;
 
-    public static bool DiscUtilsInitialized { get; private set; } = DevioServiceFactory.DiscUtilsInitialized;
+    public static bool DiscUtilsInitialized { get; } = DevioServiceFactory.DiscUtilsInitialized;
 
     public static void InitializeVirtualDisk(VirtualDisk disk, Geometry discutils_geometry, PARTITION_STYLE partition_style, InitializeFileSystem file_system, string label)
     {

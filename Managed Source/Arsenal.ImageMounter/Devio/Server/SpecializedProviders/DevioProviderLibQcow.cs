@@ -118,9 +118,9 @@ public class DevioProviderLibQcow : DevioProviderUnmanagedBase
     }
     #endregion
 
-    public byte Flags { get; private set; }
+    public byte Flags { get; }
 
-    public SafeLibQcowFileHandle SafeHandle { get; private set; }
+    public SafeLibQcowFileHandle SafeHandle { get; }
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, SetLastError = true, ThrowOnUnmappableChar = true)]
     private static extern byte libqcow_get_access_flags_read();
@@ -298,10 +298,7 @@ public class DevioProviderLibQcow : DevioProviderUnmanagedBase
     {
         get
         {
-            var LengthRet = 0L;
-            LengthRet = 0L;
-
-            var RC = libqcow_file_get_media_size(SafeHandle, out LengthRet, out var errobj);
+            var RC = libqcow_file_get_media_size(SafeHandle, out var LengthRet, out var errobj);
             if (RC < 0 || Failed(errobj))
             {
                 ThrowError(errobj, "libqcow_file_get_media_size() failed");
@@ -405,8 +402,6 @@ public class DevioProviderLibQcow : DevioProviderUnmanagedBase
         {
             SafeHandle.Dispose();
         }
-
-        SafeHandle = null!;
 
         base.Dispose(disposing);
 

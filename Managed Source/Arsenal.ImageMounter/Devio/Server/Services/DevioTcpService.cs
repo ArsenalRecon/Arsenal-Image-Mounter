@@ -34,7 +34,7 @@ public class DevioTcpService : DevioServiceBase
     /// <summary>
     /// Server endpoint where this service listens for client connection.
     /// </summary>
-    public IPEndPoint ListenEndPoint { get; private set; }
+    public IPEndPoint ListenEndPoint { get; }
 
     private Action? InternalShutdownRequestAction;
 

@@ -15,10 +15,10 @@ namespace Arsenal.ImageMounter.Views;
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public static class DiskStateParser
 {
-    public static IEnumerable<DiskStateView>? GetSimpleView(ScsiAdapter portnumber, IEnumerable<DeviceProperties> deviceProperties)
+    public static IEnumerable<DiskStateView> GetSimpleView(ScsiAdapter portnumber, IEnumerable<DeviceProperties> deviceProperties)
         => GetSimpleViewSpecial<DiskStateView>(portnumber, deviceProperties);
 
-    public static IEnumerable<T>? GetSimpleViewSpecial<T>(ScsiAdapter portnumber, IEnumerable<DeviceProperties> deviceProperties) where T : DiskStateView, new()
+    public static IEnumerable<T> GetSimpleViewSpecial<T>(ScsiAdapter portnumber, IEnumerable<DeviceProperties> deviceProperties) where T : DiskStateView, new()
     {
 
         try

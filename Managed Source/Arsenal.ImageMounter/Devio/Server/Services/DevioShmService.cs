@@ -35,12 +35,12 @@ public class DevioShmService : DevioServiceBase
     /// <summary>
     /// Object name of shared memory file mapping object created by this instance.
     /// </summary>
-    public string ObjectName { get; private set; }
+    public string ObjectName { get; }
 
     /// <summary>
     /// Size of the memory block that is shared between driver and this service.
     /// </summary>
-    public long BufferSize { get; private set; }
+    public long BufferSize { get; }
 
     /// <summary>
     /// Largest size of an I/O transfer between driver and this service. This

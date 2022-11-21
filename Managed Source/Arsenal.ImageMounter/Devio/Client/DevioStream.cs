@@ -34,7 +34,7 @@ public abstract partial class DevioStream : Stream
     /// <summary>
     /// Object name used by proxy implementation.
     /// </summary>
-    public string? ObjectName { get; private set; }
+    public string? ObjectName { get; }
 
     /// <summary>
     /// Virtual disk size of server object.
@@ -194,7 +194,7 @@ public abstract partial class DevioStream : Stream
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         Write(buffer.Span);
-        return new();
+        return default;
     }
 #endif
 }

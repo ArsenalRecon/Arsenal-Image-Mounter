@@ -6,7 +6,6 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>aim_cli</AssemblyName>
     <Title>Arsenal Image Mounter Console Service</Title>
-	<TargetFrameworks>net48;net6.0</TargetFrameworks>
     <UseWindowsForms>false</UseWindowsForms>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>

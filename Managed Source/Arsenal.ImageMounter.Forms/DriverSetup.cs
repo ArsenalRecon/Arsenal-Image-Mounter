@@ -335,10 +335,10 @@ public static class DriverSetup
     /// version followed by one subdirectory for each architecture.</param>
     internal static void InstallScsiPortDriver(IWin32Window ownerWindow, string setupsource)
     {
-        Trace.WriteLine($"Pre-installed controller inf: '{(NativeFileIO.SetupCopyOEMInf(Path.Combine(setupsource, "CtlUnit", "ctlunit.inf"), NoOverwrite: false))}'");
+        Trace.WriteLine($"Pre-installed controller inf: '{NativeFileIO.SetupCopyOEMInf(Path.Combine(setupsource, "CtlUnit", "ctlunit.inf"), NoOverwrite: false)}'");
         Directory.SetCurrentDirectory(setupsource);
         NativeFileIO.UnsafeNativeMethods.SetupSetNonInteractiveMode(state: false);
-        NativeFileIO.RunDLLInstallHinfSection(InfPath: Path.Combine(".", API.Kernel, "phdskmnt.inf"), OwnerWindow: ownerWindow.Handle, InfSection: "DefaultInstall".AsMemory());
+        NativeFileIO.RunDLLInstallHinfSection(InfPath: Path.Combine(".", API.Kernel, "phdskmnt.inf"), OwnerWindow: ownerWindow.Handle, InfSection: "DefaultInstall".AsSpan());
         using (var scm = new ServiceController("phdskmnt"))
         {
             while (scm.Status != ServiceControllerStatus.Running)

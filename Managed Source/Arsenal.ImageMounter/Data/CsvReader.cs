@@ -17,7 +17,7 @@ public abstract class CsvReader : MarshalByRefObject, IEnumerable, IEnumerator, 
 
     protected readonly char[] textQuotes = { '"' };
 
-    public TextReader BaseReader { get; private set; }
+    public TextReader BaseReader { get; }
 
     public ReadOnlyCollection<char> Delimiters => new(delimiters);
 

@@ -368,8 +368,10 @@ public static class ProviderSupport
         {
             foreach (var hashName in hashResults.Keys)
             {
+#pragma warning disable SYSLIB0045 // Type or member is obsolete
                 var hashProvider = HashAlgorithm.Create(hashName)
                     ?? throw new NotSupportedException($"Hash algorithm '{hashName}' not supported");
+#pragma warning restore SYSLIB0045 // Type or member is obsolete
 
                 hashProvider.Initialize();
                 hashProviders.Add(hashName, hashProvider);

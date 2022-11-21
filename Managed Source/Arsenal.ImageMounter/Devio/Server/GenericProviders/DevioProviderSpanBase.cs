@@ -45,7 +45,7 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// Indicates whether provider supports shared image operations with registrations
     /// and reservations.
     /// </summary>
-    public virtual bool SupportsShared { get; private set; }
+    public virtual bool SupportsShared { get; }
 
     /// <summary>
     /// Size of virtual disk.

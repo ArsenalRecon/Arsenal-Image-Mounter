@@ -38,7 +38,7 @@ namespace Arsenal.ImageMounter;
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public static class API
 {
-    public static Version OSVersion { get; private set; } = NativeFileIO.GetOSVersion().Version;
+    public static Version OSVersion { get; } = NativeFileIO.GetOSVersion().Version;
 
     public static string Kernel { get; private set; } = GetKernelName();
 
@@ -259,7 +259,13 @@ public static class API
            select value;
 
     public static void UnregisterWriteOverlayImage(uint devInst)
-        => RegisterWriteOverlayImage(devInst, OverlayImagePath: default, FakeNonRemovable: false);
+        => RegisterWriteOverlayImage(devInst, OverlayImagePath: ReadOnlyMemory<char>.Empty, FakeNonRemovable: false);
+
+    public static void RegisterWriteOverlayImage(uint devInst, string OverlayImagePath)
+        => RegisterWriteOverlayImage(devInst, OverlayImagePath.AsMemory(), FakeNonRemovable: false);
+
+    public static void RegisterWriteOverlayImage(uint devInst, string OverlayImagePath, bool FakeNonRemovable)
+        => RegisterWriteOverlayImage(devInst, OverlayImagePath.AsMemory(), FakeNonRemovable);
 
     public static void RegisterWriteOverlayImage(uint devInst, ReadOnlyMemory<char> OverlayImagePath)
         => RegisterWriteOverlayImage(devInst, OverlayImagePath, FakeNonRemovable: false);

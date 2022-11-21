@@ -33,11 +33,11 @@ public class FileStreamsEnumerator : IEnumerable<FindStreamData>
     public sealed class Enumerator : IEnumerator<FindStreamData>
     {
 
-        public ReadOnlyMemory<char> FilePath { get; private set; }
+        public ReadOnlyMemory<char> FilePath { get; }
 
         public SafeFindHandle? SafeHandle { get; private set; }
 
-        private FindStreamData _current;
+        private FindStreamData current;
 
         public Enumerator(ReadOnlyMemory<char> FilePath)
         {
@@ -46,7 +46,7 @@ public class FileStreamsEnumerator : IEnumerable<FindStreamData>
 
         public FindStreamData Current => disposedValue
             ? throw new ObjectDisposedException("FileStreamsEnumerator.Enumerator")
-            : _current;
+            : current;
 
         private object IEnumerator_Current => Current;
 
@@ -62,7 +62,7 @@ public class FileStreamsEnumerator : IEnumerable<FindStreamData>
 
             if (SafeHandle is null)
             {
-                SafeHandle = FindFirstStreamW(FilePath.MakeNullTerminated(), 0, out _current, 0);
+                SafeHandle = FindFirstStreamW(FilePath.MakeNullTerminated(), 0, out current, 0);
 
                 if (!SafeHandle.IsInvalid)
                 {
@@ -73,7 +73,7 @@ public class FileStreamsEnumerator : IEnumerable<FindStreamData>
                     return Marshal.GetLastWin32Error() == ERROR_HANDLE_EOF ? false : throw new Win32Exception();
                 }
             }
-            else if (FindNextStream(SafeHandle, out _current))
+            else if (FindNextStream(SafeHandle, out current))
             {
                 return true;
             }
@@ -104,7 +104,7 @@ public class FileStreamsEnumerator : IEnumerable<FindStreamData>
                 SafeHandle = null;
 
                 // TODO: set large fields to null.
-                _current = default;
+                current = default;
             }
 
             disposedValue = true;

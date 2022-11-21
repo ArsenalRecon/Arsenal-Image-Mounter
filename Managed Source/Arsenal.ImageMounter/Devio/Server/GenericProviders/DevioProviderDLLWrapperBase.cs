@@ -82,7 +82,7 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
 
     }
 
-    public SafeDevioProviderDLLHandle SafeHandle { get; private set; }
+    public SafeDevioProviderDLLHandle SafeHandle { get; }
 
     public override long Length { get; }
 
@@ -110,8 +110,6 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
         {
             SafeHandle?.Dispose();
         }
-
-        SafeHandle = null!;
 
         base.Dispose(disposing);
     }

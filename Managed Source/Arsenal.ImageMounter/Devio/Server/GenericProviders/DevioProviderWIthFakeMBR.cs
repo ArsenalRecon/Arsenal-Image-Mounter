@@ -37,11 +37,11 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
     public const int PrefixLength = 64 << 10;
 
-    public IDevioProvider BaseProvider { get; private set; }
+    public IDevioProvider BaseProvider { get; }
 
-    internal byte[] PrefixBuffer { get; private set; } = new byte[65536];
+    internal byte[] PrefixBuffer { get; } = new byte[65536];
 
-    internal byte[] SuffixBuffer { get; private set; }
+    internal byte[] SuffixBuffer { get; }
 
     public DevioProviderWithFakeMBR(IDevioProvider BaseProvider)
         : this(BaseProvider, BaseProvider.GetVBRPartitionLength())

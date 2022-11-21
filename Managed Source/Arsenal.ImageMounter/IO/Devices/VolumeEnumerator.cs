@@ -28,11 +28,11 @@ public class VolumeEnumerator : IEnumerable<string>
 
         public SafeFindVolumeHandle? SafeHandle { get; private set; }
 
-        private char[] _sb = new char[50];
+        private char[] sb = new char[50];
 
         public string Current => disposedValue
                     ? throw new ObjectDisposedException("VolumeEnumerator.Enumerator")
-                    : _sb.AsSpan().ReadNullTerminatedUnicodeString();
+                    : sb.AsSpan().ReadNullTerminatedUnicodeString();
 
         private object IEnumerator_Current => Current;
 
@@ -48,7 +48,7 @@ public class VolumeEnumerator : IEnumerable<string>
 
             if (SafeHandle is null)
             {
-                SafeHandle = FindFirstVolumeW(out _sb[0], _sb.Length);
+                SafeHandle = FindFirstVolumeW(out sb[0], sb.Length);
                 if (!SafeHandle.IsInvalid)
                 {
                     return true;
@@ -58,7 +58,7 @@ public class VolumeEnumerator : IEnumerable<string>
                     return Marshal.GetLastWin32Error() == ERROR_NO_MORE_FILES ? false : throw new Win32Exception();
                 }
             }
-            else if (FindNextVolumeW(SafeHandle, out _sb[0], _sb.Length))
+            else if (FindNextVolumeW(SafeHandle, out sb[0], sb.Length))
             {
                 return true;
             }
@@ -88,7 +88,7 @@ public class VolumeEnumerator : IEnumerable<string>
                 SafeHandle = null;
 
                 // TODO: set large fields to null.
-                _sb = null!;
+                sb = null!;
             }
 
             disposedValue = true;

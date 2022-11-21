@@ -46,8 +46,8 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
         try
         {
             var size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionNamesW(out sectionnames[0],
-                                                                                          NamesSize,
-                                                                                          filename.MakeNullTerminated());
+                                                                                       NamesSize,
+                                                                                       filename.MakeNullTerminated());
 
             foreach (var name in sectionnames.AsMemory(0, size).ParseDoubleTerminatedString())
             {
@@ -338,10 +338,8 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
             using var fs = new FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 20480, FileOptions.SequentialScan);
             Load(fs, Encoding);
         }
-
         catch
         {
-
         }
     }
 
@@ -406,7 +404,8 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                         continue;
                     }
 
-                    if (Line.StartsWith("[".AsSpan(), StringComparison.Ordinal) && Line.EndsWith("]".AsSpan(), StringComparison.Ordinal))
+                    if (Line.StartsWith("[".AsSpan(), StringComparison.Ordinal)
+                        && Line.EndsWith("]".AsSpan(), StringComparison.Ordinal))
                     {
                         var SectionKey = Line.Slice(1, Line.Length - 2).Trim().ToString();
                         CurrentSection = this[SectionKey];

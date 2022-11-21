@@ -26,9 +26,9 @@ namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 public class DebugProvider : DevioProviderUnmanagedBase
 {
 
-    public IDevioProvider BaseProvider { get; private set; }
+    public IDevioProvider BaseProvider { get; }
 
-    public Stream DebugCompareStream { get; private set; }
+    public Stream DebugCompareStream { get; }
 
     public DebugProvider(IDevioProvider BaseProvider, Stream DebugCompareStream)
     {

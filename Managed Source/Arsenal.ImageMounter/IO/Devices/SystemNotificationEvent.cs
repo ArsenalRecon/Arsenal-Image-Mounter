@@ -63,8 +63,8 @@ public sealed class RegisteredEventHandler : IDisposable
 
     private readonly RegisteredWaitHandle _registered_wait_handle;
 
-    public WaitHandle WaitHandle { get; private set; }
-    public EventHandler EventHandler { get; private set; }
+    public WaitHandle WaitHandle { get; }
+    public EventHandler EventHandler { get; }
 
     public RegisteredEventHandler(WaitHandle waitObject, EventHandler handler)
     {
@@ -99,7 +99,7 @@ public sealed class RegisteredEventHandler : IDisposable
 public class WaitEventHandler
 {
 
-    public WaitHandle WaitHandle { get; private set; }
+    public WaitHandle WaitHandle { get; }
 
     private readonly List<RegisteredEventHandler> _event_handlers = new();
 

@@ -364,7 +364,13 @@ public static class DevioServiceFactory
             return GetProviderPhysical(device_number, DiskAccess);
         }
 
-        else if (Imagefile.StartsWith("/dev/", StringComparison.Ordinal) || RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (Imagefile.StartsWith(@"\\?\", StringComparison.OrdinalIgnoreCase) || Imagefile.StartsWith(@"\\.\", StringComparison.OrdinalIgnoreCase)) && !NativeStruct.HasExtension(Imagefile) && (!NativeFileIO.TryGetFileAttributes(Imagefile, out var attributes) || attributes.HasFlag(FileAttributes.Directory)))
+        else if (Imagefile.StartsWith("/dev/", StringComparison.Ordinal)
+            || (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            && (Imagefile.StartsWith(@"\\?\", StringComparison.OrdinalIgnoreCase)
+            || Imagefile.StartsWith(@"\\.\", StringComparison.OrdinalIgnoreCase))
+            && !NativeStruct.HasExtension(Imagefile)
+            && (!NativeFileIO.TryGetFileAttributes(Imagefile, out var attributes)
+            || attributes.HasFlag(FileAttributes.Directory))))
         {
 
             return GetProviderPhysical(Imagefile, DiskAccess);
@@ -377,7 +383,7 @@ public static class DevioServiceFactory
 
     }
 
-    public static Dictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndVirtualDiskAccess { get; private set; } =
+    public static Dictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndVirtualDiskAccess { get; } =
         new()
         {
             { ProviderType.DiscUtils, GetProviderDiscUtils },
@@ -388,7 +394,7 @@ public static class DevioServiceFactory
             { ProviderType.None, GetProviderRaw }
         };
 
-    public static Dictionary<ProviderType, Func<string, FileAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndFileAccess { get; private set; } =
+    public static Dictionary<ProviderType, Func<string, FileAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndFileAccess { get; } =
         new()
         {
             { ProviderType.DiscUtils, GetProviderDiscUtils },
@@ -399,7 +405,7 @@ public static class DevioServiceFactory
             { ProviderType.None, GetProviderRaw }
         };
 
-    public static Dictionary<string, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByNameAndVirtualDiskAccess { get; private set; } =
+    public static Dictionary<string, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByNameAndVirtualDiskAccess { get; } =
         new(StringComparer.OrdinalIgnoreCase)
         {
             { "DiscUtils", GetProviderDiscUtils },
@@ -410,7 +416,7 @@ public static class DevioServiceFactory
             { "None", GetProviderRaw }
         };
 
-    public static Dictionary<string, Func<string, FileAccess, IDevioProvider?>> InstalledProvidersByNameAndFileAccess { get; private set; } =
+    public static Dictionary<string, Func<string, FileAccess, IDevioProvider?>> InstalledProvidersByNameAndFileAccess { get; } =
         new(StringComparer.OrdinalIgnoreCase)
         {
             { "DiscUtils", GetProviderDiscUtils },
@@ -432,7 +438,7 @@ public static class DevioServiceFactory
         typeof(DiscUtils.Raw.Disk).Assembly
     };
 
-    public static bool DiscUtilsInitialized { get; private set; } = InitializeDiscUtils();
+    public static bool DiscUtilsInitialized { get; } = InitializeDiscUtils();
 
     private static bool InitializeDiscUtils()
     {
@@ -1046,7 +1052,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     public static VirtualDisk OpenImage(string imagepath)
     {
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (imagepath.StartsWith(@"\\?\", StringComparison.Ordinal) || imagepath.StartsWith(@"\\.\", StringComparison.Ordinal)) && !NativeStruct.HasExtension(imagepath))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            && (imagepath.StartsWith(@"\\?\", StringComparison.Ordinal)
+            || imagepath.StartsWith(@"\\.\", StringComparison.Ordinal))
+            && !NativeStruct.HasExtension(imagepath))
         {
 
             var vdisk = new DiskDevice(imagepath.AsMemory(), FileAccess.Read);
@@ -1055,7 +1064,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
         }
 
-        if (Path.GetExtension(imagepath).Equals(".001", StringComparison.Ordinal) && File.Exists(Path.ChangeExtension(imagepath, ".002")))
+        if (Path.GetExtension(imagepath) == ".001" && File.Exists(Path.ChangeExtension(imagepath, ".002")))
         {
             var diskstream = new DevioDirectStream(GetProviderMultiPartRaw(imagepath, FileAccess.Read), ownsProvider: true);
             return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
@@ -1165,7 +1174,9 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
             default:
                 {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (imageFile.StartsWith(@"\\?\", StringComparison.Ordinal) || imageFile.StartsWith(@"\\.\", StringComparison.Ordinal)))
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                        && (imageFile.StartsWith(@"\\?\", StringComparison.Ordinal)
+                        || imageFile.StartsWith(@"\\.\", StringComparison.Ordinal)))
                     {
 
                         var disk = new DiskDevice(imageFile.AsMemory(), FileAccess.Read);

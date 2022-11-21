@@ -54,7 +54,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// Indicates whether DevioProvider will be automatically closed when this instance
     /// is disposed.
     /// </summary>
-    public bool OwnsProvider { get; private set; }
+    public bool OwnsProvider { get; }
 
     /// <summary>
     /// Size of virtual disk device.
@@ -142,7 +142,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
             && ScsiAdapter is not null)
         {
 
-            ScsiAdapter.RemoveDevice(_DiskDeviceNumber);
+            ScsiAdapter.RemoveDevice(diskDeviceNumber);
 
         }
     }
@@ -306,7 +306,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
         try
         {
-            ScsiAdapter.CreateDevice(DiskSize, SectorSize, Offset, Flags | AdditionalFlags | ProxyModeFlags, ProxyObjectName.AsMemory(), false, WriteOverlayImageName.AsMemory(), false, ref _DiskDeviceNumber);
+            ScsiAdapter.CreateDevice(DiskSize, SectorSize, Offset, Flags | AdditionalFlags | ProxyModeFlags, ProxyObjectName.AsMemory(), false, WriteOverlayImageName.AsMemory(), false, ref diskDeviceNumber);
 
             OnDiskDeviceCreated(EventArgs.Empty);
         }
@@ -350,11 +350,11 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
         if (rc)
         {
-            Trace.WriteLine($"Service for device {_DiskDeviceNumber:X6} shut down successfully.");
+            Trace.WriteLine($"Service for device {diskDeviceNumber:X6} shut down successfully.");
         }
         else
         {
-            Trace.WriteLine($"Service for device {_DiskDeviceNumber:X6} shut down timed out.");
+            Trace.WriteLine($"Service for device {diskDeviceNumber:X6} shut down timed out.");
         }
 
         return rc;
@@ -369,20 +369,20 @@ public abstract class DevioServiceBase : IVirtualDiskService
     protected void RemoveDeviceAndStopServiceThread()
     {
 
-        Trace.WriteLine($"Notifying service stopping for device {_DiskDeviceNumber:X6}...");
+        Trace.WriteLine($"Notifying service stopping for device {diskDeviceNumber:X6}...");
 
         OnServiceStopping(EventArgs.Empty);
 
-        Trace.WriteLine($"Removing device {_DiskDeviceNumber:X6}...");
+        Trace.WriteLine($"Removing device {diskDeviceNumber:X6}...");
 
         var i = 1;
         do
         {
             try
             {
-                ScsiAdapter?.RemoveDevice(_DiskDeviceNumber);
+                ScsiAdapter?.RemoveDevice(diskDeviceNumber);
 
-                Trace.WriteLine($"Device {_DiskDeviceNumber:X6} removed.");
+                Trace.WriteLine($"Device {diskDeviceNumber:X6} removed.");
 
                 break;
             }
@@ -390,7 +390,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
             catch (Win32Exception ex) when (i < 40 && ex.NativeErrorCode == NativeConstants.ERROR_ACCESS_DENIED)
             {
 
-                Trace.WriteLine($"Access denied attempting to remove device {_DiskDeviceNumber:X6}, retrying...");
+                Trace.WriteLine($"Access denied attempting to remove device {diskDeviceNumber:X6}, retrying...");
 
                 i += 1;
                 Thread.Sleep(100);
@@ -400,7 +400,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
             catch (Win32Exception ex) when (ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND)
             {
 
-                Trace.WriteLine($"Attempt to remove non-existent device {_DiskDeviceNumber:X6}");
+                Trace.WriteLine($"Attempt to remove non-existent device {diskDeviceNumber:X6}");
 
                 EmergencyStopServiceThread();
 
@@ -449,7 +449,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// <returns>Path to write overlay image to pass to driver.</returns>
     public string? WriteOverlayImageName { get; set; }
 
-    private uint _DiskDeviceNumber = uint.MaxValue;
+    private uint diskDeviceNumber = uint.MaxValue;
 
     /// <summary>
     /// After successful call to StartServiceThreadAndMount(), this property returns disk device
@@ -462,9 +462,9 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// <returns>Disk device
     /// number for created Arsenal Image Mounter Disk Device.</returns>
     /// <remarks></remarks>
-    public uint DiskDeviceNumber => _DiskDeviceNumber == uint.MaxValue
+    public uint DiskDeviceNumber => diskDeviceNumber == uint.MaxValue
                 ? throw new InvalidOperationException("No Arsenal Image Mounter Disk Device currently associated with this instance.")
-                : _DiskDeviceNumber;
+                : diskDeviceNumber;
 
     /// <summary>
     /// Use HasDiskDevice property to find out if a disk device has been created in a call to
@@ -473,7 +473,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// </summary>
     /// <value>Returns True if an Arsenal Image Mounter Disk Device has been created, False otherwise.</value>
     /// <returns>Returns True if an Arsenal Image Mounter Disk Device has been created, False otherwise.</returns>
-    public virtual bool HasDiskDevice => _DiskDeviceNumber != uint.MaxValue;
+    public virtual bool HasDiskDevice => diskDeviceNumber != uint.MaxValue;
 
     /// <summary>
     /// Opens a DiskDevice object for direct access to a mounted device provided by

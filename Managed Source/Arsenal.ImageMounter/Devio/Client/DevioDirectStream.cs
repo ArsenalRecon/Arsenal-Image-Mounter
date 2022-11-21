@@ -28,8 +28,8 @@ namespace Arsenal.ImageMounter.Devio.Client;
 /// </summary>
 public partial class DevioDirectStream : DevioStream
 {
-    public IDevioProvider Provider { get; private set; }
-    public bool OwnsProvider { get; private set; }
+    public IDevioProvider Provider { get; }
+    public bool OwnsProvider { get; }
 
     /// <summary>
     /// Initiates a new instance with supplied provider object.
@@ -124,7 +124,6 @@ public partial class DevioDirectStream : DevioStream
             Provider?.Dispose();
         }
 
-        Provider = null!;
         base.Dispose(disposing);
     }
 }

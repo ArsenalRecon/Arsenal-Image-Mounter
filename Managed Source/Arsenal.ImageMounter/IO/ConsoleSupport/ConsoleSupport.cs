@@ -141,20 +141,22 @@ public static class ConsoleSupport
             {
             }
 
-            else if (arg.Length == 0 || arg.Equals("-", StringComparison.Ordinal))
+            else if (arg.Length == 0 || arg == "-")
             {
 
                 switches_finished = true;
             }
 
-            else if (arg.Equals("--", StringComparison.Ordinal))
+            else if (arg == "--")
             {
 
                 switches_finished = true;
                 continue;
             }
 
-            else if (arg.StartsWith("--", StringComparison.Ordinal) || Path.DirectorySeparatorChar != '/' && arg.StartsWith("/", StringComparison.Ordinal))
+            else if (arg.StartsWith("--", StringComparison.Ordinal)
+                || Path.DirectorySeparatorChar != '/'
+                && arg.StartsWith("/", StringComparison.Ordinal))
             {
 
                 var namestart = 1;

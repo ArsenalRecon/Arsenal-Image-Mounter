@@ -33,12 +33,12 @@ public class DevioNoneService : DevioServiceBase
     /// <summary>
     /// Name and path of image file mounted by Arsenal Image Mounter.
     /// </summary>
-    public string? Imagefile { get; private set; }
+    public string? Imagefile { get; }
 
     /// <summary>
     /// FileAccess flags specifying whether to mount read-only or read-write.
     /// </summary>
-    public FileAccess DiskAccess { get; private set; }
+    public FileAccess DiskAccess { get; }
 
     /// <summary>
     /// Creates a DevioServiceBase compatible object, but without providing a proxy service.

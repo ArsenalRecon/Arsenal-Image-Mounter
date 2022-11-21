@@ -335,7 +335,7 @@ Please see EULA.txt for license information.");
             {
                 detach_event = new SafeWaitHandle(new IntPtr(long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo)), ownsHandle: true);
             }
-            else if (arg.Length == 0 || arg.Equals("?", StringComparison.Ordinal) || arg.Equals("help", StringComparison.OrdinalIgnoreCase))
+            else if (arg.Length == 0 || arg == "?" || arg.Equals("help", StringComparison.OrdinalIgnoreCase))
             {
                 show_help = true;
                 break;
@@ -442,7 +442,7 @@ Syntax to display a list of mounted devices:
 
             uint devicenumber;
 
-            if (dismount.Equals("*", StringComparison.Ordinal))
+            if (dismount == "*")
             {
                 devicenumber = ScsiAdapter.AutoDeviceNumber;
             }

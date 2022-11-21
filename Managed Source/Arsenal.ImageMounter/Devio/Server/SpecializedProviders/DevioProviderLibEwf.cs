@@ -120,9 +120,9 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
     }
     #endregion
 
-    public byte Flags { get; private set; }
+    public byte Flags { get; }
 
-    public SafeLibEwfFileHandle SafeHandle { get; private set; }
+    public SafeLibEwfFileHandle SafeHandle { get; }
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, SetLastError = true, ThrowOnUnmappableChar = true)]
     private static extern byte libewf_get_access_flags_read();
@@ -433,10 +433,7 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
     {
         get
         {
-            var LengthRet = 0L;
-            LengthRet = 0L;
-
-            var RC = libewf_handle_get_media_size(SafeHandle, out LengthRet, out var errobj);
+            var RC = libewf_handle_get_media_size(SafeHandle, out var LengthRet, out var errobj);
             if (RC < 0 || Failed(errobj))
             {
                 ThrowError(errobj, "libewf_handle_get_media_size() failed");
@@ -579,17 +576,15 @@ public class DevioProviderLibEwf : DevioProviderUnmanagedBase
             SafeHandle.Dispose();
         }
 
-        SafeHandle = null!;
-
         base.Dispose(disposing);
 
     }
 
     public override uint SectorSize { get; }
 
-    public uint ChunkSize { get; private set; }
+    public uint ChunkSize { get; }
 
-    public uint SectorsPerChunk { get; private set; }
+    public uint SectorsPerChunk { get; }
 
     public void SetOutputStringParameter(string identifier, string? value)
     {

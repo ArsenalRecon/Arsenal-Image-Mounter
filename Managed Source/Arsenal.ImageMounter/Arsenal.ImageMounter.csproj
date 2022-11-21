@@ -4,7 +4,6 @@
 
   <PropertyGroup>
     <Description>Arsenal Image Mounter Low Level API Library</Description>
-	<TargetFrameworks>net48;net6.0</TargetFrameworks>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 

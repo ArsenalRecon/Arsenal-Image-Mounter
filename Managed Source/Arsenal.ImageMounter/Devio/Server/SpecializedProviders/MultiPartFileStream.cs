@@ -52,12 +52,13 @@ public class MultiPartFileStream : CombinedSeekStream
         try
         {
             imagestreams = Array.ConvertAll(Imagefiles, Imagefile =>
-{
-    Trace.WriteLine($"Opening image {Imagefile}");
-    return new FileStream(Imagefile, FileMode.Open, DiskAccess, ShareMode);
-});
-        }
+            {
+                Trace.WriteLine($"Opening image {Imagefile}");
+                return new FileStream(Imagefile, FileMode.Open, DiskAccess, ShareMode);
+            });
 
+            return imagestreams;
+        }
         catch (Exception ex)
         {
             if (imagestreams is not null)
@@ -66,11 +67,7 @@ public class MultiPartFileStream : CombinedSeekStream
             }
 
             throw new IOException($"Error opening image files '{Imagefiles.FirstOrDefault()}'", ex);
-
         }
-
-        return imagestreams;
-
     }
 
     public MultiPartFileStream(string FirstImagefile, FileAccess DiskAccess)

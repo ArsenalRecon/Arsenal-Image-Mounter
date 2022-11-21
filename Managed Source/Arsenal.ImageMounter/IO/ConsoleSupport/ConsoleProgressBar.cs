@@ -10,7 +10,7 @@ public class ConsoleProgressBar : IDisposable
 {
     public Timer Timer { get; }
 
-    public int CurrentValue { get; private set; }
+    public int CurrentValue { get; }
 
     private readonly Func<double> updateFunc;
 

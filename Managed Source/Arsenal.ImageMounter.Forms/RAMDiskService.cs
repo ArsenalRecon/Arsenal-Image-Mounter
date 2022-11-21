@@ -16,9 +16,9 @@ namespace Arsenal.ImageMounter.Devio.Server.Interaction;
 
 public class RAMDiskService : DevioNoneService
 {
-    public string? Volume { get; private set; }
+    public string? Volume { get; }
 
-    public string? MountPoint { get; private set; }
+    public string? MountPoint { get; }
 
     public RAMDiskService(ScsiAdapter Adapter, long DiskSize, InitializeFileSystem FormatFileSystem)
         : base(DiskSize)

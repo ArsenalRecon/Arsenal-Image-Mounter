@@ -25,7 +25,7 @@ public sealed class GlobalCriticalMutex : IDisposable
 
     private Mutex mutex;
 
-    public bool WasAbandoned { get; private set; }
+    public bool WasAbandoned { get; }
 
     public GlobalCriticalMutex()
     {

@@ -118,7 +118,10 @@ public class SubStream : Stream
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
 
-    public override int Read(Span<byte> buffer) => Position >= _length ? 0 : Parent.Read(buffer[..(int)Math.Min(buffer.Length, checked(_length - Position))]);
+    public override int Read(Span<byte> buffer)
+        => Position >= _length
+        ? 0
+        : Parent.Read(buffer[..(int)Math.Min(buffer.Length, checked(_length - Position))]);
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => Position >= _length
             ? new ValueTask<int>(0)
@@ -204,9 +207,10 @@ public class SubStream : Stream
         Parent.Write(buffer);
     }
 
-    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) => checked(Position + buffer.Length) > _length
-            ? throw new ArgumentOutOfRangeException(nameof(buffer), "Attempt to write beyond end of SubStream")
-            : Parent.WriteAsync(buffer, cancellationToken);
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        => checked(Position + buffer.Length) > _length
+        ? throw new ArgumentOutOfRangeException(nameof(buffer), "Attempt to write beyond end of SubStream")
+        : Parent.WriteAsync(buffer, cancellationToken);
 #endif
 
     public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)

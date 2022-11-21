@@ -1417,8 +1417,8 @@ public static class BufferExtensions
     [return: MarshalAs(UnmanagedType.I1)]
     private delegate bool RtlIsZeroMemoryFunc(in byte buffer, IntPtr length);
 
-    private static readonly RtlIsZeroMemoryFunc RtlIsZeroMemory =
-        NativeLib.GetProcAddressNoThrow("ntdll".AsMemory(), "RtlIsZeroMemory", typeof(RtlIsZeroMemoryFunc)) as RtlIsZeroMemoryFunc ??
+    private static readonly RtlIsZeroMemoryFunc fRtlIsZeroMemory =
+        NativeLib.GetProcAddressNoThrow("ntdll", "RtlIsZeroMemory", typeof(RtlIsZeroMemoryFunc)) as RtlIsZeroMemoryFunc ??
         InternalIsZeroMemory;
 
     /// <summary>
@@ -1438,7 +1438,7 @@ public static class BufferExtensions
     /// <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsBufferZero(this Span<byte> buffer) =>
-        RtlIsZeroMemory(buffer[0], new IntPtr(buffer.Length));
+        fRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), new(buffer.Length));
 
     /// <summary>
     /// Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
@@ -1448,7 +1448,7 @@ public static class BufferExtensions
     /// <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsBufferZero(this ReadOnlySpan<byte> buffer) =>
-        RtlIsZeroMemory(buffer[0], new IntPtr(buffer.Length));
+        fRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), new(buffer.Length));
 
     private static unsafe bool InternalIsZeroMemory(in byte buffer, IntPtr length)
     {

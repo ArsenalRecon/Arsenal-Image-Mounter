@@ -45,7 +45,7 @@ public class DiskDevice : DeviceObject
     /// If the object was opened in any other way, such as by supplying an already
     /// open handle, this property returns null/Nothing.
     /// </summary>
-    public ReadOnlyMemory<char> DevicePath { get; private set; }
+    public ReadOnlyMemory<char> DevicePath { get; }
 
     private void AllowExtendedDasdIo()
     {
@@ -65,11 +65,11 @@ public class DiskDevice : DeviceObject
         }
     }
 
-    protected internal DiskDevice(KeyValuePair<ReadOnlyMemory<char>, SafeFileHandle> DeviceNameAndHandle, FileAccess AccessMode)
+    protected internal DiskDevice(KeyValuePair<string, SafeFileHandle> DeviceNameAndHandle, FileAccess AccessMode)
         : base(DeviceNameAndHandle.Value, AccessMode)
     {
 
-        DevicePath = DeviceNameAndHandle.Key;
+        DevicePath = DeviceNameAndHandle.Key.AsMemory();
 
         AllowExtendedDasdIo();
     }

@@ -230,7 +230,7 @@ public static class ExpressionSupport
             => HashCode.Combine(obj.DeclaringType?.MetadataToken, obj.MetadataToken);
     }
 
-    public static SequenceEqualityComparer<MemberInfo> MemberSequenceEqualityComparer { get; private set; }
+    public static SequenceEqualityComparer<MemberInfo> MemberSequenceEqualityComparer { get; }
         = new SequenceEqualityComparer<MemberInfo>(new ExpressionMemberEqualityComparer());
 
     private static readonly Dictionary<Type, Dictionary<IEnumerable<MemberInfo>, string>> _GetDataFieldMappings_dataMappings = new();
@@ -355,11 +355,11 @@ public static class ExpressionSupport
     private class PropertiesAssigners<T>
     {
 
-        public static Dictionary<string, Func<T, object?>> Getters { get; private set; }
+        public static Dictionary<string, Func<T, object?>> Getters { get; }
 
-        public static Dictionary<string, Action<T, object?>> Setters { get; private set; }
+        public static Dictionary<string, Action<T, object?>> Setters { get; }
 
-        public static Dictionary<string, Type> Types { get; private set; }
+        public static Dictionary<string, Type> Types { get; }
 
         static PropertiesAssigners()
         {

@@ -31,13 +31,13 @@ public class DevioProviderFromStream : IDevioProvider
     /// <summary>
     /// Stream object used by this instance.
     /// </summary>
-    public Stream BaseStream { get; private set; }
+    public Stream BaseStream { get; }
 
     /// <summary>
     /// Indicates whether base stream will be automatically closed when this
     /// instance is disposed.
     /// </summary>
-    public bool OwnsBaseStream { get; private set; }
+    public bool OwnsBaseStream { get; }
 
     /// <summary>
     /// Creates an object implementing IDevioProvider interface with I/O redirected
@@ -180,7 +180,6 @@ public class DevioProviderFromStream : IDevioProvider
             BaseStream.Dispose();
         }
 
-        BaseStream = null!;
         disposedValue = true;
 
         OnDisposed(EventArgs.Empty);

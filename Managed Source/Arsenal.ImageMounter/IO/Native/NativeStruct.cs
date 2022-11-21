@@ -16,7 +16,7 @@ namespace Arsenal.ImageMounter.IO.Native;
 public static class NativeStruct
 {
 
-    public static bool IsOsWindows { get; private set; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    public static bool IsOsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     public static long GetFileSize(string path) => !RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? new FileInfo(path).Length : NativeFileIO.GetFileSize(path);
 

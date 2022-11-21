@@ -11,7 +11,7 @@ public static class NativeLib
 {
 
 #if NETSTANDARD || NETCOREAPP
-    public static bool IsWindows { get; private set; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    public static bool IsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     public static Delegate GetProcAddress(IntPtr hModule, string procedureName, Type delegateType)
         => Marshal.GetDelegateForFunctionPointer(NativeLibrary.GetExport(hModule, procedureName), delegateType);
@@ -30,10 +30,10 @@ public static class NativeLib
 
     }
 
-    public static IntPtr GetProcAddressNoThrow(ReadOnlyMemory<char> moduleName, string procedureName)
+    public static IntPtr GetProcAddressNoThrow(string moduleName, string procedureName)
     {
 
-        if (!NativeLibrary.TryLoad(moduleName.ToString(), out var hModule))
+        if (!NativeLibrary.TryLoad(moduleName, out var hModule))
         {
             return default;
         }
@@ -43,7 +43,7 @@ public static class NativeLib
 
 #else
 
-    public static bool IsWindows { get; private set; } = true;
+    public static bool IsWindows { get; } = true;
 
     public static Delegate GetProcAddress(IntPtr hModule, string procedureName, Type delegateType)
         => Marshal.GetDelegateForFunctionPointer(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)), delegateType);
@@ -65,17 +65,17 @@ public static class NativeLib
 
     }
 
-    public static IntPtr GetProcAddressNoThrow(ReadOnlyMemory<char> moduleName, string procedureName)
+    public static IntPtr GetProcAddressNoThrow(string moduleName, string procedureName)
     {
 
-        var hModule = UnsafeNativeMethods.LoadLibraryW(moduleName.MakeNullTerminated());
+        var hModule = UnsafeNativeMethods.LoadLibraryW(MemoryMarshal.GetReference(moduleName.AsSpan()));
 
         return hModule == default ? default : UnsafeNativeMethods.GetProcAddress(hModule, procedureName);
     }
 
 #endif
 
-    public static Delegate? GetProcAddressNoThrow(ReadOnlyMemory<char> moduleName, string procedureName, Type delegateType)
+    public static Delegate? GetProcAddressNoThrow(string moduleName, string procedureName, Type delegateType)
     {
 
         var fptr = GetProcAddressNoThrow(moduleName, procedureName);

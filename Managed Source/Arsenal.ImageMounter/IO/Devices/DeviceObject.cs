@@ -25,9 +25,9 @@ namespace Arsenal.ImageMounter.IO.Devices;
 public abstract class DeviceObject : IDisposable
 {
 
-    public SafeFileHandle SafeFileHandle { get; private set; }
+    public SafeFileHandle SafeFileHandle { get; }
 
-    public FileAccess AccessMode { get; private set; }
+    public FileAccess AccessMode { get; }
 
     /// <summary>
     /// Opens specified Path with CreateFile Win32 API and encapsulates the returned handle
@@ -78,7 +78,6 @@ public abstract class DeviceObject : IDisposable
             // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
 
             // TODO: set large fields to null.
-            SafeFileHandle = null!;
         }
 
         disposedValue = true;

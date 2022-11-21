@@ -24,7 +24,7 @@ public sealed class DummyProvider : IDevioProvider
 
     }
 
-    public long Length { get; private set; }
+    public long Length { get; }
 
     public uint SectorSize => 512U;
 
