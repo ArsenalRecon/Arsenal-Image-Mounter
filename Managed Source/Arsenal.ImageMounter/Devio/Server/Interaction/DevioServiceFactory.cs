@@ -1147,7 +1147,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
             case ".ex01":
             case ".lx01":
                 {
-                    DevioProviderLibEwf.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName());
+                    if (!Console.IsErrorRedirected)
+                    {
+                        DevioProviderLibEwf.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName());
+                    }
 
                     var provider = GetProviderLibEwf(imageFile, FileAccess.Read);
                     Console.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
@@ -1158,7 +1161,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
             case ".qcow2":
             case ".qcow2c":
                 {
-                    DevioProviderLibQcow.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName());
+                    if (!Console.IsErrorRedirected)
+                    {
+                        DevioProviderLibQcow.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName());
+                    }
 
                     var provider = GetProviderLibEwf(imageFile, FileAccess.Read);
                     Console.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
