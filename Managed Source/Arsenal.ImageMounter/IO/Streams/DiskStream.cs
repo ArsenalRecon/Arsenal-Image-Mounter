@@ -1,11 +1,4 @@
-﻿using Arsenal.ImageMounter.IO.Native;
-using DiscUtils.Streams.Compatibility;
-using Microsoft.Win32.SafeHandles;
-using System;
-using System.IO;
-using System.Runtime.InteropServices;
-
-// '''' DiskStream.vb
+﻿// '''' DiskStream.vb
 // '''' Stream implementation for direct access to raw disk data.
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -16,6 +9,13 @@ using System.Runtime.InteropServices;
 // '''' proprietary exceptions.
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
+
+using Arsenal.ImageMounter.IO.Native;
+using DiscUtils.Streams.Compatibility;
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 

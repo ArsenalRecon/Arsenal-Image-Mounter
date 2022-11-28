@@ -5,15 +5,31 @@ using System.Runtime.InteropServices;
 
 namespace Arsenal.ImageMounter.IO.Native;
 
-public static class NativeUnixIO
+public static partial class NativeUnixIO
 {
-    private static class UnixAPI
+    private static partial class UnixAPI
     {
         public const uint BLKGETSIZE64 = 0x80081272;
         public const uint DIOCGSECTORSIZE = 0x40046480;
         public const uint DIOCGMEDIASIZE = 0x40086481;
         public const uint DIOCGFWSECTORS = 0x40046482;
         public const uint DIOCGFWHEADS = 0x40046483;
+
+#if NET7_0_OR_GREATER
+
+        [LibraryImport("c")]
+        [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial int ioctl(SafeFileHandle handle, uint request, int parameter);
+
+        [LibraryImport("c")]
+        [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static unsafe partial int ioctl(SafeFileHandle handle, uint request, void* parameter);
+
+        [LibraryImport("c")]
+        [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial int ioctl(SafeFileHandle handle, uint request, ref byte parameter);
+
+#else
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
         public static extern int ioctl(SafeFileHandle handle, uint request, int parameter);
@@ -23,6 +39,8 @@ public static class NativeUnixIO
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
         public static extern int ioctl(SafeFileHandle handle, uint request, ref byte parameter);
+
+#endif
     }
 
     public static unsafe long? GetDiskSize(SafeFileHandle safeFileHandle)

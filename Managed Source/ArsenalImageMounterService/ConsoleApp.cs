@@ -1,22 +1,13 @@
-﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Devio.Server.Interaction;
-using Arsenal.ImageMounter.Devio.Server.Services;
-using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
+﻿using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.ConsoleSupport;
 using Arsenal.ImageMounter.IO.Native;
-using Microsoft.Win32.SafeHandles;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Threading;
 
 namespace Arsenal.ImageMounter;
@@ -36,12 +27,15 @@ public static class ConsoleApp
     /// <summary>
     /// Gets version number of assembly DLL file containing this class
     /// </summary>
-    public static readonly Version AssemblyFileVersion = NativePE.GetFixedFileVerInfo(AssemblyLocation).FileVersion;
+    public static readonly Version? AssemblyFileVersion =
+        string.IsNullOrWhiteSpace(AssemblyLocation)
+        ? null
+        : NativePE.GetFixedFileVerInfo(AssemblyLocation).FileVersion;
 
     private static string GetArchitectureLibPath()
         => RuntimeInformation.ProcessArchitecture.ToString();
 
-    private static readonly string[] assemblyPaths = {
+    private static readonly string[] AssemblyPaths = {
         Path.Combine("lib", GetArchitectureLibPath()),
         "Lib",
         "DiskDriver"
@@ -53,12 +47,12 @@ public static class ConsoleApp
         {
             var appPath = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
 
-            for (int i = 0, loopTo = assemblyPaths.Length - 1; i <= loopTo; i++)
+            for (int i = 0, loopTo = AssemblyPaths.Length - 1; i <= loopTo; i++)
             {
-                assemblyPaths[i] = Path.Combine(appPath ?? "", assemblyPaths[i]);
+                AssemblyPaths[i] = Path.Combine(appPath ?? "", AssemblyPaths[i]);
             }
 
-            var native_dll_paths = assemblyPaths.Append(Environment.GetEnvironmentVariable("PATH"));
+            var native_dll_paths = AssemblyPaths.Append(Environment.GetEnvironmentVariable("PATH"));
 
             Environment.SetEnvironmentVariable("PATH", string.Join(";", native_dll_paths));
         }
@@ -98,7 +92,7 @@ public static class ConsoleApp
                     else
                     {
                         return cmd.Value.Length == 0
-                            ? (new[] { $"--{cmd.Key}" })
+                            ? SingleValueEnumerable.Get($"--{cmd.Key}")
                             : cmd.Value.Select(value => $"--{cmd.Key}=\"{value}\"");
                     }
                 }));

@@ -11,7 +11,6 @@
 ''''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 '''''
 
-
 Imports System.ComponentModel
 Imports System.Drawing
 Imports System.IO
@@ -184,9 +183,11 @@ Public Class MainForm
 
         Try
             Dim ServiceItems As ICollection(Of ServiceListItem)
+
             SyncLock ServiceList
                 ServiceItems = ServiceList.ToArray()
             End SyncLock
+
             For Each Item In ServiceItems
                 If Item?.Service?.HasDiskDevice Then
                     Trace.WriteLine($"Requesting service for device {Item.Service.DiskDeviceNumber:X6} to shut down...")
@@ -375,6 +376,7 @@ Public Class MainForm
                 If IsClosing OrElse Disposing OrElse IsDisposed Then
                     Return
                 End If
+
                 Thread.Sleep(300)
             End While
 
@@ -577,6 +579,7 @@ Public Class MainForm
               SyncLock ServiceList
                   ServiceList.RemoveAll(AddressOf ServiceItem.Equals)
               End SyncLock
+
               RefreshDeviceList()
           End Sub
 
@@ -602,11 +605,13 @@ Public Class MainForm
             If Not LibewfVerify.VerifyLibewf(Me) Then
                 Return
             End If
+
             providerType = DevioServiceFactory.ProviderType.LibEwf
         ElseIf sender Is btnMountLibQCow Then
             If Not LibqcowVerify.VerifyLibqcow(Me) Then
                 Return
             End If
+
             providerType = DevioServiceFactory.ProviderType.LibQcow
         ElseIf sender Is btnMountLibAFF4 Then
             providerType = DevioServiceFactory.ProviderType.LibAFF4

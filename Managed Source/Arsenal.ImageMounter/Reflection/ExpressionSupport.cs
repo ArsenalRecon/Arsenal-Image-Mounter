@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Collections;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -246,7 +247,7 @@ public static class ExpressionSupport
 
                 var _mappings = from prop in ElementType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
                                 where prop.MemberType == MemberTypes.Property && ((PropertyInfo)prop).GetIndexParameters().Length == 0 && ((PropertyInfo)prop).CanRead && ((PropertyInfo)prop).CanWrite || prop.MemberType == MemberTypes.Field && !((FieldInfo)prop).IsInitOnly
-                                select (Props: (IEnumerable<MemberInfo>)(new[] { prop }), prop.Name);
+                                select (Props: (IEnumerable<MemberInfo>)SingleValueEnumerable.Get(prop), prop.Name);
 
                 mappings = _mappings.ToDictionary(m => m.Props, m => m.Name, MemberSequenceEqualityComparer);
 

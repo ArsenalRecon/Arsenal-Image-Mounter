@@ -1,7 +1,4 @@
-﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using System;
-using System.Diagnostics;
-// '''' DebugProvider.vb
+﻿// '''' DebugProvider.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 // '''' This source code and API are available under the terms of the Affero General Public
@@ -12,7 +9,12 @@ using System.Diagnostics;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.Extensions;
+using System;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -58,21 +60,18 @@ public class DebugProvider : DevioProviderUnmanagedBase
 
     public override uint SectorSize => BaseProvider.SectorSize;
 
-    [DllImport("ntdll")]
-    private static extern IntPtr RtlCompareMemory(IntPtr buf1, byte[] buf2, IntPtr count);
-
-    private byte[]? _Read_buf2;
+    private byte[]? read_buf2;
 
     public override int Read(IntPtr buf1, int bufferoffset, int count, long fileoffset)
     {
 
-        if (_Read_buf2 is null || _Read_buf2.Length < count)
+        if (read_buf2 is null || read_buf2.Length < count)
         {
-            Array.Resize(ref _Read_buf2, count);
+            Array.Resize(ref read_buf2, count);
         }
 
         DebugCompareStream.Position = fileoffset;
-        var compareTask = DebugCompareStream.ReadAsync(_Read_buf2, 0, count);
+        var compareTask = DebugCompareStream.ReadAsync(read_buf2, 0, count);
 
         var rc1 = BaseProvider.Read(buf1, bufferoffset, count, fileoffset);
         var rc2 = compareTask.Result;
@@ -82,14 +81,12 @@ public class DebugProvider : DevioProviderUnmanagedBase
             Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X)} bytes, returned 0x{rc1:X)} bytes from image provider and 0x{rc2:X} bytes from debug compare stream.");
         }
 
-        var cmpcount = new IntPtr(Math.Min(rc1, rc2));
-        if (RtlCompareMemory(buf1 + bufferoffset, _Read_buf2, cmpcount) != cmpcount)
+        if (!BufferExtensions.BinaryEqual((buf1 + bufferoffset).AsSpan(rc1), read_buf2.AsSpan(0, rc2)))
         {
             Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X} bytes, returned different data from image provider than from debug compare stream.");
         }
 
         return rc1;
-
     }
 
     public override int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset)

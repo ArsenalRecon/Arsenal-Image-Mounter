@@ -1,9 +1,4 @@
-﻿using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
-using Microsoft.Win32.SafeHandles;
-using System;
-// '''' ScsiAdapter.vb
+﻿// '''' ScsiAdapter.vb
 // '''' Class for controlling Arsenal Image Mounter Devices.
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -15,6 +10,11 @@ using System;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using Microsoft.Win32.SafeHandles;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -591,8 +591,11 @@ public class ScsiAdapter : DeviceObject
     /// in this parameter causes all present virtual disks to be removed from this adapter.</param>
     public void RemoveDevice(uint DeviceNumber)
     {
-
-        NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_REMOVE_DEVICE, 0U, BitConverter.GetBytes(DeviceNumber), out var ReturnCode);
+        NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                   NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_REMOVE_DEVICE,
+                                                   0U,
+                                                   BitConverter.GetBytes(DeviceNumber),
+                                                   out var ReturnCode);
 
         if (ReturnCode == NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND) // Device already removed
         {

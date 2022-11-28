@@ -1,9 +1,4 @@
-﻿using Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.IO.Streams;
-using DiscUtils.Streams.Compatibility;
-using Microsoft.Win32.SafeHandles;
-using System;
-// '''' DiskDevice.vb
+﻿// '''' DiskDevice.vb
 // '''' Class for controlling Arsenal Image Mounter Disk Devices.
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -15,6 +10,11 @@ using System;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.IO.Native;
+using Arsenal.ImageMounter.IO.Streams;
+using DiscUtils.Streams.Compatibility;
+using Microsoft.Win32.SafeHandles;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -295,11 +295,9 @@ public class DiskDevice : DeviceObject
                 ? stackalloc byte[bytesPerSector]
                 : new byte[bytesPerSector];
 
-            {
-                var withBlock = GetRawDiskStream();
-                withBlock.Position = 0L;
-                withBlock.Read(rawsig);
-            }
+            var stream = GetRawDiskStream();
+            stream.Position = 0L;
+            stream.Read(rawsig);
 
             return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
                 ? MemoryMarshal.Read<uint>(rawsig.Slice(0x1C))

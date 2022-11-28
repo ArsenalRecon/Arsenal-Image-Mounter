@@ -6,9 +6,8 @@
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <Title>Arsenal Image Mounter Mount Tool</Title>
-	<TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
+	<TargetFrameworks>net48;net6.0-windows;net7.0-windows</TargetFrameworks>
     <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
-    <NeutralLanguage>en</NeutralLanguage>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 

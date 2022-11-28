@@ -3,8 +3,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Arsenal Image Mounter Low Level API Library</Description>
-    <NeutralLanguage>en</NeutralLanguage>
+    <Description>Arsenal Image Mounter .NET API Library</Description>
   </PropertyGroup>
 
   <ItemGroup>

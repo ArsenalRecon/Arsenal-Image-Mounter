@@ -18,7 +18,7 @@
     <OutputPath>Help\</OutputPath>
     <HtmlHelpName>Arsenal Image Mounter API</HtmlHelpName>
     <Language>en-US</Language>
-    <HelpFileFormat>HtmlHelp1, MSHelpViewer, Website</HelpFileFormat>
+    <HelpFileFormat>Website</HelpFileFormat>
     <HelpTitle>Arsenal Image Mounter API</HelpTitle>
     <MissingTags>AutoDocumentCtors, AutoDocumentDispose</MissingTags>
     <VisibleItems>Attributes, ExplicitInterfaceImplementations, InheritedMembers, InheritedFrameworkMembers, Protected, EditorBrowsableNever, NonBrowsable</VisibleItems>
@@ -33,7 +33,25 @@
     <CopyrightText>Copyright: %28c%29 Arsenal Recon.  All Rights Reserved.</CopyrightText>
     <ComponentConfigurations />
     <HelpAttributes />
-    <NamespaceSummaries />
+    <NamespaceSummaries>
+      <NamespaceSummaryItem name="(global)" isDocumented="True">Summary</NamespaceSummaryItem>
+<NamespaceSummaryItem name="Arsenal.ImageMounter" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Collections" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Data" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Client" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.GenericProviders" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.Interaction" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.Services" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.SpecializedProviders" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Dialogs" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Extensions" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.IO.ConsoleSupport" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Devices" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Native" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Streams" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Reflection" isDocumented="True" />
+<NamespaceSummaryItem name="Arsenal.ImageMounter.Views" isDocumented="True" /></NamespaceSummaries>
     <PlugInConfigurations />
     <BuildLogFile />
     <HtmlHelp1xCompilerPath />
@@ -41,11 +59,11 @@
     <WorkingPath />
     <ComponentPath />
     <MaximumGroupParts>2</MaximumGroupParts>
-    <NamespaceGrouping>False</NamespaceGrouping>
+    <NamespaceGrouping>True</NamespaceGrouping>
     <SyntaxFilters>Standard</SyntaxFilters>
     <SdkLinkTarget>Blank</SdkLinkTarget>
     <RootNamespaceContainer>False</RootNamespaceContainer>
-    <PresentationStyle>VS2013</PresentationStyle>
+    <PresentationStyle>Default2022</PresentationStyle>
     <Preliminary>False</Preliminary>
     <NamingMethod>Guid</NamingMethod>
     <ContentPlacement>AboveNamespaces</ContentPlacement>

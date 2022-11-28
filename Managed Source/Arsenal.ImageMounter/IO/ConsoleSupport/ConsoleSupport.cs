@@ -1,4 +1,5 @@
-﻿using Arsenal.ImageMounter.Extensions;
+﻿using Arsenal.ImageMounter.Collections;
+using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.Reflection;
 using System;
 using System.Collections.Generic;
@@ -177,7 +178,7 @@ public static class ConsoleSupport
                 if (valuepos >= 0)
                 {
                     name = arg.Substring(namestart, valuepos - namestart);
-                    value = new[] { arg.Substring(valuepos + 1) };
+                    value = SingleValueEnumerable.Get(arg.Substring(valuepos + 1));
                 }
                 else
                 {
@@ -199,7 +200,7 @@ public static class ConsoleSupport
                     if (i + 1 < arg.Length && (arg[i + 1] == '=' || arg[i + 1] == ':'))
                     {
 
-                        var value = new[] { arg.Substring(i + 2) };
+                        var value = SingleValueEnumerable.Get(arg.Substring(i + 2));
 
                         yield return new(name, value);
                         break;
@@ -217,7 +218,7 @@ public static class ConsoleSupport
 
             if (switches_finished)
             {
-                yield return new(string.Empty, new[] { arg });
+                yield return new(string.Empty, SingleValueEnumerable.Get(arg));
             }
         }
     }

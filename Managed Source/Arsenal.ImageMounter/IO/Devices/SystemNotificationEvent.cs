@@ -1,7 +1,4 @@
-﻿using Arsenal.ImageMounter.IO.Native;
-using System;
-using System.Collections.Generic;
-// '''' SystemNotificationEvent.vb
+﻿// '''' SystemNotificationEvent.vb
 // '''' Represents a system notification event object. Well known paths are available as constants of SystemNotificationEvent class.
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -13,6 +10,9 @@ using System.Collections.Generic;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.IO.Native;
+using System;
+using System.Collections.Generic;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Threading;

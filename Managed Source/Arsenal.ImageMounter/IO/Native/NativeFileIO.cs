@@ -1,4 +1,17 @@
-﻿using Arsenal.ImageMounter.Collections;
+﻿// '''' NativeFileIO.vb
+// '''' Routines for accessing some useful Win32 API functions to access features not
+// '''' directly accessible through .NET Framework.
+// '''' 
+// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
+// '''' This source code and API are available under the terms of the Affero General Public
+// '''' License v3.
+// ''''
+// '''' Please see LICENSE.txt for full license terms, including the availability of
+// '''' proprietary exceptions.
+// '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
+// ''''
+
+using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
 using Microsoft.Win32;
@@ -13,6 +26,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
@@ -22,20 +36,6 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
-
-// '''' NativeFileIO.vb
-// '''' Routines for accessing some useful Win32 API functions to access features not
-// '''' directly accessible through .NET Framework.
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
-// ''''
 
 namespace Arsenal.ImageMounter.IO.Native;
 
@@ -44,15 +44,39 @@ namespace Arsenal.ImageMounter.IO.Native;
 /// CreateFile() can open and get a FileStream based .NET wrapper around the file handle.
 /// </summary>
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-public static class NativeFileIO
+public static partial class NativeFileIO
 {
 
     #region Win32 API
 
     [SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible", Justification = "Safe methods")]
-    public static class SafeNativeMethods
+    public static partial class SafeNativeMethods
     {
+#if NET7_0_OR_GREATER
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool AllocConsole();
 
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool FreeConsole();
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        public static partial IntPtr GetConsoleWindow();
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        public static partial uint GetLogicalDrives();
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        public static partial FileAttributes GetFileAttributesW(in char lpFileName);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetFileAttributesW(in char lpFileName, FileAttributes dwFileAttributes);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        public static partial long GetTickCount64();
+#else
         [DllImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool AllocConsole();
@@ -74,11 +98,506 @@ public static class NativeFileIO
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern long GetTickCount64();
+#endif
     }
 
-    public static class UnsafeNativeMethods
+    public static partial class UnsafeNativeMethods
     {
+#if NET7_0_OR_GREATER
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DuplicateHandle(IntPtr hSourceProcessHandle, IntPtr hSourceHandle, IntPtr hTargetProcessHandle, out SafeWaitHandle lpTargetHandle, uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, uint dwOptions);
 
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DuplicateHandle(IntPtr hSourceProcessHandle, SafeHandle hSourceHandle, IntPtr hTargetProcessHandle, out SafeWaitHandle lpTargetHandle, uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, uint dwOptions);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetEvent(SafeWaitHandle hEvent);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetHandleInformation(SafeHandle h, uint mask, uint flags);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetHandleInformation(SafeHandle h, out uint flags);
+
+        [LibraryImport("ntdll")]
+        internal static partial int NtCreateFile(out SafeFileHandle hFile, FileSystemRights AccessMask, in ObjectAttributes ObjectAttributes, out IoStatusBlock IoStatusBlock, in long AllocationSize, FileAttributes FileAttributes, FileShare ShareAccess, NtCreateDisposition CreateDisposition, NtCreateOptions CreateOptions, IntPtr EaBuffer, uint EaLength);
+
+        [LibraryImport("ntdll")]
+        internal static partial int NtOpenEvent(out SafeWaitHandle hEvent, uint AccessMask, in ObjectAttributes ObjectAttributes);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetFileInformationByHandle(SafeFileHandle hFile, out ByHandleFileInformation lpFileInformation);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetFileTime(SafeFileHandle hFile, [Optional] out long lpCreationTime, [Optional] out long lpLastAccessTime, [Optional] out long lpLastWriteTime);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetFileTime(SafeFileHandle hFile, [Optional] out long lpCreationTime, IntPtr lpLastAccessTime, [Optional] out long lpLastWriteTime);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetFileTime(SafeFileHandle hFile, IntPtr lpCreationTime, IntPtr lpLastAccessTime, [Optional] out long lpLastWriteTime);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetFileTime(SafeFileHandle hFile, [Optional] out long lpCreationTime, IntPtr lpLastAccessTime, IntPtr lpLastWriteTime);
+
+        [LibraryImport("kernel32", EntryPoint = "FindFirstStreamW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeFindHandle FindFirstStreamW(in char lpFileName, uint InfoLevel, out FindStreamData lpszVolumeMountPoint, uint dwFlags);
+
+        [LibraryImport("kernel32", EntryPoint = "FindNextStreamW", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool FindNextStream(SafeFindHandle hFindStream, out FindStreamData lpszVolumeMountPoint);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeFindVolumeMountPointHandle FindFirstVolumeMountPointW(in char lpszRootPathName, out char lpszVolumeMountPoint, int cchBufferLength);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool FindNextVolumeMountPointW(SafeFindVolumeMountPointHandle hFindVolumeMountPoint, out char lpszVolumeMountPoint, int cchBufferLength);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeFindVolumeHandle FindFirstVolumeW(out char lpszVolumeName, int cchBufferLength);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool FindNextVolumeW(SafeFindVolumeHandle hFindVolumeMountPoint, out char lpszVolumeName, int cchBufferLength);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeleteVolumeMountPointW(in char lpszVolumeMountPoint);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetVolumeMountPointW(in char lpszVolumeMountPoint, in char lpszVolumeName);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetFilePointerEx(SafeFileHandle hFile, long distance_to_move, out long new_file_pointer, uint move_method);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetFilePointerEx(SafeFileHandle hFile, long distance_to_move, IntPtr ptr_new_file_pointer, uint move_method);
+
+        [LibraryImport("advapi32", SetLastError = true)]
+        internal static partial SafeServiceHandle OpenSCManagerW(IntPtr lpMachineName, IntPtr lpDatabaseName, int dwDesiredAccess);
+
+        [LibraryImport("advapi32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeServiceHandle OpenSCManagerW(in char lpMachineName, IntPtr lpDatabaseName, int dwDesiredAccess);
+
+        [LibraryImport("advapi32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeServiceHandle CreateServiceW(SafeServiceHandle hSCManager, in char lpServiceName, in char lpDisplayName, int dwDesiredAccess, int dwServiceType, int dwStartType, int dwErrorControl, in char lpBinaryPathName, in char lpLoadOrderGroup, IntPtr lpdwTagId, in char lpDependencies, in char lp, in char lpPassword);
+
+        [LibraryImport("advapi32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeServiceHandle OpenServiceW(SafeServiceHandle hSCManager, in char lpServiceName, int dwDesiredAccess);
+
+        [LibraryImport("advapi32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool ControlService(SafeServiceHandle hSCManager, int dwControl, ref SERVICE_STATUS lpServiceStatus);
+
+        [LibraryImport("advapi32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeleteService(SafeServiceHandle hSCObject);
+
+        [LibraryImport("advapi32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool StartServiceW(SafeServiceHandle hService, int dwNumServiceArgs, IntPtr lpServiceArgVectors);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial IntPtr GetModuleHandleW(in char ModuleName);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial IntPtr LoadLibraryW(in char lpFileName);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool FreeLibrary(IntPtr hModule);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        internal static partial Win32FileType GetFileType(IntPtr handle);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        internal static partial Win32FileType GetFileType(SafeFileHandle handle);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        internal static partial IntPtr GetStdHandle(StdHandle nStdHandle);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetConsoleScreenBufferInfo(IntPtr hConsoleOutput, out CONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetConsoleScreenBufferInfo(SafeFileHandle hConsoleOutput, out CONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DefineDosDeviceW(DEFINE_DOS_DEVICE_FLAGS dwFlags, in char lpDeviceName, in char lpTargetPath);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int QueryDosDeviceW(in char lpDeviceName, out char lpTargetPath, int ucchMax);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int QueryDosDeviceW(IntPtr lpDeviceName, out char lpTargetPath, int ucchMax);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetVolumePathNamesForVolumeNameW(in char lpszVolumeName, out char lpszVolumePathNames, int cchBufferLength, out int lpcchReturnLength);
+        
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetVolumeNameForVolumeMountPointW(in char lpszVolumeName, out char DestinationInfFileName, int DestinationInfFileNameSize);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetCommTimeouts(SafeFileHandle hFile, out COMMTIMEOUTS lpCommTimeouts);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetCommTimeouts(SafeFileHandle hFile, in COMMTIMEOUTS lpCommTimeouts);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetVolumePathNameW(in char lpszFileName, out char lpszVolumePathName, int cchBufferLength);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, int dwFlagsAndAttributes, IntPtr hTemplateFile);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool FlushFileBuffers(SafeFileHandle handle);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetFileSizeEx(SafeFileHandle hFile, out long liFileSize);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial FileAttributes GetFileAttributesW(in char path);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool GetDiskFreeSpaceW(in char lpRootPathName, out uint lpSectorsPerCluster, out uint lpBytesPerSector, out uint lpNumberOfFreeClusters, out uint lpTotalNumberOfClusters);
+
+        [LibraryImport("kernel32", EntryPoint = "DeviceIoControl", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, [MarshalAs(UnmanagedType.Bool)] in bool lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, SafeBuffer? lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, SafeBuffer? lpInBuffer, uint nInBufferSize, SafeBuffer? lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, SafeBuffer? lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out long lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, int nInBufferSize, out GET_DISK_ATTRIBUTES lpOutBuffer, int nOutBufferSize, out int lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in DISK_GROW_PARTITION lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in SET_DISK_ATTRIBUTES lpInBuffer, int nInBufferSize, IntPtr lpOutBuffer, int nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out DISK_GEOMETRY lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out PARTITION_INFORMATION lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out PARTITION_INFORMATION_EX lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out SCSI_ADDRESS lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out STORAGE_DEVICE_NUMBER lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in STORAGE_PROPERTY_QUERY lpInBuffer, uint nInBufferSize, out STORAGE_DESCRIPTOR_HEADER lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in STORAGE_PROPERTY_QUERY lpInBuffer, uint nInBufferSize, out DEVICE_TRIM_DESCRIPTOR lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in STORAGE_PROPERTY_QUERY lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int GetModuleFileNameW(IntPtr hModule, out char lpFilename, int nSize);
+
+        [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Special Ansi only function")]
+        [LibraryImport("kernel32", SetLastError = true)]
+        internal static partial IntPtr GetProcAddress(IntPtr hModule, [MarshalAs(UnmanagedType.LPStr)] string lpEntryName);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        internal static partial IntPtr GetProcAddress(IntPtr hModule, IntPtr ordinal);
+
+        [LibraryImport("ntdll", StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool RtlDosPathNameToNtPathName_U(in char DosName, out UNICODE_STRING NtName, IntPtr DosFilePath, IntPtr NtFilePath);
+
+        [LibraryImport("ntdll")]
+        internal static partial void RtlFreeUnicodeString(ref UNICODE_STRING UnicodeString);
+
+        [LibraryImport("ntdll")]
+        internal static partial int RtlNtStatusToDosError(int NtStatus);
+
+        [LibraryImport("ntdll")]
+        internal static partial int RtlNtStatusToDosError(uint NtStatus);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int GetPrivateProfileSectionNamesW(out char Names, int NamesSize, in char FileName);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int GetPrivateProfileSectionW(in char SectionName, in char Values, int ValuesSize, in char FileName);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool WritePrivateProfileStringW(in char SectionName, in char SettingName, in char Value, in char FileName);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool WritePrivateProfileStringW(IntPtr SectionName, IntPtr SettingName, IntPtr Value, IntPtr FileName);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial void InstallHinfSectionW(IntPtr hwndOwner, IntPtr hModule, in char lpCmdLine, int nCmdShow);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupCopyOEMInfW(in char SourceInfFileName, in char OEMSourceMediaLocation, uint OEMSourceMediaType, uint CopyStyle, out char DestinationInfFileName, int DestinationInfFileNameSize, out uint RequiredSize, IntPtr DestinationInfFileNameComponent);
+
+        [LibraryImport("difxapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int DriverPackagePreinstallW(in char SourceInfFileName, uint Options);
+
+        [LibraryImport("difxapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int DriverPackageInstallW(in char SourceInfFileName, uint Options, IntPtr pInstallerInfo, [MarshalAs(UnmanagedType.Bool)] out bool pNeedReboot);
+
+        [LibraryImport("difxapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int DriverPackageUninstallW(in char SourceInfFileName, DriverPackageUninstallFlags Options, IntPtr pInstallerInfo, [MarshalAs(UnmanagedType.Bool)] out bool pNeedReboot);
+
+        [LibraryImport("imagehlp", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int MapFileAndCheckSumW(in char file, out int headerSum, out int checkSum);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial uint CM_Locate_DevNodeW(in uint devInst, in char rootid, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial uint CM_Get_DevNode_Registry_PropertyW(uint DevInst, CmDevNodeRegistryProperty Prop, out RegistryValueKind RegDataType, out byte Buffer, in int BufferLength, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial uint CM_Set_DevNode_Registry_PropertyW(uint DevInst, CmDevNodeRegistryProperty Prop, in byte Buffer, int length, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial uint CM_Get_Class_Registry_PropertyW(in Guid ClassGuid, CmClassRegistryProperty Prop, out RegistryValueKind RegDataType, out byte Buffer, in int BufferLength, uint Flags, IntPtr hMachine = default);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial uint CM_Set_Class_Registry_PropertyW(in Guid ClassGuid, CmClassRegistryProperty Prop, in byte Buffer, int length, uint Flags, IntPtr hMachine = default);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial uint CM_Get_Child(out uint dnDevInst, uint DevInst, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial uint CM_Get_Sibling(out uint dnDevInst, uint DevInst, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial uint CM_Reenumerate_DevNode(uint devInst, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial uint CM_Get_Device_ID_List_SizeW(out int Length, in char filter, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial uint CM_Get_Device_ID_ListW(in char filter, out char Buffer, uint BufferLength, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupSetNonInteractiveMode([MarshalAs(UnmanagedType.Bool)] bool state);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeInfHandle SetupOpenInfFileW(in char FileName, in char InfClass, uint InfStyle, out uint ErrorLine);
+
+        public delegate uint SetupFileCallback(IntPtr Context, uint Notification, UIntPtr Param1, UIntPtr Param2);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupInstallFromInfSectionW(IntPtr hWnd, SafeInfHandle InfHandle, in char SectionName, uint Flags, IntPtr RelativeKeyRoot, in char SourceRootPath, uint CopyFlags, SetupFileCallback MsgHandler, IntPtr Context, IntPtr DeviceInfoSet, IntPtr DeviceInfoData);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupInstallFromInfSectionW(IntPtr hWnd, SafeInfHandle InfHandle, in char SectionName, uint Flags, SafeRegistryHandle RelativeKeyRoot, in char SourceRootPath, uint CopyFlags, SetupFileCallback MsgHandler, IntPtr Context, IntPtr DeviceInfoSet, IntPtr DeviceInfoData);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiGetINFClassW(in char InfPath, out Guid ClassGuid, out char ClassName, uint ClassNameSize, out uint RequiredSize);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiOpenDeviceInfoW(SafeDeviceInfoSetHandle DevInfoSet, in char Enumerator, IntPtr hWndParent, uint Flags, IntPtr DeviceInfoData);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiOpenDeviceInfoW(SafeDeviceInfoSetHandle DevInfoSet, ref byte Enumerator, IntPtr hWndParent, uint Flags, IntPtr DeviceInfoData);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeDeviceInfoSetHandle SetupDiGetClassDevsW(in Guid ClassGuid, in char Enumerator, IntPtr hWndParent, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeDeviceInfoSetHandle SetupDiGetClassDevsW(IntPtr ClassGuid, in char Enumerator, IntPtr hWndParent, uint Flags);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiEnumDeviceInfo(SafeDeviceInfoSetHandle DeviceInfoSet, uint MemberIndex, ref SP_DEVINFO_DATA DeviceInterfaceData);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiRestartDevices(SafeDeviceInfoSetHandle DeviceInfoSet, in SP_DEVINFO_DATA DeviceInterfaceData);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiSetClassInstallParamsW(SafeDeviceInfoSetHandle DeviceInfoSet, in SP_DEVINFO_DATA DeviceInfoData, in SP_PROPCHANGE_PARAMS ClassInstallParams, int ClassInstallParamsSize);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiEnumDeviceInterfaces(SafeDeviceInfoSetHandle DeviceInfoSet, IntPtr DeviceInfoData, in Guid ClassGuid, uint MemberIndex, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiEnumDeviceInterfaces(SafeDeviceInfoSetHandle DeviceInfoSet, IntPtr DeviceInfoData, IntPtr ClassGuid, uint MemberIndex, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeDeviceInfoSetHandle SetupDiCreateDeviceInfoListExW(in Guid ClassGuid, IntPtr hwndParent, in char MachineName, IntPtr Reserved);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial SafeDeviceInfoSetHandle SetupDiCreateDeviceInfoListExW(IntPtr ClassGuid, IntPtr hwndParent, in char MachineName, IntPtr Reserved);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial SafeDeviceInfoSetHandle SetupDiCreateDeviceInfoList(in Guid ClassGuid, IntPtr hwndParent);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        internal static partial SafeDeviceInfoSetHandle SetupDiCreateDeviceInfoList(IntPtr ClassGuid, IntPtr hwndParent);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiGetDeviceInterfaceDetailW(SafeDeviceInfoSetHandle DeviceInfoSet, in SP_DEVICE_INTERFACE_DATA DeviceInterfaceData, ref SP_DEVICE_INTERFACE_DETAIL_DATA DeviceInterfaceDetailData, int DeviceInterfaceDetailDataSize, out int RequiredSize, IntPtr DeviceInfoData);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiGetDeviceInfoListDetailW(SafeDeviceInfoSetHandle devinfo, ref SP_DEVINFO_LIST_DETAIL_DATA DeviceInfoDetailData);
+
+        [LibraryImport("setupapi", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiCreateDeviceInfoW(SafeDeviceInfoSetHandle hDevInfo, in char DeviceName, in Guid ClassGuid, in char DeviceDescription, IntPtr owner, uint CreationFlags, ref SP_DEVINFO_DATA DeviceInfoData);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiSetDeviceRegistryPropertyW(SafeDeviceInfoSetHandle hDevInfo, ref SP_DEVINFO_DATA DeviceInfoData, uint Property, in byte PropertyBuffer, uint PropertyBufferSize);
+
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetupDiCallClassInstaller(uint InstallFunction, SafeDeviceInfoSetHandle hDevInfo, in SP_DEVINFO_DATA DeviceInfoData);
+
+        [LibraryImport("newdev", StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool UpdateDriverForPlugAndPlayDevicesW(IntPtr owner, in char HardwareId, in char InfPath, uint InstallFlags, [MarshalAs(UnmanagedType.Bool)] out bool RebootRequired);
+
+        [LibraryImport("user32")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
+
+        [LibraryImport("ntdll")]
+        internal static partial int RtlGetVersion(ref OSVERSIONINFO os_version);
+
+        [LibraryImport("ntdll")]
+        internal static partial int RtlGetVersion(ref OSVERSIONINFOEX os_version);
+
+        [LibraryImport("advapi32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool LookupPrivilegeValueW(in char lpSystemName, in char lpName, out long lpLuid);
+
+        [LibraryImport("advapi32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool OpenThreadToken(IntPtr hThread, uint dwAccess, [MarshalAs(UnmanagedType.Bool)] bool openAsSelf, out SafeFileHandle lpTokenHandle);
+
+        [LibraryImport("advapi32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool OpenProcessToken(IntPtr hProcess, uint dwAccess, out SafeFileHandle lpTokenHandle);
+
+        [LibraryImport("advapi32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool AdjustTokenPrivileges(SafeFileHandle TokenHandle, [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges, in byte NewStates, int BufferLength, out byte PreviousState, out int ReturnLength);
+
+        [LibraryImport("ntdll")]
+        internal static partial uint NtQuerySystemInformation(SystemInformationClass SystemInformationClass, SafeBuffer pSystemInformation, int uSystemInformationLength, out int puReturnLength);
+
+        [LibraryImport("ntdll")]
+        internal static partial uint NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
+
+        [LibraryImport("ntdll")]
+        internal static partial uint NtDuplicateObject(SafeHandle SourceProcessHandle, IntPtr SourceHandle, IntPtr TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        internal static partial IntPtr GetCurrentProcess();
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        internal static partial IntPtr GetCurrentThread();
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        internal static partial SafeFileHandle OpenProcess(uint DesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool InheritHandle, int ProcessId);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool CreateHardLinkW(in char newlink, in char existing, IntPtr security);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool MoveFileW(in char existing, in char newname);
+
+        [LibraryImport("ntdll")]
+        internal static partial IntPtr RtlCompareMemoryUlong(in byte buffer, IntPtr length, int v);
+#else
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool DuplicateHandle(IntPtr hSourceProcessHandle, IntPtr hSourceHandle, IntPtr hTargetProcessHandle, out SafeWaitHandle lpTargetHandle, uint dwDesiredAccess, bool bInheritHandle, uint dwOptions);
 
@@ -401,7 +920,7 @@ public static class NativeFileIO
         internal static extern SafeDeviceInfoSetHandle SetupDiGetClassDevsW(IntPtr ClassGuid, in char Enumerator, IntPtr hWndParent, uint Flags);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool SetupDiEnumDeviceInfo(SafeDeviceInfoSetHandle DeviceInfoSet, uint MemberIndex, out SP_DEVINFO_DATA DeviceInterfaceData);
+        internal static extern bool SetupDiEnumDeviceInfo(SafeDeviceInfoSetHandle DeviceInfoSet, uint MemberIndex, ref SP_DEVINFO_DATA DeviceInterfaceData);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool SetupDiRestartDevices(SafeDeviceInfoSetHandle DeviceInfoSet, in SP_DEVINFO_DATA DeviceInterfaceData);
@@ -410,10 +929,10 @@ public static class NativeFileIO
         internal static extern bool SetupDiSetClassInstallParamsW(SafeDeviceInfoSetHandle DeviceInfoSet, in SP_DEVINFO_DATA DeviceInfoData, in SP_PROPCHANGE_PARAMS ClassInstallParams, int ClassInstallParamsSize);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool SetupDiEnumDeviceInterfaces(SafeDeviceInfoSetHandle DeviceInfoSet, IntPtr DeviceInfoData, in Guid ClassGuid, uint MemberIndex, out SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
+        internal static extern bool SetupDiEnumDeviceInterfaces(SafeDeviceInfoSetHandle DeviceInfoSet, IntPtr DeviceInfoData, in Guid ClassGuid, uint MemberIndex, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool SetupDiEnumDeviceInterfaces(SafeDeviceInfoSetHandle DeviceInfoSet, IntPtr DeviceInfoData, IntPtr ClassGuid, uint MemberIndex, out SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
+        internal static extern bool SetupDiEnumDeviceInterfaces(SafeDeviceInfoSetHandle DeviceInfoSet, IntPtr DeviceInfoData, IntPtr ClassGuid, uint MemberIndex, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern SafeDeviceInfoSetHandle SetupDiCreateDeviceInfoListExW(in Guid ClassGuid, IntPtr hwndParent, in char MachineName, IntPtr Reserved);
@@ -428,13 +947,13 @@ public static class NativeFileIO
         internal static extern SafeDeviceInfoSetHandle SetupDiCreateDeviceInfoList(IntPtr ClassGuid, IntPtr hwndParent);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool SetupDiGetDeviceInterfaceDetailW(SafeDeviceInfoSetHandle DeviceInfoSet, in SP_DEVICE_INTERFACE_DATA DeviceInterfaceData, [In, Out, MarshalAs(UnmanagedType.LPStruct, SizeParamIndex = 3)] SP_DEVICE_INTERFACE_DETAIL_DATA DeviceInterfaceDetailData, uint DeviceInterfaceDetailDataSize, out uint RequiredSize, IntPtr DeviceInfoData);
+        internal static extern bool SetupDiGetDeviceInterfaceDetailW(SafeDeviceInfoSetHandle DeviceInfoSet, in SP_DEVICE_INTERFACE_DATA DeviceInterfaceData, ref SP_DEVICE_INTERFACE_DETAIL_DATA DeviceInterfaceDetailData, int DeviceInterfaceDetailDataSize, out int RequiredSize, IntPtr DeviceInfoData);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool SetupDiGetDeviceInfoListDetailW(SafeDeviceInfoSetHandle devinfo, [In, Out] SP_DEVINFO_LIST_DETAIL_DATA DeviceInfoDetailData);
+        internal static extern bool SetupDiGetDeviceInfoListDetailW(SafeDeviceInfoSetHandle devinfo, ref SP_DEVINFO_LIST_DETAIL_DATA DeviceInfoDetailData);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool SetupDiCreateDeviceInfoW(SafeDeviceInfoSetHandle hDevInfo, in char DeviceName, in Guid ClassGuid, in char DeviceDescription, IntPtr owner, uint CreationFlags, out SP_DEVINFO_DATA DeviceInfoData);
+        internal static extern bool SetupDiCreateDeviceInfoW(SafeDeviceInfoSetHandle hDevInfo, in char DeviceName, in Guid ClassGuid, in char DeviceDescription, IntPtr owner, uint CreationFlags, ref SP_DEVINFO_DATA DeviceInfoData);
 
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool SetupDiSetDeviceRegistryPropertyW(SafeDeviceInfoSetHandle hDevInfo, ref SP_DEVINFO_DATA DeviceInfoData, uint Property, in byte PropertyBuffer, uint PropertyBufferSize);
@@ -449,22 +968,22 @@ public static class NativeFileIO
         internal static extern bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern int RtlGetVersion([In, Out] OSVERSIONINFO os_version);
+        internal static extern int RtlGetVersion(ref OSVERSIONINFO os_version);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern int RtlGetVersion([In, Out] OSVERSIONINFOEX os_version);
+        internal static extern int RtlGetVersion(ref OSVERSIONINFOEX os_version);
 
         [DllImport("advapi32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool LookupPrivilegeValueW(in char lpSystemName, in char lpName, out long lpLuid);
 
         [DllImport("advapi32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool OpenThreadToken(IntPtr hThread, uint dwAccess, bool openAsSelf, out SafeFileHandle lpTokenHandle);
+        internal static extern bool OpenThreadToken(IntPtr hThread, uint dwAccess, bool openAsSelf, out SafeAccessTokenHandle lpTokenHandle);
 
         [DllImport("advapi32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool OpenProcessToken(IntPtr hProcess, uint dwAccess, out SafeFileHandle lpTokenHandle);
+        internal static extern bool OpenProcessToken(IntPtr hProcess, uint dwAccess, out SafeAccessTokenHandle lpTokenHandle);
 
         [DllImport("advapi32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool AdjustTokenPrivileges(SafeFileHandle TokenHandle, bool DisableAllPrivileges, in byte NewStates, int BufferLength, out byte PreviousState, out int ReturnLength);
+        internal static extern bool AdjustTokenPrivileges(SafeAccessTokenHandle TokenHandle, bool DisableAllPrivileges, in byte NewStates, int BufferLength, out byte PreviousState, out int ReturnLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern uint NtQuerySystemInformation(SystemInformationClass SystemInformationClass, SafeBuffer pSystemInformation, int uSystemInformationLength, out int puReturnLength);
@@ -492,6 +1011,7 @@ public static class NativeFileIO
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern IntPtr RtlCompareMemoryUlong(in byte buffer, IntPtr length, int v);
+#endif
     }
     #endregion
 
@@ -517,7 +1037,7 @@ public static class NativeFileIO
         /// Signature to set in SRB_IO_CONTROL header. This identifies that sender and receiver of
         /// IOCTL_SCSI_MINIPORT requests talk to intended components only.
         /// </summary>
-        private static readonly byte[] srbIoCtlSignature = Encoding.ASCII.GetBytes("PhDskMnt".PadRight(8, new char()));
+        private static readonly byte[] SrbIoCtlSignature = "PhDskMnt"u8.ToArray();
 
         /// <summary>
         /// Sends an IOCTL_SCSI_MINIPORT control request to a SCSI miniport.
@@ -545,7 +1065,7 @@ public static class NativeFileIO
             {
                 var argvalue = PinnedBuffer<SRB_IO_CONTROL>.TypeSize;
                 MemoryMarshal.Write(indata.Slice(0), ref argvalue);
-                srbIoCtlSignature.AsSpan().CopyTo(indata.Slice(4));
+                SrbIoCtlSignature.AsSpan().CopyTo(indata.Slice(4));
                 MemoryMarshal.Write(indata.Slice(12), ref timeout);
                 MemoryMarshal.Write(indata.Slice(16), ref ctrlcode);
 
@@ -585,7 +1105,7 @@ public static class NativeFileIO
         }
     }
 
-    #endregion
+#endregion
 
     public static string SystemArchitecture { get; } = GetSystemArchitecture();
 
@@ -1128,7 +1648,7 @@ Currently, the following application has files open on this volume:
     public static IEnumerable<HandleTableEntryInformation>? EnumerateHandleTableHandleInformation(string filterObjectType)
         => EnumerateHandleTableHandleInformation(GetSystemHandleTable(), filterObjectType);
 
-    private static readonly ConcurrentDictionary<byte, string?> objectTypes = new();
+    private static readonly ConcurrentDictionary<byte, string?> ObjectTypes = new();
 
     private static IEnumerable<HandleTableEntryInformation>? EnumerateHandleTableHandleInformation(IEnumerable<SystemHandleTableEntryInformation> handleTable,
                                                                                                    string filterObjectType)
@@ -1153,7 +1673,7 @@ Currently, the following application has files open on this volume:
             string? object_type = null;
             string? object_name = null;
 
-            if (handle.ProcessId == 0 || filterObjectType is not null && objectTypes.TryGetValue(handle.ObjectType, out object_type) && !ReferenceEquals(object_type, filterObjectType) || !processInfoList.TryGetValue(handle.ProcessId, out var processInfo))
+            if (handle.ProcessId == 0 || filterObjectType is not null && ObjectTypes.TryGetValue(handle.ObjectType, out object_type) && !ReferenceEquals(object_type, filterObjectType) || !processInfoList.TryGetValue(handle.ProcessId, out var processInfo))
             {
 
                 continue;
@@ -1186,7 +1706,7 @@ Currently, the following application has files open on this volume:
             {
                 int newbuffersize;
 
-                object_type ??= objectTypes.GetOrAdd(handle.ObjectType, b =>
+                object_type ??= ObjectTypes.GetOrAdd(handle.ObjectType, b =>
                 {
                     for (; ; )
                     {
@@ -2568,12 +3088,10 @@ Currently, the following application has files open on this volume:
         }
 
         return default;
-
     }
 
     public static DiskExtent[] GetVolumeDiskExtents(SafeFileHandle volume)
     {
-
         // 776 is enough to hold 32 disk extent items
         var argoutdatasize = 776U;
         var buffer = DeviceIoControl(volume, NativeConstants.IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, default, argoutdatasize);
@@ -2581,40 +3099,48 @@ Currently, the following application has files open on this volume:
         var number = MemoryMarshal.Read<int>(buffer);
 
         return MemoryMarshal.Cast<byte, DiskExtent>(buffer.Slice(8)).ToArray();
-
     }
 
     public static PARTITION_INFORMATION? GetPartitionInformation(ReadOnlyMemory<char> DevicePath)
     {
-
         using var devicehandle = OpenFileHandle(DevicePath, FileAccess.Read, FileShare.ReadWrite, FileMode.Open, (FileOptions)0);
 
         return GetPartitionInformation(devicehandle);
-
     }
 
-    public static PARTITION_INFORMATION? GetPartitionInformation(SafeFileHandle disk) => UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX, IntPtr.Zero, 0U, out
-        PARTITION_INFORMATION partition_info, (uint)Marshal.SizeOf<PARTITION_INFORMATION>(), out var arglpBytesReturned, IntPtr.Zero)
+    public static unsafe PARTITION_INFORMATION? GetPartitionInformation(SafeFileHandle disk)
+        => UnsafeNativeMethods.DeviceIoControl(disk,
+                                               NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX,
+                                               IntPtr.Zero,
+                                               0U,
+                                               out PARTITION_INFORMATION partition_info,
+                                               (uint)sizeof(PARTITION_INFORMATION),
+                                               out var arglpBytesReturned,
+                                               IntPtr.Zero)
             ? partition_info
-            : (PARTITION_INFORMATION?)default;
+            : default;
 
     public static PARTITION_INFORMATION_EX? GetPartitionInformationEx(ReadOnlyMemory<char> DevicePath)
     {
-
         using var devicehandle = OpenFileHandle(DevicePath, 0, FileShare.ReadWrite, FileMode.Open, (FileOptions)0);
 
         return GetPartitionInformationEx(devicehandle);
-
     }
 
-    public static PARTITION_INFORMATION_EX? GetPartitionInformationEx(SafeFileHandle disk) => UnsafeNativeMethods.DeviceIoControl(disk, NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX, IntPtr.Zero, 0U, out
-        PARTITION_INFORMATION_EX partition_info, (uint)Marshal.SizeOf<PARTITION_INFORMATION_EX>(), out var arglpBytesReturned, IntPtr.Zero)
+    public static unsafe PARTITION_INFORMATION_EX? GetPartitionInformationEx(SafeFileHandle disk)
+        => UnsafeNativeMethods.DeviceIoControl(disk,
+                                               NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX,
+                                               IntPtr.Zero,
+                                               0U,
+                                               out PARTITION_INFORMATION_EX partition_info,
+                                               (uint)sizeof(PARTITION_INFORMATION_EX),
+                                               out var arglpBytesReturned,
+                                               IntPtr.Zero)
             ? partition_info
-            : (PARTITION_INFORMATION_EX?)default;
+            : default;
 
     public class DriveLayoutInformationType
     {
-
         public DRIVE_LAYOUT_INFORMATION_EX DriveLayoutInformation { get; }
 
         public ReadOnlyCollection<PARTITION_INFORMATION_EX> Partitions { get; }
@@ -2752,11 +3278,11 @@ Currently, the following application has files open on this volume:
 
     }
 
-    private static readonly int setDriveLayoutEx_partition_struct_size = PinnedBuffer<PARTITION_INFORMATION_EX>.TypeSize;
+    private static readonly int SetDriveLayoutEx_partition_struct_size = PinnedBuffer<PARTITION_INFORMATION_EX>.TypeSize;
 
-    private static readonly int setDriveLayoutEx_drive_layout_information_ex_size = PinnedBuffer<DRIVE_LAYOUT_INFORMATION_EX>.TypeSize;
+    private static readonly int SetDriveLayoutEx_drive_layout_information_ex_size = PinnedBuffer<DRIVE_LAYOUT_INFORMATION_EX>.TypeSize;
 
-    private static readonly int setDriveLayoutEx_drive_layout_information_record_size = PinnedBuffer<DRIVE_LAYOUT_INFORMATION_GPT>.TypeSize;
+    private static readonly int SetDriveLayoutEx_drive_layout_information_record_size = PinnedBuffer<DRIVE_LAYOUT_INFORMATION_GPT>.TypeSize;
 
     public static void SetDriveLayoutEx(SafeFileHandle disk, DriveLayoutInformationType layout)
     {
@@ -2765,9 +3291,9 @@ Currently, the following application has files open on this volume:
 
         var partition_count = Math.Min(layout.Partitions.Count, layout.DriveLayoutInformation.PartitionCount);
 
-        var size_needed = setDriveLayoutEx_drive_layout_information_ex_size
-            + setDriveLayoutEx_drive_layout_information_record_size
-            + partition_count * setDriveLayoutEx_partition_struct_size;
+        var size_needed = SetDriveLayoutEx_drive_layout_information_ex_size
+            + SetDriveLayoutEx_drive_layout_information_record_size
+            + partition_count * SetDriveLayoutEx_partition_struct_size;
 
         var pos = 0;
 
@@ -2778,7 +3304,7 @@ Currently, the following application has files open on this volume:
             var argvalue = layout.DriveLayoutInformation;
             MemoryMarshal.Write(buffer.AsSpan(pos), ref argvalue);
 
-            pos += setDriveLayoutEx_drive_layout_information_ex_size;
+            pos += SetDriveLayoutEx_drive_layout_information_ex_size;
 
             switch (layout.DriveLayoutInformation.PartitionStyle)
             {
@@ -2798,13 +3324,13 @@ Currently, the following application has files open on this volume:
                     }
             }
 
-            pos += setDriveLayoutEx_drive_layout_information_record_size;
+            pos += SetDriveLayoutEx_drive_layout_information_record_size;
 
             for (int i = 0, loopTo = partition_count - 1; i <= loopTo; i++)
             {
                 var tmp = layout.Partitions;
                 var argvalue3 = tmp[i];
-                MemoryMarshal.Write(buffer.AsSpan(pos + i * setDriveLayoutEx_partition_struct_size), ref argvalue3);
+                MemoryMarshal.Write(buffer.AsSpan(pos + i * SetDriveLayoutEx_partition_struct_size), ref argvalue3);
             }
 
             Win32Try(UnsafeNativeMethods.DeviceIoControl(disk,
@@ -2830,10 +3356,10 @@ Currently, the following application has files open on this volume:
             ? attribs.Attributes.HasFlag(DiskAttributes.Offline)
             : (bool?)default;
 
-    private static readonly long tryParseFileTimeUtc_MaxFileTime = DateTime.MaxValue.ToFileTimeUtc();
+    private static readonly long TryParseFileTimeUtc_MaxFileTime = DateTime.MaxValue.ToFileTimeUtc();
 
     public static DateTime? TryParseFileTimeUtc(long filetime)
-        => filetime > 0L && filetime <= tryParseFileTimeUtc_MaxFileTime
+        => filetime > 0L && filetime <= TryParseFileTimeUtc_MaxFileTime
         ? DateTime.FromFileTimeUtc(filetime)
         : (DateTime?)default;
 
@@ -3001,16 +3527,23 @@ Currently, the following application has files open on this volume:
         }
     }
 
-    private static readonly uint getScsiAddressAndLength_SizeOfLong = (uint)PinnedBuffer<long>.TypeSize;
-    private static readonly uint getScsiAddressAndLength_SizeOfScsiAddress = (uint)PinnedBuffer<SCSI_ADDRESS>.TypeSize;
+    private static readonly uint GetScsiAddressAndLength_SizeOfLong = (uint)PinnedBuffer<long>.TypeSize;
+    private static readonly uint GetScsiAddressAndLength_SizeOfScsiAddress = (uint)PinnedBuffer<SCSI_ADDRESS>.TypeSize;
 
     public static ScsiAddressAndLength? GetScsiAddressAndLength(ReadOnlyMemory<char> drv)
     {
-
         try
         {
             using var disk = new DiskDevice(drv, FileAccess.Read);
-            var rc = UnsafeNativeMethods.DeviceIoControl(disk.SafeFileHandle, NativeConstants.IOCTL_SCSI_GET_ADDRESS, IntPtr.Zero, 0U, out SCSI_ADDRESS ScsiAddress, getScsiAddressAndLength_SizeOfScsiAddress, out var arglpBytesReturned, default);
+            
+            var rc = UnsafeNativeMethods.DeviceIoControl(disk.SafeFileHandle,
+                                                         NativeConstants.IOCTL_SCSI_GET_ADDRESS,
+                                                         IntPtr.Zero,
+                                                         0U,
+                                                         out SCSI_ADDRESS ScsiAddress,
+                                                         GetScsiAddressAndLength_SizeOfScsiAddress,
+                                                         out var arglpBytesReturned,
+                                                         default);
 
             if (!rc)
             {
@@ -3019,7 +3552,7 @@ Currently, the following application has files open on this volume:
             }
 
             rc = UnsafeNativeMethods.DeviceIoControl(disk.SafeFileHandle, NativeConstants.IOCTL_DISK_GET_LENGTH_INFO, IntPtr.Zero, 0U, out
-            long Length, getScsiAddressAndLength_SizeOfLong, out var arglpBytesReturned1, default);
+            long Length, GetScsiAddressAndLength_SizeOfLong, out var arglpBytesReturned1, default);
 
             if (!rc)
             {
@@ -3187,7 +3720,7 @@ Currently, the following application has files open on this volume:
 
     public static IEnumerable<string> EnumerateVolumeNamesForDeviceObject(string DeviceObject) => DeviceObject.EndsWith("}") &&
             DeviceObject.StartsWith(@"\Device\Volume{", StringComparison.Ordinal)
-            ? (new[] { $@"\\?\{DeviceObject.Substring(@"\Device\".Length)}\" })
+            ? SingleValueEnumerable.Get($@"\\?\{DeviceObject.Substring(@"\Device\".Length)}\")
             : new VolumeEnumerator().Where(volumeGuidStr =>
         {
 
@@ -3354,7 +3887,7 @@ Currently, the following application has files open on this volume:
         // ' when there is no device at the given index.
         var deviceIndex = 0U;
 
-        while (UnsafeNativeMethods.SetupDiEnumDeviceInfo(devinfo, deviceIndex, out devInfoData))
+        while (UnsafeNativeMethods.SetupDiEnumDeviceInfo(devinfo, deviceIndex, ref devInfoData))
         {
 
             if (devInfoData.DevInst.Equals(devinst))
@@ -3491,6 +4024,8 @@ Currently, the following application has files open on this volume:
             throw new Win32Exception();
         }
 
+        var DeviceInfoData = new SP_DEVINFO_DATA();
+
         using (DeviceInfoSet)
         {
 
@@ -3505,7 +4040,7 @@ Currently, the following application has files open on this volume:
                                                                  default,
                                                                  OwnerWindow,
                                                                  0x1U,
-                                                                 out var DeviceInfoData));
+                                                                 ref DeviceInfoData));
 
             // '
             // ' Add the HardwareID to the Device's HardwareID property.
@@ -3877,7 +4412,7 @@ Currently, the following application has files open on this volume:
 
         for (; ; )
         {
-            if (!UnsafeNativeMethods.SetupDiEnumDeviceInfo(DeviceInfoSet, i, out DeviceInfoData))
+            if (!UnsafeNativeMethods.SetupDiEnumDeviceInfo(DeviceInfoSet, i, ref DeviceInfoData))
             {
                 return i == 0L
                     ? throw new Win32Exception("SetupDiEnumDeviceInfo")
@@ -4298,25 +4833,32 @@ Currently, the following application has files open on this volume:
 
     public static OperatingSystem GetOSVersion()
     {
-
         var os_version = new OSVERSIONINFOEX();
 
-        var status = UnsafeNativeMethods.RtlGetVersion(os_version);
+        var status = UnsafeNativeMethods.RtlGetVersion(ref os_version);
 
         return status < 0
             ? throw new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(status))
-            : new OperatingSystem(os_version.PlatformId, new Version(os_version.MajorVersion, os_version.MinorVersion, os_version.BuildNumber, os_version.ServicePackMajor << 16 | os_version.ServicePackMinor));
+            : new OperatingSystem(os_version.PlatformId,
+                                  new Version(os_version.MajorVersion,
+                                              os_version.MinorVersion,
+                                              os_version.BuildNumber,
+                                              os_version.ServicePackMajor << 16 | os_version.ServicePackMinor));
     }
 
     /// <summary>
     /// Encapsulates a Service Control Management object handle that is closed by calling CloseServiceHandle() Win32 API.
     /// </summary>
-    public sealed class SafeServiceHandle : SafeHandleZeroOrMinusOneIsInvalid
+    public sealed partial class SafeServiceHandle : SafeHandleZeroOrMinusOneIsInvalid
     {
-
+#if NET7_0_OR_GREATER
+        [LibraryImport("advapi32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool CloseServiceHandle(IntPtr hSCObject);
+#else
         [DllImport("advapi32", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern bool CloseServiceHandle(IntPtr hSCObject);
-
+#endif
         /// <summary>
         /// Initiates a new instance with an existing open handle.
         /// </summary>
@@ -4349,11 +4891,16 @@ Currently, the following application has files open on this volume:
     /// <summary>
     /// Encapsulates a FindVolume handle that is closed by calling FindVolumeClose() Win32 API.
     /// </summary>
-    public sealed class SafeFindVolumeHandle : SafeHandleMinusOneIsInvalid
+    public sealed partial class SafeFindVolumeHandle : SafeHandleMinusOneIsInvalid
     {
-
+#if NET7_0_OR_GREATER
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool FindVolumeClose(IntPtr h);
+#else
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern bool FindVolumeClose(IntPtr h);
+#endif
 
         /// <summary>
         /// Initiates a new instance with an existing open handle.
@@ -4388,11 +4935,16 @@ Currently, the following application has files open on this volume:
     /// <summary>
     /// Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
     /// </summary>
-    public sealed class SafeFindVolumeMountPointHandle : SafeHandleMinusOneIsInvalid
+    public sealed partial class SafeFindVolumeMountPointHandle : SafeHandleMinusOneIsInvalid
     {
-
+#if NET7_0_OR_GREATER
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool FindVolumeMountPointClose(IntPtr h);
+#else
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern bool FindVolumeMountPointClose(IntPtr h);
+#endif
 
         /// <summary>
         /// Initiates a new instance with an existing open handle.
@@ -4427,11 +4979,15 @@ Currently, the following application has files open on this volume:
     /// <summary>
     /// Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
     /// </summary>
-    public sealed class SafeInfHandle : SafeHandleMinusOneIsInvalid
+    public sealed partial class SafeInfHandle : SafeHandleMinusOneIsInvalid
     {
-
-        [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
+#if NET7_0_OR_GREATER
+        [LibraryImport("setupapi", SetLastError = true)]
+        private static partial void SetupCloseInfFile(IntPtr hInf);
+#else
+        [DllImport("setupapi", SetLastError = true)]
         private static extern void SetupCloseInfFile(IntPtr hInf);
+#endif
 
         /// <summary>
         /// Initiates a new instance with an existing open handle.
@@ -4470,11 +5026,16 @@ Currently, the following application has files open on this volume:
     /// <summary>
     /// Encapsulates a SetupAPI hInf handle that is closed by calling SetupCloseInf() API.
     /// </summary>
-    public sealed class SafeDeviceInfoSetHandle : SafeHandleMinusOneIsInvalid
+    public sealed partial class SafeDeviceInfoSetHandle : SafeHandleMinusOneIsInvalid
     {
-
+#if NET7_0_OR_GREATER
+        [LibraryImport("setupapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool SetupDiDestroyDeviceInfoList(IntPtr handle);
+#else
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern bool SetupDiDestroyDeviceInfoList(IntPtr handle);
+#endif
 
         /// <summary>
         /// Initiates a new instance with an existing open handle.
@@ -4507,7 +5068,7 @@ Currently, the following application has files open on this volume:
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct ByHandleFileInformation
+    public readonly struct ByHandleFileInformation
     {
         public FileAttributes FileAttributes { get; }
         private readonly long ftCreationTime;

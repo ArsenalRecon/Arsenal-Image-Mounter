@@ -1,5 +1,4 @@
-﻿using Arsenal.ImageMounter.IO.Native;
-// '''' ScsiAdapter.vb
+﻿// '''' ScsiAdapter.vb
 // '''' Class for controlling Arsenal Image Mounter Devices.
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -11,6 +10,7 @@
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.IO.Native;
 using System.Runtime.Versioning;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member

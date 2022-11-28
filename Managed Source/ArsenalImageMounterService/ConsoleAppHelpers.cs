@@ -18,7 +18,6 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using System.Threading;
 
 internal static class ConsoleAppHelpers
 {
@@ -55,11 +54,9 @@ internal static class ConsoleAppHelpers
 
         if (adapters is null)
         {
-
             Console.WriteLine("Driver not installed.");
 
             return;
-
         }
 
         foreach (var devinstNameAdapter in adapters)
@@ -377,16 +374,7 @@ Please see EULA.txt for license information.");
 
             }
 
-
-/* Unmerged change from project 'ArsenalImageMounterService (net6.0)'
-Before:
             ListDevices();
-After:
-            ConsoleAppHelpers.
-                        ListDevices();
-*/
-            global::ConsoleAppHelpers.
-                        ListDevices();
 
             return 0;
         }

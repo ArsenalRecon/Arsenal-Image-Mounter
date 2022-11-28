@@ -18,11 +18,10 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Extensions;
 
-public static class BufferExtensions
+public static partial class BufferExtensions
 {
 #if NETCOREAPP
     static BufferExtensions()
@@ -248,7 +247,7 @@ public static class BufferExtensions
     /// <param name="buffer">Span to search</param>
     /// <returns>Position of first found empty element or entire span length if none found</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int IndexOfTerminator<T>(this ReadOnlySpan<T> buffer) where T : struct, IEquatable<T>
+    public static int IndexOfTerminator<T>(this ReadOnlySpan<T> buffer) where T : unmanaged, IEquatable<T>
     {
         var endpos = buffer.IndexOf(default(T));
         return endpos >= 0 ? endpos : buffer.Length;
@@ -261,7 +260,7 @@ public static class BufferExtensions
     /// <param name="buffer">Span to search</param>
     /// <returns>Position of first found empty element or entire span length if none found</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int IndexOfTerminator<T>(this Span<T> buffer) where T : struct, IEquatable<T>
+    public static int IndexOfTerminator<T>(this Span<T> buffer) where T : unmanaged, IEquatable<T>
     {
         var endpos = buffer.IndexOf(default(T));
         return endpos >= 0 ? endpos : buffer.Length;
@@ -321,6 +320,58 @@ public static class BufferExtensions
     }
 
 #endif
+
+    /// <summary>
+    /// Reads null terminated Unicode string from byte buffer.
+    /// </summary>
+    /// <param name="buffer">Byte buffer</param>
+    /// <param name="offset">Offset in byte buffer where the string starts</param>
+    /// <returns>Managed string</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ReadNullTerminatedUnicode(byte[] buffer, int offset)
+        => ReadNullTerminatedUnicode(MemoryMarshal.Cast<byte, char>(buffer.AsSpan(offset)));
+
+    /// <summary>
+    /// Reads null terminated Unicode string from byte buffer.
+    /// </summary>
+    /// <param name="buffer">Byte buffer</param>
+    /// <returns>Managed string</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Span<char> ReadNullTerminatedUnicode(this Span<byte> buffer)
+        => ReadNullTerminatedUnicode(MemoryMarshal.Cast<byte, char>(buffer));
+
+    /// <summary>
+    /// Reads null terminated Unicode string from byte buffer.
+    /// </summary>
+    /// <param name="buffer">Byte buffer</param>
+    /// <returns>Managed string</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ReadNullTerminatedUnicode(this ReadOnlySpan<byte> buffer)
+        => ReadNullTerminatedUnicode(MemoryMarshal.Cast<byte, char>(buffer));
+
+    /// <summary>
+    /// Reads null terminated Unicode string from char buffer.
+    /// </summary>
+    /// <param name="chars">Buffer</param>
+    /// <returns>Managed string</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlySpan<char> ReadNullTerminatedUnicode(this ReadOnlySpan<char> chars)
+    {
+        var endpos = chars.IndexOfTerminator();
+        return chars.Slice(0, endpos);
+    }
+
+    /// <summary>
+    /// Reads null terminated Unicode string from char buffer.
+    /// </summary>
+    /// <param name="chars">Buffer</param>
+    /// <returns>Managed string</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Span<char> ReadNullTerminatedUnicode(this Span<char> chars)
+    {
+        var endpos = chars.IndexOfTerminator();
+        return chars.Slice(0, endpos);
+    }
 
     /// <summary>
     /// Reads null terminated Unicode string from byte buffer.
@@ -1125,11 +1176,11 @@ public static class BufferExtensions
     public static void AddRange<T>(this List<T> list, params T[] collection) => list.AddRange(collection);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static unsafe Span<byte> AsSpan(IntPtr ptr, int length) =>
+    public static unsafe Span<byte> AsSpan(this IntPtr ptr, int length) =>
         new(ptr.ToPointer(), length);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static unsafe ReadOnlySpan<byte> AsReadOnlySpan(IntPtr ptr, int length) =>
+    public static unsafe ReadOnlySpan<byte> AsReadOnlySpan(this IntPtr ptr, int length) =>
         new(ptr.ToPointer(), length);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1141,24 +1192,28 @@ public static class BufferExtensions
         memoryStream.GetBuffer().AsSpan(0, checked((int)memoryStream.Length));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static unsafe Span<byte> AsSpan(this UnmanagedMemoryStream memoryStream) =>
+        new(memoryStream.PositionPointer - memoryStream.Position, (int)memoryStream.Length);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Memory<byte> AsMemory(this MemoryStream memoryStream) =>
         memoryStream.GetBuffer().AsMemory(0, checked((int)memoryStream.Length));
 
 #if !NETCOREAPP
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref readonly T AsRef<T>(this ReadOnlySpan<byte> bytes) where T : struct =>
+    public static ref readonly T AsRef<T>(this ReadOnlySpan<byte> bytes) where T : unmanaged =>
         ref MemoryMarshal.Cast<byte, T>(bytes)[0];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref T AsRef<T>(this Span<byte> bytes) where T : struct =>
+    public static ref T AsRef<T>(this Span<byte> bytes) where T : unmanaged =>
         ref MemoryMarshal.Cast<byte, T>(bytes)[0];
 #else
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref readonly T AsRef<T>(this ReadOnlySpan<byte> bytes) where T : struct =>
+    public static ref readonly T AsRef<T>(this ReadOnlySpan<byte> bytes) where T : unmanaged =>
         ref MemoryMarshal.AsRef<T>(bytes);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref T AsRef<T>(this Span<byte> bytes) where T : struct =>
+    public static ref T AsRef<T>(this Span<byte> bytes) where T : unmanaged =>
         ref MemoryMarshal.AsRef<T>(bytes);
 #endif
 
@@ -1196,23 +1251,27 @@ public static class BufferExtensions
         MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(source), length);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int BinaryCompare<T>(in T s1, in T s2) where T : struct =>
+    public static Span<T> CreateSpan<T>(ref T source, int length) =>
+        MemoryMarshal.CreateSpan(ref source, length);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int BinaryCompare<T>(in T s1, in T s2) where T : unmanaged =>
         BinaryCompare(CreateReadOnlySpan(s1, 1), CreateReadOnlySpan(s2, 1));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool BinaryEqual<T>(in T s1, in T s2) where T : struct =>
+    public static bool BinaryEqual<T>(in T s1, in T s2) where T : unmanaged =>
         BinaryEqual(CreateReadOnlySpan(s1, 1), CreateReadOnlySpan(s2, 1));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ReadOnlySpan<byte> AsReadOnlyBytes<T>(in T source) where T : struct =>
+    public static ReadOnlySpan<byte> AsReadOnlyBytes<T>(in T source) where T : unmanaged =>
         MemoryMarshal.AsBytes(CreateReadOnlySpan(source, 1));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Span<byte> AsBytes<T>(ref T source) where T : struct =>
+    public static Span<byte> AsBytes<T>(ref T source) where T : unmanaged =>
         MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref source, 1));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string ToHexString<T>(in T source) where T : struct =>
+    public static string ToHexString<T>(in T source) where T : unmanaged =>
         ToHexString(AsReadOnlyBytes(source));
 
     public static string ToHexString(this ReadOnlySpan<byte> bytes, ReadOnlySpan<char> delimiter)
@@ -1239,10 +1298,18 @@ public static class BufferExtensions
         return target.ToString();
     }
 
-    public static int GetHashCode<T>(in T source) where T : struct =>
+    public static int GetHashCode<T>(in T source) where T : unmanaged =>
         GetHashCode(AsReadOnlyBytes(source));
 
 #else
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static unsafe ReadOnlySpan<T> CreateReadOnlySpan<T>(in T source, int length) =>
+        new(Unsafe.AsPointer(ref Unsafe.AsRef(source)), length);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static unsafe Span<T> CreateSpan<T>(ref T source, int length) =>
+        new(Unsafe.AsPointer(ref source), length);
 
     public static string ToHexString(this ReadOnlySpan<byte> data, string? delimiter)
     {
@@ -1285,8 +1352,14 @@ public static class BufferExtensions
         return result;
     }
 
+#if NET7_0_OR_GREATER
+    [LibraryImport("msvcrt", SetLastError = false)]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    private static partial int memcmp(in byte ptr1, in byte ptr2, IntPtr count);
+#else
     [DllImport("msvcrt", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
     private static extern int memcmp(in byte ptr1, in byte ptr2, IntPtr count);
+#endif
 
     /// <summary>
     /// Compares two byte spans using C runtime memcmp function.
@@ -1349,7 +1422,7 @@ public static class BufferExtensions
     /// <param name="second">Second span</param>
     /// <returns>If sequences are both empty, true is returned. If sequences have different lengths, false is returned.
     /// If lengths are equal and byte sequences are equal, true is returned.</returns>
-    public static bool BinaryEqual<T>(this ReadOnlySpan<T> first, ReadOnlySpan<T> second) where T : struct
+    public static bool BinaryEqual<T>(this ReadOnlySpan<T> first, ReadOnlySpan<T> second) where T : unmanaged
         => BinaryEqual(MemoryMarshal.AsBytes(first), MemoryMarshal.AsBytes(second));
 
     /// <summary>
@@ -1358,7 +1431,7 @@ public static class BufferExtensions
     /// <param name="first">First span</param>
     /// <param name="second">Second span</param>
     /// <returns>Result of memcmp comparison.</returns>
-    public static int BinaryCompare<T>(this ReadOnlySpan<T> first, ReadOnlySpan<T> second) where T : struct
+    public static int BinaryCompare<T>(this ReadOnlySpan<T> first, ReadOnlySpan<T> second) where T : unmanaged
         => BinaryCompare(MemoryMarshal.AsBytes(first), MemoryMarshal.AsBytes(second));
 
 #if !NETCOREAPP
@@ -1395,18 +1468,18 @@ public static class BufferExtensions
     /// input string, but guaranteed to be null terminated.</returns>
     public static ref char MakeNullTerminated(this ReadOnlyMemory<char> strMemory)
     {
+        if (MemoryMarshal.TryGetString(strMemory, out var text, out var start, out var length) &&
+            start + length == text.Length)
+        {
+            return ref MemoryMarshal.GetReference(strMemory.Span);
+        }
+
         if (MemoryMarshal.TryGetArray(strMemory, out var chars) &&
             chars.Array is not null &&
             chars.Offset + chars.Count < chars.Array.Length &&
             chars.Array[chars.Offset + chars.Count] == '\0')
         {
             return ref chars.Array[chars.Offset];
-        }
-
-        if (MemoryMarshal.TryGetString(strMemory, out var text, out var start, out var length) &&
-            start + length == text.Length)
-        {
-            return ref MemoryMarshal.GetReference(strMemory.Span);
         }
 
         var buffer = new char[strMemory.Length + 1];
@@ -1417,9 +1490,29 @@ public static class BufferExtensions
     [return: MarshalAs(UnmanagedType.I1)]
     private delegate bool RtlIsZeroMemoryFunc(in byte buffer, IntPtr length);
 
-    private static readonly RtlIsZeroMemoryFunc fRtlIsZeroMemory =
-        NativeLib.GetProcAddressNoThrow("ntdll", "RtlIsZeroMemory", typeof(RtlIsZeroMemoryFunc)) as RtlIsZeroMemoryFunc ??
+    private static readonly RtlIsZeroMemoryFunc FuncRtlIsZeroMemory =
+        GetRtlIsZeroMemory() ??
         InternalIsZeroMemory;
+
+    private static unsafe RtlIsZeroMemoryFunc? GetRtlIsZeroMemory()
+    {
+        var fptr = NativeLib.GetProcAddressNoThrow("ntdll", "RtlIsZeroMemory");
+        
+        if (fptr == default)
+        {
+            return null;
+        }
+
+        var ptr = (delegate* unmanaged[Stdcall]<byte*, nint, byte>)fptr;
+
+        return (in byte buffer, nint length) =>
+        {
+            fixed (byte* bytes = &buffer)
+            {
+                return ptr(bytes, length) != 0;
+            }
+        };
+    }
 
     /// <summary>
     /// Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
@@ -1438,7 +1531,7 @@ public static class BufferExtensions
     /// <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsBufferZero(this Span<byte> buffer) =>
-        fRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), new(buffer.Length));
+        FuncRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), new(buffer.Length));
 
     /// <summary>
     /// Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
@@ -1448,7 +1541,7 @@ public static class BufferExtensions
     /// <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsBufferZero(this ReadOnlySpan<byte> buffer) =>
-        fRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), new(buffer.Length));
+        FuncRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), new(buffer.Length));
 
     private static unsafe bool InternalIsZeroMemory(in byte buffer, IntPtr length)
     {

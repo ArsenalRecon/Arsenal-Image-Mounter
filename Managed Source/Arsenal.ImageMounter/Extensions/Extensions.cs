@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using System.Threading;
 
@@ -9,6 +10,29 @@ namespace Arsenal.ImageMounter.Extensions;
 
 public static class ExtensionMethods
 {
+    public static IEnumerable<string> EnumerateLines(this TextReader reader)
+    {
+        for (
+            var line = reader.ReadLine();
+            line is not null;
+            line = reader.ReadLine())
+        {
+            yield return line;
+        }
+    }
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    public static async IAsyncEnumerable<string> AsyncEnumerateLines(this TextReader reader)
+    {
+        for (
+            var line = await reader.ReadLineAsync().ConfigureAwait(false);
+            line is not null;
+            line = await reader.ReadLineAsync().ConfigureAwait(false))
+        {
+            yield return line;
+        }
+    }
+#endif
 
     public static string Join(this IEnumerable<string> strings, string separator) => string.Join(separator, strings);
 

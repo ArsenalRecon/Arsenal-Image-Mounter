@@ -37,12 +37,11 @@ public class BufferedBinaryWriter : BinaryWriter
     public void WriteTo(Stream stream)
     {
         Flush();
-        {
-            var withBlock = (MemoryStream)BaseStream;
-            withBlock.WriteTo(stream);
-            withBlock.SetLength(0L);
-            withBlock.Position = 0L;
-        }
+
+        var baseStream = (MemoryStream)BaseStream;
+        baseStream.WriteTo(stream);
+        baseStream.SetLength(0L);
+        baseStream.Position = 0L;
 
         stream.Flush();
     }

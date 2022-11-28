@@ -1,9 +1,11 @@
 ﻿using Arsenal.ImageMounter.Extensions;
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
@@ -597,42 +599,7 @@ public unsafe struct PARTITION_INFORMATION_GPT
 
     private fixed char _name[36];
 
-    public ReadOnlySpan<char> Name
-    {
-        get
-        {
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-
-            var span = MemoryMarshal.CreateReadOnlySpan(ref _name[0], 36);
-            var endpos = span.IndexOf('\0');
-
-            if (endpos >= 0)
-            {
-                span = span.Slice(0, endpos);
-            }
-
-            return span;
-
-#else
-
-            fixed (char* namePtr = _name)
-            {
-                var span = new ReadOnlySpan<char>(namePtr, 36);
-                var endpos = span.IndexOf('\0');
-
-                if (endpos >= 0)
-                {
-                    span = span.Slice(0, endpos);
-                }
-
-                return span;
-            }
-
-#endif
-
-        }
-    }
+    public unsafe ReadOnlySpan<char> Name => BufferExtensions.CreateReadOnlySpan(_name[0], 36).ReadNullTerminatedUnicode();
 }
 
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -880,29 +847,32 @@ public class HGlobalBuffer : SafeBuffer
 }
 
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-public readonly struct FindStreamData
+public struct FindStreamData
 {
-
     public long StreamSize { get; }
 
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 296)]
-    private readonly string _streamName;
+    private unsafe fixed char _streamName[296];
 
-    public ReadOnlyMemory<char> NamePart => _streamName.AsMemory().Split(':').ElementAtOrDefault(1);
+    public ReadOnlySpan<char> NamePart => StreamName.Split(':').ElementAtOrDefault(1);
 
-    public ReadOnlyMemory<char> TypePart => _streamName.AsMemory().Split(':').ElementAtOrDefault(2);
+    public ReadOnlySpan<char> TypePart => StreamName.Split(':').ElementAtOrDefault(2);
 
-    public string StreamName => _streamName;
+    public unsafe ReadOnlySpan<char> StreamName => BufferExtensions.CreateReadOnlySpan(_streamName[0], 296).ReadNullTerminatedUnicode();
 }
 
 /// <summary>
 /// Encapsulates a FindVolumeMountPoint handle that is closed by calling FindVolumeMountPointClose () Win32 API.
 /// </summary>
-public sealed class SafeFindHandle : SafeHandleMinusOneIsInvalid
+public sealed partial class SafeFindHandle : SafeHandleMinusOneIsInvalid
 {
-
+#if NET7_0_OR_GREATER
+    [LibraryImport("kernel32", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool FindClose(IntPtr h);
+#else
     [DllImport("kernel32", SetLastError = true)]
     private static extern bool FindClose(IntPtr h);
+#endif
 
     /// <summary>
     /// Initiates a new instance with an existing open handle.
@@ -1419,8 +1389,8 @@ public readonly struct DISK_GEOMETRY
     public int BytesPerSector { get; }
 }
 
-[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-public sealed class OSVERSIONINFO
+[StructLayout(LayoutKind.Sequential)]
+public struct OSVERSIONINFO
 {
     public int OSVersionInfoSize { get; }
     public int MajorVersion { get; }
@@ -1428,17 +1398,18 @@ public sealed class OSVERSIONINFO
     public int BuildNumber { get; }
     public PlatformID PlatformId { get; }
 
-    [field: MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-    public string? CSDVersion { get; }
+    private unsafe fixed char csdVersion[128];
 
-    public OSVERSIONINFO()
+    public unsafe ReadOnlySpan<char> CSDVersion => BufferExtensions.CreateReadOnlySpan(csdVersion[0], 128).ReadNullTerminatedUnicode();
+
+    public unsafe OSVERSIONINFO()
     {
-        OSVersionInfoSize = Marshal.SizeOf<OSVERSIONINFO>();
+        OSVersionInfoSize = sizeof(OSVERSIONINFO);
     }
 }
 
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-public sealed class OSVERSIONINFOEX
+public struct OSVERSIONINFOEX
 {
     public int OSVersionInfoSize { get; }
     public int MajorVersion { get; }
@@ -1446,8 +1417,9 @@ public sealed class OSVERSIONINFOEX
     public int BuildNumber { get; }
     public PlatformID PlatformId { get; }
 
-    [field: MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-    public string? CSDVersion { get; }
+    private unsafe fixed char csdVersion[128];
+
+    public unsafe ReadOnlySpan<char> CSDVersion => BufferExtensions.CreateReadOnlySpan(csdVersion[0], 128).ReadNullTerminatedUnicode();
 
     public ushort ServicePackMajor { get; }
 
@@ -1459,9 +1431,9 @@ public sealed class OSVERSIONINFOEX
 
     public byte Reserved { get; }
 
-    public OSVERSIONINFOEX()
+    public unsafe OSVERSIONINFOEX()
     {
-        OSVersionInfoSize = Marshal.SizeOf<OSVERSIONINFOEX>();
+        OSVersionInfoSize = sizeof(OSVERSIONINFOEX);
     }
 }
 
@@ -1749,22 +1721,23 @@ public readonly struct SP_DEVICE_INTERFACE_DATA
     public IntPtr Reserved { get; }
 }
 
-[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-public sealed class SP_DEVICE_INTERFACE_DETAIL_DATA
+[StructLayout(LayoutKind.Sequential)]
+public struct SP_DEVICE_INTERFACE_DETAIL_DATA
 {
-    public uint Size { get; }
+    public int Size { get; }
 
-    [field: MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32768)]
-    public string? DevicePath { get; }
+    private unsafe fixed char devicePath[32768];
 
-    public SP_DEVICE_INTERFACE_DETAIL_DATA()
+    public unsafe ReadOnlySpan<char> DevicePath => BufferExtensions.CreateReadOnlySpan(devicePath[0], 32768).ReadNullTerminatedUnicode();
+
+    public unsafe SP_DEVICE_INTERFACE_DETAIL_DATA()
     {
-        Size = (uint)Marshal.SizeOf(this);
+        Size = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
     }
 }
 
-[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-public sealed class SP_DEVINFO_LIST_DETAIL_DATA
+[StructLayout(LayoutKind.Sequential)]
+public struct SP_DEVINFO_LIST_DETAIL_DATA
 {
     public const int SP_MAX_MACHINENAME_LENGTH = 263;
 
@@ -1774,12 +1747,11 @@ public sealed class SP_DEVINFO_LIST_DETAIL_DATA
 
     public IntPtr RemoteMachineHandle { get; }
 
-    [field: MarshalAs(UnmanagedType.ByValTStr, SizeConst = SP_MAX_MACHINENAME_LENGTH)]
-    public string? RemoteMachineName { get; }
+    private unsafe fixed char remoteMachineName[SP_MAX_MACHINENAME_LENGTH];
 
-    public SP_DEVINFO_LIST_DETAIL_DATA()
+    public unsafe SP_DEVINFO_LIST_DETAIL_DATA()
     {
-        Size = Marshal.SizeOf(this);
+        Size = sizeof(SP_DEVINFO_LIST_DETAIL_DATA);
     }
 }
 

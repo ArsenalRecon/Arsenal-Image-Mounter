@@ -22,7 +22,7 @@ internal static class ImageConversions
         {
             Console.WriteLine($"Calculating checksums {string.Join(", ", checksums)}...");
 
-            var completionPosition = new CompletionPosition();
+            var completionPosition = new CompletionPosition(provider.Length);
 
             Console.CancelKeyPress += (sender, e) =>
             {
@@ -70,17 +70,18 @@ internal static class ImageConversions
             }
             else
             {
-                var update_time = TimeSpan.FromMilliseconds(400d);
+                var update_time = TimeSpan.FromMilliseconds(400);
 
                 try
                 {
                     while (!t.Wait(update_time))
                     {
-                        var percent = 100m * completionPosition.LengthComplete / provider.Length;
-                        Console.Write($"Reading ({percent:0.0}%)...\r");
+                        Console.Write($"Reading ({completionPosition.PercentComplete:0.0}%, ETR {completionPosition.EstimatedTimeRemaining:d\\.hh\\:mm\\:ss})...\r");
                     }
 
-                    Console.WriteLine($"Done.                ");
+                    Console.Write("Done.");
+
+                    Console.WriteLine(new string(' ', Console.WindowWidth - Console.CursorLeft - 1));
 
                     Console.WriteLine();
 
@@ -92,16 +93,12 @@ internal static class ImageConversions
                         {
                             Console.WriteLine($"{hash.Key}: {hash.Value?.ToHexString()}");
                         }
-
-                        Console.WriteLine();
                     }
                 }
                 finally
                 {
                     Console.WriteLine();
                 }
-
-                Console.WriteLine("Image converted successfully.");
             }
         }
     }
@@ -121,7 +118,7 @@ internal static class ImageConversions
             }
             else
             {
-                completionPosition = new CompletionPosition();
+                completionPosition = new CompletionPosition(provider.Length);
 
                 Console.CancelKeyPress += (sender, e) =>
                 {
@@ -163,7 +160,7 @@ internal static class ImageConversions
                 metafile = new StreamWriter(metafilename, append: false);
 
                 metafile.WriteLine($"Created by Arsenal Image Mounter version {ConsoleApp.AssemblyFileVersion}");
-                metafile.WriteLine($"Running on machine '{Environment.MachineName}' with {RuntimeInformation.OSDescription} and {RuntimeInformation.FrameworkDescription}");
+                metafile.WriteLine($"Running on machine '{Environment.MachineName}' with {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture} and {RuntimeInformation.FrameworkDescription} {RuntimeInformation.ProcessArchitecture}");
                 metafile.WriteLine($"Saved from '{sourcePath}'");
                 metafile.WriteLine($"Disk size: {provider.Length} bytes");
                 metafile.WriteLine($"Bytes per sector: {provider.SectorSize}");
@@ -220,11 +217,12 @@ internal static class ImageConversions
                     {
                         while (!t.Wait(update_time))
                         {
-                            var percent = 100m * completionPosition.LengthComplete / provider.Length;
-                            Console.Write($"Converting ({percent:0.0}%)...\r");
+                            Console.Write($"Converting ({completionPosition.PercentComplete:0.0}%, ETR {completionPosition.EstimatedTimeRemaining:d\\.hh\\:mm\\:ss})...\r");
                         }
 
-                        Console.WriteLine($"Conversion finished.");
+                        Console.Write($"Conversion finished.");
+
+                        Console.WriteLine(new string(' ', Console.WindowWidth - Console.CursorLeft - 1));
 
                         if (metafile is not null)
                         {

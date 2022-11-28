@@ -18,6 +18,7 @@
     <Deterministic>false</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
+    <NeutralLanguage>en</NeutralLanguage>
 
     <Title>Arsenal Image Mounter</Title>
     <Company>Arsenal Recon</Company>

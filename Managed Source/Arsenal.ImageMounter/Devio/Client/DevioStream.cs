@@ -1,6 +1,4 @@
-﻿using Arsenal.ImageMounter.Extensions;
-using System;
-// '''' DevioStream.vb
+﻿// '''' DevioStream.vb
 // '''' Client side component for use with devio proxy services from other clients
 // '''' than actual Arsenal Image Mounter driver. This could be useful for example
 // '''' for directly examining virtual disk contents directly in an application,
@@ -15,6 +13,8 @@ using System;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Extensions;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;

@@ -53,19 +53,19 @@ public enum IMAGE_FILE_MACHINE : WORD
 /// </summary>
 public readonly struct IMAGE_FILE_HEADER
 {
-    public readonly IMAGE_FILE_MACHINE Machine;
-    public readonly WORD NumberOfSections;
-    public readonly DWORD TimeDateStamp;
-    public readonly DWORD PointerToSymbolTable;
-    public readonly DWORD NumberOfSymbols;
-    public readonly WORD SizeOfOptionalHeader;
-    public readonly WORD Characteristics;
+    public IMAGE_FILE_MACHINE Machine { get; }
+    public WORD NumberOfSections { get; }
+    public DWORD TimeDateStamp { get; }
+    public DWORD PointerToSymbolTable { get; }
+    public DWORD NumberOfSymbols { get; }
+    public WORD SizeOfOptionalHeader { get; }
+    public WORD Characteristics { get; }
 }
 
 internal readonly struct IMAGE_DATA_DIRECTORY
 {
-    public readonly DWORD VirtualAddress;
-    public readonly DWORD Size;
+    public DWORD VirtualAddress { get; }
+    public DWORD Size { get; }
 }
 
 /// <summary>
@@ -77,14 +77,14 @@ public readonly struct IMAGE_OPTIONAL_HEADER
     // Standard fields.
     //
 
-    public readonly WORD Magic;
-    public readonly BYTE MajorLinkerVersion;
-    public readonly BYTE MinorLinkerVersion;
-    public readonly DWORD SizeOfCode;
-    public readonly DWORD SizeOfInitializedData;
-    public readonly DWORD SizeOfUninitializedData;
-    public readonly DWORD AddressOfEntryPoint;
-    public readonly DWORD BaseOfCode;
+    public WORD Magic { get; }
+    public BYTE MajorLinkerVersion { get; }
+    public BYTE MinorLinkerVersion { get; }
+    public DWORD SizeOfCode { get; }
+    public DWORD SizeOfInitializedData { get; }
+    public DWORD SizeOfUninitializedData { get; }
+    public DWORD AddressOfEntryPoint { get; }
+    public DWORD BaseOfCode { get; }
 
     // Different fields follow depending on architecture
 }
@@ -117,31 +117,27 @@ internal unsafe struct IMAGE_DOS_HEADER
 /// </summary>
 public readonly struct IMAGE_NT_HEADERS
 {
-    public readonly int Signature;
-    public readonly IMAGE_FILE_HEADER FileHeader;
-    public readonly IMAGE_OPTIONAL_HEADER OptionalHeader;
+    public int Signature { get; }
+    public IMAGE_FILE_HEADER FileHeader { get; }
+    public IMAGE_OPTIONAL_HEADER OptionalHeader { get; }
 }
 
 /// <summary>
 /// Version resource header fields
 /// </summary>
-public unsafe struct VS_VERSIONINFO
+public struct VS_VERSIONINFO
 {
-    public readonly ushort Length { get; }
-    public readonly ushort ValueLength { get; }
-    public readonly ushort Type { get; }
+    public ushort Length { get; }
+    public ushort ValueLength { get; }
+    public ushort Type { get; }
 
-    private fixed char szKey[16];
+    private unsafe fixed char szKey[16];
 
     private readonly ushort padding1;
 
     public FixedFileVerInfo FixedFileInfo { get; }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public ReadOnlySpan<char> Key => MemoryMarshal.CreateReadOnlySpan(ref szKey[0], 16);
-#else
-    public ReadOnlySpan<char> Key => new(Unsafe.AsPointer(ref szKey[0]), 16);
-#endif
+    public unsafe ReadOnlySpan<char> Key => BufferExtensions.CreateReadOnlySpan(szKey[0], 16);
 }
 
 /// <summary>
@@ -177,16 +173,29 @@ public readonly struct FixedFileVerInfo
 }
 
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-internal static class WindowsSpecific
+internal static partial class WindowsSpecific
 {
+#if NET7_0_OR_GREATER
+    [LibraryImport("version", StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static unsafe partial bool VerQueryValueW(void* pBlock, string lpSubBlock, out char* lplpBuffer, out int puLen);
+
+    [LibraryImport("version", StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static unsafe partial bool VerQueryValueW(void* pBlock, string lpSubBlock, out uint* lplpBuffer, out int puLen);
+
+    [LibraryImport("version", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial DWORD VerLanguageNameW(DWORD wLang, out char szLang, DWORD cchLang);
+#else
     [DllImport("version", CharSet = CharSet.Unicode)]
-    public static extern unsafe bool VerQueryValue(void* pBlock, string lpSubBlock, out char* lplpBuffer, out int puLen);
+    public static extern unsafe bool VerQueryValueW(void* pBlock, string lpSubBlock, out char* lplpBuffer, out int puLen);
 
     [DllImport("version", CharSet = CharSet.Unicode)]
-    public static extern unsafe bool VerQueryValue(void* pBlock, string lpSubBlock, out uint* lplpBuffer, out int puLen);
+    public static extern unsafe bool VerQueryValueW(void* pBlock, string lpSubBlock, out uint* lplpBuffer, out int puLen);
 
     [DllImport("version", CharSet = CharSet.Unicode)]
-    public static extern DWORD VerLanguageName(DWORD wLang, out char szLang, DWORD cchLang);
+    public static extern DWORD VerLanguageNameW(DWORD wLang, out char szLang, DWORD cchLang);
+#endif
 }
 
 /// <summary>
@@ -242,7 +251,7 @@ public class NativeFileVersion
 
         fixed (VS_VERSIONINFO* versionResourcePtr = &versionResource)
         {
-            return !WindowsSpecific.VerQueryValue(versionResourcePtr, SubBlock, out uint* lpVerBuf, out var len) ||
+            return !WindowsSpecific.VerQueryValueW(versionResourcePtr, SubBlock, out uint* lpVerBuf, out var len) ||
                 lpVerBuf == null ||
                 len != sizeof(uint)
                 ? null
@@ -263,7 +272,7 @@ public class NativeFileVersion
 
         fixed (VS_VERSIONINFO* versionResourcePtr = &versionResource)
         {
-            return WindowsSpecific.VerQueryValue(versionResourcePtr, SubBlock, out char* lpVerBuf, out var len) &&
+            return WindowsSpecific.VerQueryValueW(versionResourcePtr, SubBlock, out char* lpVerBuf, out var len) &&
                 len > 0
                 ? (new(lpVerBuf, 0, len))
                 : null;
@@ -283,7 +292,7 @@ public class NativeFileVersion
         const DWORD dwDefaultTranslationCode = 0x04E40409;
         if (dwTranslationCode == DWORD.MaxValue)
         {
-            var lpwTranslationCode = QueryValueInt(versionResource, "\\VarFileInfo\\Translation");
+            var lpwTranslationCode = QueryValueInt(versionResource, @"\VarFileInfo\Translation");
             if (lpwTranslationCode.HasValue)
             {
                 dwTranslationCode = lpwTranslationCode.Value;
@@ -294,12 +303,12 @@ public class NativeFileVersion
             }
         }
 
-        var SubBlock = $"\\StringFileInfo\\{dwTranslationCode.LOWORD():X4}{dwTranslationCode.HIWORD():X4}\\{strRecordName}";
+        var SubBlock = $@"\StringFileInfo\{dwTranslationCode.LOWORD():X4}{dwTranslationCode.HIWORD():X4}\{strRecordName}";
 
         return QueryValueString(versionResource, SubBlock);
     }
 
-    private static readonly string[] _commonfields = {
+    private static readonly string[] Commonfields = {
         "CompanyName",
         "FileDescription",
         "FileVersion",
@@ -321,14 +330,14 @@ public class NativeFileVersion
 
         Fixed = ptr.FixedFileInfo;
 
-        var lpdwTranslationCode = QueryValueInt(ptr, "\\VarFileInfo\\Translation");
+        var lpdwTranslationCode = QueryValueInt(ptr, @"\VarFileInfo\Translation");
 
         DWORD dwTranslationCode;
         if (lpdwTranslationCode.HasValue)
         {
             dwTranslationCode = lpdwTranslationCode.Value;
             Span<char> tcLanguageName = stackalloc char[128];
-            if (WindowsSpecific.VerLanguageName(dwTranslationCode.LOWORD(), out tcLanguageName[0], 128) != 0)
+            if (WindowsSpecific.VerLanguageNameW(dwTranslationCode.LOWORD(), out tcLanguageName[0], 128) != 0)
             {
                 Fields.Add("TranslationCode", dwTranslationCode.ToString("X"));
                 Fields.Add("LanguageName", tcLanguageName.ReadNullTerminatedUnicodeString());
@@ -339,7 +348,7 @@ public class NativeFileVersion
             dwTranslationCode = 0x04E40409;
         }
 
-        foreach (var fieldname in _commonfields)
+        foreach (var fieldname in Commonfields)
         {
             var fieldvalue = QueryValueWithTranslation(ptr, fieldname, dwTranslationCode);
 

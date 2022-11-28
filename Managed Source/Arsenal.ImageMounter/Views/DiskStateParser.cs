@@ -68,11 +68,9 @@ public static class DiskStateParser
                             view.NativePartitionLayout = default;
                         }
                     }
-
                     catch (Exception ex)
                     {
                         Trace.WriteLine($"Error reading signature from MBR for drive {view.DevicePath}: {ex.JoinMessages()}");
-
                     }
 
                     try
@@ -83,25 +81,20 @@ public static class DiskStateParser
                             .Select(mnt => mnt.ToString())
                             .ToArray();
                     }
-
                     catch (Exception ex)
                     {
                         Trace.WriteLine($"Error enumerating volumes for drive {view.DevicePath}: {ex.JoinMessages()}");
-
                     }
                 }
 
                 return view;
-
             });
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine($"Exception in GetSimpleView: {ex}");
 
             throw new Exception("Exception generating view", ex);
-
         }
     }
 }

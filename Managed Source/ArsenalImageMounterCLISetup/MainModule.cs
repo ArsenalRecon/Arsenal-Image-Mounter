@@ -1,11 +1,4 @@
-﻿using Arsenal.ImageMounter.IO.Native;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Reflection;
-using static Arsenal.ImageMounter.API;
-// '''' MainModule.vb
+﻿// '''' MainModule.vb
 // '''' Console driver setup application, for scripting and similar.
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -17,6 +10,13 @@ using static Arsenal.ImageMounter.API;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.IO.Native;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Reflection;
+using static Arsenal.ImageMounter.API;
 using static Arsenal.ImageMounter.DriverSetup;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -25,8 +25,7 @@ namespace Arsenal.ImageMounter;
 
 public static class MainModule
 {
-
-    private static readonly Dialogs.NativeWindowHandle ownerWindow = new(NativeFileIO.SafeNativeMethods.GetConsoleWindow());
+    private static readonly Dialogs.NativeWindowHandle OwnerWindow = new(NativeFileIO.SafeNativeMethods.GetConsoleWindow());
 
     public static int Main(params string[] args)
     {
@@ -85,7 +84,7 @@ public static class MainModule
                     using (var zipStream = typeof(MainModule).Assembly.GetManifestResourceStream(typeof(MainModule), "DriverFiles.zip")
                         ?? throw new KeyNotFoundException("Cannot find embedded DriverFiles.zip"))
                     {
-                        InstallFromZipStream(ownerWindow, zipStream);
+                        InstallFromZipStream(OwnerWindow, zipStream);
                     }
 
                     try
@@ -108,7 +107,7 @@ public static class MainModule
                 {
                     if (AdapterDevicePresent)
                     {
-                        Uninstall(ownerWindow);
+                        Uninstall(OwnerWindow);
                         Trace.WriteLine("Driver successfully uninstalled.");
 
                         try

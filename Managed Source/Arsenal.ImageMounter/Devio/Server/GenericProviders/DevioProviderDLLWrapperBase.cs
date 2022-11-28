@@ -1,6 +1,4 @@
-﻿using Microsoft.Win32.SafeHandles;
-using System;
-// '''' DevioProviderDLLWrapperBase.vb
+﻿// '''' DevioProviderDLLWrapperBase.vb
 // '''' Proxy provider that implements devio proxy service with an unmanaged DLL written
 // '''' for use with devio.exe command line tool.
 // '''' 
@@ -13,6 +11,8 @@ using System;
 // '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 // ''''
 
+using Microsoft.Win32.SafeHandles;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;

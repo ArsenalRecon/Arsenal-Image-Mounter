@@ -1,15 +1,4 @@
-﻿using Arsenal.ImageMounter.Collections;
-using Arsenal.ImageMounter.Devio.Server.Interaction;
-using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.IO.Streams;
-using DiscUtils;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-// '''' ProviderSupport.vb
+﻿// '''' ProviderSupport.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 // '''' This source code and API are available under the terms of the Affero General Public
@@ -20,6 +9,17 @@ using System.Diagnostics;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Collections;
+using Arsenal.ImageMounter.Devio.Server.Interaction;
+using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using Arsenal.ImageMounter.IO.Streams;
+using DiscUtils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -27,6 +27,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;

@@ -1,7 +1,4 @@
-﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using System;
-using System.Diagnostics;
-// '''' DevioTcpService.vb
+﻿// '''' DevioTcpService.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 // '''' This source code and API are available under the terms of the Affero General Public
@@ -12,6 +9,9 @@ using System.Diagnostics;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -180,11 +180,10 @@ public class DevioTcpService : DevioServiceBase
                 // Trace.WriteLine("Sending response and waiting for next request.")
 
                 Writer.Seek(0, SeekOrigin.Begin);
-                {
-                    var withBlock = (MemoryStream)Writer.BaseStream;
-                    withBlock.WriteTo(TcpStream);
-                    withBlock.SetLength(0L);
-                }
+
+                var baseStream = (MemoryStream)Writer.BaseStream;
+                baseStream.WriteTo(TcpStream);
+                baseStream.SetLength(0L);
             }
         }
         catch (Exception ex)

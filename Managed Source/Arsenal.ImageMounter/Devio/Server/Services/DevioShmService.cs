@@ -1,9 +1,4 @@
-﻿using Arsenal.ImageMounter.Collections;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.IO.Native;
-using System;
-using System.Diagnostics;
-// '''' DevioShmService.vb
+﻿// '''' DevioShmService.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 // '''' This source code and API are available under the terms of the Affero General Public
@@ -14,6 +9,11 @@ using System.Diagnostics;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Collections;
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.IO.Native;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;

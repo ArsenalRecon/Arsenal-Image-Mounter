@@ -11,7 +11,7 @@ using System.Security.Cryptography;
 
 namespace Arsenal.ImageMounter.IO.Native;
 
-public static class NativeCalls
+public static partial class NativeCalls
 {
 #if NETCOREAPP
     public static IntPtr CrtDllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath) => !OperatingSystem.IsWindows() &&
@@ -26,8 +26,26 @@ public static class NativeCalls
 #endif
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    private static class WindowsAPI
+    private static partial class WindowsAPI
     {
+#if NET7_0_OR_GREATER
+        [LibraryImport("ntdll")]
+        public static unsafe partial int NtQueryVolumeInformationFile(SafeFileHandle FileHandle, out IoStatusBlock IoStatusBlock, void* FsInformation, int FsInformationLength, FsInformationClass FsInformationClass);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static unsafe partial bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, void* InBuffer, int InBufferSize, void* OutBuffer, int OutBufferSize, out int BytesReturned, void* overlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, in byte InBuffer, int InBufferSize, out byte OutBuffer, int OutBufferSize, out int BytesReturned, IntPtr overlapped);
+
+        [LibraryImport("advapi32", EntryPoint = "SystemFunction036", SetLastError = true)]
+        public static partial byte RtlGenRandom(out byte buffer, int length);
+
+        [LibraryImport("advapi32", EntryPoint = "SystemFunction036", SetLastError = true)]
+        public static unsafe partial byte RtlGenRandom(void* buffer, int length);
+#else
         [DllImport("ntdll")]
         public static extern unsafe int NtQueryVolumeInformationFile(SafeFileHandle FileHandle, out IoStatusBlock IoStatusBlock, void* FsInformation, int FsInformationLength, FsInformationClass FsInformationClass);
 
@@ -42,6 +60,7 @@ public static class NativeCalls
 
         [DllImport("advapi32", SetLastError = true, EntryPoint = "SystemFunction036")]
         public static extern unsafe byte RtlGenRandom(void* buffer, int length);
+#endif
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP

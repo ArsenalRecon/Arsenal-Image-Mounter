@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Arsenal.ImageMounter.Extensions;
+using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Arsenal.ImageMounter.Devio;
@@ -134,8 +136,9 @@ public partial struct IMDPROXY_SCSI_REQ
 {
     public IMDPROXY_REQ request_code { get; set; }
 
-    [field: MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-    public byte[] Cdb { get; set; }
+    private unsafe fixed byte cdb[16];
+
+    public unsafe Span<byte> Cdb => BufferExtensions.CreateSpan(ref cdb[0], 16);
 
     public ulong length { get; set; }
 }

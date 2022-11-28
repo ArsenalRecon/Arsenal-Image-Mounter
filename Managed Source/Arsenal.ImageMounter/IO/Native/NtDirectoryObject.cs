@@ -20,10 +20,24 @@ public enum NtObjectAccess
 }
 
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-public class NtDirectoryObject : IDisposable
+public partial class NtDirectoryObject : IDisposable
 {
     private bool disposedValue;
 
+#if NET7_0_OR_GREATER
+    [LibraryImport("ntdll", SetLastError = false)]
+    private static partial uint NtOpenDirectoryObject(out SafeFileHandle handle, NtObjectAccess access, in ObjectAttributes objectAttributes);
+
+    [LibraryImport("ntdll", SetLastError = false)]
+    private static partial uint NtQueryDirectoryObject(
+        SafeFileHandle DirectoryHandle,
+        out byte buffer,
+        int length,
+        [MarshalAs(UnmanagedType.U1)] bool returnSingleEntry,
+        [MarshalAs(UnmanagedType.U1)] bool restartScan,
+        ref int context,
+        out int returnLength);
+#else
     [DllImport("ntdll", SetLastError = false)]
     private static extern uint NtOpenDirectoryObject(out SafeFileHandle handle, NtObjectAccess access, in ObjectAttributes objectAttributes);
 
@@ -36,6 +50,7 @@ public class NtDirectoryObject : IDisposable
         [MarshalAs(UnmanagedType.U1)] bool restartScan,
         ref int context,
         out int returnLength);
+#endif
 
     public SafeFileHandle Handle { get; }
 

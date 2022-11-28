@@ -1,11 +1,4 @@
-﻿using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
-using Microsoft.Win32;
-using Microsoft.Win32.SafeHandles;
-using System;
-using System.Collections.Generic;
-// '''' API.vb
+﻿// '''' API.vb
 // '''' API for manipulating flag values, issuing SCSI bus rescans and similar
 // '''' tasks.
 // '''' 
@@ -18,6 +11,13 @@ using System.Collections.Generic;
 // '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -36,7 +36,7 @@ namespace Arsenal.ImageMounter;
 /// </summary>
 [ComVisible(false)]
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-public static class API
+public static partial class API
 {
     public static Version OSVersion { get; } = NativeFileIO.GetOSVersion().Version;
 
@@ -116,9 +116,9 @@ public static class API
         {
 
             using var DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevsW(NativeConstants.SerenumBusEnumeratorGuid,
-                                                                                 devinstname.MakeNullTerminated(),
-                                                                                 HwndParent,
-                                                                                 NativeConstants.DIGCF_DEVICEINTERFACE | NativeConstants.DIGCF_PRESENT);
+                                                                                         devinstname.MakeNullTerminated(),
+                                                                                         HwndParent,
+                                                                                         NativeConstants.DIGCF_DEVICEINTERFACE | NativeConstants.DIGCF_PRESENT);
 
             if (DevInfoSet.IsInvalid)
             {
@@ -128,7 +128,13 @@ public static class API
             var i = 0U;
             do
             {
-                if (NativeFileIO.UnsafeNativeMethods.SetupDiEnumDeviceInterfaces(DevInfoSet, IntPtr.Zero, NativeConstants.SerenumBusEnumeratorGuid, i, out var DeviceInterfaceData) == false)
+                var DeviceInterfaceData = new SP_DEVICE_INTERFACE_DATA();
+
+                if (!NativeFileIO.UnsafeNativeMethods.SetupDiEnumDeviceInterfaces(DevInfoSet,
+                                                                                  IntPtr.Zero,
+                                                                                  NativeConstants.SerenumBusEnumeratorGuid,
+                                                                                  i,
+                                                                                  ref DeviceInterfaceData))
                 {
                     break;
                 }
@@ -137,13 +143,13 @@ public static class API
 
                 if (NativeFileIO.UnsafeNativeMethods.SetupDiGetDeviceInterfaceDetailW(DevInfoSet,
                                                                                       DeviceInterfaceData,
-                                                                                      DeviceInterfaceDetailData,
-                                                                                      (uint)Marshal.SizeOf(DeviceInterfaceData),
+                                                                                      ref DeviceInterfaceDetailData,
+                                                                                      DeviceInterfaceData.Size,
                                                                                       out _,
                                                                                       IntPtr.Zero)
-                    && DeviceInterfaceDetailData.DevicePath is not null)
+                    && !DeviceInterfaceDetailData.DevicePath.IsEmpty)
                 {
-                    yield return DeviceInterfaceDetailData.DevicePath;
+                    yield return DeviceInterfaceDetailData.DevicePath.ToString();
                 }
 
                 i += 1U;
@@ -704,7 +710,9 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
 
         Statistics = new();
 
-        return UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0U, out Statistics, Statistics.Version, out var arglpBytesReturned, default)
+        var version = Statistics.Version;
+
+        return UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0U, out Statistics, version, out var arglpBytesReturned, default)
             ? (int)NativeConstants.NO_ERROR
             : Marshal.GetLastWin32Error();
 
@@ -738,17 +746,26 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
             : Marshal.GetLastWin32Error();
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    private static class UnsafeNativeMethods
+    private static partial class UnsafeNativeMethods
     {
         public const uint IOCTL_AIMWRFLTR_GET_DEVICE_DATA = 0x88443404u;
 
         public const uint IOCTL_AIMWRFLTR_DELETE_ON_CLOSE = 0x8844F407u;
 
+#if NET7_0_OR_GREATER
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out WriteFilterStatistics lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+#else
         [DllImport("kernel32", SetLastError = true)]
         public static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out WriteFilterStatistics lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         public static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
-
+#endif
     }
 }

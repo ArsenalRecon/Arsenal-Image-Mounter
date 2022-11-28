@@ -1,6 +1,4 @@
-﻿using Arsenal.ImageMounter.IO.Native;
-using System;
-
+﻿
 // '''' DevioShmStream.vb
 // '''' Client side component for use with devio proxy services from other clients
 // '''' than actual Arsenal Image Mounter driver. This could be useful for example
@@ -16,6 +14,8 @@ using System;
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.IO.Native;
+using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
@@ -38,15 +38,16 @@ public partial class DevioShmStream : DevioStream
     private readonly EventWaitHandle ResponseEvent;
     private readonly Mutex ServerMutex;
     private readonly SafeBuffer MapView;
+    private readonly WaitHandle[] WaitHandles;
 
-    /// <summary>
-    /// Creates a new instance by opening an existing Devio shared memory object and starts
-    /// communication with a Devio service using this shared memory object.
-    /// </summary>
-    /// <param name="name">Name of shared memory object to use for communication.</param>
-    /// <param name="read_only">Specifies if communication should be read-only.</param>
-    /// <returns>Returns new instance of DevioShmStream.</returns>
-    public static DevioShmStream Open(string name, bool read_only) => new(name, read_only);
+/// <summary>
+/// Creates a new instance by opening an existing Devio shared memory object and starts
+/// communication with a Devio service using this shared memory object.
+/// </summary>
+/// <param name="name">Name of shared memory object to use for communication.</param>
+/// <param name="read_only">Specifies if communication should be read-only.</param>
+/// <returns>Returns new instance of DevioShmStream.</returns>
+public static DevioShmStream Open(string name, bool read_only) => new(name, read_only);
 
     /// <summary>
     /// Creates a new instance by opening an existing Devio shared memory object and starts
@@ -67,9 +68,10 @@ public partial class DevioShmStream : DevioStream
             RequestEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Request");
             ResponseEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Response");
             ServerMutex = new Mutex(initiallyOwned: false, name: $@"Global\{ObjectName}_Server");
+            WaitHandles = new WaitHandle[] { ResponseEvent, ServerMutex };
             MapView.Write(0x0, IMDPROXY_REQ.IMDPROXY_REQ_INFO);
             RequestEvent.Set();
-            if (WaitHandle.WaitAny(new WaitHandle[] { ResponseEvent, ServerMutex }) != 0)
+            if (WaitHandle.WaitAny(WaitHandles) != 0)
             {
                 throw new EndOfStreamException("Server exit.");
             }
@@ -121,7 +123,7 @@ public partial class DevioShmStream : DevioStream
         Request.length = (ulong)count;
         MapView.Write(0x0, Request);
         RequestEvent.Set();
-        if (WaitHandle.WaitAny(new WaitHandle[] { ResponseEvent, ServerMutex }) != 0)
+        if (WaitHandle.WaitAny(WaitHandles) != 0)
         {
             throw new EndOfStreamException("Server exit.");
         }
@@ -147,7 +149,7 @@ public partial class DevioShmStream : DevioStream
         Request.length = (ulong)buffer.Length;
         MapView.Write(0x0, Request);
         RequestEvent.Set();
-        if (WaitHandle.WaitAny(new WaitHandle[] { ResponseEvent, ServerMutex }) != 0)
+        if (WaitHandle.WaitAny(WaitHandles) != 0)
         {
             throw new EndOfStreamException("Server exit.");
         }
@@ -176,7 +178,7 @@ public partial class DevioShmStream : DevioStream
         MapView.Write(0x0, Request);
         MapView.WriteArray(IMDPROXY_HEADER_SIZE, buffer, offset, count);
         RequestEvent.Set();
-        if (WaitHandle.WaitAny(new WaitHandle[] { ResponseEvent, ServerMutex }) != 0)
+        if (WaitHandle.WaitAny(WaitHandles) != 0)
         {
             throw new EndOfStreamException("Server exit.");
         }
@@ -206,7 +208,7 @@ public partial class DevioShmStream : DevioStream
         MapView.WriteSpan(IMDPROXY_HEADER_SIZE, buffer);
 
         RequestEvent.Set();
-        if (WaitHandle.WaitAny(new WaitHandle[] { ResponseEvent, ServerMutex }) != 0)
+        if (WaitHandle.WaitAny(WaitHandles) != 0)
         {
             throw new EndOfStreamException("Server exit.");
         }

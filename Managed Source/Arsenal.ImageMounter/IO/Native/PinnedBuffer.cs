@@ -47,7 +47,7 @@ public class PinnedBuffer : SafeBuffer
     /// position.
     /// </summary>
     /// <param name="instance">Existing object to marshal to unmanaged memory.</param>
-    public static PinnedBuffer<T> Create<T>(T[] instance) where T : struct => new(instance);
+    public static PinnedBuffer<T> Create<T>(T[] instance) where T : unmanaged => new(instance);
 
     /// <summary>
     /// Creates a new pinning for an offset into the existing pinned buffer.
@@ -148,7 +148,7 @@ public class PinnedBuffer : SafeBuffer
 /// </summary>
 /// <typeparam name="T">Type of elements in array.</typeparam>
 [ComVisible(false)]
-public class PinnedBuffer<T> : PinnedBuffer, IMemoryOwner<T> where T : struct
+public class PinnedBuffer<T> : PinnedBuffer, IMemoryOwner<T> where T : unmanaged
 {
     /// <summary>
     /// Returns associated object of this instance.
@@ -206,7 +206,7 @@ public class PinnedBuffer<T> : PinnedBuffer, IMemoryOwner<T> where T : struct
     /// </summary>
     public static int TypeSize { get; } = GetTypeSize();
 
-    private static int GetTypeSize() => typeof(T) == typeof(char) ? 2 : Marshal.SizeOf<T>();
+    private static unsafe int GetTypeSize() => sizeof(T);
 
     /// <summary>
     /// Initializes a new instance with an existing type T array and pins memory

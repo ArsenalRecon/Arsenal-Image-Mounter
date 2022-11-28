@@ -1,16 +1,4 @@
-﻿using Arsenal.ImageMounter.Devio.Client;
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Devio.Server.Services;
-using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.ConsoleSupport;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
-using DiscUtils;
-using DiscUtils.Streams;
-using System;
-using System.Collections.Generic;
-// '''' DevioServiceFactory.vb
+﻿// '''' DevioServiceFactory.vb
 // '''' Support routines for creating provider and service instances given a known
 // '''' proxy provider.
 // '''' 
@@ -23,6 +11,18 @@ using System.Collections.Generic;
 // '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.Devio.Client;
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+using Arsenal.ImageMounter.Devio.Server.Services;
+using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
+using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.ConsoleSupport;
+using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
+using DiscUtils;
+using DiscUtils.Streams;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;

@@ -15,6 +15,7 @@ Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ArsenalImageMounterGUISetup
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CCDE959C-C0CA-4F98-B379-64931C7C91D0}"
 	ProjectSection(SolutionItems) = preProject
+		..\.editorconfig = ..\.editorconfig
 		Directory.build.props = Directory.build.props
 		..\Directory_structure.txt = ..\Directory_structure.txt
 		..\How-to-build.txt = ..\How-to-build.txt

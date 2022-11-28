@@ -10,20 +10,19 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable 0649
-#pragma warning disable 1591
-#pragma warning disable IDE0057 // Use range operator
-#pragma warning disable IDE0051 // Remove unused private members
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.IO.Native;
 
 public static class NativePE
 {
-    private static readonly long _rsrc_id = 0x000000637273722E; // ".rsrc\0\0\0"
+    private static readonly long RsrcId = 0x000000637273722E; // ".rsrc\0\0\0"
 
+    /*
     private const int ERROR_RESOURCE_DATA_NOT_FOUND = 1812;
     private const int ERROR_RESOURCE_TYPE_NOT_FOUND = 1813;
     private const int ERROR_NO_MORE_ITEMS = 259;
+    */
 
     private const ushort RT_VERSION = 16;
 
@@ -276,7 +275,7 @@ public static class NativePE
     {
         for (var i = 0; i < section_table.Length; i++)
         {
-            if (section_table[i].Name != _rsrc_id)
+            if (section_table[i].Name != RsrcId)
             {
                 continue;
             }

@@ -1,7 +1,4 @@
-﻿using Arsenal.ImageMounter.IO.Native;
-using Microsoft.Win32.SafeHandles;
-using System;
-// '''' DeviceObject.vb
+﻿// '''' DeviceObject.vb
 // '''' Base class for Arsenal Image Mounter SCSI Miniport objects.
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
@@ -13,6 +10,9 @@ using System;
 // '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 // ''''
 
+using Arsenal.ImageMounter.IO.Native;
+using Microsoft.Win32.SafeHandles;
+using System;
 using System.IO;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member

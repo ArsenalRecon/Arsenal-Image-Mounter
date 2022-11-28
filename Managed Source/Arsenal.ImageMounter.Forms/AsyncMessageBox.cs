@@ -11,7 +11,7 @@ namespace Arsenal.ImageMounter.Dialogs;
 [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed")]
 public partial class AsyncMessageBox : Form
 {
-    private static readonly Font maxFont = new("Tahoma", 96f);
+    private static readonly Font MaxFont = new("Tahoma", 96f);
     private Brush? foregroundBrush;
     private Brush? backgroundBrush;
 
@@ -143,14 +143,14 @@ public partial class AsyncMessageBox : Form
                     return;
                 }
 
-                currentFont = FindLargestFont(g, maxFont.FontFamily, maxFont.Size, maxFont.Style, maxFont.Unit, textRectangle, text);
+                currentFont = FindLargestFont(g, MaxFont.FontFamily, MaxFont.Size, MaxFont.Style, MaxFont.Unit, textRectangle, text);
 
                 if (currentFont is null)
                 {
                     return;
                 }
 
-                g.DrawString(text, currentFont, foregroundBrush, textRectangle, sftCentered);
+                g.DrawString(text, currentFont, foregroundBrush, textRectangle, SftCentered);
 
                 return;
             }
@@ -160,13 +160,23 @@ public partial class AsyncMessageBox : Form
         }
     }
 
-    private static readonly StringFormat sftCentered = new() { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Center };
+    private static readonly StringFormat SftCentered = new()
+    {
+        LineAlignment = StringAlignment.Center,
+        Alignment = StringAlignment.Center
+    };
 
-    private static Font? FindLargestFont(Graphics Graphics, FontFamily FontFamily, float MaxFontSize, FontStyle FontStyle, GraphicsUnit FontUnit, RectangleF TextRectangle, string Text)
+    private static Font? FindLargestFont(Graphics Graphics,
+                                         FontFamily FontFamily,
+                                         float MaxFontSize,
+                                         FontStyle FontStyle,
+                                         GraphicsUnit FontUnit,
+                                         RectangleF TextRectangle,
+                                         string Text)
     {
         Font? FindLargestFontRet = null;
 
-        for (var FontSize = MaxFontSize; FontSize >= 1f; FontSize += -2)
+        for (var FontSize = MaxFontSize; FontSize >= 1f; FontSize -= 2)
         {
             FindLargestFontRet = new(FontFamily, FontSize, FontStyle, FontUnit);
 

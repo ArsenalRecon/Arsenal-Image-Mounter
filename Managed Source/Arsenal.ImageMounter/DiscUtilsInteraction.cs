@@ -32,7 +32,7 @@ public static class DiscUtilsInteraction
 
     public static bool DiscUtilsInitialized { get; } = DevioServiceFactory.DiscUtilsInitialized;
 
-    public static void InitializeVirtualDisk(VirtualDisk disk, Geometry discutils_geometry, PARTITION_STYLE partition_style, InitializeFileSystem file_system, string label)
+    public static void InitializeVirtualDisk(VirtualDisk disk, Geometry discutils_geometry, PARTITION_STYLE partition_style, InitializeFileSystem file_system, string? label)
     {
 
         Func<Stream> open_volume;

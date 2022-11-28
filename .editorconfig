@@ -4,8 +4,6 @@ root = true
 # C# files
 [*.cs]
 
-file_header_template = \nCopyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>\nThis source code and API are available under the terms of the Affero General Public\nLicense v3.\n\nPlease see LICENSE.txt for full license terms, including the availability of\nproprietary exceptions.\nQuestions, comments, or requests for clarification: http://ArsenalRecon.com/contact/\n\n
-
 #### Core EditorConfig Options ####
 
 # Indentation and spacing
@@ -205,6 +203,10 @@ dotnet_naming_rule.constant_should_be_pascal_case.severity = suggestion
 dotnet_naming_rule.constant_should_be_pascal_case.symbols = constant
 dotnet_naming_rule.constant_should_be_pascal_case.style = pascal_case
 
+dotnet_naming_rule.read_only_static_field_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.read_only_static_field_should_be_pascal_case.symbols = read_only_static_field
+dotnet_naming_rule.read_only_static_field_should_be_pascal_case.style = pascal_case
+
 dotnet_naming_rule.field_should_be_camel_case.severity = suggestion
 dotnet_naming_rule.field_should_be_camel_case.symbols = field
 dotnet_naming_rule.field_should_be_camel_case.style = camel_case
@@ -230,6 +232,10 @@ dotnet_naming_symbols.field.required_modifiers =
 dotnet_naming_symbols.constant.applicable_kinds = field
 dotnet_naming_symbols.constant.applicable_accessibilities = *
 dotnet_naming_symbols.constant.required_modifiers = const
+
+dotnet_naming_symbols.read_only_static_field.applicable_kinds = field
+dotnet_naming_symbols.read_only_static_field.applicable_accessibilities = *
+dotnet_naming_symbols.read_only_static_field.required_modifiers = readonly, static
 
 # Naming styles
 
@@ -258,4 +264,3 @@ dotnet_style_null_propagation = true:suggestion
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
 dotnet_style_prefer_auto_properties = true:suggestion
 dotnet_style_object_initializer = true:suggestion
-dotnet_style_collection_initializer = true:suggestion

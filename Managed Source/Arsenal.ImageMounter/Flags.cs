@@ -1,9 +1,4 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
-
-namespace Arsenal.ImageMounter;
-
-// '''' Flags.vb
+﻿// '''' Flags.vb
 // '''' .NET definitions of the same flags and structures as in phdskmnt.h
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -14,6 +9,11 @@ namespace Arsenal.ImageMounter;
 // '''' proprietary exceptions.
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
+
+using System;
+using System.Diagnostics.CodeAnalysis;
+
+namespace Arsenal.ImageMounter;
 
 /// <summary>
 /// Values for flag fields used when creating, querying or modifying virtual disks.

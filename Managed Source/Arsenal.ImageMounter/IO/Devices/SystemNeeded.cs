@@ -10,7 +10,7 @@ namespace Arsenal.ImageMounter.IO.Devices;
 /// during some work
 /// </summary>
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-public class SystemNeeded : IDisposable
+public partial class SystemNeeded : IDisposable
 {
     /// <summary>
     /// Flags indicating what system resource and interface are required
@@ -35,11 +35,21 @@ public class SystemNeeded : IDisposable
         Continuous = 0x80000000
     }
 
+#if NET7_0_OR_GREATER
+    [LibraryImport("KERNEL32", SetLastError = true)]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvStdcall) })]
+    private static partial ExecutionState SetThreadExecutionState(ExecutionState executionState);
+
+    [LibraryImport("KERNEL32", SetLastError = true)]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvStdcall) })]
+    private static partial uint GetCurrentThreadId();
+#else
     [DllImport("KERNEL32", CallingConvention = CallingConvention.StdCall, SetLastError = true)]
     private static extern ExecutionState SetThreadExecutionState(ExecutionState executionState);
 
     [DllImport("KERNEL32", CallingConvention = CallingConvention.StdCall, SetLastError = true)]
     private static extern uint GetCurrentThreadId();
+#endif
 
     private readonly ExecutionState previous_state;
 

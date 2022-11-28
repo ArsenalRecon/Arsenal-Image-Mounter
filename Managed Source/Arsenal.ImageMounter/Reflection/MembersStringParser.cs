@@ -8,7 +8,6 @@ namespace Arsenal.ImageMounter.Reflection;
 
 internal static class MembersStringParser<T>
 {
-
     public static string ToString(T obj)
     {
         var values = from accessor in _accessors
@@ -21,16 +20,13 @@ internal static class MembersStringParser<T>
 
     private static string? TryCall(Func<T, string> method, T param, Func<Exception, string> handler)
     {
-
         try
         {
             return method(param);
         }
-
         catch (Exception ex)
         {
             return handler is null ? null : handler(ex);
-
         }
     }
 

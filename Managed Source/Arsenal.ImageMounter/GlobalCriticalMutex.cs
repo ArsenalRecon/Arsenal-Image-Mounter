@@ -1,5 +1,4 @@
-﻿using System;
-// '''' API.vb
+﻿// '''' API.vb
 // '''' API for manipulating flag values, issuing SCSI bus rescans and similar
 // '''' tasks.
 // '''' 
@@ -12,6 +11,7 @@
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using System;
 using System.Threading;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member

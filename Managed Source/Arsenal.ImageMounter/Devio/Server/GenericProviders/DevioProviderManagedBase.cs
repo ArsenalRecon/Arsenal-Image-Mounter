@@ -1,5 +1,4 @@
-﻿using System;
-
+﻿
 // '''' DevioProviderManagedBase.vb
 // '''' 
 // '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
@@ -11,6 +10,7 @@
 // '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // ''''
 
+using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 
