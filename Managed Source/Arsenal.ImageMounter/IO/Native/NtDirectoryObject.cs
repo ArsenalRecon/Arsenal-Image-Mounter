@@ -72,8 +72,8 @@ public partial class NtDirectoryObject : IDisposable
 
     private readonly struct ObjectDirectoryInformation
     {
-        public readonly UNICODE_STRING Name;
-        public readonly UNICODE_STRING TypeName;
+        public readonly UNICODE_STRING Name { get; }
+        public readonly UNICODE_STRING TypeName { get; }
     }
 
     public static IEnumerable<(string Name, string TypeName)> EnumerateObjects(string path)

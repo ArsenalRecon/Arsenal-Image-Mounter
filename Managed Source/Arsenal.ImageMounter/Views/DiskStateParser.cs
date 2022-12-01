@@ -40,7 +40,7 @@ public static class DiskStateParser
 
             return deviceProperties.Select(dev =>
             {
-                var view = new T()
+                var view = new T
                 {
                     DeviceProperties = dev,
                     DeviceName = getid(dev),

@@ -774,7 +774,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
     private static bool HandleDifferencingDiskCreationError(Exception ex, ref string differencingPath)
     {
-        var e = new PathExceptionEventArgs()
+        var e = new PathExceptionEventArgs
         {
             Exception = ex,
             Path = differencingPath

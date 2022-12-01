@@ -328,11 +328,12 @@ public class DevioShmService : DevioServiceBase
     private void SendInfo(SafeBuffer MapView)
     {
 
-        var Info = new IMDPROXY_INFO_RESP()
+        var Info = new IMDPROXY_INFO_RESP
         {
             file_size = (ulong)DevioProvider.Length,
             req_alignment = REQUIRED_ALIGNMENT,
-            flags = (DevioProvider.CanWrite ? IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE : IMDPROXY_FLAGS.IMDPROXY_FLAG_RO) | (DevioProvider.SupportsShared ? IMDPROXY_FLAGS.IMDPROXY_FLAG_SUPPORTS_SHARED : IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE)
+            flags = (DevioProvider.CanWrite ? IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE : IMDPROXY_FLAGS.IMDPROXY_FLAG_RO)
+                | (DevioProvider.SupportsShared ? IMDPROXY_FLAGS.IMDPROXY_FLAG_SUPPORTS_SHARED : IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE)
         };
 
         MapView.Write(0x0UL, Info);

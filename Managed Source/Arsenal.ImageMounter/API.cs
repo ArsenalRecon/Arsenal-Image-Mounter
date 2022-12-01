@@ -126,7 +126,8 @@ public static partial class API
             }
 
             var i = 0U;
-            do
+
+            for(; ;)
             {
                 var DeviceInterfaceData = new SP_DEVICE_INTERFACE_DATA();
 
@@ -154,7 +155,6 @@ public static partial class API
 
                 i += 1U;
             }
-            while (true);
         }
     }
 

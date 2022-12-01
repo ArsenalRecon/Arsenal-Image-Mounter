@@ -1669,13 +1669,11 @@ Currently, the following application has files open on this volume:
 
         foreach (var handle in handleTable)
         {
-
             string? object_type = null;
             string? object_name = null;
 
             if (handle.ProcessId == 0 || filterObjectType is not null && ObjectTypes.TryGetValue(handle.ObjectType, out object_type) && !ReferenceEquals(object_type, filterObjectType) || !processInfoList.TryGetValue(handle.ProcessId, out var processInfo))
             {
-
                 continue;
             }
 
@@ -1696,7 +1694,14 @@ Currently, the following application has files open on this volume:
             }
 
             var duphandle = new SafeFileHandle(default, true);
-            var status = UnsafeNativeMethods.NtDuplicateObject(processHandle, new IntPtr(handle.Handle), UnsafeNativeMethods.GetCurrentProcess(), out duphandle, 0U, 0U, 0U);
+            var status = UnsafeNativeMethods.NtDuplicateObject(processHandle,
+                                                               new IntPtr(handle.Handle),
+                                                               UnsafeNativeMethods.GetCurrentProcess(),
+                                                               out duphandle,
+                                                               0U,
+                                                               0U,
+                                                               0U);
+
             if (status < 0)
             {
                 continue;
@@ -1729,14 +1734,13 @@ Currently, the following application has files open on this volume:
 
                 if (object_type is null || filterObjectType is not null && !ReferenceEquals(filterObjectType, object_type))
                 {
-
                     continue;
                 }
 
                 if (handle.GrantedAccess is not (uint)0x12019FL and not (uint)0x12008DL and not (uint)0x120189L and not (uint)0x16019FL and not (uint)0x1A0089L and not (uint)0x1A019FL and not (uint)0x120089L and not (uint)0x100000L)
                 {
 
-                    do
+                    for(; ;)
                     {
                         LastObjectNameQueryGrantedAccess = handle.GrantedAccess;
                         LastObjectNameQuueryTime = SafeNativeMethods.GetTickCount64();
@@ -1757,7 +1761,6 @@ Currently, the following application has files open on this volume:
 
                         break;
                     }
-                    while (true);
 
                     var name = buffer.Read<UNICODE_STRING>(0UL);
 
@@ -1769,15 +1772,12 @@ Currently, the following application has files open on this volume:
                     object_name = name.ToString();
                 }
             }
-
             catch
             {
             }
-
             finally
             {
                 duphandle.Dispose();
-
             }
 
             yield return new(handle, object_type, object_name, processInfo);
@@ -2968,10 +2968,10 @@ Currently, the following application has files open on this volume:
 
     public static IEnumerable<string> QueryDosDevice()
     {
-
         const int UcchMax = 65536;
 
         var TargetPath = ArrayPool<char>.Shared.Rent(UcchMax);
+
         try
         {
             var length = UnsafeNativeMethods.QueryDosDeviceW(IntPtr.Zero, out TargetPath[0], UcchMax);
@@ -2986,11 +2986,9 @@ Currently, the following application has files open on this volume:
                 yield return name.ToString();
             }
         }
-
         finally
         {
             ArrayPool<char>.Shared.Return(TargetPath);
-
         }
     }
 
@@ -3003,6 +3001,7 @@ Currently, the following application has files open on this volume:
         const int UcchMax = 65536;
 
         var TargetPath = ArrayPool<char>.Shared.Rent(UcchMax);
+
         try
         {
             var length = UnsafeNativeMethods.QueryDosDeviceW(DosDevice.MakeNullTerminated(), out TargetPath[0], UcchMax);
@@ -3017,11 +3016,9 @@ Currently, the following application has files open on this volume:
                 yield return name.ToString();
             }
         }
-
         finally
         {
             ArrayPool<char>.Shared.Return(TargetPath);
-
         }
     }
 
@@ -3620,6 +3617,7 @@ Currently, the following application has files open on this volume:
         const int CchBufferLength = 65536;
 
         var TargetPath = ArrayPool<char>.Shared.Rent(CchBufferLength);
+
         try
         {
             if (UnsafeNativeMethods.GetVolumePathNamesForVolumeNameW(VolumeName.MakeNullTerminated(),
@@ -3627,21 +3625,17 @@ Currently, the following application has files open on this volume:
                                                                      CchBufferLength,
                                                                      out var length) && length > 2)
             {
-
                 foreach (var s in TargetPath.AsMemory(0, length).ParseDoubleTerminatedString())
                 {
                     yield return s.ToString();
                 }
 
                 yield break;
-
             }
         }
-
         finally
         {
             ArrayPool<char>.Shared.Return(TargetPath);
-
         }
 
         if (VolumeName.Span.StartsWith(@"\\?\Volume{".AsSpan(), StringComparison.OrdinalIgnoreCase))
@@ -4074,13 +4068,11 @@ Currently, the following application has files open on this volume:
 
         while (rc == 0L)
         {
-
             Trace.WriteLine($"Found child devinst: {child}");
 
             yield return child;
 
             rc = UnsafeNativeMethods.CM_Get_Sibling(out child, child, 0U);
-
         }
     }
 

@@ -300,8 +300,7 @@ public static class ProviderSupport
                                             CompletionPosition? completionPosition,
                                             CancellationToken cancel)
     {
-
-        var imaging_parameters = new DevioProviderLibEwf.ImagingParameters()
+        var imaging_parameters = new DevioProviderLibEwf.ImagingParameters
         {
             MediaSize = (ulong)provider.Length,
             BytesPerSector = provider.SectorSize

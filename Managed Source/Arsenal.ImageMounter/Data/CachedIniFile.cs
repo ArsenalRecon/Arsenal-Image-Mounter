@@ -87,7 +87,7 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                 var key = valuepair.Slice(0, pos).ToString();
                 var value = valuepair.Slice(pos + 1).ToString();
 
-                yield return new KeyValuePair<string, string>(key, value);
+                yield return new(key, value);
 
             }
         }
