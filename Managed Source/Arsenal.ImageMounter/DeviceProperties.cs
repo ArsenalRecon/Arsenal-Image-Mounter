@@ -26,7 +26,6 @@ public sealed class DeviceProperties
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public DeviceProperties(ScsiAdapter adapter, uint deviceNumber)
     {
-
         adapter.QueryDevice(deviceNumber, out var diskSize, out var bytesPerSector, out var imageOffset, out var flags, out var filename, out var writeOverlayImageFile);
 
         DeviceNumber = deviceNumber;

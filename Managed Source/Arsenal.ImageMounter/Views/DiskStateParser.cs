@@ -20,7 +20,6 @@ public static class DiskStateParser
 
     public static IEnumerable<T> GetSimpleViewSpecial<T>(ScsiAdapter portnumber, IEnumerable<DeviceProperties> deviceProperties) where T : DiskStateView, new()
     {
-
         try
         {
             var ids = NativeFileIO.GetDevicesScsiAddresses(portnumber);

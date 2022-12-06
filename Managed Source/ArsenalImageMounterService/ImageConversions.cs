@@ -44,7 +44,6 @@ internal static class ImageConversions
 
             var t = Task.Run(() =>
             {
-
                 Console.WriteLine($"Bytes per sector: {provider.SectorSize}");
                 Console.WriteLine();
                 Console.WriteLine($"Start time: {DateTime.Now}");
@@ -79,7 +78,7 @@ internal static class ImageConversions
                         Console.Write($"Reading ({completionPosition.PercentComplete:0.0}%, ETR {completionPosition.EstimatedTimeRemaining:d\\.hh\\:mm\\:ss})...\r");
                     }
 
-                    Console.Write("Done.");
+                    Console.Write($"Finished: {DateTime.Now}");
 
                     Console.WriteLine(new string(' ', Console.WindowWidth - Console.CursorLeft - 1));
 
@@ -145,7 +144,6 @@ internal static class ImageConversions
 
             var t = Task.Run(() =>
             {
-
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                     string.IsNullOrWhiteSpace(image_type) &&
                     (outputImage.StartsWith(@"\\?\", StringComparison.Ordinal) ||

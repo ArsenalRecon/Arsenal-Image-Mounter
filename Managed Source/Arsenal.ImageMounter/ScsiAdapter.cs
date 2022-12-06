@@ -46,19 +46,16 @@ public class ScsiAdapter : DeviceObject
 
     private static SafeFileHandle? OpenAdapterHandle(string ntdevice, uint devInst)
     {
-
         SafeFileHandle handle;
         try
         {
             handle = NativeFileIO.NtCreateFile(ntdevice, 0, FileAccess.ReadWrite, FileShare.ReadWrite, NtCreateDisposition.Open, 0, 0, null, out var argWasCreated);
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error opening device '{ntdevice}': {ex.JoinMessages()}");
 
             return null;
-
         }
 
         bool acceptedversion;
@@ -77,10 +74,9 @@ public class ScsiAdapter : DeviceObject
                     throw new Exception("Incompatible version of Arsenal Image Mounter Miniport driver.");
                 }
             }
-
-            catch (Win32Exception ex) when (ex.NativeErrorCode is (int)NativeConstants.ERROR_INVALID_FUNCTION or (int)NativeConstants.ERROR_IO_DEVICE)
+            catch (Win32Exception ex)
+            when (ex.NativeErrorCode is NativeConstants.ERROR_INVALID_FUNCTION or NativeConstants.ERROR_IO_DEVICE)
             {
-
                 // ' In case of SCSIPORT (Win XP) miniport, there is always a risk
                 // ' that we lose contact with IOCTL_SCSI_MINIPORT after device adds
                 // ' and removes. Therefore, in case we know that we have a handle to
@@ -96,18 +92,15 @@ public class ScsiAdapter : DeviceObject
                         Thread.Sleep(100);
                         continue;
                     }
-
                     catch (Exception ex2)
                     {
                         Trace.WriteLine($"PhDskMnt::RescanScsiAdapter: {ex2}");
-
                     }
                 }
 
                 handle.Dispose();
                 return null;
             }
-
             catch (Exception ex)
             {
                 if (ex is Win32Exception win32exception)
@@ -118,12 +111,10 @@ public class ScsiAdapter : DeviceObject
                 Trace.WriteLine($"PhDskMnt::OpenAdapterHandle: Error checking driver version: {ex.JoinMessages()}");
                 handle.Dispose();
                 return null;
-
             }
         }
 
         return null;
-
     }
 
     private record class AdapterDeviceInstance(ReadOnlyMemory<char> DevInstName, uint DevInst, SafeFileHandle SafeHandle);
@@ -155,9 +146,12 @@ public class ScsiAdapter : DeviceObject
                      where handle is not null
                      select new AdapterDeviceInstance(devInstName, devinst.Value, handle)).FirstOrDefault();
 
-        return found is null
-            ? throw new FileNotFoundException("No Arsenal Image Mounter adapter found.")
-            : found;
+        if (found is null)
+        {
+            throw new FileNotFoundException("No Arsenal Image Mounter adapter found.");
+        }
+
+        return found;
     }
 
     /// <summary>
@@ -201,7 +195,6 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public uint[] GetDeviceList()
     {
-
         var buffer = ArrayPool<byte>.Shared.Rent(65536);
         try
         {
@@ -214,16 +207,19 @@ public class ScsiAdapter : DeviceObject
 
             var NumberOfDevices = MemoryMarshal.Read<int>(Response);
 
+            if (NumberOfDevices == 0)
+            {
+                return Array.Empty<uint>();
+            }
+
             var array = MemoryMarshal.Cast<byte, uint>(Response.Slice(sizeof(uint), NumberOfDevices * sizeof(uint)))
                 .ToArray();
 
             return array;
         }
-
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
-
         }
     }
 
@@ -625,7 +621,7 @@ public class ScsiAdapter : DeviceObject
     /// <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
     /// virtual memory type virtual disk.</param>
     public void QueryDevice(uint DeviceNumber, out long DiskSize, out uint BytesPerSector, out long ImageOffset, out DeviceFlags Flags, out string? Filename)
-        => QueryDevice(DeviceNumber, out DiskSize, out BytesPerSector, out ImageOffset, out Flags, out Filename, WriteOverlayImagefile: out var argWriteOverlayImagefile);
+        => QueryDevice(DeviceNumber, out DiskSize, out BytesPerSector, out ImageOffset, out Flags, out Filename, WriteOverlayImagefile: out _);
 
     /// <summary>
     /// Retrieves properties for an existing virtual disk.
@@ -770,7 +766,6 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public static bool CheckDriverVersion(SafeFileHandle SafeFileHandle)
     {
-
         NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION, 0U, null, out var ReturnCode);
 
         if (ReturnCode == CompatibleDriverVersion)
@@ -782,7 +777,6 @@ public class ScsiAdapter : DeviceObject
         Trace.WriteLine($"Driver version: {ReturnCode:X4}");
 
         return false;
-
     }
 
     /// <summary>
@@ -793,7 +787,6 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public Version? GetDriverSubVersion()
     {
-
         Span<byte> buffer = stackalloc byte[4];
 
         try

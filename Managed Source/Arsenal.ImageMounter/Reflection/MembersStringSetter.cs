@@ -10,8 +10,7 @@ namespace Arsenal.ImageMounter.Reflection;
 
 public static class MembersStringSetter
 {
-
-    internal static readonly MethodInfo _EnumParse = typeof(Enum)
+    internal static readonly MethodInfo EnumParseMethod = typeof(Enum)
         .GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(Type), typeof(string) }, null)!;
 
     public static Action<T, string>? GenerateReferenceTypeMemberSetter<T>(string member_name)
@@ -64,7 +63,7 @@ public static class MembersStringSetter
             }
             else if (member.Type.IsEnum)
             {
-                assign_value = Expression.Convert(Expression.Call(_EnumParse, Expression.Constant(member.Type), param_value), member.Type);
+                assign_value = Expression.Convert(Expression.Call(EnumParseMethod, Expression.Constant(member.Type), param_value), member.Type);
             }
             else
             {

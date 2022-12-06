@@ -34,7 +34,6 @@ public static class DiscUtilsInteraction
 
     public static void InitializeVirtualDisk(VirtualDisk disk, Geometry discutils_geometry, PARTITION_STYLE partition_style, InitializeFileSystem file_system, string? label)
     {
-
         Func<Stream> open_volume;
         long first_sector;
         long sector_count;
@@ -63,7 +62,7 @@ public static class DiscUtilsInteraction
 
             case PARTITION_STYLE.RAW:
                 {
-                    open_volume = new Func<Stream>(() => disk.Content);
+                    open_volume = () => disk.Content;
                     first_sector = 0L;
                     sector_count = disk.Capacity / disk.SectorSize;
                     break;
@@ -133,9 +132,13 @@ public static class DiscUtilsInteraction
         }
     }
 
-    public static async Task InitializeVirtualDiskAsync(VirtualDisk disk, Geometry discutils_geometry, PARTITION_STYLE partition_style, InitializeFileSystem file_system, string label, CancellationToken cancellationToken)
+    public static async Task InitializeVirtualDiskAsync(VirtualDisk disk,
+                                                        Geometry discutils_geometry,
+                                                        PARTITION_STYLE partition_style,
+                                                        InitializeFileSystem file_system,
+                                                        string label,
+                                                        CancellationToken cancellationToken)
     {
-
         Func<Stream> open_volume;
         long first_sector;
         long sector_count;
@@ -164,7 +167,7 @@ public static class DiscUtilsInteraction
 
             case PARTITION_STYLE.RAW:
                 {
-                    open_volume = new Func<Stream>(() => disk.Content);
+                    open_volume = () => disk.Content;
                     first_sector = 0L;
                     sector_count = disk.Capacity / disk.SectorSize;
                     break;

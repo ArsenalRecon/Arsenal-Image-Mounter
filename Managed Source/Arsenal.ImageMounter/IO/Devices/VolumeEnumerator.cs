@@ -14,8 +14,9 @@ using static Arsenal.ImageMounter.IO.Native.NativeFileIO.UnsafeNativeMethods;
 namespace Arsenal.ImageMounter.IO.Devices;
 
 [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
-public class VolumeEnumerator : IEnumerable<string>
+public readonly struct VolumeEnumerator : IEnumerable<string>
 {
+    public static VolumeEnumerator Volumes { get; } = default;
 
     public IEnumerator<string> GetEnumerator() => new Enumerator();
 
@@ -25,7 +26,6 @@ public class VolumeEnumerator : IEnumerable<string>
 
     private class Enumerator : IEnumerator<string>
     {
-
         public SafeFindVolumeHandle? SafeHandle { get; private set; }
 
         private char[] sb = new char[50];
@@ -40,7 +40,6 @@ public class VolumeEnumerator : IEnumerable<string>
 
         public bool MoveNext()
         {
-
             if (disposedValue)
             {
                 throw new ObjectDisposedException("VolumeEnumerator.Enumerator");

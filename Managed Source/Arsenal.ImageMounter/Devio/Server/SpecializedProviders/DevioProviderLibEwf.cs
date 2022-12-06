@@ -52,7 +52,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         {
         }
 
-        protected override bool ReleaseHandle() => libewf_handle_close(handle, out var argerrobj) >= 0;
+        protected override bool ReleaseHandle() => libewf_handle_close(handle, out _) >= 0;
 
         public override string ToString()
         {

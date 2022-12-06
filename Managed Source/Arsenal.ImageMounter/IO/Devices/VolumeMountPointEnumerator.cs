@@ -9,15 +9,15 @@ using static Arsenal.ImageMounter.IO.Native.NativeConstants;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO.UnsafeNativeMethods;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.IO.Devices;
 
 [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
-public class VolumeMountPointEnumerator : IEnumerable<string>
+public readonly struct VolumeMountPointEnumerator : IEnumerable<string>
 {
-
-    public ReadOnlyMemory<char> VolumePath { get; set; }
+    public ReadOnlyMemory<char> VolumePath { get; }
 
     public IEnumerator<string> GetEnumerator() => new Enumerator(VolumePath);
 
@@ -30,23 +30,27 @@ public class VolumeMountPointEnumerator : IEnumerable<string>
         this.VolumePath = VolumePath;
     }
 
+    public VolumeMountPointEnumerator(string VolumePath)
+    {
+        this.VolumePath = VolumePath.AsMemory();
+    }
+
     private class Enumerator : IEnumerator<string>
     {
-
-        private readonly ReadOnlyMemory<char> _volumePath;
+        private readonly ReadOnlyMemory<char> volumePath;
 
         public SafeFindVolumeMountPointHandle? SafeHandle { get; private set; }
 
-        private char[] _sb = new char[32767];
+        private char[] sb = new char[32767];
 
         public Enumerator(ReadOnlyMemory<char> VolumePath)
         {
-            _volumePath = VolumePath;
+            volumePath = VolumePath;
         }
 
         public string Current => disposedValue
                     ? throw new ObjectDisposedException("VolumeMountPointEnumerator.Enumerator")
-                    : _sb.AsSpan().ReadNullTerminatedUnicodeString();
+                    : sb.AsSpan().ReadNullTerminatedUnicodeString();
 
         private object IEnumerator_Current => Current;
 
@@ -62,7 +66,7 @@ public class VolumeMountPointEnumerator : IEnumerable<string>
 
             if (SafeHandle is null)
             {
-                SafeHandle = FindFirstVolumeMountPointW(_volumePath.MakeNullTerminated(), out _sb[0], _sb.Length);
+                SafeHandle = FindFirstVolumeMountPointW(volumePath.MakeNullTerminated(), out sb[0], sb.Length);
                 if (!SafeHandle.IsInvalid)
                 {
                     return true;
@@ -72,7 +76,7 @@ public class VolumeMountPointEnumerator : IEnumerable<string>
                     return Marshal.GetLastWin32Error() == ERROR_NO_MORE_FILES ? false : throw new Win32Exception();
                 }
             }
-            else if (FindNextVolumeMountPointW(SafeHandle, out _sb[0], _sb.Length))
+            else if (FindNextVolumeMountPointW(SafeHandle, out sb[0], sb.Length))
             {
                 return true;
             }
@@ -102,7 +106,7 @@ public class VolumeMountPointEnumerator : IEnumerable<string>
                 SafeHandle = null;
 
                 // TODO: set large fields to null.
-                _sb = null!;
+                sb = null!;
             }
 
             disposedValue = true;

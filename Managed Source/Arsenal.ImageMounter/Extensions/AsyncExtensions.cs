@@ -1,8 +1,10 @@
 ﻿using Arsenal.ImageMounter.IO.Native;
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.Buffers;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -18,14 +20,26 @@ public static partial class AsyncExtensions
 {
     public static readonly Task<int> ZeroCompletedTask = Task.FromResult(0);
 
+#if !NET7_0_OR_GREATER
+    public static Task<string?> ReadLineAsync(this TextReader reader, CancellationToken _)
+        => reader.ReadLineAsync();
+
+    public static Task WriteLineAsync(this TextWriter writer, ReadOnlyMemory<char> str, CancellationToken _)
+        => MemoryMarshal.TryGetString(str, out var text, out int start, out int length) && start == 0 && length == text.Length
+        ? writer.WriteLineAsync(text)
+        : MemoryMarshal.TryGetArray(str, out var segment)
+        ? writer.WriteLineAsync(segment.Array!, segment.Offset, segment.Count)
+        : writer.WriteLineAsync(str.ToString());
+#endif
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static SynchronizationContext? GetSynchronizationContext(this ISynchronizeInvoke owner) =>
         owner.InvokeRequired ?
-        (SynchronizationContext?)owner.Invoke(new Func<SynchronizationContext?>(() => SynchronizationContext.Current), null) :
+        (SynchronizationContext?)owner.Invoke(() => SynchronizationContext.Current, null) :
         SynchronizationContext.Current;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static WaitHandleAwaiter GetAwaiterWithTimeout(this WaitHandle handle, TimeSpan timeout) =>
+    public static WaitHandleAwaiter WithTimeout(this WaitHandle handle, TimeSpan timeout) =>
         new(handle, timeout);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -149,7 +163,9 @@ public sealed class WaitHandleAwaiter : INotifyCompletion
 {
     private readonly WaitHandle handle;
     private readonly TimeSpan timeout;
-    private bool result;
+    private RegisteredWaitHandle? callbackHandle;
+    private Action? continuation;
+    private bool result = true;
 
     public WaitHandleAwaiter(WaitHandle handle, TimeSpan timeout)
     {
@@ -163,44 +179,28 @@ public sealed class WaitHandleAwaiter : INotifyCompletion
 
     public bool GetResult() => result;
 
-    private sealed class CompletionValues
-    {
-        public RegisteredWaitHandle? callbackHandle;
-
-        public Action? continuation;
-
-        public WaitHandleAwaiter? awaiter;
-    }
-
     public void OnCompleted(Action continuation)
     {
-        var completionValues = new CompletionValues
-        {
-            continuation = continuation,
-            awaiter = this
-        };
+        this.continuation = continuation;
 
-        completionValues.callbackHandle = ThreadPool.RegisterWaitForSingleObject(
+        callbackHandle = ThreadPool.RegisterWaitForSingleObject(
             waitObject: handle,
             callBack: WaitProc,
-            state: completionValues,
+            state: this,
             timeout: timeout,
             executeOnlyOnce: true);
     }
 
     private static void WaitProc(object? state, bool timedOut)
     {
-        var obj = state as CompletionValues
+        var obj = state as WaitHandleAwaiter
             ?? throw new InvalidAsynchronousStateException();
 
-        if (obj.awaiter is not null)
-        {
-            obj.awaiter.result = !timedOut;
-        }
+        obj.result = !timedOut;
 
         while (obj.callbackHandle is null)
         {
-            Thread.Sleep(0);
+            Thread.Yield();
         }
 
         obj.callbackHandle.Unregister(null);

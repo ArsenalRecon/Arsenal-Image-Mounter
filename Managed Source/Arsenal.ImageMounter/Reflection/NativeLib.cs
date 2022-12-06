@@ -9,9 +9,9 @@ namespace Arsenal.ImageMounter.Reflection;
 
 public static class NativeLib
 {
+    public static bool IsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
 #if NETSTANDARD || NETCOREAPP
-    public static bool IsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     public static TDelegate GetProcAddress<TDelegate>(IntPtr hModule, string procedureName) where TDelegate : Delegate
         => Marshal.GetDelegateForFunctionPointer<TDelegate>(NativeLibrary.GetExport(hModule, procedureName));
@@ -40,13 +40,16 @@ public static class NativeLib
 
 #else
 
-    public static bool IsWindows { get; } = true;
-
     public static TDelegate GetProcAddress<TDelegate>(IntPtr hModule, string procedureName) where TDelegate : Delegate
         => Marshal.GetDelegateForFunctionPointer<TDelegate>(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)));
 
     public static TDelegate? GetProcAddressNoThrow<TDelegate>(IntPtr hModule, string procedureName) where TDelegate : Delegate
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return null;
+        }
+
         var fptr = UnsafeNativeMethods.GetProcAddress(hModule, procedureName);
 
         return fptr == default ? null : Marshal.GetDelegateForFunctionPointer<TDelegate>(fptr);
@@ -54,13 +57,23 @@ public static class NativeLib
 
     public static TDelegate GetProcAddress<TDelegate>(ReadOnlyMemory<char> moduleName, string procedureName) where TDelegate : Delegate
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            throw new PlatformNotSupportedException();
+        }
+
         var hModule = Win32Try(UnsafeNativeMethods.LoadLibraryW(moduleName.MakeNullTerminated()));
 
         return Marshal.GetDelegateForFunctionPointer<TDelegate>(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)));
     }
 
-    public static IntPtr GetProcAddressNoThrow(string moduleName, string procedureName)
+    public static nint GetProcAddressNoThrow(string moduleName, string procedureName)
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return 0;
+        }
+
         var hModule = UnsafeNativeMethods.LoadLibraryW(MemoryMarshal.GetReference(moduleName.AsSpan()));
 
         return hModule == default ? default : UnsafeNativeMethods.GetProcAddress(hModule, procedureName);

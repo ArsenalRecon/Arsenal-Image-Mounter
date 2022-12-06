@@ -14,15 +14,15 @@ namespace Arsenal.ImageMounter.IO.Streams;
 
 public class CombinedSeekStream : Stream
 {
-    private readonly Dictionary<long, Stream> _streams;
+    private readonly List<KeyValuePair<long, Stream>> streams;
 
-    private KeyValuePair<long, Stream> _current;
+    private KeyValuePair<long, Stream> current;
 
     public bool Extendable { get; }
 
-    public ICollection<Stream> BaseStreams => _streams.Values;
+    public IReadOnlyCollection<KeyValuePair<long, Stream>> BaseStreams => streams;
 
-    public Stream CurrentBaseStream => _current.Value;
+    public Stream CurrentBaseStream => current.Value;
 
     public CombinedSeekStream()
         : this(true)
@@ -38,13 +38,13 @@ public class CombinedSeekStream : Stream
     {
         if (inputStreams is null || inputStreams.Length == 0)
         {
-            _streams = new();
+            streams = new();
 
             Extendable = true;
         }
         else
         {
-            _streams = new(inputStreams.Length);
+            streams = new(inputStreams.Length);
 
             Array.ForEach(inputStreams, AddStream);
 
@@ -71,16 +71,16 @@ public class CombinedSeekStream : Stream
             _length += stream.Length;
         }
 
-        _streams.Add(_length, stream);
+        streams.Add(new(_length, stream));
     }
 
     public override int Read(byte[] buffer, int index, int count)
     {
         var num = 0;
 
-        while (_current.Value is not null && count > 0)
+        while (current.Value is not null && count > 0)
         {
-            var r = _current.Value.Read(buffer, index, count);
+            var r = current.Value.Read(buffer, index, count);
 
             if (r <= 0)
             {
@@ -101,9 +101,9 @@ public class CombinedSeekStream : Stream
     {
         var num = 0;
 
-        while (_current.Value is not null && count > 0)
+        while (current.Value is not null && count > 0)
         {
-            var r = await _current.Value.ReadAsync(buffer.AsMemory(index, count), cancellationToken).ConfigureAwait(false);
+            var r = await current.Value.ReadAsync(buffer.AsMemory(index, count), cancellationToken).ConfigureAwait(false);
 
             if (r <= 0)
             {
@@ -133,9 +133,9 @@ public class CombinedSeekStream : Stream
         var index = 0;
         var num = 0;
 
-        while (_current.Value is not null && count > 0)
+        while (current.Value is not null && count > 0)
         {
-            var r = await _current.Value.ReadAsync(buffer.Slice(index, count), cancellationToken).ConfigureAwait(false);
+            var r = await current.Value.ReadAsync(buffer.Slice(index, count), cancellationToken).ConfigureAwait(false);
 
             if (r <= 0)
             {
@@ -158,9 +158,9 @@ public class CombinedSeekStream : Stream
         var index = 0;
         var num = 0;
 
-        while (_current.Value is not null && count > 0)
+        while (current.Value is not null && count > 0)
         {
-            var r = _current.Value.Read(buffer.Slice(index, count));
+            var r = current.Value.Read(buffer.Slice(index, count));
 
             if (r <= 0)
             {
@@ -186,7 +186,7 @@ public class CombinedSeekStream : Stream
             throw new NotSupportedException();
         }
 
-        if (_position == _length && count > 0 && Extendable)
+        if (position == _length && count > 0 && Extendable)
         {
             AddStream(new MemoryStream(buffer, index, count, writable: true, publiclyVisible: true));
 
@@ -195,16 +195,16 @@ public class CombinedSeekStream : Stream
             return;
         }
 
-        if (_position >= _length && count > 0)
+        if (position >= _length && count > 0)
         {
             throw new EndOfStreamException();
         }
 
-        while (_current.Value is not null && count > 0)
+        while (current.Value is not null && count > 0)
         {
-            var current_count = (int)Math.Min(count, _current.Value.Length - _current.Value.Position);
+            var current_count = (int)Math.Min(count, current.Value.Length - current.Value.Position);
 
-            _current.Value.Write(buffer, index, current_count);
+            current.Value.Write(buffer, index, current_count);
 
             Seek(current_count, SeekOrigin.Current);
 
@@ -220,7 +220,7 @@ public class CombinedSeekStream : Stream
             throw new NotSupportedException();
         }
 
-        if (_position == _length && count > 0 && Extendable)
+        if (position == _length && count > 0 && Extendable)
         {
             AddStream(new MemoryStream(buffer, index, count, writable: true, publiclyVisible: true));
 
@@ -229,16 +229,16 @@ public class CombinedSeekStream : Stream
             return;
         }
 
-        if (_position >= _length && count > 0)
+        if (position >= _length && count > 0)
         {
             throw new EndOfStreamException();
         }
 
-        while (_current.Value is not null && count > 0)
+        while (current.Value is not null && count > 0)
         {
-            var current_count = (int)Math.Min(count, _current.Value.Length - _current.Value.Position);
+            var current_count = (int)Math.Min(count, current.Value.Length - current.Value.Position);
 
-            await _current.Value.WriteAsync(buffer.AsMemory(index, current_count), cancellationToken).ConfigureAwait(false);
+            await current.Value.WriteAsync(buffer.AsMemory(index, current_count), cancellationToken).ConfigureAwait(false);
 
             Seek(current_count, SeekOrigin.Current);
 
@@ -264,7 +264,7 @@ public class CombinedSeekStream : Stream
         var count = buffer.Length;
         var index = 0;
 
-        if (_position == _length && count > 0 && Extendable)
+        if (position == _length && count > 0 && Extendable)
         {
             AddStream(new MemoryStream(buffer.ToArray(), index, count, writable: true, publiclyVisible: true));
 
@@ -273,16 +273,16 @@ public class CombinedSeekStream : Stream
             return;
         }
 
-        if (_position >= _length && count > 0)
+        if (position >= _length && count > 0)
         {
             throw new EndOfStreamException();
         }
 
-        while (_current.Value is not null && count > 0)
+        while (current.Value is not null && count > 0)
         {
-            var current_count = (int)Math.Min(count, _current.Value.Length - _current.Value.Position);
+            var current_count = (int)Math.Min(count, current.Value.Length - current.Value.Position);
 
-            await _current.Value.WriteAsync(buffer.Slice(index, current_count), cancellationToken).ConfigureAwait(false);
+            await current.Value.WriteAsync(buffer.Slice(index, current_count), cancellationToken).ConfigureAwait(false);
 
             Seek(current_count, SeekOrigin.Current);
 
@@ -301,7 +301,7 @@ public class CombinedSeekStream : Stream
         var count = buffer.Length;
         var index = 0;
 
-        if (_position == _length && count > 0 && Extendable)
+        if (position == _length && count > 0 && Extendable)
         {
             AddStream(new MemoryStream(buffer.ToArray(), index, count, writable: true, publiclyVisible: true));
 
@@ -310,16 +310,16 @@ public class CombinedSeekStream : Stream
             return;
         }
 
-        if (_position >= _length && count > 0)
+        if (position >= _length && count > 0)
         {
             throw new EndOfStreamException();
         }
 
-        while (_current.Value is not null && count > 0)
+        while (current.Value is not null && count > 0)
         {
-            var current_count = (int)Math.Min(count, _current.Value.Length - _current.Value.Position);
+            var current_count = (int)Math.Min(count, current.Value.Length - current.Value.Position);
 
-            _current.Value.Write(buffer.Slice(index, current_count));
+            current.Value.Write(buffer.Slice(index, current_count));
 
             Seek(current_count, SeekOrigin.Current);
 
@@ -329,16 +329,16 @@ public class CombinedSeekStream : Stream
     }
 #endif
 
-    public override void Flush() => _current.Value?.Flush();
+    public override void Flush() => current.Value?.Flush();
 
     public override Task FlushAsync(CancellationToken cancellationToken)
-        => _current.Value?.FlushAsync(cancellationToken) ?? Task.FromResult(0);
+        => current.Value?.FlushAsync(cancellationToken) ?? Task.FromResult(0);
 
-    private long _position;
+    private long position;
 
     public override long Position
     {
-        get => _position;
+        get => position;
         set => Seek(value, SeekOrigin.Begin);
     }
 
@@ -346,10 +346,10 @@ public class CombinedSeekStream : Stream
     {
         get
         {
-            var stream = _current.Value;
+            var stream = current.Value;
             if (stream is null)
             {
-                var last_stream = _streams.LastOrDefault();
+                var last_stream = streams.LastOrDefault();
                 if (last_stream.Value is null)
                 {
                     return null;
@@ -379,7 +379,7 @@ public class CombinedSeekStream : Stream
         switch (origin)
         {
             case SeekOrigin.Current:
-                offset += _position;
+                offset += position;
                 break;
 
             case SeekOrigin.End:
@@ -392,28 +392,28 @@ public class CombinedSeekStream : Stream
             throw new ArgumentException("Negative stream positions not supported");
         }
 
-        _current = _streams.FirstOrDefault(s => s.Key > offset);
+        current = streams.FirstOrDefault(s => s.Key > offset);
 
-        if (_current.Value is not null)
+        if (current.Value is not null)
         {
-            _current.Value.Position = _current.Value.Length - (_current.Key - offset);
+            current.Value.Position = current.Value.Length - (current.Key - offset);
         }
 
-        _position = offset;
+        position = offset;
 
         return offset;
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (_streams != null)
+        if (streams != null)
         {
             if (disposing)
             {
-                _streams.Values.AsParallel().ForAll(stream => stream.Dispose());
+                streams.AsParallel().ForAll(stream => stream.Value.Dispose());
             }
 
-            _streams.Clear();
+            streams.Clear();
         }
 
         base.Dispose(disposing);

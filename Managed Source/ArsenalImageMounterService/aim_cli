@@ -1,2 +1,2 @@
-#!/bin/sh
-exec dotnet "$0.dll" "$@"
+#!/bin/bash
+exec -a "$0" dotnet "$0.dll" "$@"

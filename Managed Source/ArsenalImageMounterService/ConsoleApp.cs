@@ -79,25 +79,23 @@ public static class ConsoleApp
                     return -1;
                 }
 
+                var cmdLine = NativeFileIO.GetProcessCommandLineAsArgumentArray();
+
                 using var ready_wait = new ManualResetEvent(initialState: false);
 
                 NativeFileIO.SetInheritable(ready_wait.SafeWaitHandle, inheritable: true);
 
-                var cmdline = string.Join(" ", commands.SelectMany(cmd =>
+                for (var i = 0; i < cmdLine.Length; i++)
                 {
-                    if (cmd.Key.Equals("background", StringComparison.OrdinalIgnoreCase))
+                    if (cmdLine[i] is "--background" or "/background")
                     {
-                        return Enumerable.Empty<string>();
+                        cmdLine[i] = $"--detach={ready_wait.SafeWaitHandle.DangerousGetHandle()}";
                     }
-                    else
+                    else if (cmdLine[i].Contains(' ') && !cmdLine[i].Contains('"'))
                     {
-                        return cmd.Value.Length == 0
-                            ? SingleValueEnumerable.Get($"--{cmd.Key}")
-                            : cmd.Value.Select(value => $"--{cmd.Key}=\"{value}\"");
+                        cmdLine[i] = $@"""{cmdLine[i]}""";
                     }
-                }));
-
-                cmdline = $"{cmdline} --detach={ready_wait.SafeWaitHandle.DangerousGetHandle()}";
+                }
 
                 using var process = new Process();
 
@@ -108,7 +106,7 @@ public static class ConsoleApp
 #endif
 
                 process.StartInfo.UseShellExecute = false;
-                process.StartInfo.Arguments = cmdline;
+                process.StartInfo.Arguments = string.Join(" ", cmdLine.Skip(1));
 
                 process.Start();
 

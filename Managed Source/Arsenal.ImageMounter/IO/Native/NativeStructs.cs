@@ -784,7 +784,6 @@ public enum DEFINE_DOS_DEVICE_FLAGS : uint
 
 public class HGlobalBuffer : SafeBuffer
 {
-
     public HGlobalBuffer(IntPtr numBytes)
         : base(ownsHandle: true)
     {
@@ -1762,22 +1761,27 @@ public struct SP_DEVINFO_LIST_DETAIL_DATA
 [ComVisible(false)]
 public readonly struct SRB_IO_CONTROL
 {
-    public SRB_IO_CONTROL(uint headerLength, ulong signature, uint timeout, uint controlCode, uint returnCode, uint length)
+    public unsafe SRB_IO_CONTROL(ulong signature, uint timeout, uint controlCode, int dataLength)
+        : this(sizeof(SRB_IO_CONTROL), signature, timeout, controlCode, 0, dataLength)
+    {
+    }
+
+    public SRB_IO_CONTROL(int headerLength, ulong signature, uint timeout, uint controlCode, uint returnCode, int dataLength)
     {
         HeaderLength = headerLength;
         Signature = signature;
         Timeout = timeout;
         ControlCode = controlCode;
         ReturnCode = returnCode;
-        Length = length;
+        DataLength = dataLength;
     }
 
-    public uint HeaderLength { get; }
+    public int HeaderLength { get; }
     public ulong Signature { get; }
     public uint Timeout { get; }
     public uint ControlCode { get; }
     public uint ReturnCode { get; }
-    public uint Length { get; }
+    public int DataLength { get; }
 }
 
 public enum NtFileCreated

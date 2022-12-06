@@ -34,11 +34,11 @@ namespace Arsenal.ImageMounter.Devio.Client;
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public partial class DevioShmStream : DevioStream
 {
-    private readonly EventWaitHandle RequestEvent;
-    private readonly EventWaitHandle ResponseEvent;
-    private readonly Mutex ServerMutex;
-    private readonly SafeBuffer MapView;
-    private readonly WaitHandle[] WaitHandles;
+    private readonly EventWaitHandle requestEvent;
+    private readonly EventWaitHandle responseEvent;
+    private readonly Mutex serverMutex;
+    private readonly SafeBuffer mapView;
+    private readonly WaitHandle[] waitHandles;
 
 /// <summary>
 /// Creates a new instance by opening an existing Devio shared memory object and starts
@@ -62,21 +62,21 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         {
             using (var Mapping = MemoryMappedFile.OpenExisting(name, MemoryMappedFileRights.ReadWrite))
             {
-                MapView = Mapping.CreateViewAccessor().SafeMemoryMappedViewHandle;
+                mapView = Mapping.CreateViewAccessor().SafeMemoryMappedViewHandle;
             }
 
-            RequestEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Request");
-            ResponseEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Response");
-            ServerMutex = new Mutex(initiallyOwned: false, name: $@"Global\{ObjectName}_Server");
-            WaitHandles = new WaitHandle[] { ResponseEvent, ServerMutex };
-            MapView.Write(0x0, IMDPROXY_REQ.IMDPROXY_REQ_INFO);
-            RequestEvent.Set();
-            if (WaitHandle.WaitAny(WaitHandles) != 0)
+            requestEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Request");
+            responseEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Response");
+            serverMutex = new Mutex(initiallyOwned: false, name: $@"Global\{ObjectName}_Server");
+            waitHandles = new WaitHandle[] { responseEvent, serverMutex };
+            mapView.Write(0x0, IMDPROXY_REQ.IMDPROXY_REQ_INFO);
+            requestEvent.Set();
+            if (WaitHandle.WaitAny(waitHandles) != 0)
             {
                 throw new EndOfStreamException("Server exit.");
             }
 
-            var Response = MapView.Read<IMDPROXY_INFO_RESP>(0x0UL);
+            var Response = mapView.Read<IMDPROXY_INFO_RESP>(0x0UL);
             Size = (long)Response.file_size;
             Alignment = (long)Response.req_alignment;
             Flags |= Response.flags;
@@ -90,12 +90,12 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
 
     public override void Close()
     {
-        if (MapView is not null && RequestEvent is not null)
+        if (mapView is not null && requestEvent is not null)
         {
             try
             {
-                MapView.Write(0x0, IMDPROXY_REQ.IMDPROXY_REQ_CLOSE);
-                RequestEvent.Set();
+                mapView.Write(0x0, IMDPROXY_REQ.IMDPROXY_REQ_CLOSE);
+                requestEvent.Set();
             }
             catch
             {
@@ -103,7 +103,7 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         }
 
         base.Close();
-        foreach (var obj in new IDisposable?[] { ServerMutex, MapView, RequestEvent, ResponseEvent })
+        foreach (var obj in new IDisposable?[] { serverMutex, mapView, requestEvent, responseEvent })
         {
             try
             {
@@ -121,21 +121,21 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         Request.request_code = IMDPROXY_REQ.IMDPROXY_REQ_READ;
         Request.offset = (ulong)Position;
         Request.length = (ulong)count;
-        MapView.Write(0x0, Request);
-        RequestEvent.Set();
-        if (WaitHandle.WaitAny(WaitHandles) != 0)
+        mapView.Write(0x0, Request);
+        requestEvent.Set();
+        if (WaitHandle.WaitAny(waitHandles) != 0)
         {
             throw new EndOfStreamException("Server exit.");
         }
 
-        var Response = MapView.Read<IMDPROXY_READ_RESP>(0x0UL);
+        var Response = mapView.Read<IMDPROXY_READ_RESP>(0x0UL);
         if (Response.errorno != 0)
         {
             throw new EndOfStreamException($"Read error: {Response.errorno}");
         }
 
         var Length = (int)Response.length;
-        MapView.ReadArray(IMDPROXY_HEADER_SIZE, buffer, offset, Length);
+        mapView.ReadArray(IMDPROXY_HEADER_SIZE, buffer, offset, Length);
         Position += Length;
         return Length;
     }
@@ -147,14 +147,14 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         Request.request_code = IMDPROXY_REQ.IMDPROXY_REQ_READ;
         Request.offset = (ulong)Position;
         Request.length = (ulong)buffer.Length;
-        MapView.Write(0x0, Request);
-        RequestEvent.Set();
-        if (WaitHandle.WaitAny(WaitHandles) != 0)
+        mapView.Write(0x0, Request);
+        requestEvent.Set();
+        if (WaitHandle.WaitAny(waitHandles) != 0)
         {
             throw new EndOfStreamException("Server exit.");
         }
 
-        var Response = MapView.Read<IMDPROXY_READ_RESP>(0x0UL);
+        var Response = mapView.Read<IMDPROXY_READ_RESP>(0x0UL);
         if (Response.errorno != 0)
         {
             throw new EndOfStreamException($"Read error: {Response.errorno}");
@@ -162,7 +162,7 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
 
         var Length = (int)Response.length;
 
-        MapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer[..Length]);
+        mapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer[..Length]);
 
         Position += Length;
         return Length;
@@ -175,15 +175,15 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         Request.request_code = IMDPROXY_REQ.IMDPROXY_REQ_WRITE;
         Request.offset = (ulong)Position;
         Request.length = (ulong)count;
-        MapView.Write(0x0, Request);
-        MapView.WriteArray(IMDPROXY_HEADER_SIZE, buffer, offset, count);
-        RequestEvent.Set();
-        if (WaitHandle.WaitAny(WaitHandles) != 0)
+        mapView.Write(0x0, Request);
+        mapView.WriteArray(IMDPROXY_HEADER_SIZE, buffer, offset, count);
+        requestEvent.Set();
+        if (WaitHandle.WaitAny(waitHandles) != 0)
         {
             throw new EndOfStreamException("Server exit.");
         }
 
-        var Response = MapView.Read<IMDPROXY_WRITE_RESP>(0x0UL);
+        var Response = mapView.Read<IMDPROXY_WRITE_RESP>(0x0UL);
         if (Response.errorno != 0)
         {
             throw new EndOfStreamException($"Write error: {Response.errorno}");
@@ -204,16 +204,16 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         Request.request_code = IMDPROXY_REQ.IMDPROXY_REQ_WRITE;
         Request.offset = (ulong)Position;
         Request.length = (ulong)buffer.Length;
-        MapView.Write(0x0, Request);
-        MapView.WriteSpan(IMDPROXY_HEADER_SIZE, buffer);
+        mapView.Write(0x0, Request);
+        mapView.WriteSpan(IMDPROXY_HEADER_SIZE, buffer);
 
-        RequestEvent.Set();
-        if (WaitHandle.WaitAny(WaitHandles) != 0)
+        requestEvent.Set();
+        if (WaitHandle.WaitAny(waitHandles) != 0)
         {
             throw new EndOfStreamException("Server exit.");
         }
 
-        var Response = MapView.Read<IMDPROXY_WRITE_RESP>(0x0UL);
+        var Response = mapView.Read<IMDPROXY_WRITE_RESP>(0x0UL);
         if (Response.errorno != 0)
         {
             throw new EndOfStreamException($"Write error: {Response.errorno}");

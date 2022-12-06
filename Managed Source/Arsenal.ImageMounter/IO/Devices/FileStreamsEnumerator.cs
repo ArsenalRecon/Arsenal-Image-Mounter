@@ -14,10 +14,9 @@ using static Arsenal.ImageMounter.IO.Native.NativeFileIO.UnsafeNativeMethods;
 namespace Arsenal.ImageMounter.IO.Devices;
 
 [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
-public class FileStreamsEnumerator : IEnumerable<FindStreamData>
+public readonly struct FileStreamsEnumerator : IEnumerable<FindStreamData>
 {
-
-    public ReadOnlyMemory<char> FilePath { get; set; }
+    public ReadOnlyMemory<char> FilePath { get; }
 
     public IEnumerator<FindStreamData> GetEnumerator() => new Enumerator(FilePath);
 
@@ -28,6 +27,11 @@ public class FileStreamsEnumerator : IEnumerable<FindStreamData>
     public FileStreamsEnumerator(ReadOnlyMemory<char> FilePath)
     {
         this.FilePath = FilePath;
+    }
+
+    public FileStreamsEnumerator(string FilePath)
+    {
+        this.FilePath = FilePath.AsMemory();
     }
 
     public sealed class Enumerator : IEnumerator<FindStreamData>

@@ -9,13 +9,13 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.IO.Native;
 
 public static class NativeStruct
 {
-
     public static bool IsOsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     public static long GetFileSize(string path) => !RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? new FileInfo(path).Length : NativeFileIO.GetFileSize(path);
@@ -108,14 +108,18 @@ public static class NativeStruct
             ? NativeFileIO.OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped)
             : new FileStream(FileName.ToString(), CreationDisposition, DesiredAccess, ShareMode, 1, Overlapped).SafeFileHandle;
 
-    private static readonly Dictionary<string, long> knownFormatsOffsets = new(StringComparer.OrdinalIgnoreCase) { { "nrg", 600 << 9 }, { "sdi", 8 << 9 } };
+    private static readonly Dictionary<string, long> KnownFormatsOffsets = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "nrg", 600 << 9 },
+        { "sdi", 8 << 9 }
+    };
 
     /// <summary>
     /// Checks if filename contains a known extension for which PhDskMnt knows of a constant offset value. That value can be
     /// later passed as Offset parameter to CreateDevice method.
     /// </summary>
     /// <param name="ImageFile">Name of disk image file.</param>
-    public static long GetOffsetByFileExt(string ImageFile) => knownFormatsOffsets.TryGetValue(Path.GetExtension(ImageFile), out var Offset) ? Offset : 0L;
+    public static long GetOffsetByFileExt(string ImageFile) => KnownFormatsOffsets.TryGetValue(Path.GetExtension(ImageFile), out var Offset) ? Offset : 0L;
 
     /// <summary>
     /// Returns sector size typically used for image file name extensions. Returns 2048 for
@@ -133,45 +137,43 @@ public static class NativeStruct
 
     }
 
-    private static readonly Dictionary<ulong, string> multipliers = new()
+    private static readonly IReadOnlyList<(ulong Size, string Suffix)> Multipliers = new List<(ulong Size, string Suffix)>
     {
-        { 1UL << 60, " EB" },
-        { 1UL << 50, " PB" },
-        { 1UL << 40, " TB" },
-        { 1UL << 30, " GB" },
-        { 1UL << 20, " MB" },
-        { 1UL << 10, " KB" }
+        (1UL << 60, " EB"),
+        (1UL << 50, " PB"),
+        (1UL << 40, " TB"),
+        (1UL << 30, " GB"),
+        (1UL << 20, " MB"),
+        (1UL << 10, " KB")
     };
 
     public static string FormatBytes(ulong size)
     {
-
-        foreach (var m in multipliers)
+        foreach (var (Size, Suffix) in Multipliers)
         {
-            if (size >= m.Key)
+            if (size >= Size)
             {
-                return $"{size / (double)m.Key:0.0}{m.Value}";
+                return $"{size / (double)Size:0.0}{Suffix}";
             }
         }
 
         return $"{size} byte";
-
     }
 
-    private static readonly ConcurrentDictionary<int, string> precisionFormatStrings = new();
+    private static readonly ConcurrentDictionary<int, string> PrecisionFormatStrings = new();
 
     public static string FormatBytes(ulong size, int precision)
     {
 
-        foreach (var m in multipliers)
+        foreach (var (Size, Suffix) in Multipliers)
         {
-            if (size >= m.Key)
+            if (size >= Size)
             {
                 var precisionFormatString =
-                    precisionFormatStrings.GetOrAdd(precision,
+                    PrecisionFormatStrings.GetOrAdd(precision,
                                                     precision => $"0.{new string('0', precision - 1)}");
 
-                return $"{(size / (double)m.Key).ToString(precisionFormatString)}{m.Value}";
+                return $"{(size / (double)Size).ToString(precisionFormatString)}{Suffix}";
             }
         }
 
@@ -181,32 +183,32 @@ public static class NativeStruct
 
     public static string FormatBytes(long size)
     {
-
-        foreach (var m in multipliers)
+        foreach (var (Size, Suffix) in Multipliers)
         {
-            if (Math.Abs(size) >= (decimal)m.Key)
+            if (Math.Abs(size) >= (decimal)Size)
             {
-                return $"{size / (double)m.Key:0.000}{m.Value}";
+                return $"{size / (double)Size:0.000}{Suffix}";
             }
         }
 
         return size == 1L ? $"{size} byte" : $"{size} bytes";
-
     }
 
     public static string FormatBytes(long size, int precision)
     {
-
-        foreach (var m in multipliers)
+        foreach (var (Size, Suffix) in Multipliers)
         {
-            if (size >= (decimal)m.Key)
+            if (size >= (decimal)Size)
             {
-                return $"{(size / (double)m.Key).ToString("0." + new string('0', precision - 1))}{m.Value}";
+                var precisionFormatString =
+                    PrecisionFormatStrings.GetOrAdd(precision,
+                                                    precision => $"0.{new string('0', precision - 1)}");
+
+                return $"{(size / (double)Size).ToString(precisionFormatString)}{Suffix}";
             }
         }
 
         return $"{size} byte";
-
     }
 
     /// <summary>

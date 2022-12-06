@@ -9,19 +9,22 @@ using System.Linq;
 using System.Text;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.ConsoleSupport;
 
 public static class ConsoleSupport
 {
-
     public static string GetConsoleOutputDeviceName() => NativeLib.IsWindows ? "CONOUT$" : "/dev/tty";
 
     internal static readonly object ConsoleSync = new();
 
-    public static string LineFormat(this string message, int IndentWidth = 0, int? LineWidth = default, char WordDelimiter = ' ', char FillChar = ' ')
+    public static string LineFormat(this string message,
+                                    int IndentWidth = 0,
+                                    int? LineWidth = default,
+                                    char WordDelimiter = ' ',
+                                    char FillChar = ' ')
     {
-
         int Width;
 
         if (LineWidth.HasValue)
@@ -92,7 +95,6 @@ public static class ConsoleSupport
 
     public static void WriteMsg(TraceLevel level, string msg)
     {
-
         var color = level switch
         {
             TraceLevel.Off => ConsoleColor.Cyan,
@@ -105,61 +107,48 @@ public static class ConsoleSupport
 
         if (level <= WriteMsgTraceLevel)
         {
-
             lock (ConsoleSync)
             {
-
                 Console.ForegroundColor = color;
 
                 Console.WriteLine(msg.LineFormat());
 
                 Console.ResetColor();
-
             }
         }
     }
 
     public static Dictionary<string, string[]> ParseCommandLine(IEnumerable<string> args, StringComparer comparer)
     {
-
         var dict = ParseCommandLineParameter(args)
             .GroupBy(item => item.Key, item => item.Value, comparer)
             .ToDictionary(item => item.Key, item => item.SelectMany(i => i ?? Enumerable.Empty<string>()).ToArray(), comparer);
 
         return dict;
-
     }
 
     public static IEnumerable<KeyValuePair<string, IEnumerable<string>?>> ParseCommandLineParameter(IEnumerable<string> args)
     {
-
         var switches_finished = false;
 
         foreach (var arg in args)
         {
-
             if (switches_finished)
             {
             }
-
             else if (arg.Length == 0 || arg == "-")
             {
-
                 switches_finished = true;
             }
-
             else if (arg == "--")
             {
-
                 switches_finished = true;
                 continue;
             }
-
             else if (arg.StartsWith("--", StringComparison.Ordinal)
                 || Path.DirectorySeparatorChar != '/'
-                && arg.StartsWith("/", StringComparison.Ordinal))
+                && arg.StartsWith('/'))
             {
-
                 var namestart = 1;
                 if (arg[0] == '-')
                 {
@@ -188,27 +177,21 @@ public static class ConsoleSupport
 
                 yield return new(name, value);
             }
-
-            else if (arg.StartsWith("-", StringComparison.Ordinal))
+            else if (arg.StartsWith('-'))
             {
-
                 for (int i = 1, loopTo = arg.Length - 1; i <= loopTo; i++)
                 {
-
                     var name = arg.Substring(i, 1);
 
                     if (i + 1 < arg.Length && (arg[i + 1] == '=' || arg[i + 1] == ':'))
                     {
-
                         var value = SingleValueEnumerable.Get(arg.Substring(i + 2));
 
                         yield return new(name, value);
                         break;
-
                     }
 
                     yield return new(name, null);
-
                 }
             }
             else

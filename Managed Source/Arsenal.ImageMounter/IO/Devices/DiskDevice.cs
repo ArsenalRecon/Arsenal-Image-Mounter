@@ -54,7 +54,7 @@ public class DiskDevice : DeviceObject
             return;
         }
 
-        if (!NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0U, IntPtr.Zero, 0U, out var arglpBytesReturned, IntPtr.Zero))
+        if (!NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0U, IntPtr.Zero, 0U, out _, IntPtr.Zero))
         {
             var errcode = Marshal.GetLastWin32Error();
             if (errcode is not NativeConstants.ERROR_INVALID_PARAMETER and not NativeConstants.ERROR_INVALID_FUNCTION)

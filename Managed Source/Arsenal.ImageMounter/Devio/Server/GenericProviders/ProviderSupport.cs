@@ -29,6 +29,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
@@ -106,7 +107,6 @@ public static class ProviderSupport
 
         if (extension.EndsWith("01", StringComparison.Ordinal) || extension.EndsWith("00", StringComparison.Ordinal))
         {
-
             var start = extension.Length - 3;
 
             while (start >= 0 && char.IsDigit(extension.GetItem(start)))
@@ -211,12 +211,9 @@ public static class ProviderSupport
                                                CompletionPosition? completionPosition,
                                                CancellationToken cancel)
     {
-
         if (!DevioServiceFactory.DiscUtilsInitialized)
         {
-
             throw new NotSupportedException("DiscUtils libraries not available");
-
         }
 
         using var builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, (int)provider.SectorSize), null);
@@ -228,7 +225,6 @@ public static class ProviderSupport
                                         hashResults,
                                         completionPosition,
                                         cancel);
-
     }
 
     public static void ConvertToRawImage(this IDevioProvider provider,
@@ -238,7 +234,6 @@ public static class ProviderSupport
                                          CompletionPosition? completionPosition,
                                          CancellationToken cancel)
     {
-
         using var target = new FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageConversionIoBufferSize);
 
         if ("fixed".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase))
@@ -272,7 +267,6 @@ public static class ProviderSupport
                                         adjustTargetSize: true,
                                         completionPosition: completionPosition,
                                         cancel: cancel);
-
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
@@ -281,7 +275,6 @@ public static class ProviderSupport
                                            CompletionPosition? completionPosition,
                                            CancellationToken cancel)
     {
-
         using var disk = new DiskDevice(outputDevice, FileAccess.ReadWrite);
 
         provider.WriteToSkipEmptyBlocks(disk.GetRawDiskStream(),
@@ -291,7 +284,6 @@ public static class ProviderSupport
                                         adjustTargetSize: false,
                                         completionPosition: completionPosition,
                                         cancel: cancel);
-
     }
 
     public static void ConvertToLibEwfImage(this IDevioProvider provider,
@@ -308,19 +300,15 @@ public static class ProviderSupport
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-
             var physical_disk_handle = ((provider as DevioProviderFromStream)?.BaseStream as FileStream)?.SafeFileHandle;
 
             if (physical_disk_handle is not null)
             {
-
                 var storageproperties = NativeFileIO.GetStorageStandardProperties(physical_disk_handle);
                 if (storageproperties.HasValue)
                 {
-
                     imaging_parameters.StorageStandardProperties = storageproperties.Value;
                     Trace.WriteLine($"Source disk vendor '{imaging_parameters.StorageStandardProperties.VendorId}' model '{imaging_parameters.StorageStandardProperties.ProductId}', serial number '{imaging_parameters.StorageStandardProperties.SerialNumber}'");
-
                 }
             }
         }
@@ -361,7 +349,6 @@ public static class ProviderSupport
                                               CompletionPosition? completionPosition,
                                               CancellationToken cancel)
     {
-
         using var hashProviders = new DisposableDictionary<string, HashAlgorithm>(StringComparer.OrdinalIgnoreCase);
 
         if (hashResults is not null)

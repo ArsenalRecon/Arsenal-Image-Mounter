@@ -93,7 +93,7 @@ public static class Module1
     /// </summary>
     public static int CheckDriverVersion(SafeFileHandle SafeFileHandle)
     {
-        var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION, 0U, null, out var ReturnCode);
+        _ = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION, 0U, null, out var ReturnCode);
 
         return (int)ReturnCode;
     }

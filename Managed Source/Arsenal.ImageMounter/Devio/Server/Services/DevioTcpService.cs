@@ -36,7 +36,7 @@ public class DevioTcpService : DevioServiceBase
     /// </summary>
     public IPEndPoint ListenEndPoint { get; }
 
-    private Action? InternalShutdownRequestAction;
+    private Action? internalShutdownRequestAction;
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
@@ -116,20 +116,19 @@ public class DevioTcpService : DevioServiceBase
             using var Reader = new BinaryReader(TcpStream, Encoding.Default);
             using var Writer = new BinaryWriter(new MemoryStream(), Encoding.Default);
 
-            InternalShutdownRequestAction = new Action(() =>
+            internalShutdownRequestAction = () =>
             {
                 try
                 {
                     Reader.Dispose();
                 }
                 catch { }
-            });
+            };
 
             byte[]? ManagedBuffer = null;
 
             for (; ; )
             {
-
                 IMDPROXY_REQ RequestCode;
 
                 try
@@ -145,7 +144,6 @@ public class DevioTcpService : DevioServiceBase
 
                 switch (RequestCode)
                 {
-
                     case IMDPROXY_REQ.IMDPROXY_REQ_INFO:
                         {
                             SendInfo(Writer);
@@ -293,5 +291,5 @@ public class DevioTcpService : DevioServiceBase
 
     protected override DeviceFlags ProxyModeFlags => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeTCP;
 
-    protected override void EmergencyStopServiceThread() => InternalShutdownRequestAction?.Invoke();
+    protected override void EmergencyStopServiceThread() => internalShutdownRequestAction?.Invoke();
 }

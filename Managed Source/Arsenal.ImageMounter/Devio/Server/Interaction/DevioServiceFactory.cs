@@ -41,22 +41,16 @@ namespace Arsenal.ImageMounter.Devio.Server.Interaction;
 /// </summary>
 public static class DevioServiceFactory
 {
-
     /// <summary>
     /// Supported proxy types.
     /// </summary>
     public enum ProviderType
     {
         None,
-
         LibEwf,
-
         DiscUtils,
-
         MultiPartRaw,
-
         LibAFF4,
-
         LibQcow
     }
 
@@ -66,28 +60,55 @@ public static class DevioServiceFactory
     /// </summary>
     public enum VirtualDiskAccess
     {
-
         ReadOnly = 1,
-
         ReadWriteOriginal = 3,
-
         ReadWriteOverlay = 7,
-
         ReadOnlyFileSystem = 9,
-
         ReadWriteFileSystem = 11
-
     }
 
-    private static readonly Dictionary<ProviderType, ReadOnlyCollection<VirtualDiskAccess>> SupportedVirtualDiskAccess = new()
-    {
-        { ProviderType.None, Array.AsReadOnly(new[] { VirtualDiskAccess.ReadOnly, VirtualDiskAccess.ReadWriteOriginal, VirtualDiskAccess.ReadOnlyFileSystem, VirtualDiskAccess.ReadWriteFileSystem }) },
-        { ProviderType.MultiPartRaw, Array.AsReadOnly(new[] { VirtualDiskAccess.ReadOnly, VirtualDiskAccess.ReadWriteOriginal, VirtualDiskAccess.ReadOnlyFileSystem, VirtualDiskAccess.ReadWriteFileSystem }) },
-        { ProviderType.DiscUtils, Array.AsReadOnly(new[] { VirtualDiskAccess.ReadOnly, VirtualDiskAccess.ReadWriteOriginal, VirtualDiskAccess.ReadWriteOverlay, VirtualDiskAccess.ReadOnlyFileSystem, VirtualDiskAccess.ReadWriteFileSystem }) },
-        { ProviderType.LibEwf, Array.AsReadOnly(new[] { VirtualDiskAccess.ReadOnly, VirtualDiskAccess.ReadWriteOverlay, VirtualDiskAccess.ReadOnlyFileSystem }) },
-        { ProviderType.LibAFF4, Array.AsReadOnly(new[] { VirtualDiskAccess.ReadOnly, VirtualDiskAccess.ReadOnlyFileSystem }) },
-        { ProviderType.LibQcow, Array.AsReadOnly(new[] { VirtualDiskAccess.ReadOnly, VirtualDiskAccess.ReadOnlyFileSystem }) }
-    };
+    private static readonly ReadOnlyDictionary<ProviderType, IReadOnlyCollection<VirtualDiskAccess>> SupportedVirtualDiskAccess
+        = new(new Dictionary<ProviderType, IReadOnlyCollection<VirtualDiskAccess>>()
+        {
+            { ProviderType.None, new[]
+            {
+                VirtualDiskAccess.ReadOnly,
+                VirtualDiskAccess.ReadWriteOriginal,
+                VirtualDiskAccess.ReadOnlyFileSystem,
+                VirtualDiskAccess.ReadWriteFileSystem
+            }},
+            { ProviderType.MultiPartRaw, new[]
+            {
+                VirtualDiskAccess.ReadOnly,
+                VirtualDiskAccess.ReadWriteOriginal,
+                VirtualDiskAccess.ReadOnlyFileSystem,
+                VirtualDiskAccess.ReadWriteFileSystem
+            }},
+            { ProviderType.DiscUtils, new[]
+            {
+                VirtualDiskAccess.ReadOnly,
+                VirtualDiskAccess.ReadWriteOriginal,
+                VirtualDiskAccess.ReadWriteOverlay,
+                VirtualDiskAccess.ReadOnlyFileSystem,
+                VirtualDiskAccess.ReadWriteFileSystem
+            }},
+            { ProviderType.LibEwf, new[]
+            {
+                VirtualDiskAccess.ReadOnly,
+                VirtualDiskAccess.ReadWriteOverlay,
+                VirtualDiskAccess.ReadOnlyFileSystem
+            }},
+            { ProviderType.LibAFF4, new[]
+            {
+                VirtualDiskAccess.ReadOnly,
+                VirtualDiskAccess.ReadOnlyFileSystem
+            }},
+            { ProviderType.LibQcow, new[]
+            {
+                VirtualDiskAccess.ReadOnly,
+                VirtualDiskAccess.ReadOnlyFileSystem
+            }}
+        });
 
     private static readonly string[] NotSupportedFormatsForWriteOverlay = { ".vdi", ".xva" };
 
@@ -106,12 +127,10 @@ public static class DevioServiceFactory
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static DevioServiceBase AutoMount(string Imagefile, ScsiAdapter Adapter, ProviderType ProviderType, DeviceFlags Flags, VirtualDiskAccess DiskAccess)
     {
-
         if (Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase)
             || Imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase)
             || Imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
         {
-
             Flags |= DeviceFlags.DeviceTypeCD;
         }
 
@@ -120,7 +139,6 @@ public static class DevioServiceFactory
         Service.StartServiceThreadAndMount(Adapter, Flags);
 
         return Service;
-
     }
 
     /// <summary>
@@ -137,7 +155,6 @@ public static class DevioServiceFactory
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static DevioServiceBase AutoMount(string Imagefile, ScsiAdapter Adapter, ProviderType ProviderType, DeviceFlags Flags)
     {
-
         FileAccess DiskAccess;
 
         if (!Flags.HasFlag(DeviceFlags.ReadOnly))
@@ -151,7 +168,6 @@ public static class DevioServiceFactory
 
         if (Imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || Imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) || Imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
         {
-
             Flags |= DeviceFlags.DeviceTypeCD;
         }
 
@@ -160,38 +176,30 @@ public static class DevioServiceFactory
         Service.StartServiceThreadAndMount(Adapter, Flags);
 
         return Service;
-
     }
 
-    public static ReadOnlyCollection<VirtualDiskAccess> GetSupportedVirtualDiskAccess(ProviderType ProviderType, string imagePath)
+    public static IReadOnlyCollection<VirtualDiskAccess> GetSupportedVirtualDiskAccess(ProviderType ProviderType, string imagePath)
     {
-        if (!SupportedVirtualDiskAccess.TryGetValue(ProviderType, out var GetSupportedVirtualDiskAccessRet))
+        if (!SupportedVirtualDiskAccess.TryGetValue(ProviderType, out var supportedVirtualDiskAccess))
         {
             throw new ArgumentException($"Provider type not supported: {ProviderType}", nameof(ProviderType));
         }
 
         if (ProviderType == ProviderType.DiscUtils && NotSupportedFormatsForWriteOverlay.Contains(Path.GetExtension(imagePath), StringComparer.OrdinalIgnoreCase))
         {
-
-            GetSupportedVirtualDiskAccessRet = GetSupportedVirtualDiskAccessRet
+            supportedVirtualDiskAccess = supportedVirtualDiskAccess
                 .Where(acc => acc != VirtualDiskAccess.ReadWriteOverlay)
-                .ToList()
-                .AsReadOnly();
-
+                .ToList();
         }
 
         if (File.GetAttributes(imagePath).HasFlag(FileAttributes.ReadOnly))
         {
-
-            GetSupportedVirtualDiskAccessRet = GetSupportedVirtualDiskAccessRet
+            supportedVirtualDiskAccess = supportedVirtualDiskAccess
                 .Where(acc => acc is not VirtualDiskAccess.ReadWriteFileSystem and not VirtualDiskAccess.ReadWriteOriginal)
-                .ToList()
-                .AsReadOnly();
-
+                .ToList();
         }
 
-        return GetSupportedVirtualDiskAccessRet;
-
+        return supportedVirtualDiskAccess;
     }
 
     /// <summary>
@@ -357,7 +365,6 @@ public static class DevioServiceFactory
 
     private static DevioProviderFromStream GetProviderRaw(string Imagefile, FileAccess DiskAccess)
     {
-
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && uint.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out var device_number))
         {
 
@@ -372,15 +379,12 @@ public static class DevioServiceFactory
             && (!NativeFileIO.TryGetFileAttributes(Imagefile, out var attributes)
             || attributes.HasFlag(FileAttributes.Directory))))
         {
-
             return GetProviderPhysical(Imagefile, DiskAccess);
-
         }
 
         var stream = new FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: true);
 
         return new DevioProviderFromStream(stream, ownsStream: true) { CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile) };
-
     }
 
     public static Dictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndVirtualDiskAccess { get; } =
@@ -701,7 +705,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
                 Trace.WriteLine($"Using temporary overlay file '{DifferencingPath}'");
 
-                do
+                for(; ;)
                 {
                     try
                     {
@@ -719,13 +723,12 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         Disk = Disk.CreateDifferencingDisk(DifferencingPath);
                         break;
                     }
-
-                    catch (Exception ex) when (!ex.Enumerate().OfType<OperationCanceledException>().Any() && HandleDifferencingDiskCreationError(ex, ref DifferencingPath))
+                    catch (Exception ex)
+                    when (!ex.Enumerate().OfType<OperationCanceledException>().Any()
+                        && HandleDifferencingDiskCreationError(ex, ref DifferencingPath))
                     {
-
                     }
                 }
-                while (true);
 
                 DisposableObjects.Add(Disk);
             }

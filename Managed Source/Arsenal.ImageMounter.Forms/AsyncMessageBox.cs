@@ -263,11 +263,12 @@ public partial class AsyncMessageBox : Form
         }
     }
 
-    public void SetProgressMessage(string msg) => Invoke(new Action(() =>
-                                                       {
-                                                           MsgText = msg;
-                                                           Refresh();
-                                                       }));
+    public void SetProgressMessage(string msg)
+        => Invoke(() =>
+        {
+            MsgText = msg;
+            Refresh();
+        });
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {

@@ -366,6 +366,7 @@ Public Class MainForm
     End Sub
 
     Private Sub DeviceListRefreshThread()
+
         Try
 
             Dim simpleviewtask = Task.Factory.StartNew(Function() DiskStateParser.GetSimpleView(Adapter, Adapter.EnumerateDevicesProperties()).ToList(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)

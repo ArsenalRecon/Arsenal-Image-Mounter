@@ -18,6 +18,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Text.Json;
 
 internal static class ConsoleAppHelpers
 {
@@ -48,7 +49,7 @@ internal static class ConsoleAppHelpers
     /// Lists mounted devices to console
     /// </summary>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static void ListDevices()
+    public static void ListDevices(bool verbose)
     {
         var adapters = API.EnumerateAdapterDeviceInstanceNames();
 
@@ -65,36 +66,72 @@ internal static class ConsoleAppHelpers
 
             if (!devinstAdapter.HasValue)
             {
+                Console.Error.WriteLine($"Could not find device instance for '{devinstNameAdapter}'");
+
                 continue;
             }
 
-            Console.WriteLine($"Adapter {devinstNameAdapter}");
+            if (verbose)
+            {
+                Console.WriteLine($"Adapter {devinstNameAdapter}");
+            }
+
+            var found = false;
 
             foreach (var dev in from devinstChild in NativeFileIO.EnumerateChildDevices(devinstAdapter.Value)
-                                let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
-                                where !string.IsNullOrWhiteSpace(path)
-                                let address = NativeFileIO.GetScsiAddressForNtDevice(path)
-                                let physical_drive_path = NativeFileIO.GetPhysicalDriveNameForNtDevice(path)
-                                select (address, path, devinstChild, physical_drive_path))
+                                let DevicePath = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
+                                where !string.IsNullOrWhiteSpace(DevicePath)
+                                let ScsiAddress = NativeFileIO.GetScsiAddressForNtDevice(DevicePath)
+                                where ScsiAddress.HasValue
+                                let PhysicalDrive = NativeFileIO.GetPhysicalDriveNameForNtDevice(DevicePath)
+                                select (ScsiAddress: ScsiAddress.Value, DevicePath, devinst: devinstChild, PhysicalDrive))
             {
+                found = true;
 
-                Console.WriteLine($"SCSI address {dev.address} found at {dev.path} devinst {dev.devinstChild} ({dev.physical_drive_path}).");
+                try
+                {
+                    if (verbose)
+                    {
+                        using var h = NativeFileIO.NtCreateFile(dev.DevicePath,
+                                                                NtObjectAttributes.OpenIf,
+                                                                (FileAccess)0,
+                                                                FileShare.ReadWrite,
+                                                                NtCreateDisposition.Open,
+                                                                NtCreateOptions.NonDirectoryFile | NtCreateOptions.SynchronousIoNonAlert,
+                                                                FileAttributes.Normal,
+                                                                null,
+                                                                out _);
 
-#if DEBUG
-                using var h = NativeFileIO.NtCreateFile(dev.path,
-                                                        NtObjectAttributes.OpenIf,
-                                                        (FileAccess)0,
-                                                        FileShare.ReadWrite,
-                                                        NtCreateDisposition.Open,
-                                                        NtCreateOptions.NonDirectoryFile | NtCreateOptions.SynchronousIoNonAlert,
-                                                        FileAttributes.Normal,
-                                                        null,
-                                                        out var argWasCreated);
+                        var prop = NativeFileIO.GetStorageStandardProperties(h);
 
-                var prop = NativeFileIO.GetStorageStandardProperties(h);
+                        Console.WriteLine($"Storage device properties: {JsonSerializer.Serialize(prop, new JsonSerializerOptions { WriteIndented = true })}");
+                    }
 
-                Console.WriteLine(prop?.ToMembersString());
-#endif
+                    var device_name = $@"\\?\{dev.PhysicalDrive}";
+
+                    Console.WriteLine($"Device number {dev.ScsiAddress.DWordDeviceNumber:X6}");
+                    Console.WriteLine($"Device is {device_name}");
+                    Console.WriteLine();
+
+                    foreach (var vol in NativeFileIO.EnumerateDiskVolumes(device_name))
+                    {
+                        Console.WriteLine($"Contains volume {vol}");
+
+                        foreach (var mnt in NativeFileIO.EnumerateVolumeMountPoints(vol))
+                        {
+                            Console.WriteLine($"  Mounted at {mnt}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error displaying volume mount points: {ex.JoinMessages()}");
+                }
+            }
+
+            if (!found)
+            {
+                Console.WriteLine("No virtual disks.");
             }
         }
     }
@@ -172,7 +209,8 @@ Please see EULA.txt for license information.");
         {
             var arg = cmd.Key;
 
-            if (arg.Equals("trace", StringComparison.OrdinalIgnoreCase))
+            if (arg.Equals("trace", StringComparison.OrdinalIgnoreCase) ||
+                arg.Equals("verbose", StringComparison.OrdinalIgnoreCase))
             {
                 if (cmd.Value.Length == 0)
                 {
@@ -215,7 +253,8 @@ Please see EULA.txt for license information.");
             {
                 buffer_size = long.Parse(cmd.Value[0]);
             }
-            else if (arg.Equals("filename", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1 || arg.Equals("device", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            else if (arg.Equals("filename", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
+                || arg.Equals("device", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
                 image_path = cmd.Value[0];
             }
@@ -271,10 +310,11 @@ Please see EULA.txt for license information.");
                     }
                 }
             }
-            else if (arg.Equals("convert", StringComparison.OrdinalIgnoreCase) || arg.Equals("saveas", StringComparison.OrdinalIgnoreCase))
+            else if (arg.Equals("convert", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("saveas", StringComparison.OrdinalIgnoreCase))
             {
-                var targetcount = (commands.TryGetValue("convert", out var convert) ? convert.Length : 0) +
-                    (commands.TryGetValue("saveas", out var saveas) ? saveas.Length : 0);
+                var targetcount = (commands.TryGetValue("convert", out var convert) ? convert.Length : 0)
+                    + (commands.TryGetValue("saveas", out var saveas) ? saveas.Length : 0);
 
                 if (targetcount != 1)
                 {
@@ -296,15 +336,18 @@ Please see EULA.txt for license information.");
 
                 disk_access = FileAccess.Read;
             }
-            else if (arg.Equals("variant", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            else if (arg.Equals("variant", StringComparison.OrdinalIgnoreCase)
+                && cmd.Value.Length == 1)
             {
                 output_image_variant = cmd.Value[0];
             }
-            else if (arg.Equals("libewfoutput", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            else if (arg.Equals("libewfoutput", StringComparison.OrdinalIgnoreCase)
+                && cmd.Value.Length == 1)
             {
                 libewf_debug_output = cmd.Value[0];
             }
-            else if (arg.Equals("debugcompare", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            else if (arg.Equals("debugcompare", StringComparison.OrdinalIgnoreCase)
+                && cmd.Value.Length == 1)
             {
                 debug_compare = cmd.Value[0];
             }
@@ -345,7 +388,6 @@ Please see EULA.txt for license information.");
             else if (arg.Equals("list", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
                 list_devices = true;
-                return 0;
             }
             else if (arg.Length == 0)
             {
@@ -363,18 +405,15 @@ Please see EULA.txt for license information.");
 
         if (list_devices)
         {
-
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.Error.WriteLine("The --list switch is only supported on Windows");
                 Console.ResetColor();
                 return -1;
-
             }
 
-            ListDevices();
+            ListDevices(verbose);
 
             return 0;
         }
@@ -616,7 +655,6 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             {
                 adapter = new ScsiAdapter();
             }
-
             catch (Exception ex)
             {
                 Trace.WriteLine($"Failed to open SCSI adapter: {ex.JoinMessages()}");
@@ -659,17 +697,14 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     }
                 }
             }
-
             catch (Exception ex)
             {
                 Console.WriteLine($"Error displaying volume mount points: {ex.JoinMessages()}");
 
             }
         }
-
         else
         {
-
             service.StartServiceThread();
 
         }

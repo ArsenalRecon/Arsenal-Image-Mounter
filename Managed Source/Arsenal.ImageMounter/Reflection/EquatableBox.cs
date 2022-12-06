@@ -6,7 +6,6 @@ namespace Arsenal.ImageMounter.Reflection;
 
 public sealed class EquatableBox<T> : IEquatable<T>, IEquatable<EquatableBox<T>> where T : struct, IEquatable<T>
 {
-
     public T Value { get; set; }
 
     public EquatableBox()
@@ -18,7 +17,7 @@ public sealed class EquatableBox<T> : IEquatable<T>, IEquatable<EquatableBox<T>>
         Value = value;
     }
 
-    public bool HasDefaultValue => Value.Equals(new T());
+    public bool HasDefaultValue => Value.Equals(default);
 
     public void ClearValue() => Value = new T();
 

@@ -61,7 +61,7 @@ public class SystemNotificationEvent : WaitHandle
 public sealed class RegisteredEventHandler : IDisposable
 {
 
-    private readonly RegisteredWaitHandle _registered_wait_handle;
+    private readonly RegisteredWaitHandle registered_wait_handle;
 
     public WaitHandle WaitHandle { get; }
     public EventHandler EventHandler { get; }
@@ -73,7 +73,7 @@ public sealed class RegisteredEventHandler : IDisposable
 
         EventHandler = handler;
 
-        _registered_wait_handle = ThreadPool.RegisterWaitForSingleObject(waitObject, Callback, this, -1, executeOnlyOnce: true);
+        registered_wait_handle = ThreadPool.RegisterWaitForSingleObject(waitObject, Callback, this, -1, executeOnlyOnce: true);
 
     }
 
@@ -89,7 +89,7 @@ public sealed class RegisteredEventHandler : IDisposable
     public void Dispose()
     {
 
-        _registered_wait_handle?.Unregister(null);
+        registered_wait_handle?.Unregister(null);
 
         GC.SuppressFinalize(this);
 
@@ -101,7 +101,7 @@ public class WaitEventHandler
 
     public WaitHandle WaitHandle { get; }
 
-    private readonly List<RegisteredEventHandler> _event_handlers = new();
+    private readonly List<RegisteredEventHandler> event_handlers = new();
 
     public WaitEventHandler(WaitHandle WaitHandle)
     {
@@ -111,8 +111,8 @@ public class WaitEventHandler
 
     public event EventHandler Signalled
     {
-        add => _event_handlers.Add(new RegisteredEventHandler(WaitHandle, value));
-        remove => _event_handlers.RemoveAll(handler =>
+        add => event_handlers.Add(new RegisteredEventHandler(WaitHandle, value));
+        remove => event_handlers.RemoveAll(handler =>
                            {
                                if (handler.EventHandler.Equals(value))
                                {
@@ -127,6 +127,6 @@ public class WaitEventHandler
     }
 
     private void OnSignalled(object sender, EventArgs e)
-        => _event_handlers.ForEach(handler => handler.EventHandler?.Invoke(sender, e));
+        => event_handlers.ForEach(handler => handler.EventHandler?.Invoke(sender, e));
 
 }

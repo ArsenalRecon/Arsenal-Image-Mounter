@@ -368,7 +368,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     protected void RemoveDeviceAndStopServiceThread()
     {
-
         Trace.WriteLine($"Notifying service stopping for device {diskDeviceNumber:X6}...");
 
         OnServiceStopping(EventArgs.Empty);
@@ -376,7 +375,8 @@ public abstract class DevioServiceBase : IVirtualDiskService
         Trace.WriteLine($"Removing device {diskDeviceNumber:X6}...");
 
         var i = 1;
-        do
+
+        for(; ;)
         {
             try
             {
@@ -386,30 +386,23 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
                 break;
             }
-
             catch (Win32Exception ex) when (i < 40 && ex.NativeErrorCode == NativeConstants.ERROR_ACCESS_DENIED)
             {
-
                 Trace.WriteLine($"Access denied attempting to remove device {diskDeviceNumber:X6}, retrying...");
 
                 i += 1;
                 Thread.Sleep(100);
                 continue;
             }
-
             catch (Win32Exception ex) when (ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND)
             {
-
                 Trace.WriteLine($"Attempt to remove non-existent device {diskDeviceNumber:X6}");
 
                 EmergencyStopServiceThread();
 
                 break;
-
             }
         }
-        while (true);
-
     }
 
     /// <summary>

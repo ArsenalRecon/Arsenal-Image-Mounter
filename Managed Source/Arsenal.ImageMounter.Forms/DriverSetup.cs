@@ -33,7 +33,8 @@ public static class DriverSetup
     {
         var path1 = $"{API.Kernel}\\x86\\phdskmnt.sys";
         var path2 = $"{API.Kernel}/x86/phdskmnt.sys";
-        var entry = zipFile.Entries.FirstOrDefault(e => e.FullName.Equals(path1, StringComparison.OrdinalIgnoreCase) || e.FullName.Equals(path2, StringComparison.OrdinalIgnoreCase));
+        var entry = zipFile.Entries.FirstOrDefault(e => e.FullName.Equals(path1, StringComparison.OrdinalIgnoreCase)
+                                                        || e.FullName.Equals(path2, StringComparison.OrdinalIgnoreCase));
         if (entry == null)
         {
             throw new KeyNotFoundException($"Driver file phdskmnt.sys for {API.Kernel} missing in zip archive.");

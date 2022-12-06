@@ -40,7 +40,7 @@ public class DiskStream : AligningStream
     {
     }
 
-    private long? _CachedLength;
+    private long? cachedLength;
 
     /// <summary>
     /// Initializes an DiskStream object for an open disk device.
@@ -53,7 +53,7 @@ public class DiskStream : AligningStream
                Alignment: (NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector) ?? 512,
                ownsBaseStream: true)
     {
-        _CachedLength = DiskSize;
+        cachedLength = DiskSize;
     }
 
     public SafeFileHandle SafeFileHandle => ((FileStream)BaseStream).SafeFileHandle;
@@ -65,37 +65,37 @@ public class DiskStream : AligningStream
     {
         get
         {
-            _CachedLength ??= NativeStruct.GetDiskSize(SafeFileHandle);
+            cachedLength ??= NativeStruct.GetDiskSize(SafeFileHandle);
 
-            return _CachedLength ?? throw new NotSupportedException("Disk size not available");
+            return cachedLength ?? throw new NotSupportedException("Disk size not available");
         }
     }
 
-    private bool _size_from_vbr;
+    private bool size_from_vbr;
 
     public bool SizeFromVBR
     {
-        get => _size_from_vbr;
+        get => size_from_vbr;
         set
         {
             if (value)
             {
-                _CachedLength = GetVBRPartitionLength();
-                if (!_CachedLength.HasValue)
+                cachedLength = GetVBRPartitionLength();
+                if (!cachedLength.HasValue)
                 {
                     throw new NotSupportedException();
                 }
             }
             else
             {
-                _CachedLength = NativeStruct.GetDiskSize(SafeFileHandle);
-                if (!_CachedLength.HasValue)
+                cachedLength = NativeStruct.GetDiskSize(SafeFileHandle);
+                if (!cachedLength.HasValue)
                 {
                     throw new NotSupportedException();
                 }
             }
 
-            _size_from_vbr = value;
+            size_from_vbr = value;
         }
     }
 

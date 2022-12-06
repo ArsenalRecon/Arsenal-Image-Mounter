@@ -55,14 +55,12 @@ public class ConsoleSpinProgress : IDisposable
 
         lock (ConsoleSupport.ConsoleSync)
         {
-
             Console.ForegroundColor = ConsoleProgressBar.ConsoleProgressBarColor;
 
             Console.Write(chr);
             Console.Write('\b');
 
             Console.ResetColor();
-
         }
     }
 

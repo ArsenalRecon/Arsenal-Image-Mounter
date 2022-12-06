@@ -32,7 +32,7 @@ namespace Arsenal.ImageMounter.IO.Streams;
 
 public class SubStream : Stream
 {
-    private readonly long _length;
+    private readonly long length;
 
     public bool OwnsParent { get; }
     public long Start { get; }
@@ -42,10 +42,10 @@ public class SubStream : Stream
     {
         Parent = parent;
         Start = start;
-        _length = length;
+        this.length = length;
         OwnsParent = false;
 
-        if (checked(Start + _length) > Parent.Length)
+        if (checked(Start + this.length) > Parent.Length)
         {
             throw new ArgumentException("SubStream extends beyond end of parent stream");
         }
@@ -56,9 +56,9 @@ public class SubStream : Stream
         Parent = parent;
         OwnsParent = ownsParent;
         Start = start;
-        _length = length;
+        this.length = length;
 
-        if (checked(Start + _length) > Parent.Length)
+        if (checked(Start + this.length) > Parent.Length)
         {
             throw new ArgumentException("SubStream extends beyond end of parent stream");
         }
@@ -70,7 +70,7 @@ public class SubStream : Stream
 
     public override bool CanWrite => Parent.CanWrite;
 
-    public override long Length => _length;
+    public override long Length => length;
 
     public override long Position
     {
@@ -78,7 +78,7 @@ public class SubStream : Stream
 
         set
         {
-            if (value >= 0 && value <= _length)
+            if (value >= 0 && value <= length)
             {
                 Parent.Position = checked(value + Start);
             }
@@ -101,7 +101,7 @@ public class SubStream : Stream
             throw new ArgumentOutOfRangeException(nameof(count), "Attempt to read negative bytes");
         }
 
-        return Position >= _length ? 0 : Parent.Read(buffer, offset, (int)Math.Min(count, checked(_length - Position)));
+        return Position >= length ? 0 : Parent.Read(buffer, offset, (int)Math.Min(count, checked(length - Position)));
     }
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -111,21 +111,21 @@ public class SubStream : Stream
             throw new ArgumentOutOfRangeException(nameof(count), "Attempt to read negative bytes");
         }
 
-        return Position >= _length
+        return Position >= length
             ? AsyncExtensions.ZeroCompletedTask
-            : Parent.ReadAsync(buffer, offset, (int)Math.Min(count, checked(_length - Position)), cancellationToken);
+            : Parent.ReadAsync(buffer, offset, (int)Math.Min(count, checked(length - Position)), cancellationToken);
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
 
     public override int Read(Span<byte> buffer)
-        => Position >= _length
+        => Position >= length
         ? 0
-        : Parent.Read(buffer[..(int)Math.Min(buffer.Length, checked(_length - Position))]);
+        : Parent.Read(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))]);
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => Position >= _length
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => Position >= length
             ? new ValueTask<int>(0)
-            : Parent.ReadAsync(buffer[..(int)Math.Min(buffer.Length, checked(_length - Position))], cancellationToken);
+            : Parent.ReadAsync(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))], cancellationToken);
 
 #endif
 
@@ -136,12 +136,12 @@ public class SubStream : Stream
             throw new ArgumentOutOfRangeException(nameof(count), "Attempt to read negative bytes");
         }
 
-        if (Position >= _length)
+        if (Position >= length)
         {
             count = 0;
         }
 
-        return Parent.BeginRead(buffer, offset, (int)Math.Min(count, checked(_length - Position)), callback, state);
+        return Parent.BeginRead(buffer, offset, (int)Math.Min(count, checked(length - Position)), callback, state);
     }
 
     public override long Seek(long offset, SeekOrigin origin)
@@ -152,7 +152,7 @@ public class SubStream : Stream
         }
         else if (origin == SeekOrigin.End)
         {
-            Position = _length + offset;
+            Position = length + offset;
         }
         else if (origin == SeekOrigin.Begin)
         {
@@ -176,7 +176,7 @@ public class SubStream : Stream
             throw new ArgumentOutOfRangeException(nameof(count), "Attempt to write negative bytes");
         }
 
-        if (checked(Position + count) > _length)
+        if (checked(Position + count) > length)
         {
             throw new ArgumentOutOfRangeException(nameof(count), "Attempt to write beyond end of SubStream");
         }
@@ -191,7 +191,7 @@ public class SubStream : Stream
             throw new ArgumentOutOfRangeException(nameof(count), "Attempt to write negative bytes");
         }
 
-        return checked(Position + count) > _length
+        return checked(Position + count) > length
             ? throw new ArgumentOutOfRangeException(nameof(count), "Attempt to write beyond end of SubStream")
             : Parent.WriteAsync(buffer, offset, count, cancellationToken);
     }
@@ -199,7 +199,7 @@ public class SubStream : Stream
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override void Write(ReadOnlySpan<byte> buffer)
     {
-        if (checked(Position + buffer.Length) > _length)
+        if (checked(Position + buffer.Length) > length)
         {
             throw new ArgumentOutOfRangeException(nameof(buffer), "Attempt to write beyond end of SubStream");
         }
@@ -208,7 +208,7 @@ public class SubStream : Stream
     }
 
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
-        => checked(Position + buffer.Length) > _length
+        => checked(Position + buffer.Length) > length
         ? throw new ArgumentOutOfRangeException(nameof(buffer), "Attempt to write beyond end of SubStream")
         : Parent.WriteAsync(buffer, cancellationToken);
 #endif
@@ -220,7 +220,7 @@ public class SubStream : Stream
             throw new ArgumentOutOfRangeException(nameof(count), "Attempt to write negative bytes");
         }
 
-        return checked(Position + count) > _length
+        return checked(Position + count) > length
             ? throw new ArgumentOutOfRangeException(nameof(count), "Attempt to write beyond end of SubStream")
             : Parent.BeginWrite(buffer, offset, count, callback, state);
     }

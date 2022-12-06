@@ -46,7 +46,6 @@ public static partial class API
 
     private static string GetKernelName()
     {
-
         if (OSVersion >= new Version(10, 0))
         {
             Kernel = "Win10";
@@ -93,7 +92,6 @@ public static partial class API
         }
 
         return Kernel;
-
     }
 
     /// <summary>
@@ -102,19 +100,16 @@ public static partial class API
     /// </summary>
     public static IEnumerable<string> EnumerateAdapterDevicePaths(IntPtr HwndParent)
     {
-
         var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt".AsMemory(), out var devinstances);
 
         if (status != 0L || devinstances is null)
         {
-
             Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}");
             yield break;
         }
 
         foreach (var devinstname in devinstances)
         {
-
             using var DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevsW(NativeConstants.SerenumBusEnumeratorGuid,
                                                                                          devinstname.MakeNullTerminated(),
                                                                                          HwndParent,
@@ -207,7 +202,6 @@ public static partial class API
     /// </summary>
     public static IEnumerable<ReadOnlyMemory<char>>? EnumerateAdapterDeviceInstanceNames()
     {
-
         var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt".AsMemory(), out var devinstances);
 
         if (status != 0L || devinstances is null)
@@ -218,7 +212,6 @@ public static partial class API
         }
 
         return devinstances;
-
     }
 
     /// <summary>
@@ -227,7 +220,6 @@ public static partial class API
     /// </summary>
     public static bool RescanScsiAdapter(uint devInst)
     {
-
         var rc = false;
 
         var status = NativeFileIO.UnsafeNativeMethods.CM_Reenumerate_DevNode(devInst, 0U);
@@ -242,7 +234,6 @@ public static partial class API
         }
 
         return rc;
-
     }
 
     private const string NonRemovableSuffix = ":$NonRemovable";
@@ -252,7 +243,7 @@ public static partial class API
            let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
            where !string.IsNullOrWhiteSpace(path)
            let address = NativeFileIO.GetScsiAddressForNtDevice(path)
-           where address.HasValue && address.Value.DWordDeviceNumber.Equals(DeviceNumber)
+           where address.HasValue && address.Value.DWordDeviceNumber == DeviceNumber
            select path;
 
     public static IEnumerable<string> EnumerateDeviceProperty(uint devinstAdapter, uint DeviceNumber, CmDevNodeRegistryProperty prop)
@@ -260,7 +251,7 @@ public static partial class API
            let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
            where !string.IsNullOrWhiteSpace(path)
            let address = NativeFileIO.GetScsiAddressForNtDevice(path)
-           where address.HasValue && address.Value.DWordDeviceNumber.Equals(DeviceNumber)
+           where address.HasValue && address.Value.DWordDeviceNumber == DeviceNumber
            from value in NativeFileIO.GetDeviceRegistryProperty(devinstChild, prop) ?? Enumerable.Empty<string>()
            select value;
 
@@ -278,7 +269,6 @@ public static partial class API
 
     public static void RegisterWriteOverlayImage(uint devInst, ReadOnlyMemory<char> OverlayImagePath, bool FakeNonRemovable)
     {
-
         string? nativepath;
 
         if (!OverlayImagePath.Span.IsWhiteSpace())
@@ -328,7 +318,6 @@ public static partial class API
 
         for (var r = 1; r <= 4; r++)
         {
-
             NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, devInst);
 
             var statistics = new WriteFilterStatistics();
@@ -339,35 +328,26 @@ public static partial class API
 
             if (nativepath is null && last_error == NativeConstants.NO_ERROR)
             {
-
                 Trace.WriteLine("Filter driver not yet unloaded, retrying...");
                 Thread.Sleep(300);
                 continue;
             }
-
             else if (nativepath is not null && (last_error == NativeConstants.ERROR_INVALID_FUNCTION || last_error == NativeConstants.ERROR_INVALID_PARAMETER || last_error == NativeConstants.ERROR_NOT_SUPPORTED))
             {
-
                 Trace.WriteLine("Filter driver not yet loaded, retrying...");
                 Thread.Sleep(300);
                 continue;
             }
-
             else if (nativepath is not null && last_error != NativeConstants.NO_ERROR || nativepath is null && last_error != NativeConstants.ERROR_INVALID_FUNCTION && last_error != NativeConstants.ERROR_INVALID_PARAMETER && last_error != NativeConstants.ERROR_NOT_SUPPORTED)
             {
-
                 throw new NotSupportedException("Error checking write filter driver status", new Win32Exception(last_error));
             }
-
             else if (nativepath is not null && statistics.Initialized || nativepath is null)
             {
-
                 return;
-
             }
 
             throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
-
         }
 
         var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
@@ -391,39 +371,33 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
         }
 
         throw new FileNotFoundException("Error adding write overlay: Device not found.");
-
     }
 
     public static void RegisterWriteFilter(uint devinstAdapter, uint DeviceNumber, RegisterWriteFilterOperation operation)
     {
-
         foreach (var dev in from devinstChild in NativeFileIO.EnumerateChildDevices(devinstAdapter)
                             let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
                             where !string.IsNullOrWhiteSpace(path)
                             let address = NativeFileIO.GetScsiAddressForNtDevice(path)
-                            where address.HasValue && address.Value.DWordDeviceNumber.Equals(DeviceNumber)
+                            where address.HasValue && address.Value.DWordDeviceNumber == DeviceNumber
                             select (path, devinstChild))
         {
-
             Trace.WriteLine($"Device number {DeviceNumber:X6}  found at {dev.path} devinst {dev.devinstChild}. Registering write filter driver.");
 
             if (operation == RegisterWriteFilterOperation.Unregister)
             {
-
                 if (NativeFileIO.RemoveFilter(dev.devinstChild, "aimwrfltr"))
                 {
                     NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, dev.devinstChild);
                 }
 
                 return;
-
             }
 
             var last_error = 0;
 
             for (var r = 1; r <= 2; r++)
             {
-
                 if (NativeFileIO.AddFilter(dev.devinstChild, "aimwrfltr"))
                 {
                     NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, dev.devinstChild);
@@ -450,7 +424,6 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 }
 
                 throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
-
             }
 
             var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
@@ -474,7 +447,6 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
         }
 
         throw new FileNotFoundException("Error adding write overlay: Device not found.");
-
     }
 
     public static async Task RegisterWriteOverlayImageAsync(uint devInst, ReadOnlyMemory<char> OverlayImagePath, bool FakeNonRemovable, CancellationToken cancel)
@@ -529,7 +501,6 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
 
         for (var r = 1; r <= 4; r++)
         {
-
             NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, devInst);
 
             var statistics = new WriteFilterStatistics();
@@ -540,35 +511,26 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
 
             if (nativepath is null && last_error == NativeConstants.NO_ERROR)
             {
-
                 Trace.WriteLine("Filter driver not yet unloaded, retrying...");
                 await Task.Delay(300, cancel).ConfigureAwait(false);
                 continue;
             }
-
             else if (nativepath is not null && (last_error == NativeConstants.ERROR_INVALID_FUNCTION || last_error == NativeConstants.ERROR_INVALID_PARAMETER || last_error == NativeConstants.ERROR_NOT_SUPPORTED))
             {
-
                 Trace.WriteLine("Filter driver not yet loaded, retrying...");
                 await Task.Delay(300, cancel).ConfigureAwait(false);
                 continue;
             }
-
             else if (nativepath is not null && last_error != NativeConstants.NO_ERROR || nativepath is null && last_error != NativeConstants.ERROR_INVALID_FUNCTION && last_error != NativeConstants.ERROR_INVALID_PARAMETER && last_error != NativeConstants.ERROR_NOT_SUPPORTED)
             {
-
                 throw new NotSupportedException("Error checking write filter driver status", new Win32Exception(last_error));
             }
-
             else if (nativepath is not null && statistics.Initialized || nativepath is null)
             {
-
                 return;
-
             }
 
             throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
-
         }
 
         var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
@@ -592,39 +554,33 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
         }
 
         throw new FileNotFoundException("Error adding write overlay: Device not found.");
-
     }
 
     public static async Task RegisterWriteFilterAsync(uint devinstAdapter, uint DeviceNumber, RegisterWriteFilterOperation operation, CancellationToken cancel)
     {
-
         foreach (var dev in from devinstChild in NativeFileIO.EnumerateChildDevices(devinstAdapter)
                             let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
                             where !string.IsNullOrWhiteSpace(path)
                             let address = NativeFileIO.GetScsiAddressForNtDevice(path)
-                            where address.HasValue && address.Value.DWordDeviceNumber.Equals(DeviceNumber)
+                            where address.HasValue && address.Value.DWordDeviceNumber == DeviceNumber
                             select (path, devinstChild))
         {
-
             Trace.WriteLine($"Device number {DeviceNumber:X6}  found at {dev.path} devinst {dev.devinstChild}. Registering write filter driver.");
 
             if (operation == RegisterWriteFilterOperation.Unregister)
             {
-
                 if (NativeFileIO.RemoveFilter(dev.devinstChild, "aimwrfltr"))
                 {
                     NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, dev.devinstChild);
                 }
 
                 return;
-
             }
 
             var last_error = 0;
 
             for (var r = 1; r <= 2; r++)
             {
-
                 if (NativeFileIO.AddFilter(dev.devinstChild, "aimwrfltr"))
                 {
                     NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, dev.devinstChild);
@@ -651,7 +607,6 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 }
 
                 throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
-
             }
 
             var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
@@ -692,8 +647,15 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
     /// <returns>Returns 0 on success or Win32 error code on failure</returns>
     public static int GetWriteOverlayStatus(string NtDevicePath, out WriteFilterStatistics Statistics)
     {
-
-        using var hDevice = NativeFileIO.NtCreateFile(NtDevicePath, 0, 0, FileShare.ReadWrite, NtCreateDisposition.Open, NtCreateOptions.NonDirectoryFile, 0, null, out var argWasCreated);
+        using var hDevice = NativeFileIO.NtCreateFile(NtDevicePath,
+                                                      0,
+                                                      0,
+                                                      FileShare.ReadWrite,
+                                                      NtCreateDisposition.Open,
+                                                      NtCreateOptions.NonDirectoryFile,
+                                                      0,
+                                                      null,
+                                                      out _);
 
         return GetWriteOverlayStatus(hDevice, out Statistics);
 
@@ -707,15 +669,18 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
     /// <returns>Returns 0 on success or Win32 error code on failure</returns>
     public static int GetWriteOverlayStatus(SafeFileHandle hDevice, out WriteFilterStatistics Statistics)
     {
-
         Statistics = new();
 
-        var version = Statistics.Version;
-
-        return UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA, IntPtr.Zero, 0U, out Statistics, version, out var arglpBytesReturned, default)
+        return UnsafeNativeMethods.DeviceIoControl(hDevice,
+                                                   UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA,
+                                                   IntPtr.Zero,
+                                                   0,
+                                                   ref Statistics,
+                                                   Statistics.Version,
+                                                   out _,
+                                                   default)
             ? (int)NativeConstants.NO_ERROR
             : Marshal.GetLastWin32Error();
-
     }
 
     /// <summary>
@@ -727,11 +692,9 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
     /// <returns>Returns 0 on success or Win32 error code on failure</returns>
     public static int SetWriteOverlayDeleteOnClose(string NtDevicePath)
     {
-
-        using var hDevice = NativeFileIO.NtCreateFile(NtDevicePath, 0, FileAccess.ReadWrite, FileShare.ReadWrite, NtCreateDisposition.Open, NtCreateOptions.NonDirectoryFile, 0, null, out var argWasCreated);
+        using var hDevice = NativeFileIO.NtCreateFile(NtDevicePath, 0, FileAccess.ReadWrite, FileShare.ReadWrite, NtCreateDisposition.Open, NtCreateOptions.NonDirectoryFile, 0, null, out _);
 
         return SetWriteOverlayDeleteOnClose(hDevice);
-
     }
 
     /// <summary>
@@ -741,9 +704,10 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
     /// </summary>
     /// <param name="hDevice">Handle to device.</param>
     /// <returns>Returns 0 on success or Win32 error code on failure</returns>
-    public static int SetWriteOverlayDeleteOnClose(SafeFileHandle hDevice) => UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_DELETE_ON_CLOSE, IntPtr.Zero, 0U, IntPtr.Zero, 0U, out var arglpBytesReturned, default)
-            ? (int)NativeConstants.NO_ERROR
-            : Marshal.GetLastWin32Error();
+    public static int SetWriteOverlayDeleteOnClose(SafeFileHandle hDevice)
+        => UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_DELETE_ON_CLOSE, IntPtr.Zero, 0, IntPtr.Zero, 0, out _, default)
+        ? NativeConstants.NO_ERROR
+        : Marshal.GetLastWin32Error();
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     private static partial class UnsafeNativeMethods
@@ -755,17 +719,46 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
 #if NET7_0_OR_GREATER
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out WriteFilterStatistics lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+        public static partial bool DeviceIoControl(SafeFileHandle hDevice,
+                                                   uint dwIoControlCode,
+                                                   IntPtr lpInBuffer,
+                                                   int nInBufferSize,
+                                                   ref WriteFilterStatistics lpOutBuffer,
+                                                   int nOutBufferSize,
+                                                   out int lpBytesReturned,
+                                                   IntPtr lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+        public static partial bool DeviceIoControl(SafeFileHandle hDevice,
+                                                   uint dwIoControlCode,
+                                                   IntPtr lpInBuffer,
+                                                   int nInBufferSize,
+                                                   IntPtr lpOutBuffer,
+                                                   int nOutBufferSize,
+                                                   out int lpBytesReturned,
+                                                   IntPtr lpOverlapped);
 #else
         [DllImport("kernel32", SetLastError = true)]
-        public static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, out WriteFilterStatistics lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+        public static extern bool DeviceIoControl(SafeFileHandle hDevice,
+                                                  uint dwIoControlCode,
+                                                  IntPtr lpInBuffer,
+                                                  int nInBufferSize,
+                                                  ref WriteFilterStatistics lpOutBuffer,
+                                                  int nOutBufferSize,
+                                                  out int lpBytesReturned,
+                                                  IntPtr lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
-        public static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+        public static extern bool DeviceIoControl(SafeFileHandle hDevice,
+                                                  uint dwIoControlCode,
+                                                  IntPtr lpInBuffer,
+                                                  int nInBufferSize,
+                                                  IntPtr lpOutBuffer,
+                                                  int nOutBufferSize,
+                                                  out int lpBytesReturned,
+                                                  IntPtr lpOverlapped);
 #endif
     }
 }
+

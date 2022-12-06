@@ -17,11 +17,9 @@ public class DisposableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IDis
     where TKey : notnull
     where TValue : IDisposable?
 {
-
     // IDisposable
     protected virtual void Dispose(bool disposing)
     {
-
         if (disposing)
         {
             // ' Dispose each object in list
@@ -33,7 +31,6 @@ public class DisposableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IDis
 
         // ' Clear list
         Clear();
-
     }
 
     // This code added by Visual Basic to correctly implement the disposable pattern.

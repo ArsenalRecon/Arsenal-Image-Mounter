@@ -21,16 +21,15 @@ namespace Arsenal.ImageMounter.IO.Devices;
 [StructLayout(LayoutKind.Sequential)]
 public struct WriteFilterStatistics
 {
-
-    public WriteFilterStatistics()
+    public unsafe WriteFilterStatistics()
     {
-        Version = (uint)PinnedBuffer<WriteFilterStatistics>.TypeSize;
+        Version = sizeof(WriteFilterStatistics);
     }
 
     // '
     // ' Version of structure. Set to sizeof(AIMWRFLTR_DEVICE_STATISTICS)
     // '
-    public uint Version { get; }
+    public int Version { get; }
 
     public uint Flags { get; }
 

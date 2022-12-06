@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Extensions;
 
@@ -1436,23 +1437,29 @@ public static partial class BufferExtensions
 
 #if !NETCOREAPP
 
-    public static ReadOnlyMemory<char> TrimEnd(this ReadOnlyMemory<char> str, char chr) =>
-        str.Slice(0, str.Span.TrimEnd(chr).Length);
+    public static ReadOnlyMemory<char> TrimEnd(this ReadOnlyMemory<char> str, char chr)
+        => str.Slice(0, str.Span.TrimEnd(chr).Length);
 
-    public static ReadOnlyMemory<char> TrimStart(this ReadOnlyMemory<char> str, char chr) =>
-        str.Slice(str.Span.TrimStart(chr).Length);
+    public static ReadOnlyMemory<char> TrimStart(this ReadOnlyMemory<char> str, char chr)
+        => str.Slice(str.Span.TrimStart(chr).Length);
 
-    public static bool Contains(this ReadOnlySpan<char> str, char chr) =>
-        str.IndexOf(chr) >= 0;
+    public static bool Contains(this ReadOnlySpan<char> str, char chr)
+        => str.IndexOf(chr) >= 0;
 
-    public static bool Contains(this string str, char chr) =>
-        str.IndexOf(chr) >= 0;
+    public static bool Contains(this string str, char chr)
+        => str.IndexOf(chr) >= 0;
 
-    public static bool Contains(this string str, string substr) =>
-        str.IndexOf(substr) >= 0;
+    public static bool Contains(this string str, string substr)
+        => str.IndexOf(substr) >= 0;
 
-    public static bool Contains(this string str, string substr, StringComparison comparison) =>
-        str.IndexOf(substr, comparison) >= 0;
+    public static bool Contains(this string str, string substr, StringComparison comparison)
+        => str.IndexOf(substr, comparison) >= 0;
+
+    public static bool StartsWith(this string str, char chr)
+        => str is not null && str.Length > 0 && str[0] == chr;
+
+    public static bool EndsWith(this string str, char chr)
+        => str is not null && str.Length > 0 && str[str.Length - 1] == chr;
 
 #endif
 
@@ -1496,8 +1503,16 @@ public static partial class BufferExtensions
 
     private static unsafe RtlIsZeroMemoryFunc? GetRtlIsZeroMemory()
     {
-        var fptr = NativeLib.GetProcAddressNoThrow("ntdll", "RtlIsZeroMemory");
-        
+        nint fptr = 0;
+
+        try
+        {
+            fptr = NativeLib.GetProcAddressNoThrow("ntdll", "RtlIsZeroMemory");
+        }
+        catch
+        {
+        }
+
         if (fptr == default)
         {
             return null;
@@ -1535,7 +1550,7 @@ public static partial class BufferExtensions
 
     /// <summary>
     /// Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
-    /// otherwise it falls back to a native method that compares groups of bytes is an optimized way.
+    /// otherwise it falls back to a managed method that compares groups of bytes is an optimized way.
     /// </summary>
     /// <param name="buffer"></param>
     /// <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>

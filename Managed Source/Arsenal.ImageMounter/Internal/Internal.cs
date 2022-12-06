@@ -13,108 +13,108 @@ internal readonly unsafe struct IMAGE_OPTIONAL_HEADER32
     // Standard fields.
     //
 
-    public readonly WORD Magic;
-    public readonly BYTE MajorLinkerVersion;
-    public readonly BYTE MinorLinkerVersion;
-    public readonly DWORD SizeOfCode;
-    public readonly DWORD SizeOfInitializedData;
-    public readonly DWORD SizeOfUninitializedData;
-    public readonly DWORD AddressOfEntryPoint;
-    public readonly DWORD BaseOfCode;
-    public readonly DWORD BaseOfData;
+    public WORD Magic { get; }
+    public BYTE MajorLinkerVersion { get; }
+    public BYTE MinorLinkerVersion { get; }
+    public DWORD SizeOfCode { get; }
+    public DWORD SizeOfInitializedData { get; }
+    public DWORD SizeOfUninitializedData { get; }
+    public DWORD AddressOfEntryPoint { get; }
+    public DWORD BaseOfCode { get; }
+    public DWORD BaseOfData { get; }
 
     //
     // NT additional fields.
     //
 
-    public readonly DWORD ImageBase;
-    public readonly DWORD SectionAlignment;
-    public readonly DWORD FileAlignment;
-    public readonly WORD MajorOperatingSystemVersion;
-    public readonly WORD MinorOperatingSystemVersion;
-    public readonly WORD MajorImageVersion;
-    public readonly WORD MinorImageVersion;
-    public readonly WORD MajorSubsystemVersion;
-    public readonly WORD MinorSubsystemVersion;
-    public readonly DWORD Win32VersionValue;
-    public readonly DWORD SizeOfImage;
-    public readonly DWORD SizeOfHeaders;
-    public readonly DWORD CheckSum;
-    public readonly WORD Subsystem;
-    public readonly WORD DllCharacteristics;
-    public readonly DWORD SizeOfStackReserve;
-    public readonly DWORD SizeOfStackCommit;
-    public readonly DWORD SizeOfHeapReserve;
-    public readonly DWORD SizeOfHeapCommit;
-    public readonly DWORD LoaderFlags;
-    public readonly DWORD NumberOfRvaAndSizes;
+    public DWORD ImageBase { get; }
+    public DWORD SectionAlignment { get; }
+    public DWORD FileAlignment { get; }
+    public WORD MajorOperatingSystemVersion { get; }
+    public WORD MinorOperatingSystemVersion { get; }
+    public WORD MajorImageVersion { get; }
+    public WORD MinorImageVersion { get; }
+    public WORD MajorSubsystemVersion { get; }
+    public WORD MinorSubsystemVersion { get; }
+    public DWORD Win32VersionValue { get; }
+    public DWORD SizeOfImage { get; }
+    public DWORD SizeOfHeaders { get; }
+    public DWORD CheckSum { get; }
+    public WORD Subsystem { get; }
+    public WORD DllCharacteristics { get; }
+    public DWORD SizeOfStackReserve { get; }
+    public DWORD SizeOfStackCommit { get; }
+    public DWORD SizeOfHeapReserve { get; }
+    public DWORD SizeOfHeapCommit { get; }
+    public DWORD LoaderFlags { get; }
+    public DWORD NumberOfRvaAndSizes { get; }
 
     // Here follows 16 IMAGE_DATA_DIRECTORY entries
 }
 
 internal readonly unsafe struct IMAGE_OPTIONAL_HEADER64
 {
-    public readonly WORD Magic;
-    public readonly BYTE MajorLinkerVersion;
-    public readonly BYTE MinorLinkerVersion;
-    public readonly DWORD SizeOfCode;
-    public readonly DWORD SizeOfInitializedData;
-    public readonly DWORD SizeOfUninitializedData;
-    public readonly DWORD AddressOfEntryPoint;
-    public readonly DWORD BaseOfCode;
-    public readonly ULONGLONG ImageBase;
-    public readonly DWORD SectionAlignment;
-    public readonly DWORD FileAlignment;
-    public readonly WORD MajorOperatingSystemVersion;
-    public readonly WORD MinorOperatingSystemVersion;
-    public readonly WORD MajorImageVersion;
-    public readonly WORD MinorImageVersion;
-    public readonly WORD MajorSubsystemVersion;
-    public readonly WORD MinorSubsystemVersion;
-    public readonly DWORD Win32VersionValue;
-    public readonly DWORD SizeOfImage;
-    public readonly DWORD SizeOfHeaders;
-    public readonly DWORD CheckSum;
-    public readonly WORD Subsystem;
-    public readonly WORD DllCharacteristics;
-    public readonly ULONGLONG SizeOfStackReserve;
-    public readonly ULONGLONG SizeOfStackCommit;
-    public readonly ULONGLONG SizeOfHeapReserve;
-    public readonly ULONGLONG SizeOfHeapCommit;
-    public readonly DWORD LoaderFlags;
-    public readonly DWORD NumberOfRvaAndSizes;
+    public WORD Magic { get; }
+    public BYTE MajorLinkerVersion { get; }
+    public BYTE MinorLinkerVersion { get; }
+    public DWORD SizeOfCode { get; }
+    public DWORD SizeOfInitializedData { get; }
+    public DWORD SizeOfUninitializedData { get; }
+    public DWORD AddressOfEntryPoint { get; }
+    public DWORD BaseOfCode { get; }
+    public ULONGLONG ImageBase { get; }
+    public DWORD SectionAlignment { get; }
+    public DWORD FileAlignment { get; }
+    public WORD MajorOperatingSystemVersion { get; }
+    public WORD MinorOperatingSystemVersion { get; }
+    public WORD MajorImageVersion { get; }
+    public WORD MinorImageVersion { get; }
+    public WORD MajorSubsystemVersion { get; }
+    public WORD MinorSubsystemVersion { get; }
+    public DWORD Win32VersionValue { get; }
+    public DWORD SizeOfImage { get; }
+    public DWORD SizeOfHeaders { get; }
+    public DWORD CheckSum { get; }
+    public WORD Subsystem { get; }
+    public WORD DllCharacteristics { get; }
+    public ULONGLONG SizeOfStackReserve { get; }
+    public ULONGLONG SizeOfStackCommit { get; }
+    public ULONGLONG SizeOfHeapReserve { get; }
+    public ULONGLONG SizeOfHeapCommit { get; }
+    public DWORD LoaderFlags { get; }
+    public DWORD NumberOfRvaAndSizes { get; }
 
     // Here follows 16 IMAGE_DATA_DIRECTORY entries
 }
 
 internal readonly struct IMAGE_SECTION_HEADER
 {
-    public readonly long Name;
-    public readonly DWORD VirtualSize;
-    public readonly DWORD VirtualAddress;
-    public readonly DWORD SizeOfRawData;
-    public readonly DWORD PointerToRawData;
-    public readonly DWORD PointerToRelocations;
-    public readonly DWORD PointerToLinenumbers;
-    public readonly WORD NumberOfRelocations;
-    public readonly WORD NumberOfLinenumbers;
-    public readonly DWORD Characteristics;
+    public long Name { get; }
+    public DWORD VirtualSize { get; }
+    public DWORD VirtualAddress { get; }
+    public DWORD SizeOfRawData { get; }
+    public DWORD PointerToRawData { get; }
+    public DWORD PointerToRelocations { get; }
+    public DWORD PointerToLinenumbers { get; }
+    public WORD NumberOfRelocations { get; }
+    public WORD NumberOfLinenumbers { get; }
+    public DWORD Characteristics { get; }
 }
 
 internal readonly struct IMAGE_RESOURCE_DIRECTORY
 {
-    public readonly DWORD Characteristics;
-    public readonly DWORD TimeDateStamp;
-    public readonly WORD MajorVersion;
-    public readonly WORD MinorVersion;
-    public readonly WORD NumberOfNamedEntries;
-    public readonly WORD NumberOfIdEntries;
+    public DWORD Characteristics { get; }
+    public DWORD TimeDateStamp { get; }
+    public WORD MajorVersion { get; }
+    public WORD MinorVersion { get; }
+    public WORD NumberOfNamedEntries { get; }
+    public WORD NumberOfIdEntries { get; }
     //  IMAGE_RESOURCE_DIRECTORY_ENTRY DirectoryEntries[];
 }
 
 internal readonly struct IMAGE_RESOURCE_DIRECTORY_ENTRY
 {
-    private readonly DWORD NameId;
+    private DWORD NameId { get; }
     public uint OffsetToData { get; }
 
     public bool NameIsString => (NameId & 0x80000000) != 0;
@@ -126,9 +126,9 @@ internal readonly struct IMAGE_RESOURCE_DIRECTORY_ENTRY
 
 internal readonly struct IMAGE_RESOURCE_DATA_ENTRY
 {
-    public readonly DWORD OffsetToData;
-    public readonly DWORD Size;
-    public readonly DWORD CodePage;
-    public readonly DWORD Reserved;
+    public DWORD OffsetToData { get; }
+    public DWORD Size { get; }
+    public DWORD CodePage { get; }
+    public DWORD Reserved { get; }
 }
 

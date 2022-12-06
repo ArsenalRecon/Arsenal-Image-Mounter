@@ -10,13 +10,13 @@ internal static class MembersStringParser<T>
 {
     public static string ToString(T obj)
     {
-        var values = from accessor in _accessors
+        var values = from accessor in Accessors
                      select $"{accessor.Key} = {TryCall(accessor.Value, obj, ex => $"{{{ex.GetType()}: {ex.Message}}}")}";
 
         return $"{{{string.Join(", ", values)}}}";
     }
 
-    private static readonly KeyValuePair<string, Func<T, string>>[] _accessors = GetAccessors();
+    private static readonly KeyValuePair<string, Func<T, string>>[] Accessors = GetAccessors();
 
     private static string? TryCall(Func<T, string> method, T param, Func<Exception, string> handler)
     {

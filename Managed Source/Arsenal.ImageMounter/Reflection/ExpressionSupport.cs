@@ -1,5 +1,6 @@
 ﻿using Arsenal.ImageMounter.Collections;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -16,10 +17,8 @@ namespace Arsenal.ImageMounter.Reflection;
 [ComVisible(false)]
 public static class ExpressionSupport
 {
-
     private class ParameterCompatibilityComparer : IEqualityComparer<Type>
     {
-
         private static readonly ParameterCompatibilityComparer Instance = new();
 
         private static bool Equals(Type? x, Type? y) => ReferenceEquals(x, y) || (x?.IsAssignableFrom(y) ?? false);
@@ -35,9 +34,13 @@ public static class ExpressionSupport
             && dest.GetParameters().Select(dparam => dparam.ParameterType).SequenceEqual(sourceParameters, Instance);
     }
 
-    public static Delegate CreateLocalFallbackFunction(string MethodName, Type[] GenericArguments, IEnumerable<Expression> MethodArguments, Type ReturnType, bool InvertResult, bool RuntimeMethodDetection)
+    public static Delegate CreateLocalFallbackFunction(string MethodName,
+                                                       Type[] GenericArguments,
+                                                       IEnumerable<Expression> MethodArguments,
+                                                       Type ReturnType,
+                                                       bool InvertResult,
+                                                       bool RuntimeMethodDetection)
     {
-
         var staticArgs = (from arg in MethodArguments
                           select arg.NodeType == ExpressionType.Quote ? ((UnaryExpression)arg).Operand : arg).ToArray();
 
@@ -47,7 +50,7 @@ public static class ExpressionSupport
 
         if (newMethod is null)
         {
-            throw new NotSupportedException("Expression calls unsupported method " + MethodName + ".");
+            throw new NotSupportedException($"Expression calls unsupported method {MethodName}.");
         }
 
         // ' Substitute first argument (extension method source object) with a parameter that
@@ -94,9 +97,7 @@ public static class ExpressionSupport
         }
         else
         {
-
             return enumerableStaticDelegate;
-
         }
     }
 
@@ -110,7 +111,6 @@ public static class ExpressionSupport
                                                           ParameterExpression Instance,
                                                           Expression[] Args)
     {
-
         var dynMethod = GetCompatibleMethod(TypeToSearch, FindStaticMethod, MethodName, GenericArguments, ReturnType, AlternateArgsTypes);
         if (dynMethod is null)
         {
@@ -133,79 +133,58 @@ public static class ExpressionSupport
         }
 
         return Expression.Lambda(callExpr, Instance).Compile();
-
     }
 
-    private static readonly Dictionary<string, MethodInfo?> _GetCompatibleMethod_methodCache = new();
+    private static readonly ConcurrentDictionary<string, MethodInfo?> _GetCompatibleMethod_methodCache = new();
 
     public static MethodInfo? GetCompatibleMethod(Type TypeToSearch, bool FindStaticMethod, string MethodName, Type[] GenericArguments, Type ReturnType, Type[] AlternateArgsTypes)
     {
+        var key = $"{ReturnType}:{MethodName}:{string.Join(":", Array.ConvertAll(AlternateArgsTypes, argType => argType.ToString()))}";
 
-        var key = string.Concat(ReturnType.ToString(), ":", MethodName, ":", string.Join(":", Array.ConvertAll(AlternateArgsTypes, argType => argType.ToString())));
-
-        lock (_GetCompatibleMethod_methodCache)
+        return _GetCompatibleMethod_methodCache.GetOrAdd(key, key =>
         {
+            var methodNames = new[] { MethodName, $"get_{MethodName}" };
 
-            if (!_GetCompatibleMethod_methodCache.TryGetValue(key, out var newMethod))
-            {
-
-                var methodNames = new[] { MethodName, "get_" + MethodName };
-
-                newMethod = (from m in TypeToSearch.GetMethods(BindingFlags.Public | (FindStaticMethod ? BindingFlags.Static : BindingFlags.Instance))
+            var newMethod = (from m in TypeToSearch.GetMethods(BindingFlags.Public | (FindStaticMethod ? BindingFlags.Static : BindingFlags.Instance))
                              where methodNames.Contains(m.Name) && m.GetParameters().Length == AlternateArgsTypes.Length && m.IsGenericMethodDefinition && m.GetGenericArguments().Length == GenericArguments.Length
                              select m.MakeGenericMethod(GenericArguments)).FirstOrDefault(m => ParameterCompatibilityComparer.Compatible(m, ReturnType, AlternateArgsTypes));
 
-                if (newMethod is null && !FindStaticMethod)
+            if (newMethod is null && !FindStaticMethod)
+            {
+                foreach (var interf in from i in TypeToSearch.GetInterfaces()
+                                       where i.IsGenericType && i.GetGenericArguments().Length == GenericArguments.Length
+                                       select i)
                 {
-                    foreach (var interf in from i in TypeToSearch.GetInterfaces()
-                                           where i.IsGenericType && i.GetGenericArguments().Length == GenericArguments.Length
-                                           select i)
+                    newMethod = interf.GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(m => methodNames.Contains(m.Name) && ParameterCompatibilityComparer.Compatible(m, ReturnType, AlternateArgsTypes));
+
+                    if (newMethod is not null)
                     {
-
-                        newMethod = interf.GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(m => methodNames.Contains(m.Name) && ParameterCompatibilityComparer.Compatible(m, ReturnType, AlternateArgsTypes));
-
-                        if (newMethod is not null)
-                        {
-                            break;
-                        }
+                        break;
                     }
                 }
-
-                _GetCompatibleMethod_methodCache.Add(key, newMethod);
-
             }
 
             return newMethod;
-
-        }
+        });
     }
 
-    private static readonly Dictionary<Type, Type[]> _GetListItemsType_listItemsTypes = new();
+    private static readonly ConcurrentDictionary<Type, Type[]> _GetListItemsType_listItemsTypes = new();
 
     public static Type GetListItemsType(Type type)
     {
-
         while (type.HasElementType)
         {
             type = type.GetElementType()!;
         }
 
-        Type[]? i = null;
-
-        lock (_GetListItemsType_listItemsTypes)
+        var i = _GetListItemsType_listItemsTypes.GetOrAdd(type, type =>
         {
+            var i = (from ifc in type.GetInterfaces()
+                    where ifc.IsGenericType && ReferenceEquals(ifc.GetGenericTypeDefinition(), typeof(IList<>))
+                    select ifc.GetGenericArguments()[0]).ToArray();
 
-            if (!_GetListItemsType_listItemsTypes.TryGetValue(type, out i))
-            {
-
-                i = (from ifc in type.GetInterfaces()
-                     where ifc.IsGenericType && ReferenceEquals(ifc.GetGenericTypeDefinition(), typeof(IList<>))
-                     select ifc.GetGenericArguments()[0]).ToArray();
-
-                _GetListItemsType_listItemsTypes.Add(type, i);
-
-            }
-        }
+            return i;
+        });
 
         if (i.Length == 0)
         {
@@ -216,13 +195,11 @@ public static class ExpressionSupport
             return i[0];
         }
 
-        throw new NotSupportedException("More than one element type detected for list type " + type.ToString() + ".");
-
+        throw new NotSupportedException($"More than one element type detected for list type {type}.");
     }
 
     private sealed class ExpressionMemberEqualityComparer : IEqualityComparer<MemberInfo>
     {
-
         public bool Equals(MemberInfo? x, MemberInfo? y)
             => ReferenceEquals(x, y)
             || ReferenceEquals(x?.DeclaringType, y?.DeclaringType) && x?.MetadataToken == y?.MetadataToken;
@@ -234,111 +211,49 @@ public static class ExpressionSupport
     public static SequenceEqualityComparer<MemberInfo> MemberSequenceEqualityComparer { get; }
         = new SequenceEqualityComparer<MemberInfo>(new ExpressionMemberEqualityComparer());
 
-    private static readonly Dictionary<Type, Dictionary<IEnumerable<MemberInfo>, string>> _GetDataFieldMappings_dataMappings = new();
-
-    public static Dictionary<IEnumerable<MemberInfo>, string> GetDataFieldMappings(Type ElementType)
-    {
-
-        lock (_GetDataFieldMappings_dataMappings)
-        {
-
-            if (!_GetDataFieldMappings_dataMappings.TryGetValue(ElementType, out var mappings))
-            {
-
-                var _mappings = from prop in ElementType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-                                where prop.MemberType == MemberTypes.Property && ((PropertyInfo)prop).GetIndexParameters().Length == 0 && ((PropertyInfo)prop).CanRead && ((PropertyInfo)prop).CanWrite || prop.MemberType == MemberTypes.Field && !((FieldInfo)prop).IsInitOnly
-                                select (Props: (IEnumerable<MemberInfo>)SingleValueEnumerable.Get(prop), prop.Name);
-
-                mappings = _mappings.ToDictionary(m => m.Props, m => m.Name, MemberSequenceEqualityComparer);
-
-                var submappings = from props in mappings.Keys.ToArray()
-                                  let prop = props.ElementAtOrDefault(0)
-                                  where prop.MemberType == MemberTypes.Property && ((PropertyInfo)prop).GetIndexParameters().Length == 0 && ((PropertyInfo)prop).CanRead && ((PropertyInfo)prop).CanWrite || prop.MemberType == MemberTypes.Field && !((FieldInfo)prop).IsInitOnly
-                                  let type = GetListItemsType(prop.MemberType == MemberTypes.Property ? ((PropertyInfo)prop).PropertyType : ((FieldInfo)prop).FieldType)
-                                  where !type.IsPrimitive && !ReferenceEquals(type, typeof(string))
-                                  from submapping in GetDataFieldMappings(type)
-                                  select (Key: submapping.Key.Concat(props), Value: $"{prop.Name}.{submapping.Value}");
-
-                foreach (var (Key, Value) in submappings)
-                {
-                    mappings.Add(Key, Value);
-                }
-
-                _GetDataFieldMappings_dataMappings.Add(ElementType, mappings);
-
-            }
-
-            return mappings;
-        }
-    }
-
     public static ReadOnlyCollection<string> GetPropertiesWithAttributes<TAttribute>(Type type) where TAttribute : Attribute => AttributedMemberFinder<TAttribute>.GetPropertiesWithAttributes(type);
 
-    private static readonly Dictionary<Type, ReadOnlyCollection<string>> _GetPropertiesWithAttributes_cache = new();
+    private static readonly ConcurrentDictionary<Type, ReadOnlyCollection<string>> _GetPropertiesWithAttributes_cache = new();
 
     private class AttributedMemberFinder<TAttribute> where TAttribute : Attribute
     {
-
         public static ReadOnlyCollection<string> GetPropertiesWithAttributes(Type type)
-        {
-
-            lock (_GetPropertiesWithAttributes_cache)
+            => _GetPropertiesWithAttributes_cache.GetOrAdd(type, type =>
             {
-
-                if (!_GetPropertiesWithAttributes_cache.TryGetValue(type, out var prop))
-                {
-                    prop = Array.AsReadOnly((from p in type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
+                var prop = Array.AsReadOnly((from p in type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
                                              where Attribute.IsDefined(p, typeof(TAttribute))
                                              select p.Name).ToArray());
 
-                    _GetPropertiesWithAttributes_cache.Add(type, prop);
-                }
-
                 return prop;
-            }
-        }
+            });
     }
 
     public static string? GetDataTableName<TContext>(Type entityType)
         => DataContextPropertyFinder<TContext>.GetDataTableName(entityType);
 
-    private static readonly Dictionary<Type, string?> _GetDataTableName_properties = new();
+    private static readonly ConcurrentDictionary<Type, string?> _GetDataTableName_properties = new();
 
     private class DataContextPropertyFinder<TContext>
     {
-
         public static string? GetDataTableName(Type entityType)
-        {
-
-            string? prop = null;
-
-            lock (_GetDataTableName_properties)
+            => _GetDataTableName_properties.GetOrAdd(entityType, entityType =>
             {
+                var prop = typeof(TContext)
+                    .GetProperty("Items")?
+                    .GetCustomAttributes(true)
+                    .OfType<XmlElementAttribute>()
+                    .Single(attr => attr.Type?.IsAssignableFrom(entityType) ?? false)
+                    .ElementName;
 
-                if (!_GetDataTableName_properties.TryGetValue(entityType, out prop))
-                {
-                    prop = typeof(TContext)
-                        .GetProperty("Items")?
-                        .GetCustomAttributes(true)
-                        .OfType<XmlElementAttribute>()
-                        .Single(attr => attr.Type?.IsAssignableFrom(entityType) ?? false)
-                        .ElementName;
-
-                    _GetDataTableName_properties.Add(entityType, prop);
-                }
-            }
-
-            return prop;
-
-        }
+                return prop;
+            });
     }
 
     public static Expression GetLambdaBody(Expression expression)
-        => GetLambdaBody(expression, out var argparameters);
+        => GetLambdaBody(expression, out _);
 
     public static Expression GetLambdaBody(Expression expression, out ReadOnlyCollection<ParameterExpression>? parameters)
     {
-
         if (expression.NodeType != ExpressionType.Quote)
         {
             parameters = null;
@@ -350,21 +265,18 @@ public static class ExpressionSupport
         parameters = expr.Parameters;
 
         return expr.Body;
-
     }
 
     private class PropertiesAssigners<T>
     {
+        public static ReadOnlyDictionary<string, Func<T, object?>> Getters { get; }
 
-        public static Dictionary<string, Func<T, object?>> Getters { get; }
+        public static ReadOnlyDictionary<string, Action<T, object?>> Setters { get; }
 
-        public static Dictionary<string, Action<T, object?>> Setters { get; }
-
-        public static Dictionary<string, Type> Types { get; }
+        public static ReadOnlyDictionary<string, Type> Types { get; }
 
         static PropertiesAssigners()
         {
-
             var target = Expression.Parameter(typeof(T), "targetObject");
 
             var props = (from m in typeof(T).GetMembers(BindingFlags.Public | BindingFlags.Instance)
@@ -381,7 +293,7 @@ public static class ExpressionSupport
                             ? Expression.Convert(m.member, typeof(object))
                             : Expression.TypeAs(m.member, typeof(object)));
 
-            Getters = getters.ToDictionary(m => m.name, m => Expression.Lambda<Func<T, object?>>(m.valueconverted, target).Compile(), StringComparer.OrdinalIgnoreCase);
+            Getters = new(getters.ToDictionary(m => m.name, m => Expression.Lambda<Func<T, object?>>(m.valueconverted, target).Compile(), StringComparer.OrdinalIgnoreCase));
 
             var setters = from m in props
                           let value = Expression.Parameter(typeof(object), "value")
@@ -392,28 +304,17 @@ public static class ExpressionSupport
                                                                Expression.ConvertChecked(value, m.proptype))
                           select (m.name, assign: Expression.Assign(m.member, valueconverted), value);
 
-            Setters = setters.ToDictionary(m => m.name, m => Expression.Lambda<Action<T, object?>>(m.assign, target, m.value).Compile(), StringComparer.OrdinalIgnoreCase);
+            Setters = new(setters.ToDictionary(m => m.name, m => Expression.Lambda<Action<T, object?>>(m.assign, target, m.value).Compile(), StringComparer.OrdinalIgnoreCase));
 
-            Types = props.ToDictionary(m => m.name, m => m.proptype, StringComparer.OrdinalIgnoreCase);
-
+            Types = new(props.ToDictionary(m => m.name, m => m.proptype, StringComparer.OrdinalIgnoreCase));
         }
     }
-
-    public static Dictionary<string, Func<T, object?>> GetPropertyGetters<T>() where T : new()
-        => new(PropertiesAssigners<T>.Getters, PropertiesAssigners<T>.Getters.Comparer);
-
-    public static Dictionary<string, Action<T, object?>> GetPropertySetters<T>() where T : new()
-        => new(PropertiesAssigners<T>.Setters, PropertiesAssigners<T>.Setters.Comparer);
-
-    public static Dictionary<string, Type> GetPropertyTypes<T>() where T : new()
-        => new(PropertiesAssigners<T>.Types, PropertiesAssigners<T>.Types.Comparer);
 
     public static T RecordToEntityObject<T>(IDataRecord record) where T : new()
         => RecordToEntityObject(record, new T());
 
     public static T RecordToEntityObject<T>(IDataRecord record, T obj)
     {
-
         var props = PropertiesAssigners<T>.Setters;
 
         for (int i = 0, loopTo = record.FieldCount - 1; i <= loopTo; i++)
@@ -425,6 +326,5 @@ public static class ExpressionSupport
         }
 
         return obj;
-
     }
 }

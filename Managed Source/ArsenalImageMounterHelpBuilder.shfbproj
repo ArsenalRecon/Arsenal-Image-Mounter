@@ -18,7 +18,7 @@
     <OutputPath>Help\</OutputPath>
     <HtmlHelpName>Arsenal Image Mounter API</HtmlHelpName>
     <Language>en-US</Language>
-    <HelpFileFormat>Website</HelpFileFormat>
+    <HelpFileFormat>HtmlHelp1, MSHelpViewer, Website</HelpFileFormat>
     <HelpTitle>Arsenal Image Mounter API</HelpTitle>
     <MissingTags>AutoDocumentCtors, AutoDocumentDispose</MissingTags>
     <VisibleItems>Attributes, ExplicitInterfaceImplementations, InheritedMembers, InheritedFrameworkMembers, Protected, EditorBrowsableNever, NonBrowsable</VisibleItems>
@@ -35,23 +35,24 @@
     <HelpAttributes />
     <NamespaceSummaries>
       <NamespaceSummaryItem name="(global)" isDocumented="True">Summary</NamespaceSummaryItem>
-<NamespaceSummaryItem name="Arsenal.ImageMounter" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Collections" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Data" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Client" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.GenericProviders" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.Interaction" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.Services" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.SpecializedProviders" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Dialogs" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Extensions" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.IO.ConsoleSupport" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Devices" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Native" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Streams" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Reflection" isDocumented="True" />
-<NamespaceSummaryItem name="Arsenal.ImageMounter.Views" isDocumented="True" /></NamespaceSummaries>
+      <NamespaceSummaryItem name="Arsenal.ImageMounter" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Collections" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Data" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Devio" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Client" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.GenericProviders" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.Interaction" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.Services" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Devio.Server.SpecializedProviders" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Dialogs" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Extensions" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.IO.ConsoleSupport" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Devices" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Native" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.IO.Streams" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Reflection" isDocumented="True" />
+      <NamespaceSummaryItem name="Arsenal.ImageMounter.Views" isDocumented="True" />
+    </NamespaceSummaries>
     <PlugInConfigurations />
     <BuildLogFile />
     <HtmlHelp1xCompilerPath />
@@ -59,13 +60,13 @@
     <WorkingPath />
     <ComponentPath />
     <MaximumGroupParts>2</MaximumGroupParts>
-    <NamespaceGrouping>True</NamespaceGrouping>
+    <NamespaceGrouping>False</NamespaceGrouping>
     <SyntaxFilters>Standard</SyntaxFilters>
     <SdkLinkTarget>Blank</SdkLinkTarget>
-    <RootNamespaceContainer>False</RootNamespaceContainer>
-    <PresentationStyle>Default2022</PresentationStyle>
+    <RootNamespaceContainer>True</RootNamespaceContainer>
+    <PresentationStyle>VS2013</PresentationStyle>
     <Preliminary>False</Preliminary>
-    <NamingMethod>Guid</NamingMethod>
+    <NamingMethod>HashedMemberName</NamingMethod>
     <ContentPlacement>AboveNamespaces</ContentPlacement>
     <FrameworkVersion>.NET Framework 4.8</FrameworkVersion>
     <CleanIntermediates>True</CleanIntermediates>
@@ -77,9 +78,10 @@
     <HelpFileVersion>3.9.230.0</HelpFileVersion>
     <HtmlSdkLinkType>Msdn</HtmlSdkLinkType>
     <BinaryTOC>True</BinaryTOC>
-    <IncludeFavorites>True</IncludeFavorites>
+    <IncludeFavorites>False</IncludeFavorites>
     <WebsiteSdkLinkType>Msdn</WebsiteSdkLinkType>
     <AppendMarkdownFileExtensionsToUrls>False</AppendMarkdownFileExtensionsToUrls>
+    <RootNamespaceTitle>Arsenal Image Mounter API</RootNamespaceTitle>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in
        order for Visual Studio to perform the build.  The others are optional

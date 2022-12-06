@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -13,21 +14,20 @@ namespace Arsenal.ImageMounter.Collections;
 [ComVisible(false)]
 public abstract class NullSafeDictionary<TKey, TValue> : IDictionary<TKey, TValue?> where TKey : notnull
 {
-
-    private readonly Dictionary<TKey, TValue?> m_Dictionary;
+    private readonly Dictionary<TKey, TValue?> dictionary;
 
     /// <summary>Gets a value that is returned as item for non-existing
     /// keys in dictionary</summary>
     protected abstract TValue GetDefaultValue(TKey Key);
 
-    public object SyncRoot => ((ICollection)m_Dictionary).SyncRoot;
+    protected readonly SemaphoreSlim SyncRoot = new(1);
 
     /// <summary>
     /// Creates a new NullSafeDictionary object
     /// </summary>
     public NullSafeDictionary()
     {
-        m_Dictionary = new();
+        dictionary = new();
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public abstract class NullSafeDictionary<TKey, TValue> : IDictionary<TKey, TValu
     /// </summary>
     public NullSafeDictionary(IEqualityComparer<TKey> Comparer)
     {
-        m_Dictionary = new(Comparer);
+        dictionary = new(Comparer);
     }
 
     /// <summary>
@@ -47,81 +47,91 @@ public abstract class NullSafeDictionary<TKey, TValue> : IDictionary<TKey, TValu
     {
         get
         {
-            lock (SyncRoot)
+            SyncRoot.Wait();
+            try
             {
-                return m_Dictionary.TryGetValue(key, out var ItemRet) ? ItemRet : GetDefaultValue(key);
+                return dictionary.TryGetValue(key, out var ItemRet) ? ItemRet : GetDefaultValue(key);
+            }
+            finally
+            {
+                SyncRoot.Release();
             }
         }
         set
         {
-            lock (SyncRoot)
+            SyncRoot.Wait();
+            try
             {
-                if (m_Dictionary.ContainsKey(key))
+                if (dictionary.ContainsKey(key))
                 {
-                    m_Dictionary[key] = value;
+                    dictionary[key] = value;
                 }
                 else
                 {
-                    m_Dictionary.Add(key, value);
+                    dictionary.Add(key, value);
                 }
+            }
+            finally
+            {
+                SyncRoot.Release();
             }
         }
     }
 
     private void ICollection_Add(KeyValuePair<TKey, TValue?> item)
-        => ((ICollection<KeyValuePair<TKey, TValue?>>)m_Dictionary).Add(item);
+        => ((ICollection<KeyValuePair<TKey, TValue?>>)dictionary).Add(item);
 
     void ICollection<KeyValuePair<TKey, TValue?>>.Add(KeyValuePair<TKey, TValue?> item)
         => ICollection_Add(item);
 
-    public void Clear() => m_Dictionary.Clear();
+    public void Clear() => dictionary.Clear();
 
     private bool ICollection_Contains(KeyValuePair<TKey, TValue?> item)
-        => ((ICollection<KeyValuePair<TKey, TValue?>>)m_Dictionary).Contains(item);
+        => ((ICollection<KeyValuePair<TKey, TValue?>>)dictionary).Contains(item);
 
     bool ICollection<KeyValuePair<TKey, TValue?>>.Contains(KeyValuePair<TKey, TValue?> item)
         => ICollection_Contains(item);
 
     private void ICollection_CopyTo(KeyValuePair<TKey, TValue?>[] array, int arrayIndex)
-        => ((ICollection<KeyValuePair<TKey, TValue?>>)m_Dictionary).CopyTo(array, arrayIndex);
+        => ((ICollection<KeyValuePair<TKey, TValue?>>)dictionary).CopyTo(array, arrayIndex);
 
     void ICollection<KeyValuePair<TKey, TValue?>>.CopyTo(KeyValuePair<TKey, TValue?>[] array, int arrayIndex)
         => ICollection_CopyTo(array, arrayIndex);
 
-    public int Count => m_Dictionary.Count;
+    public int Count => dictionary.Count;
 
     public bool IsReadOnly => false;
 
     private bool ICollection_Remove(KeyValuePair<TKey, TValue?> item)
-        => ((ICollection<KeyValuePair<TKey, TValue?>>)m_Dictionary).Remove(item);
+        => ((ICollection<KeyValuePair<TKey, TValue?>>)dictionary).Remove(item);
 
     bool ICollection<KeyValuePair<TKey, TValue?>>.Remove(KeyValuePair<TKey, TValue?> item)
         => ICollection_Remove(item);
 
     public void Add(TKey key, TValue? value)
-        => m_Dictionary.Add(key, value);
+        => dictionary.Add(key, value);
 
     public bool ContainsKey(TKey key)
-        => m_Dictionary.ContainsKey(key);
+        => dictionary.ContainsKey(key);
 
-    public ICollection<TKey> Keys => m_Dictionary.Keys;
+    public ICollection<TKey> Keys => dictionary.Keys;
 
     public bool Remove(TKey key)
-        => m_Dictionary.Remove(key);
+        => dictionary.Remove(key);
 
     public bool TryGetValue(TKey key, out TValue? value)
-        => m_Dictionary.TryGetValue(key, out value);
+        => dictionary.TryGetValue(key, out value);
 
-    public ICollection<TValue?> Values => m_Dictionary.Values;
+    public ICollection<TValue?> Values => dictionary.Values;
 
     private IEnumerator<KeyValuePair<TKey, TValue?>> ICollection_GetEnumerator()
-        => ((ICollection<KeyValuePair<TKey, TValue?>>)m_Dictionary).GetEnumerator();
+        => ((ICollection<KeyValuePair<TKey, TValue?>>)dictionary).GetEnumerator();
 
     IEnumerator<KeyValuePair<TKey, TValue?>> IEnumerable<KeyValuePair<TKey, TValue?>>.GetEnumerator()
         => ICollection_GetEnumerator();
 
     public IEnumerator GetEnumerator()
-        => m_Dictionary.GetEnumerator();
+        => dictionary.GetEnumerator();
 }
 
 public class NullSafeStringDictionary : NullSafeDictionary<string, string>

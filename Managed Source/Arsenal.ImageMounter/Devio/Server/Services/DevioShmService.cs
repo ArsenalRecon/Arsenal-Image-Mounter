@@ -242,7 +242,7 @@ public class DevioShmService : DevioServiceBase
 
             var request_shutdown = false;
 
-            internalShutdownRequestAction = new Action(() =>
+            internalShutdownRequestAction = () =>
             {
                 try
                 {
@@ -251,7 +251,7 @@ public class DevioShmService : DevioServiceBase
                     RequestEvent.Set();
                 }
                 catch { }
-            });
+            };
 
             for (; ; )
             {
@@ -327,7 +327,6 @@ public class DevioShmService : DevioServiceBase
 
     private void SendInfo(SafeBuffer MapView)
     {
-
         var Info = new IMDPROXY_INFO_RESP
         {
             file_size = (ulong)DevioProvider.Length,
@@ -337,14 +336,12 @@ public class DevioShmService : DevioServiceBase
         };
 
         MapView.Write(0x0UL, Info);
-
     }
 
     private int readData_largest_request = default;
 
     private void ReadData(SafeBuffer MapView)
     {
-
         var Request = MapView.Read<IMDPROXY_READ_REQ>(0x0UL);
 
         var Offset = (long)Request.offset;
@@ -371,25 +368,21 @@ public class DevioShmService : DevioServiceBase
             Response.length = (ulong)DevioProvider.Read(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, ReadLength, Offset);
             Response.errorno = 0UL;
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine(ex.ToString());
             Trace.WriteLine($"Read request at 0x{Offset:X8} for {ReadLength} bytes.");
             Response.errorno = 1UL;
             Response.length = 0UL;
-
         }
 
         MapView.Write(0x0UL, Response);
-
     }
 
     private int writeData_largest_request = default;
 
     private void WriteData(SafeBuffer MapView)
     {
-
         var Request = MapView.Read<IMDPROXY_WRITE_REQ>(0x0UL);
 
         var Offset = (long)Request.offset;
@@ -402,46 +395,39 @@ public class DevioShmService : DevioServiceBase
 
         var Response = default(IMDPROXY_WRITE_RESP);
 
-        do
+        try
         {
-            try
+            if (WriteLength > MaxTransferSize)
             {
-                if (WriteLength > MaxTransferSize)
-                {
-                    throw new Exception($"Requested write length {WriteLength}. Buffer size is {MaxTransferSize} bytes.");
-                }
-
-                var WrittenLength = DevioProvider.Write(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, WriteLength, Offset);
-                if (WrittenLength < 0)
-                {
-                    Trace.WriteLine($"Write request at 0x{Offset:X8} for {WriteLength} bytes, returned {WrittenLength}.");
-                    Response.errorno = 1UL;
-                    Response.length = 0UL;
-                    break;
-                }
-
-                Response.length = (ulong)WrittenLength;
-                Response.errorno = 0UL;
+                throw new Exception($"Requested write length {WriteLength}. Buffer size is {MaxTransferSize} bytes.");
             }
 
-            catch (Exception ex)
+            var WrittenLength = DevioProvider.Write(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, WriteLength, Offset);
+            if (WrittenLength < 0)
             {
-                Trace.WriteLine(ex.ToString());
-                Trace.WriteLine($"Write request at 0x{Offset:X8} for {WriteLength} bytes.");
+                Trace.WriteLine($"Write request at 0x{Offset:X8} for {WriteLength} bytes, returned {WrittenLength}.");
                 Response.errorno = 1UL;
                 Response.length = 0UL;
             }
+            else
+            {
+                Response.length = (ulong)WrittenLength;
+                Response.errorno = 0UL;
+            }
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine(ex.ToString());
+            Trace.WriteLine($"Write request at 0x{Offset:X8} for {WriteLength} bytes.");
+            Response.errorno = 1UL;
+            Response.length = 0UL;
         }
 
-        while (false);
-
         MapView.Write(0x0UL, Response);
-
     }
 
     private void SharedKeys(SafeBuffer MapView)
     {
-
         var Request = MapView.Read<IMDPROXY_SHARED_REQ>(0x0UL);
 
         var Response = default(IMDPROXY_SHARED_RESP);
@@ -459,17 +445,14 @@ public class DevioShmService : DevioServiceBase
                 MapView.WriteArray(IMDPROXY_HEADER_SIZE, Keys, 0, Keys.Length);
             }
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine(ex.ToString());
             Response.errorno = IMDPROXY_SHARED_RESP_CODE.IOError;
             Response.length = 0UL;
-
         }
 
         MapView.Write(0x0UL, Response);
-
     }
 
     protected override string ProxyObjectName => ObjectName;
@@ -477,5 +460,4 @@ public class DevioShmService : DevioServiceBase
     protected override DeviceFlags ProxyModeFlags => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeSharedMemory;
 
     protected override void EmergencyStopServiceThread() => internalShutdownRequestAction?.Invoke();
-
 }
