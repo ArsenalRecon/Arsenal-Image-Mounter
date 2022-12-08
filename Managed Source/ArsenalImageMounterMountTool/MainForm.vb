@@ -226,7 +226,7 @@ Public Class MainForm
         MyBase.OnClosed(e)
     End Sub
 
-    Private Sub RefreshDeviceList() Handles btnRefresh.Click
+    Private Async Sub RefreshDeviceList() Handles btnRefresh.Click
 
         If IsClosing OrElse Disposing OrElse IsDisposed Then
             Return
@@ -239,7 +239,7 @@ Public Class MainForm
 
         SetLabelBusy()
 
-        Thread.Sleep(400)
+        Await Task.Delay(400)
 
         btnRemoveSelected.Enabled = False
 
@@ -334,7 +334,7 @@ Public Class MainForm
 
                         If obj.DevicePath.StartsWith("\\?\PhysicalDrive", StringComparison.Ordinal) Then
                             Using New AsyncMessageBox("Please wait...")
-                                Using device As New DiskDevice(obj.DevicePath.AsMemory(), FileAccess.ReadWrite)
+                                Using device As New DiskDevice(obj.DevicePath, FileAccess.ReadWrite)
                                     device.DiskPolicyOffline = False
                                 End Using
                             End Using

@@ -1,15 +1,15 @@
-﻿// '''' DevioServiceFactory.vb
-// '''' Support routines for creating provider and service instances given a known
-// '''' proxy provider.
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
-// ''''
+﻿//  DevioServiceFactory.vb
+//  Support routines for creating provider and service instances given a known
+//  proxy provider.
+//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
+// 
 
 using Arsenal.ImageMounter.Devio.Client;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
@@ -1061,7 +1061,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
             && !NativeStruct.HasExtension(imagepath))
         {
 
-            var vdisk = new DiskDevice(imagepath.AsMemory(), FileAccess.Read);
+            var vdisk = new DiskDevice(imagepath, FileAccess.Read);
             var diskstream = vdisk.GetRawDiskStream();
             return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
 
@@ -1188,7 +1188,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         || imageFile.StartsWith(@"\\.\", StringComparison.Ordinal)))
                     {
 
-                        var disk = new DiskDevice(imageFile.AsMemory(), FileAccess.Read);
+                        var disk = new DiskDevice(imageFile, FileAccess.Read);
                         var sector_size = (disk.Geometry?.BytesPerSector) ?? 512;
                         Console.WriteLine($"Physical disk '{imageFile}' sector size: {sector_size}");
                         return disk.GetRawDiskStream();

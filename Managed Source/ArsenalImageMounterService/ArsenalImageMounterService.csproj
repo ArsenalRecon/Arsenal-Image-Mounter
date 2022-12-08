@@ -7,7 +7,6 @@
     <AssemblyName>aim_cli</AssemblyName>
     <Title>Arsenal Image Mounter Console Service</Title>
     <UseWindowsForms>false</UseWindowsForms>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,9 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="aim_cli">
+    <None Include="aim_cli">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="aim_cli" Pack="true" PackagePath="lib\net6.0" />
+    <None Include="aim_cli" Pack="true" PackagePath="lib\net7.0" />
   </ItemGroup>
 
 </Project>

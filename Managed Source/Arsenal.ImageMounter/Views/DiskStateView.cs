@@ -1,4 +1,14 @@
-﻿using System;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using System;
 using System.ComponentModel;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -151,15 +161,19 @@ public class DiskStateView : INotifyPropertyChanged
 
     public string[]? Volumes { get; set; }
 
-    public string? VolumesString => Volumes is null ? null : string.Join(Environment.NewLine, Volumes);
+    public string? VolumesString
+        => Volumes is null ? null : string.Join(Environment.NewLine, Volumes);
 
     public string[]? MountPoints { get; set; }
 
-    public string MountPointsString => MountPoints is null || MountPoints.Length == 0 ? string.Empty : string.Join(Environment.NewLine, MountPoints);
+    public string MountPointsString
+        => MountPoints is null || MountPoints.Length == 0 ? string.Empty : string.Join(Environment.NewLine, MountPoints);
 
-    public string MountPointsSequenceString => MountPoints is null || MountPoints.Length == 0 ? string.Empty : $"Mount Points: {string.Join(", ", MountPoints)}";
+    public string MountPointsSequenceString
+        => MountPoints is null || MountPoints.Length == 0 ? string.Empty : $"Mount Points: {string.Join(", ", MountPoints)}";
 
-    public bool? IsReadOnly => NativePropertyDiskReadOnly ?? (DeviceProperties?.Flags.HasFlag(DeviceFlags.ReadOnly));
+    public bool? IsReadOnly
+        => NativePropertyDiskReadOnly ?? (DeviceProperties?.Flags.HasFlag(DeviceFlags.ReadOnly));
 
     public string? ReadOnlyString
     {

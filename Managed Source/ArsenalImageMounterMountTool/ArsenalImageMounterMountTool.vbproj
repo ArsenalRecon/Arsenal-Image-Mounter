@@ -7,8 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Title>Arsenal Image Mounter Mount Tool</Title>
 	<TargetFrameworks>net48;net6.0-windows;net7.0-windows</TargetFrameworks>
-    <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5.0`))' &lt; 0">
@@ -17,11 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="EULA.txt">
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip">
-      <Link>DriverFiles.zip</Link>
-    </EmbeddedResource>
+    <AdditionalFiles Remove="app.manifest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="EULA.txt" />
+    <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip" Link="DriverFiles.zip" />
   </ItemGroup>
 
   <ItemGroup>

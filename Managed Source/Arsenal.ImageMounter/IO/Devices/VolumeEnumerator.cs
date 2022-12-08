@@ -1,5 +1,16 @@
-﻿using Arsenal.ImageMounter.Extensions;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Extensions;
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -24,11 +35,11 @@ public readonly struct VolumeEnumerator : IEnumerable<string>
 
     IEnumerator IEnumerable.GetEnumerator() => IEnumerable_GetEnumerator();
 
-    private class Enumerator : IEnumerator<string>
+    private sealed class Enumerator : IEnumerator<string>
     {
         public SafeFindVolumeHandle? SafeHandle { get; private set; }
 
-        private char[] sb = new char[50];
+        private char[] sb = ArrayPool<char>.Shared.Rent(50);
 
         public string Current => disposedValue
                     ? throw new ObjectDisposedException("VolumeEnumerator.Enumerator")
@@ -73,7 +84,7 @@ public readonly struct VolumeEnumerator : IEnumerable<string>
         private bool disposedValue; // To detect redundant calls
 
         // IDisposable
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
@@ -81,23 +92,17 @@ public readonly struct VolumeEnumerator : IEnumerable<string>
                 {
                     // TODO: dispose managed state (managed objects).
                     SafeHandle?.Dispose();
+                    ArrayPool<char>.Shared.Return(sb);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-                SafeHandle = null;
 
                 // TODO: set large fields to null.
+                SafeHandle = null;
                 sb = null!;
             }
 
             disposedValue = true;
-        }
-
-        // TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-        ~Enumerator()
-        {
-            // Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-            Dispose(false);
         }
 
         // This code added by Visual Basic to correctly implement the disposable pattern.

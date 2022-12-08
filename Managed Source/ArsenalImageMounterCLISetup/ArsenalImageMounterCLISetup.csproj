@@ -10,9 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip">
-      <Link>DriverFiles.zip</Link>
-    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip" Link="DriverFiles.zip" />
   </ItemGroup>
 
   <ItemGroup>

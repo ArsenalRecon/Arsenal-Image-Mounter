@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.Extensions;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using System;
 using System.Collections;
@@ -16,7 +26,7 @@ namespace Arsenal.ImageMounter.IO.Devices;
 [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
 public readonly struct FileStreamsEnumerator : IEnumerable<FindStreamData>
 {
-    public ReadOnlyMemory<char> FilePath { get; }
+    public string FilePath { get; }
 
     public IEnumerator<FindStreamData> GetEnumerator() => new Enumerator(FilePath);
 
@@ -24,26 +34,21 @@ public readonly struct FileStreamsEnumerator : IEnumerable<FindStreamData>
 
     IEnumerator IEnumerable.GetEnumerator() => IEnumerable_GetEnumerator();
 
-    public FileStreamsEnumerator(ReadOnlyMemory<char> FilePath)
-    {
-        this.FilePath = FilePath;
-    }
-
     public FileStreamsEnumerator(string FilePath)
     {
-        this.FilePath = FilePath.AsMemory();
+        this.FilePath = FilePath;
     }
 
     public sealed class Enumerator : IEnumerator<FindStreamData>
     {
 
-        public ReadOnlyMemory<char> FilePath { get; }
+        public string FilePath { get; }
 
         public SafeFindHandle? SafeHandle { get; private set; }
 
         private FindStreamData current;
 
-        public Enumerator(ReadOnlyMemory<char> FilePath)
+        public Enumerator(string FilePath)
         {
             this.FilePath = FilePath;
         }
@@ -66,7 +71,7 @@ public readonly struct FileStreamsEnumerator : IEnumerable<FindStreamData>
 
             if (SafeHandle is null)
             {
-                SafeHandle = FindFirstStreamW(FilePath.MakeNullTerminated(), 0, out current, 0);
+                SafeHandle = FindFirstStreamW(FilePath.AsRef(), 0, out current, 0);
 
                 if (!SafeHandle.IsInvalid)
                 {

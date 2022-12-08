@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.Collections;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.ConsoleSupport;
 using Arsenal.ImageMounter.IO.Native;
@@ -110,10 +120,9 @@ public static class ConsoleApp
 
                 process.Start();
 
-                using (var process_wait = NativeFileIO.CreateWaitHandle(process.SafeHandle, inheritable: false))
-                {
-                    WaitHandle.WaitAny(new[] { process_wait, ready_wait });
-                }
+                using var process_wait = NativeFileIO.CreateWaitHandle(process.SafeHandle, inheritable: false);
+
+                WaitHandle.WaitAny(new[] { process_wait, ready_wait });
 
                 return process.HasExited ? 0 : process.Id;
             }

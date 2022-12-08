@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.Extensions;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Extensions;
 using System;
 using System.Runtime.InteropServices;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO;
@@ -55,14 +65,14 @@ public static class NativeLib
         return fptr == default ? null : Marshal.GetDelegateForFunctionPointer<TDelegate>(fptr);
     }
 
-    public static TDelegate GetProcAddress<TDelegate>(ReadOnlyMemory<char> moduleName, string procedureName) where TDelegate : Delegate
+    public static TDelegate GetProcAddress<TDelegate>(string moduleName, string procedureName) where TDelegate : Delegate
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             throw new PlatformNotSupportedException();
         }
 
-        var hModule = Win32Try(UnsafeNativeMethods.LoadLibraryW(moduleName.MakeNullTerminated()));
+        var hModule = Win32Try(UnsafeNativeMethods.LoadLibraryW(moduleName.AsRef()));
 
         return Marshal.GetDelegateForFunctionPointer<TDelegate>(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)));
     }
@@ -74,7 +84,7 @@ public static class NativeLib
             return 0;
         }
 
-        var hModule = UnsafeNativeMethods.LoadLibraryW(MemoryMarshal.GetReference(moduleName.AsSpan()));
+        var hModule = UnsafeNativeMethods.LoadLibraryW(moduleName.AsRef());
 
         return hModule == default ? default : UnsafeNativeMethods.GetProcAddress(hModule, procedureName);
     }

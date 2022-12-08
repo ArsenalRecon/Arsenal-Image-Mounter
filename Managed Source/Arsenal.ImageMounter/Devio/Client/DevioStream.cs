@@ -1,17 +1,12 @@
-﻿// '''' DevioStream.vb
-// '''' Client side component for use with devio proxy services from other clients
-// '''' than actual Arsenal Image Mounter driver. This could be useful for example
-// '''' for directly examining virtual disk contents directly in an application,
-// '''' even if that disk contents is accessed through a proxy.
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
-// ''''
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
 
 using Arsenal.ImageMounter.Extensions;
 using System;

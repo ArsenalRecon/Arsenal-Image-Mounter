@@ -28,8 +28,9 @@
     <FileVersion>3.9.230.0</FileVersion>
     <ProductVersion>3.9.230.0</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Authors>Arsenal Recon</Authors>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
 
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <Company>Arsenal Recon</Company>
     <PackageVersion>$(FileVersion)</PackageVersion>
@@ -47,5 +48,9 @@
     <AssemblyOriginatorKeyFile>..\Arsenal.ImageMounter.snk</AssemblyOriginatorKeyFile>
 
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>

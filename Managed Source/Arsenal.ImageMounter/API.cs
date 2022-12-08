@@ -1,15 +1,15 @@
-﻿// '''' API.vb
-// '''' API for manipulating flag values, issuing SCSI bus rescans and similar
-// '''' tasks.
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
-// ''''
+﻿//  API.vb
+//  API for manipulating flag values, issuing SCSI bus rescans and similar
+//  tasks.
+//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
+// 
 
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
@@ -100,7 +100,7 @@ public static partial class API
     /// </summary>
     public static IEnumerable<string> EnumerateAdapterDevicePaths(IntPtr HwndParent)
     {
-        var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt".AsMemory(), out var devinstances);
+        var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var devinstances);
 
         if (status != 0L || devinstances is null)
         {
@@ -111,7 +111,7 @@ public static partial class API
         foreach (var devinstname in devinstances)
         {
             using var DevInfoSet = NativeFileIO.UnsafeNativeMethods.SetupDiGetClassDevsW(NativeConstants.SerenumBusEnumeratorGuid,
-                                                                                         devinstname.MakeNullTerminated(),
+                                                                                         devinstname.Span[0],
                                                                                          HwndParent,
                                                                                          NativeConstants.DIGCF_DEVICEINTERFACE | NativeConstants.DIGCF_PRESENT);
 
@@ -185,7 +185,7 @@ public static partial class API
 #if DEBUG
             Trace.WriteLine($"Found adapter instance '{devinstname}'");
 #endif
-            var devInst = NativeFileIO.GetDevInst(devinstname);
+            var devInst = NativeFileIO.GetDevInst(devinstname.ToString());
 
             if (!devInst.HasValue)
             {
@@ -202,7 +202,7 @@ public static partial class API
     /// </summary>
     public static IEnumerable<ReadOnlyMemory<char>>? EnumerateAdapterDeviceInstanceNames()
     {
-        var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt".AsMemory(), out var devinstances);
+        var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var devinstances);
 
         if (status != 0L || devinstances is null)
         {
@@ -256,22 +256,17 @@ public static partial class API
            select value;
 
     public static void UnregisterWriteOverlayImage(uint devInst)
-        => RegisterWriteOverlayImage(devInst, OverlayImagePath: ReadOnlyMemory<char>.Empty, FakeNonRemovable: false);
+        => RegisterWriteOverlayImage(devInst, OverlayImagePath: null, FakeNonRemovable: false);
 
-    public static void RegisterWriteOverlayImage(uint devInst, string OverlayImagePath)
-        => RegisterWriteOverlayImage(devInst, OverlayImagePath.AsMemory(), FakeNonRemovable: false);
-
-    public static void RegisterWriteOverlayImage(uint devInst, string OverlayImagePath, bool FakeNonRemovable)
-        => RegisterWriteOverlayImage(devInst, OverlayImagePath.AsMemory(), FakeNonRemovable);
-
-    public static void RegisterWriteOverlayImage(uint devInst, ReadOnlyMemory<char> OverlayImagePath)
+    public static void RegisterWriteOverlayImage(uint devInst, string? OverlayImagePath)
         => RegisterWriteOverlayImage(devInst, OverlayImagePath, FakeNonRemovable: false);
 
-    public static void RegisterWriteOverlayImage(uint devInst, ReadOnlyMemory<char> OverlayImagePath, bool FakeNonRemovable)
+    public static void RegisterWriteOverlayImage(uint devInst, string? OverlayImagePath, bool FakeNonRemovable)
     {
         string? nativepath;
 
-        if (!OverlayImagePath.Span.IsWhiteSpace())
+        if (OverlayImagePath is not null
+            && !string.IsNullOrWhiteSpace(OverlayImagePath))
         {
             nativepath = NativeFileIO.GetNtPath(OverlayImagePath);
         }
@@ -449,12 +444,12 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
         throw new FileNotFoundException("Error adding write overlay: Device not found.");
     }
 
-    public static async Task RegisterWriteOverlayImageAsync(uint devInst, ReadOnlyMemory<char> OverlayImagePath, bool FakeNonRemovable, CancellationToken cancel)
+    public static async Task RegisterWriteOverlayImageAsync(uint devInst, string? OverlayImagePath, bool FakeNonRemovable, CancellationToken cancel)
     {
-
         string? nativepath;
 
-        if (!OverlayImagePath.Span.IsWhiteSpace())
+        if (OverlayImagePath is not null
+            && !string.IsNullOrWhiteSpace(OverlayImagePath))
         {
             nativepath = NativeFileIO.GetNtPath(OverlayImagePath);
         }

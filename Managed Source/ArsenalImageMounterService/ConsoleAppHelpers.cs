@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
@@ -62,7 +72,7 @@ internal static class ConsoleAppHelpers
 
         foreach (var devinstNameAdapter in adapters)
         {
-            var devinstAdapter = NativeFileIO.GetDevInst(devinstNameAdapter);
+            var devinstAdapter = NativeFileIO.GetDevInst(devinstNameAdapter.ToString());
 
             if (!devinstAdapter.HasValue)
             {
@@ -433,17 +443,17 @@ Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User L
 Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01), AFF4 forensic disk images or QEMU Qcow images, you must make the Libewf (libewf.dll), LibAFF4 (libaff4.dll) and Libqcow (libqcow.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-original mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
-{asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly] [--fakesig] [--fakembr] --filename=imagefilename --provider={providers} [--writeoverlay=differencingimagefile [--autodelete]] [--background]
+{asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly] [--fakesig] [--fakembr] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile [--autodelete]] [--background]
 
 Syntax to start shared memory service mode, for mounting from other applications:
-{asmname} --name=objectname [--buffersize=bytes] [--readonly] [--fakembr] --filename=imagefilename --provider={providers} [--background]
+{asmname} --name=objectname [--buffersize=bytes] [--readonly] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
 
 Syntax to start TCP/IP service mode, for mounting from other computers:
-aim_cli.exe [--ipaddress=listenaddress] --port=tcpport [--readonly] [--fakembr] --filename=imagefilename --provider={providers} [--background]
+{asmname} [--ipaddress=listenaddress] --port=tcpport [--readonly] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
 
 Syntax to convert a disk image without mounting:
-{asmname} --filename=imagefilename [--fakembr] --provider={providers} --convert=outputimagefilename [--variant=fixed|dynamic] [--background]
-{asmname} --filename=imagefilename [--fakembr] --provider={providers} --convert=\\?\PhysicalDriveN [--background]
+{asmname} --filename=imagefilename [--fakembr] [--provider={providers}] --convert=outputimagefilename [--variant=fixed|dynamic] [--background]
+{asmname} --filename=imagefilename [--fakembr] [--provider={providers}] --convert=\\?\PhysicalDriveN [--background]
 
 Syntax to save as a new disk image after mounting:
 {asmname} --device=devicenumber --saveas=outputimagefilename [--variant=fixed|dynamic] [--background]
@@ -459,7 +469,7 @@ Syntax to display a list of mounted devices:
 
 ";
 
-            msg = msg.LineFormat(4);
+            msg = msg.LineFormat(IndentWidth: 4);
 
             Console.WriteLine(msg);
 

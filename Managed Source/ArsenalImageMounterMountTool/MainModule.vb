@@ -77,7 +77,10 @@ Public Module MainModule
 
         Try
             File.AppendAllText(logfile,
-                               $"---------------{Environment.NewLine}{Date.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}{msg}{Environment.NewLine}")
+                               $"---------------
+{Date.Now:yyyy-MM-dd HH:mm:ss}
+{msg}
+")
 
         Catch ex As Exception
             Trace.WriteLine($"Exception while logging message: {ex}")

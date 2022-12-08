@@ -1,14 +1,14 @@
-﻿// '''' DeviceObject.vb
-// '''' Base class for Arsenal Image Mounter SCSI Miniport objects.
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
-// ''''
+﻿//  DeviceObject.vb
+//  Base class for Arsenal Image Mounter SCSI Miniport objects.
+//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
+// 
 
 using Arsenal.ImageMounter.IO.Native;
 using Microsoft.Win32.SafeHandles;
@@ -34,7 +34,7 @@ public abstract class DeviceObject : IDisposable
     /// in a new DeviceObject.
     /// </summary>
     /// <param name="Path">Path to pass to CreateFile API</param>
-    protected DeviceObject(ReadOnlyMemory<char> Path)
+    protected DeviceObject(string Path)
         : this(NativeStruct.OpenFileHandle(Path, 0, FileShare.ReadWrite, FileMode.Open, Overlapped: false), 0)
     {
     }
@@ -45,7 +45,7 @@ public abstract class DeviceObject : IDisposable
     /// </summary>
     /// <param name="Path">Path to pass to CreateFile API</param>
     /// <param name="AccessMode">Access mode for opening and for underlying FileStream</param>
-    protected DeviceObject(ReadOnlyMemory<char> Path, FileAccess AccessMode)
+    protected DeviceObject(string Path, FileAccess AccessMode)
         : this(NativeStruct.OpenFileHandle(Path, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped: false), AccessMode)
     {
     }

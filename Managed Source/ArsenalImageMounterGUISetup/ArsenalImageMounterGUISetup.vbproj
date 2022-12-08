@@ -8,7 +8,7 @@
     <Title>Arsenal Image Mounter Setup</Title>
     <StartupObject>Arsenal.ImageMounter.MainForm</StartupObject>
 	<TargetFrameworks>net48;net6.0-windows;net7.0-windows</TargetFrameworks>
-    <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &lt; 0">
@@ -16,12 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\ArsenalImageMounterMountTool\EULA.txt">
-      <Link>EULA.txt</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip">
-      <Link>DriverFiles.zip</Link>
-    </EmbeddedResource>
+    <EmbeddedResource Include="..\ArsenalImageMounterMountTool\EULA.txt" />
+    <EmbeddedResource Include="..\..\DriverSetup\DriverFiles.zip" Link="DriverFiles.zip" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,6 @@
 
--- What's new, driver and low level API/tools version 1.0.7.22
+What's new, driver and low level API/tools version 1.0.7.22
+-----------------------------------------------------------
 
 * Driver now supports CD/DVD emulation.
 
@@ -24,8 +25,10 @@
   partition in the new space, or extend an existing partition over it using
   Disk Management, diskpart or similar tools.
 
--- What's new, driver version 1.0.5.014 and API library version 1.0.021
-   Bug fixes in driver. New driver embedded with Mount Tool.
+What's new, driver version 1.0.5.014 and API library version 1.0.021
+--------------------------------------------------------------------
+
+* Bug fixes in driver. New driver embedded with Mount Tool.
 
 * Driver caused blue-screen crash when virtual SCSI port device was disabled
   or uninstalled through Device Manager while virtual disk drives were still
@@ -41,13 +44,15 @@
   SRB_STATUS_NOT_POWERED while a newly mounted virtual disk drive is becoming
   ready. This should make drive mounting faster and more reliable.
 
--- What's new, API library version 1.0.020
+What's new, API library version 1.0.020
+---------------------------------------
 
 * Some users reported error message dialogs when device list is refreshed in
   Mount Tool. A possible cause has been identified and protected so that an
   error while opening a device should not cause an unhandled exception message.
 
--- What's new, driver version 1.0.4.013 and API library version 1.0.019
+What's new, driver version 1.0.4.013 and API library version 1.0.019
+--------------------------------------------------------------------
 
 * Write-temporary mode (also known as "write-overlay") is now supported for
   most virtual disk formats mounted through DiscUtils.dll as well as the
@@ -73,14 +78,16 @@
 * Included newer version of DiscUtils.dll with some fixes and improvements
   for some virtual disk formats.
 
--- What's new, API library version 1.0.014
+What's new, API library version 1.0.014
+---------------------------------------
 
 * Disks mounted from ewf images through libewf.dll now use sector size from
   ewf image. Previously, sector size was hard-coded as 512 bytes which
   caused Windows to misread partition table and similar if sector size was
   different from that number.
 
--- What's new, driver version 1.0.1 and API library version 1.0.013
+What's new, driver version 1.0.1 and API library version 1.0.013
+----------------------------------------------------------------
 
 * MountTool previously crashed on start if any disk drive in the system was
   exclusively locked by another application. This problem has been corrected
@@ -109,7 +116,8 @@
   possible reason has been identified and corrected. Please report if such
   problems are still seen!
 
--- Managed API 3.9.204
+Managed API 3.9.204
+-------------------
 
 * Optimizations and modernizations in many places.
 
@@ -127,3 +135,18 @@
 * Projects now reference most third-party .NET dependencies as packages
   instead of .dll files directly.
 
+Managed API 3.9.230
+-------------------
+
+* Library projects merged into two projects in C#. Also lots of optimizations
+  and code cleanup that could be done as we have dropped support for older
+  .NET Framework versions.
+
+* Added .NET 7.0 as a target framework. The library projects and command line
+  tool now target all of .NET Framework 4.8, .NET 6.0 and .NET 7.0. Since .NET
+  6.0 is the latest LTS version, it makes sense to keep it supported by AIM.
+  Also, .NET Framework 4.8 is the pre-installed version on latest Windows
+  versions and still used but lots of projects as well.
+
+* NuGet packages Arsenal.ImageMounter and Arsenal.ImageMounter.Forms that
+  can be referenced directly from other Visual Studio and .NET projects.

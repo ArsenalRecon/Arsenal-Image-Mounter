@@ -4,7 +4,9 @@ root = true
 # C# files
 [*.cs]
 
-file_header_template = LTRLib\n{fileName}\n\nCopyright (c) Olof Lagerkvist, LTR Data.\nhttp://ltr-data.se   https://github.com/LTRData
+file_header_template = Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>\nThis source code and API are available under the terms of the Affero General Public\nLicense v3.\n//\nPlease see LICENSE.txt for full license terms, including the availability of\nproprietary exceptions.\nQuestions, comments, or requests for clarification: https://ArsenalRecon.com/contact/\n//
+
+
 
 #### Core EditorConfig Options ####
 
@@ -222,7 +224,7 @@ dotnet_naming_style.begins_with_i.capitalization = pascal_case
 # Visual Basic files
 [*.vb]
 
-file_header_template = LTRLib\n{fileName}\n\nCopyright (c) Olof Lagerkvist, LTR Data.\nhttp://ltr-data.se   https://github.com/LTRData
+file_header_template = Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>\nThis source code and API are available under the terms of the Affero General Public\nLicense v3.\n//\nPlease see LICENSE.txt for full license terms, including the availability of\nproprietary exceptions.\nQuestions, comments, or requests for clarification: https://ArsenalRecon.com/contact/\n//
 
 #### Core EditorConfig Options ####
 

@@ -1,13 +1,13 @@
-﻿// '''' ProviderSupport.vb
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
-// ''''
+﻿//  ProviderSupport.vb
+//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
 
 using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
@@ -271,7 +271,7 @@ public static class ProviderSupport
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static void WriteToPhysicalDisk(this IDevioProvider provider,
-                                           ReadOnlyMemory<char> outputDevice,
+                                           string outputDevice,
                                            CompletionPosition? completionPosition,
                                            CancellationToken cancel)
     {

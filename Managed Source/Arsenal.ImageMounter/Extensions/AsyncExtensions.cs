@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.IO.Native;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.IO.Native;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;
@@ -41,6 +51,10 @@ public static partial class AsyncExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static WaitHandleAwaiter WithTimeout(this WaitHandle handle, TimeSpan timeout) =>
         new(handle, timeout);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static WaitHandleAwaiter WithTimeout(this WaitHandle handle, int mSecTimeout) =>
+        new(handle, TimeSpan.FromMilliseconds(mSecTimeout));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static WaitHandleAwaiter GetAwaiter(this WaitHandle handle) =>

@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.Extensions;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using Arsenal.ImageMounter.Reflection;
 using System;
@@ -535,24 +545,47 @@ public static partial class BufferExtensions
             capacity += delimiter.Length * (data.Count - 1);
         }
 
-        var result = new StringBuilder(capacity);
+#if NETCOREAPP
+        var result = string.Create(capacity,
+            (data, delimiter, capacity),
+            static (ptr, v) =>
+            {
+                foreach (var b in v.data)
+                {
+                    if (v.delimiter is not null && ptr.Length < v.capacity)
+                    {
+                        v.delimiter.AsSpan().CopyTo(ptr);
+                        ptr = ptr.Slice(v.delimiter.Length);
+                    }
+
+                    b.TryFormat(ptr, out _, "x2", NumberFormatInfo.InvariantInfo);
+                    ptr = ptr.Slice(2);
+                }
+            });
+#else
+        var result = new string('\0', capacity);
+
+        var ptr = MemoryMarshal.AsMemory(result.AsMemory()).Span;
 
         foreach (var b in data)
         {
-            if (delimiter is not null && result.Length > 0)
+            if (delimiter is not null && ptr.Length < capacity)
             {
-                result.Append(delimiter);
+                delimiter.AsSpan().CopyTo(ptr);
+                ptr = ptr.Slice(delimiter.Length);
             }
 
-            result.Append(b.ToString("x2", NumberFormatInfo.InvariantInfo));
+            b.ToString("x2", NumberFormatInfo.InvariantInfo).AsSpan().CopyTo(ptr);
+            ptr = ptr.Slice(2);
         }
+#endif
 
-        return result.ToString();
+        return result;
     }
 
     public static string ToHexString(this byte[] data) => ((ReadOnlySpan<byte>)data).ToHexString(default);
 
-    public static string ToHexString(this byte[] data, string? delimiter) => ((ReadOnlySpan<byte>)data).ToHexString(delimiter);
+    public static string ToHexString(this byte[] data, string? delimiter) => ((ReadOnlySpan<byte>)data).ToHexString(delimiter.AsSpan());
 
     public static string ToHexString(this byte[] data, int offset, int count) => data.AsSpan(offset, count).ToHexString(null);
 
@@ -560,7 +593,7 @@ public static partial class BufferExtensions
 
     public static string ToHexString(this Span<byte> data) => ((ReadOnlySpan<byte>)data).ToHexString(null);
 
-    public static string ToHexString(this Span<byte> data, string? delimiter) => ((ReadOnlySpan<byte>)data).ToHexString(delimiter);
+    public static string ToHexString(this Span<byte> data, string? delimiter) => ((ReadOnlySpan<byte>)data).ToHexString(delimiter.AsSpan());
 
     public static string ToHexString(this ReadOnlySpan<byte> data) => data.ToHexString(null);
 
@@ -582,42 +615,61 @@ public static partial class BufferExtensions
 
     public static IEnumerable<string> FormatHexLines(this IEnumerable<byte> bytes)
     {
-        var sb = new StringBuilder(67);
-        byte pos = 0;
-        foreach (var b in bytes)
+        var sb = ArrayPool<char>.Shared.Rent(67);
+        try
         {
-            if (pos == 0)
+            byte pos = 0;
+            foreach (var b in bytes)
             {
-                sb.Append($"                        -                                          ");
+                if (pos == 0)
+                {
+                    "                        -                                          ".CopyTo(0, sb, 0, 67);
+                }
+
+#if NETCOREAPP
+                var bstr = 0;
+                if ((pos & 8) == 0)
+                {
+                    bstr = pos * 3;
+                }
+                else
+                {
+                    bstr = 2 + pos * 3;
+                }
+                b.TryFormat(sb.AsSpan(bstr), out _, "X2");
+#else
+                var bstr = b.ToString("X2");
+                if ((pos & 8) == 0)
+                {
+                    sb[pos * 3] = bstr[0];
+                    sb[pos * 3 + 1] = bstr[1];
+                }
+                else
+                {
+                    sb[2 + pos * 3] = bstr[0];
+                    sb[2 + pos * 3 + 1] = bstr[1];
+                }
+#endif
+
+                sb[51 + pos] = char.IsControl((char)b) ? '.' : (char)b;
+
+                pos++;
+                pos &= 0xf;
+
+                if (pos == 0)
+                {
+                    yield return new(sb, 0, 67);
+                }
             }
 
-            var bstr = b.ToString("X2");
-            if ((pos & 8) == 0)
+            if (pos > 0)
             {
-                sb[pos * 3] = bstr[0];
-                sb[pos * 3 + 1] = bstr[1];
-            }
-            else
-            {
-                sb[2 + pos * 3] = bstr[0];
-                sb[2 + pos * 3 + 1] = bstr[1];
-            }
-
-            sb[51 + pos] = char.IsControl((char)b) ? '.' : (char)b;
-
-            pos++;
-            pos &= 0xf;
-
-            if (pos == 0)
-            {
-                yield return sb.ToString();
-                sb.Clear();
+                yield return new(sb, 0, 67);
             }
         }
-
-        if (sb.Length > 0)
+        finally
         {
-            yield return sb.ToString();
+            ArrayPool<char>.Shared.Return(sb);
         }
     }
 
@@ -727,7 +779,47 @@ public static partial class BufferExtensions
             return false;
         }
 
-        public ReadOnlySpan<char> First() => MoveNext() ? Current : default;
+        public ReadOnlySpan<char> First() => MoveNext() ? Current : throw new InvalidOperationException();
+
+        public ReadOnlySpan<char> FirstOrDefault() => MoveNext() ? Current : default;
+
+        public ReadOnlySpan<char> Last()
+        {
+            var found = false;
+            ReadOnlySpan<char> result = default;
+
+            while (MoveNext())
+            {
+                found = true;
+                result = Current;
+            }
+
+            if (found)
+            {
+                return result;
+            }
+
+            throw new InvalidOperationException();
+        }
+
+        public ReadOnlySpan<char> LastOrDefault()
+        {
+            var found = false;
+            ReadOnlySpan<char> result = default;
+
+            while (MoveNext())
+            {
+                found = true;
+                result = Current;
+            }
+
+            if (found)
+            {
+                return result;
+            }
+
+            return default;
+        }
 
         public ReadOnlySpan<char> ElementAt(int pos)
         {
@@ -852,7 +944,47 @@ public static partial class BufferExtensions
             return false;
         }
 
-        public ReadOnlySpan<char> First() => MoveNext() ? Current : default;
+        public ReadOnlySpan<char> First() => MoveNext() ? Current : throw new InvalidOperationException();
+
+        public ReadOnlySpan<char> FirstOrDefault() => MoveNext() ? Current : default;
+
+        public ReadOnlySpan<char> Last()
+        {
+            var found = false;
+            ReadOnlySpan<char> result = default;
+
+            while (MoveNext())
+            {
+                found = true;
+                result = Current;
+            }
+
+            if (found)
+            {
+                return result;
+            }
+
+            throw new InvalidOperationException();
+        }
+
+        public ReadOnlySpan<char> LastOrDefault()
+        {
+            var found = false;
+            ReadOnlySpan<char> result = default;
+
+            while (MoveNext())
+            {
+                found = true;
+                result = Current;
+            }
+
+            if (found)
+            {
+                return result;
+            }
+
+            return default;
+        }
 
         public ReadOnlySpan<char> ElementAt(int pos)
         {
@@ -1202,19 +1334,19 @@ public static partial class BufferExtensions
 
 #if !NETCOREAPP
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref readonly T AsRef<T>(this ReadOnlySpan<byte> bytes) where T : unmanaged =>
+    public static ref readonly T CastRef<T>(this ReadOnlySpan<byte> bytes) where T : unmanaged =>
         ref MemoryMarshal.Cast<byte, T>(bytes)[0];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref T AsRef<T>(this Span<byte> bytes) where T : unmanaged =>
+    public static ref T CastRef<T>(this Span<byte> bytes) where T : unmanaged =>
         ref MemoryMarshal.Cast<byte, T>(bytes)[0];
 #else
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref readonly T AsRef<T>(this ReadOnlySpan<byte> bytes) where T : unmanaged =>
+    public static ref readonly T CastRef<T>(this ReadOnlySpan<byte> bytes) where T : unmanaged =>
         ref MemoryMarshal.AsRef<T>(bytes);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref T AsRef<T>(this Span<byte> bytes) where T : unmanaged =>
+    public static ref T CastRef<T>(this Span<byte> bytes) where T : unmanaged =>
         ref MemoryMarshal.AsRef<T>(bytes);
 #endif
 
@@ -1275,30 +1407,6 @@ public static partial class BufferExtensions
     public static string ToHexString<T>(in T source) where T : unmanaged =>
         ToHexString(AsReadOnlyBytes(source));
 
-    public static string ToHexString(this ReadOnlySpan<byte> bytes, ReadOnlySpan<char> delimiter)
-    {
-        if (bytes.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var delimiter_length = delimiter.Length;
-        var str = new string('\0', (bytes.Length << 1) + delimiter_length * (bytes.Length - 1));
-
-        var target = MemoryMarshal.AsMemory(str.AsMemory()).Span;
-
-        for (var i = 0; i < bytes.Length; i++)
-        {
-            bytes[i].TryFormat(target.Slice(i * (2 + delimiter_length), 2), out _, "x2");
-            if (delimiter_length > 0 && i < bytes.Length - 1)
-            {
-                delimiter.CopyTo(target[(i * (2 + delimiter_length) + 2)..]);
-            }
-        }
-
-        return target.ToString();
-    }
-
     public static int GetHashCode<T>(in T source) where T : unmanaged =>
         GetHashCode(AsReadOnlyBytes(source));
 
@@ -1312,7 +1420,9 @@ public static partial class BufferExtensions
     public static unsafe Span<T> CreateSpan<T>(ref T source, int length) =>
         new(Unsafe.AsPointer(ref source), length);
 
-    public static string ToHexString(this ReadOnlySpan<byte> data, string? delimiter)
+#endif
+
+    public static string ToHexString(this ReadOnlySpan<byte> data, ReadOnlySpan<char> delimiter)
     {
         if (data.IsEmpty)
         {
@@ -1320,27 +1430,33 @@ public static partial class BufferExtensions
         }
 
         var capacity = data.Length << 1;
-        if (delimiter is not null)
+        if (!delimiter.IsEmpty)
         {
             capacity += delimiter.Length * (data.Length - 1);
         }
 
-        var result = new StringBuilder(capacity);
+        var result = new string('\0', capacity);
+
+        var ptr = MemoryMarshal.AsMemory(result.AsMemory()).Span;
 
         foreach (var b in data)
         {
-            if (delimiter is not null && result.Length > 0)
+            if (!delimiter.IsEmpty && ptr.Length < capacity)
             {
-                result.Append(delimiter);
+                delimiter.CopyTo(ptr);
+                ptr = ptr.Slice(delimiter.Length);
             }
 
-            result.Append(b.ToString("x2", NumberFormatInfo.InvariantInfo));
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+            b.TryFormat(ptr, out _, "x2", NumberFormatInfo.InvariantInfo);
+#else
+            b.ToString("x2", NumberFormatInfo.InvariantInfo).AsSpan().CopyTo(ptr);
+#endif
+            ptr = ptr.Slice(2);
         }
 
-        return result.ToString();
+        return result;
     }
-
-#endif
 
     public static int GetHashCode(ReadOnlySpan<byte> ptr)
     {
@@ -1377,7 +1493,7 @@ public static partial class BufferExtensions
         }
 
         return first.Length == second.Length
-&& (first == second ||
+            && (first == second ||
             memcmp(first[0], second[0], new IntPtr(first.Length)) == 0);
     }
 
@@ -1396,7 +1512,7 @@ public static partial class BufferExtensions
         }
 
         return first.Length == second.Length
-&& (first == second ||
+            && (first == second ||
             memcmp(first[0], second[0], new IntPtr(first.Length)) == 0);
     }
 
@@ -1406,7 +1522,9 @@ public static partial class BufferExtensions
     /// <param name="first">First span</param>
     /// <param name="second">Second span</param>
     /// <returns>Result of memcmp comparison.</returns>
-    public static int BinaryCompare(this ReadOnlySpan<byte> first, ReadOnlySpan<byte> second) => (first.IsEmpty && second.IsEmpty) || first == second ? 0 : memcmp(first[0], second[0], new IntPtr(first.Length));
+    public static int BinaryCompare(this ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)
+        => (first.IsEmpty && second.IsEmpty) || (first == second)
+        ? 0 : memcmp(first[0], second[0], new IntPtr(first.Length));
 
     /// <summary>
     /// Compares two byte spans using C runtime memcmp function.
@@ -1414,7 +1532,9 @@ public static partial class BufferExtensions
     /// <param name="first">First span</param>
     /// <param name="second">Second span</param>
     /// <returns>Result of memcmp comparison.</returns>
-    public static int BinaryCompare(this Span<byte> first, ReadOnlySpan<byte> second) => (first.IsEmpty && second.IsEmpty) || first == second ? 0 : memcmp(first[0], second[0], new IntPtr(first.Length));
+    public static int BinaryCompare(this Span<byte> first, ReadOnlySpan<byte> second)
+        => (first.IsEmpty && second.IsEmpty) || (first == second)
+        ? 0 : memcmp(first[0], second[0], new IntPtr(first.Length));
 
     /// <summary>
     /// Compares two spans using C runtime memcmp function.
@@ -1464,6 +1584,60 @@ public static partial class BufferExtensions
 #endif
 
     /// <summary>
+    /// Return a managed reference to Span, or a managed null reference
+    /// if Span is empty.
+    /// </summary>
+    /// <param name="span">Span to return reference for or null</param>
+    /// <returns>Managed reference</returns>
+    public static ref readonly T AsRef<T>(this ReadOnlySpan<T> span)
+    {
+        if (span.IsEmpty)
+        {
+            return ref Unsafe.NullRef<T>();
+        }
+        else
+        {
+            return ref span[0];
+        }
+    }
+
+    /// <summary>
+    /// Return a managed reference to Span, or a managed null reference
+    /// if Span is empty.
+    /// </summary>
+    /// <param name="span">Span to return reference for or null</param>
+    /// <returns>Managed reference</returns>
+    public static ref T AsRef<T>(this Span<T> span)
+    {
+        if (span.IsEmpty)
+        {
+            return ref Unsafe.NullRef<T>();
+        }
+        else
+        {
+            return ref span[0];
+        }
+    }
+
+    /// <summary>
+    /// Return a managed reference to string, or a managed null reference
+    /// if given a null reference.
+    /// </summary>
+    /// <param name="str">String to return reference for or null</param>
+    /// <returns>Managed reference</returns>
+    public static ref readonly char AsRef(this string? str)
+    {
+        if (str is null)
+        {
+            return ref Unsafe.NullRef<char>();
+        }
+        else
+        {
+            return ref MemoryMarshal.GetReference(str.AsSpan());
+        }
+    }
+
+    /// <summary>
     /// Returns a reference to a character string guaranteed to be null
     /// terminated. If the supplied buffer is null terminated, a reference
     /// to the first character in buffer is returned. Otherwise, a new char
@@ -1473,8 +1647,13 @@ public static partial class BufferExtensions
     /// <param name="strMemory">Input string</param>
     /// <returns>Reference to output string with characters equal to
     /// input string, but guaranteed to be null terminated.</returns>
-    public static ref char MakeNullTerminated(this ReadOnlyMemory<char> strMemory)
+    public static ref readonly char MakeNullTerminated(this ReadOnlyMemory<char> strMemory)
     {
+        if (strMemory.IsEmpty)
+        {
+            return ref Unsafe.NullRef<char>();
+        }
+
         if (MemoryMarshal.TryGetString(strMemory, out var text, out var start, out var length) &&
             start + length == text.Length)
         {

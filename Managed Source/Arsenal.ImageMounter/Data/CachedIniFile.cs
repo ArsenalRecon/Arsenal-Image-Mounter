@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.Collections;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using System;
@@ -42,7 +52,7 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
         => NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static IEnumerable<string> EnumerateFileSectionNames(ReadOnlyMemory<char> filename)
+    public static IEnumerable<string> EnumerateFileSectionNames(string filename)
     {
 
         const int NamesSize = 32767;
@@ -52,7 +62,7 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
         {
             var size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionNamesW(out sectionnames[0],
                                                                                        NamesSize,
-                                                                                       filename.MakeNullTerminated());
+                                                                                       filename.AsRef());
 
             foreach (var name in sectionnames.AsMemory(0, size).ParseDoubleTerminatedString())
             {
@@ -66,17 +76,17 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static IEnumerable<KeyValuePair<string, string>> EnumerateFileSectionValuePairs(ReadOnlyMemory<char> filename, ReadOnlyMemory<char> section)
+    public static IEnumerable<KeyValuePair<string, string>> EnumerateFileSectionValuePairs(string filename, string section)
     {
         const int ValuesSize = 32767;
 
         var valuepairs = ArrayPool<char>.Shared.Rent(ValuesSize);
         try
         {
-            var size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionW(section.MakeNullTerminated(),
-                                                                                     valuepairs[0],
-                                                                                     ValuesSize,
-                                                                                     filename.MakeNullTerminated());
+            var size = NativeFileIO.UnsafeNativeMethods.GetPrivateProfileSectionW(section.AsRef(),
+                                                                                  valuepairs[0],
+                                                                                  ValuesSize,
+                                                                                  filename.AsRef());
 
             foreach (var valuepair in valuepairs.AsMemory(0, size).ParseDoubleTerminatedString())
             {
@@ -108,26 +118,11 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
     /// <param name="SettingName">Name of value to save</param>
     /// <param name="Value">Value to save</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static void SaveValue(ReadOnlyMemory<char> FileName, ReadOnlyMemory<char> SectionName, ReadOnlyMemory<char> SettingName, ReadOnlyMemory<char> Value)
-        => NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(SectionName.MakeNullTerminated(),
-                                                                                             SettingName.MakeNullTerminated(),
-                                                                                             Value.MakeNullTerminated(),
-                                                                                             FileName.MakeNullTerminated()));
-
-    /// <summary>
-    /// Saves a value to an INI file by calling Win32 API function WritePrivateProfileString. If call fails and exception
-    /// is thrown.
-    /// </summary>
-    /// <param name="FileName">Name and path of INI file where to save value</param>
-    /// <param name="SectionName">Name of INI file section where to save value</param>
-    /// <param name="SettingName">Name of value to save</param>
-    /// <param name="Value">Value to save</param>
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static void SaveValue(string? FileName, string? SectionName, string? SettingName, string? Value)
-        => NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(MemoryMarshal.GetReference(SectionName.AsSpan()),
-                                                                                             MemoryMarshal.GetReference(SettingName.AsSpan()),
-                                                                                             MemoryMarshal.GetReference(Value.AsSpan()),
-                                                                                             MemoryMarshal.GetReference(FileName.AsSpan())));
+        => NativeFileIO.Win32Try(NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(SectionName.AsRef(),
+                                                                                             SettingName.AsRef(),
+                                                                                             Value.AsRef(),
+                                                                                             FileName.AsRef()));
 
     /// <summary>
     /// Saves a current value from this object to an INI file by calling Win32 API function WritePrivateProfileString.
@@ -137,10 +132,10 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
     /// <param name="SectionName">Name of INI file section where to save value</param>
     /// <param name="SettingName">Name of value to save</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public void SaveValue(ReadOnlyMemory<char> FileName, string SectionName, string SettingName)
-        => SaveValue(SectionName.AsMemory(),
-                     SettingName.AsMemory(),
-                     base[SectionName]?[SettingName].AsMemory() ?? default,
+    public void SaveValue(string FileName, string SectionName, string SettingName)
+        => SaveValue(SectionName,
+                     SettingName,
+                     base[SectionName]?[SettingName] ?? default,
                      FileName);
 
     /// <summary>

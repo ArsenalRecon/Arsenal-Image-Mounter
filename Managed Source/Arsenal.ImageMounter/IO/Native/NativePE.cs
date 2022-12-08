@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.Extensions;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Internal;
 using DiscUtils.Streams.Compatibility;
 using System;
@@ -178,11 +188,11 @@ public static class NativePE
     {
         resourceSize = 0;
 
-        ref readonly var dos_header = ref fileData.AsRef<IMAGE_DOS_HEADER>();
+        ref readonly var dos_header = ref fileData.CastRef<IMAGE_DOS_HEADER>();
 
         var header_ptr = fileData.Slice(dos_header.e_lfanew);
 
-        ref readonly var header = ref header_ptr.AsRef<IMAGE_NT_HEADERS>();
+        ref readonly var header = ref header_ptr.CastRef<IMAGE_NT_HEADERS>();
 
         var sizeOfOptionalHeader = header.FileHeader.SizeOfOptionalHeader;
 
@@ -203,7 +213,7 @@ public static class NativePE
         var raw = fileData.Slice((int)section_header.PointerToRawData);
 
         var resource_section = raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress));
-        ref readonly var resource_dir = ref resource_section.AsRef<IMAGE_RESOURCE_DIRECTORY>();
+        ref readonly var resource_dir = ref resource_section.CastRef<IMAGE_RESOURCE_DIRECTORY>();
         var resource_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress) + sizeof(IMAGE_RESOURCE_DIRECTORY)));
 
         for (var i = 0; i < resource_dir.NumberOfNamedEntries + resource_dir.NumberOfIdEntries; i++)
@@ -215,7 +225,7 @@ public static class NativePE
                 ref readonly var found_entry = ref resource_dir_entry[i];
 
                 var found_dir = resource_section.Slice((int)found_entry.OffsetToDirectory);
-                ref readonly var found_dir_header = ref found_dir.AsRef<IMAGE_RESOURCE_DIRECTORY>();
+                ref readonly var found_dir_header = ref found_dir.CastRef<IMAGE_RESOURCE_DIRECTORY>();
 
                 if (found_dir_header.NumberOfIdEntries + found_dir_header.NumberOfNamedEntries == 0)
                 {
@@ -232,7 +242,7 @@ public static class NativePE
                     }
 
                     var found_subdir = resource_section.Slice((int)found_dir_entry[j].OffsetToDirectory);
-                    ref readonly var found_subdir_header = ref found_subdir.AsRef<IMAGE_RESOURCE_DIRECTORY>();
+                    ref readonly var found_subdir_header = ref found_subdir.CastRef<IMAGE_RESOURCE_DIRECTORY>();
 
                     if (found_subdir_header.NumberOfIdEntries + found_subdir_header.NumberOfNamedEntries == 0)
                     {
@@ -240,7 +250,7 @@ public static class NativePE
                     }
 
                     var found_subdir_entry = found_subdir.Slice(sizeof(IMAGE_RESOURCE_DIRECTORY));
-                    ref readonly var found_subdir_entry_header = ref found_subdir_entry.AsRef<IMAGE_RESOURCE_DIRECTORY_ENTRY>();
+                    ref readonly var found_subdir_entry_header = ref found_subdir_entry.CastRef<IMAGE_RESOURCE_DIRECTORY_ENTRY>();
 
                     if (found_subdir_entry_header.DataIsDirectory)
                     {
@@ -248,10 +258,10 @@ public static class NativePE
                     }
 
                     var found_data_entry = resource_section.Slice((int)found_subdir_entry_header.OffsetToData);
-                    ref readonly var found_data_entry_header = ref found_data_entry.AsRef<IMAGE_RESOURCE_DATA_ENTRY>();
+                    ref readonly var found_data_entry_header = ref found_data_entry.CastRef<IMAGE_RESOURCE_DATA_ENTRY>();
 
                     var found_res = raw.Slice((int)(found_data_entry_header.OffsetToData - section_header.VirtualAddress));
-                    ref readonly var found_res_block = ref found_res.AsRef<VS_VERSIONINFO>();
+                    ref readonly var found_res_block = ref found_res.CastRef<VS_VERSIONINFO>();
 
                     if (found_res_block.Type != 0 ||
                         !found_res_block.Key.Equals("VS_VERSION_INFO\0".AsSpan(), StringComparison.Ordinal) ||
@@ -290,14 +300,14 @@ public static class NativePE
     {
         if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER32) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
         {
-            ref readonly var optional_header = ref optional_header_ptr.AsRef<IMAGE_OPTIONAL_HEADER32>();
+            ref readonly var optional_header = ref optional_header_ptr.CastRef<IMAGE_OPTIONAL_HEADER32>();
             var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER32));
             var data_directory = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
             return ref data_directory[2];
         }
         else if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
         {
-            ref readonly var optional_header = ref optional_header_ptr.AsRef<IMAGE_OPTIONAL_HEADER64>();
+            ref readonly var optional_header = ref optional_header_ptr.CastRef<IMAGE_OPTIONAL_HEADER64>();
             var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER64));
             var data_directory = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
             return ref data_directory[2];

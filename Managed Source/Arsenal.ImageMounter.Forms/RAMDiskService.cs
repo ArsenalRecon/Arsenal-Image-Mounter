@@ -1,13 +1,25 @@
-﻿using Arsenal.ImageMounter.Devio.Server.Services;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Raw;
 using DiscUtils.Streams;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -16,14 +28,13 @@ namespace Arsenal.ImageMounter.Devio.Server.Interaction;
 
 public class RAMDiskService : DevioNoneService
 {
-    public string? Volume { get; }
+    public string? Volume { get; private set; }
 
-    public string? MountPoint { get; }
+    public string? MountPoint { get; private set; }
 
     public RAMDiskService(ScsiAdapter Adapter, long DiskSize, InitializeFileSystem FormatFileSystem)
         : base(DiskSize)
     {
-
         try
         {
             StartServiceThreadAndMount(Adapter, 0);
@@ -53,7 +64,7 @@ public class RAMDiskService : DevioNoneService
 
             device.DiskPolicyOffline = false;
 
-            do
+            for (; ; )
             {
                 Volume = NativeFileIO.EnumerateDiskVolumes(device.DevicePath).FirstOrDefault();
 
@@ -67,50 +78,119 @@ public class RAMDiskService : DevioNoneService
                 Thread.Sleep(200);
             }
 
-            while (true);
-
             var mountPoint = NativeFileIO.EnumerateVolumeMountPoints(Volume).FirstOrDefault();
 
             if (string.IsNullOrWhiteSpace(mountPoint))
             {
-
                 var driveletter = NativeFileIO.FindFirstFreeDriveLetter();
 
                 if (driveletter != '\0')
                 {
-
                     var newMountPoint = $@"{driveletter}:\";
 
-                    NativeFileIO.SetVolumeMountPoint(newMountPoint.AsMemory(), Volume.AsMemory());
+                    NativeFileIO.SetVolumeMountPoint(newMountPoint, Volume);
 
                     MountPoint = newMountPoint;
-
                 }
             }
-
             else
             {
-
                 MountPoint = mountPoint.ToString();
-
             }
 
             return;
         }
-
         catch (Exception ex)
         {
-
             Dispose();
 
             throw new Exception("Failed to create RAM disk", ex);
+        }
+    }
 
+    private RAMDiskService(long DiskSize)
+        : base(DiskSize) { }
+
+    public static async Task<RAMDiskService> CreteAsync(ScsiAdapter Adapter, long DiskSize, InitializeFileSystem FormatFileSystem, CancellationToken cancellationToken)
+    {
+        var newObj = new RAMDiskService(DiskSize);
+
+        try
+        {
+            newObj.StartServiceThreadAndMount(Adapter, 0);
+
+            using var device = newObj.OpenDiskDevice(FileAccess.ReadWrite)
+                ?? throw new NotSupportedException("Cannot open disk device associated with this instance");
+
+            device.DiskPolicyReadOnly = false;
+
+            // Initialize partition table
+
+            device.DiskPolicyOffline = true;
+
+            var kernel_geometry = device.Geometry
+                ?? throw new NotSupportedException("Failed to get geometry for RAM disk");
+
+            var kernel_disksize = device.DiskSize
+                ?? throw new NotSupportedException("Failed to get disk size for RAM disk");
+
+            var discutils_geometry = new Geometry(kernel_disksize, kernel_geometry.TracksPerCylinder, kernel_geometry.SectorsPerTrack, kernel_geometry.BytesPerSector);
+
+            var disk = new Disk(device.GetRawDiskStream(), Ownership.None, discutils_geometry);
+
+            await DiscUtilsInteraction.InitializeVirtualDiskAsync(disk, discutils_geometry, PARTITION_STYLE.MBR,
+                                                                  FormatFileSystem, "RAM disk", cancellationToken).ConfigureAwait(false);
+
+            device.FlushBuffers();
+
+            device.DiskPolicyOffline = false;
+
+            for (; ; )
+            {
+                newObj.Volume = NativeFileIO.EnumerateDiskVolumes(device.DevicePath).FirstOrDefault();
+
+                if (newObj.Volume is not null)
+                {
+                    break;
+                }
+
+                device.UpdateProperties();
+
+                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
+            }
+
+            var mountPoint = NativeFileIO.EnumerateVolumeMountPoints(newObj.Volume).FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(mountPoint))
+            {
+                var driveletter = NativeFileIO.FindFirstFreeDriveLetter();
+
+                if (driveletter != '\0')
+                {
+                    var newMountPoint = $@"{driveletter}:\";
+
+                    NativeFileIO.SetVolumeMountPoint(newMountPoint, newObj.Volume);
+
+                    newObj.MountPoint = newMountPoint;
+                }
+            }
+            else
+            {
+                newObj.MountPoint = mountPoint.ToString();
+            }
+
+            return newObj;
+        }
+        catch (Exception ex)
+        {
+            newObj.Dispose();
+
+            throw new Exception("Failed to create RAM disk", ex);
         }
     }
 
     public static RAMDiskService? InteractiveCreate(IWin32Window? _, ScsiAdapter adapter)
     {
-
         var strsize = Microsoft.VisualBasic.Interaction.InputBox("Enter size in MB", "RAM disk");
 
         if (strsize is null || string.IsNullOrWhiteSpace(strsize))
@@ -131,7 +211,6 @@ public class RAMDiskService : DevioNoneService
             {
                 NativeFileIO.BrowseTo(ramdisk.MountPoint);
             }
-
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to open Explorer window for created RAM disk: {ex.JoinMessages()}");
@@ -139,6 +218,5 @@ public class RAMDiskService : DevioNoneService
         }
 
         return ramdisk;
-
     }
 }

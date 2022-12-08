@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.Devio.Server.GenericProviders;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Streams;
 using Microsoft.Win32.SafeHandles;
@@ -149,7 +159,7 @@ internal static class ImageConversions
                     (outputImage.StartsWith(@"\\?\", StringComparison.Ordinal) ||
                     outputImage.StartsWith(@"\\.\", StringComparison.Ordinal)))
                 {
-                    provider.WriteToPhysicalDisk(outputImage.AsMemory(), completionPosition, cancel.Token);
+                    provider.WriteToPhysicalDisk(outputImage, completionPosition, cancel.Token);
 
                     return;
                 }

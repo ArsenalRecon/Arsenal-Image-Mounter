@@ -1,14 +1,14 @@
-﻿// '''' ScsiAdapter.vb
-// '''' Class for controlling Arsenal Image Mounter Devices.
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
-// ''''
+﻿//  ScsiAdapter.vb
+//  Class for controlling Arsenal Image Mounter Devices.
+//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
 
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
@@ -138,7 +138,7 @@ public class ScsiAdapter : DeviceObject
         }
 
         var found = (from devInstName in devinstNames
-                     let devinst = NativeFileIO.GetDevInst(devInstName)
+                     let devinst = NativeFileIO.GetDevInst(devInstName.ToString())
                      where devinst.HasValue
                      let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinst.Value)
                      where path is not null
@@ -178,7 +178,7 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     /// <param name="ScsiPortNumber">Scsi adapter port number as assigned by SCSI class driver.</param>
     public ScsiAdapter(byte ScsiPortNumber)
-        : base($@"\\?\Scsi{ScsiPortNumber}:".AsMemory(), FileAccess.ReadWrite)
+        : base($@"\\?\Scsi{ScsiPortNumber}:", FileAccess.ReadWrite)
     {
 
         Trace.WriteLine($"Successfully opened adapter with SCSI portnumber = {ScsiPortNumber}.");
@@ -250,8 +250,22 @@ public class ScsiAdapter : DeviceObject
     /// virtual disk. For automatic allocation of device number, pass ScsiAdapter.AutoDeviceNumber.
     /// 
     /// Out: Device number for created device.</param>
-    public void CreateDevice(long DiskSize, uint BytesPerSector, long ImageOffset, DeviceFlags Flags, ReadOnlyMemory<char> Filename, bool NativePath, ref uint DeviceNumber)
-        => CreateDevice(DiskSize, BytesPerSector, ImageOffset, Flags, Filename, NativePath, WriteOverlayFilename: default, WriteOverlayNativePath: default, DeviceNumber: ref DeviceNumber);
+    public void CreateDevice(long DiskSize,
+                             uint BytesPerSector,
+                             long ImageOffset,
+                             DeviceFlags Flags,
+                             string? Filename,
+                             bool NativePath,
+                             ref uint DeviceNumber)
+        => CreateDevice(DiskSize,
+                        BytesPerSector,
+                        ImageOffset,
+                        Flags,
+                        Filename,
+                        NativePath,
+                        WriteOverlayFilename: null,
+                        WriteOverlayNativePath: default,
+                        DeviceNumber: ref DeviceNumber);
 
     /// <summary>
     /// Creates a new virtual disk.
@@ -280,9 +294,16 @@ public class ScsiAdapter : DeviceObject
     /// virtual disk. For automatic allocation of device number, pass ScsiAdapter.AutoDeviceNumber.
     /// 
     /// Out: Device number for created device.</param>
-    public void CreateDevice(long DiskSize, uint BytesPerSector, long ImageOffset, DeviceFlags Flags, ReadOnlyMemory<char> Filename, bool NativePath, ReadOnlyMemory<char> WriteOverlayFilename, bool WriteOverlayNativePath, ref uint DeviceNumber)
+    public void CreateDevice(long DiskSize,
+                             uint BytesPerSector,
+                             long ImageOffset,
+                             DeviceFlags Flags,
+                             string? Filename,
+                             bool NativePath,
+                             string? WriteOverlayFilename,
+                             bool WriteOverlayNativePath,
+                             ref uint DeviceNumber)
     {
-
         // ' Temporary variable for passing through lambda function
         var devnr = DeviceNumber;
 
@@ -295,42 +316,31 @@ public class ScsiAdapter : DeviceObject
         }
 
         // ' Translate Win32 path to native NT path that kernel understands
-        if (!Filename.Span.IsWhiteSpace() && !NativePath)
+        if (Filename is not null && !string.IsNullOrWhiteSpace(Filename) && !NativePath)
         {
             switch (Flags.GetDiskType())
             {
                 case DeviceFlags.TypeProxy:
+                    switch (Flags.GetProxyType())
                     {
-                        switch (Flags.GetProxyType())
-                        {
+                        case DeviceFlags.ProxyTypeSharedMemory:
+                            Filename = $@"\BaseNamedObjects\Global\{Filename}";
+                            break;
 
-                            case DeviceFlags.ProxyTypeSharedMemory:
-                                {
-                                    Filename = $@"\BaseNamedObjects\Global\{Filename}".AsMemory();
-                                    break;
-                                }
+                        case DeviceFlags.ProxyTypeComm:
+                        case DeviceFlags.ProxyTypeTCP:
+                            break;
 
-                            case DeviceFlags.ProxyTypeComm:
-                            case DeviceFlags.ProxyTypeTCP:
-                                {
-                                    break;
-                                }
-
-                            default:
-                                {
-                                    Filename = NativeFileIO.GetNtPath(Filename).AsMemory();
-                                    break;
-                                }
-                        }
-
-                        break;
+                        default:
+                            Filename = NativeFileIO.GetNtPath(Filename);
+                            break;
                     }
+
+                    break;
 
                 default:
-                    {
-                        Filename = NativeFileIO.GetNtPath(Filename).AsMemory();
-                        break;
-                    }
+                    Filename = NativeFileIO.GetNtPath(Filename);
+                    break;
             }
         }
 
@@ -341,13 +351,12 @@ public class ScsiAdapter : DeviceObject
 
         try
         {
-
-            if (!WriteOverlayFilename.Span.IsWhiteSpace())
+            if (WriteOverlayFilename is not null
+                && !string.IsNullOrWhiteSpace(WriteOverlayFilename))
             {
-
                 if (!WriteOverlayNativePath)
                 {
-                    WriteOverlayFilename = NativeFileIO.GetNtPath(WriteOverlayFilename).AsMemory();
+                    WriteOverlayFilename = NativeFileIO.GetNtPath(WriteOverlayFilename);
                 }
 
                 Trace.WriteLine($"ScsiAdapter.CreateDevice: Thread {Environment.CurrentManagedThreadId} entering global critical section");
@@ -355,13 +364,18 @@ public class ScsiAdapter : DeviceObject
                 write_filter_added = new GlobalCriticalMutex();
 
                 NativeFileIO.AddFilter(NativeConstants.DiskDriveGuid, "aimwrfltr", addfirst: true);
-
             }
 
             // ' Show what we got
             Trace.WriteLine($"ScsiAdapter.CreateDevice: Native write overlay filename='{WriteOverlayFilename}'");
 
-            var deviceConfig = new IMSCSI_DEVICE_CONFIGURATION(deviceNumber: devnr, diskSize: DiskSize, bytesPerSector: BytesPerSector, imageOffset: ImageOffset, flags: (int)Flags, fileNameLength: (ushort)(Filename.Span.IsWhiteSpace() ? 0 : MemoryMarshal.AsBytes(Filename.Span).Length), writeOverlayFileNameLength: (ushort)(WriteOverlayFilename.Span.IsWhiteSpace() ? 0 : MemoryMarshal.AsBytes(WriteOverlayFilename.Span).Length));
+            var deviceConfig = new IMSCSI_DEVICE_CONFIGURATION(deviceNumber: devnr,
+                                                               diskSize: DiskSize,
+                                                               bytesPerSector: BytesPerSector,
+                                                               imageOffset: ImageOffset,
+                                                               flags: (int)Flags,
+                                                               fileNameLength: (ushort)MemoryMarshal.AsBytes(Filename.AsSpan()).Length,
+                                                               writeOverlayFileNameLength: (ushort)MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan()).Length);
 
             var Request = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize
                 + deviceConfig.FileNameLength
@@ -369,14 +383,16 @@ public class ScsiAdapter : DeviceObject
 
             MemoryMarshal.Write(Request, ref deviceConfig);
 
-            if (!Filename.Span.IsWhiteSpace())
+            if (!string.IsNullOrWhiteSpace(Filename))
             {
-                MemoryMarshal.AsBytes(Filename.Span).CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize));
+                MemoryMarshal.AsBytes(Filename.AsSpan())
+                    .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize));
             }
 
-            if (!WriteOverlayFilename.Span.IsWhiteSpace())
+            if (!string.IsNullOrWhiteSpace(WriteOverlayFilename))
             {
-                MemoryMarshal.AsBytes(WriteOverlayFilename.Span).CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength));
+                MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan())
+                    .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength));
             }
 
             var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE, 0U, Request, out var ReturnCode);
@@ -403,7 +419,8 @@ public class ScsiAdapter : DeviceObject
             DiskDevice DiskDevice;
 
             var waittime = TimeSpan.FromMilliseconds(500d);
-            do
+            
+            for(; ;)
             {
 
                 Thread.Sleep(waittime);
@@ -428,49 +445,39 @@ public class ScsiAdapter : DeviceObject
 
                 using (DiskDevice)
                 {
-
-                    if (0 is var arg2 && DiskDevice.DiskSize is { } arg1 && arg1 == arg2)
+                    if (DiskDevice.DiskSize.GetValueOrDefault() == 0)
                     {
-
                         // ' Wait at most 20 x 500 msec for device to get initialized by driver
                         for (var i = 1; i <= 20; i++)
                         {
-
                             Thread.Sleep(500 * i);
 
-                            if (0 is var arg4 && DiskDevice.DiskSize is { } arg3 && arg3 != arg4)
+                            if (DiskDevice.DiskSize.GetValueOrDefault(0) != 0)
                             {
                                 break;
                             }
 
                             Trace.WriteLine("Updating disk properties...");
                             DiskDevice.UpdateProperties();
-
                         }
                     }
 
-                    if (Flags.HasFlag(DeviceFlags.WriteOverlay) && !WriteOverlayFilename.Span.IsWhiteSpace())
+                    if (Flags.HasFlag(DeviceFlags.WriteOverlay) && !string.IsNullOrWhiteSpace(WriteOverlayFilename))
                     {
-
                         var status = DiskDevice.WriteOverlayStatus;
 
                         if (status.HasValue)
                         {
-
                             Trace.WriteLine($"Write filter attached, {status.Value.UsedDiffSize} differencing bytes used.");
 
                             break;
-
                         }
 
                         Trace.WriteLine("Write filter not registered. Registering and restarting device...");
                     }
-
                     else
                     {
-
                         break;
-
                     }
                 }
 
@@ -478,35 +485,271 @@ public class ScsiAdapter : DeviceObject
                 {
                     API.RegisterWriteFilter(DeviceInstance, DeviceNumber, API.RegisterWriteFilterOperation.Register);
                 }
-
                 catch (Exception ex)
                 {
                     RemoveDevice(DeviceNumber);
                     throw new Exception("Failed to register write filter driver", ex);
-
                 }
-            }
-
-            while (true);
+            }            
         }
-
         finally
         {
-
             if (write_filter_added is not null)
             {
-
                 NativeFileIO.RemoveFilter(NativeConstants.DiskDriveGuid, "aimwrfltr");
 
                 Trace.WriteLine($"ScsiAdapter.CreateDevice: Thread {Environment.CurrentManagedThreadId} leaving global critical section");
 
                 write_filter_added.Dispose();
+            }
+        }
 
+        Trace.WriteLine("CreateDevice done.");
+    }
+
+    /// <summary>
+    /// Creates a new virtual disk.
+    /// </summary>
+    /// <param name="DiskSize">Size of virtual disk. If this parameter is zero, current size of disk image file will
+    /// automatically be used as virtual disk size.</param>
+    /// <param name="BytesPerSector">Number of bytes per sector for virtual disk geometry. This parameter can be zero
+    /// in which case most reasonable value will be automatically used by the driver.</param>
+    /// <param name="ImageOffset">A skip offset if virtual disk data does not begin immediately at start of disk image file.
+    /// Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter
+    /// or Windows filesystem drivers.</param>
+    /// <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
+    /// <param name="Filename">Name of disk image file to use or create. If disk image file already exists, the DiskSize
+    /// parameter can be zero in which case current disk image file size will be used as virtual disk size. If Filename
+    /// parameter is Nothing/null disk will be created in virtual memory and not backed by a physical disk image file.</param>
+    /// <param name="NativePath">Specifies whether Filename parameter specifies a path in Windows native path format, the
+    /// path format used by drivers in Windows NT kernels, for example \Device\Harddisk0\Partition1\imagefile.img. If this
+    /// parameter is False path in Filename parameter will be interpreted as an ordinary user application path.</param>
+    /// <param name="WriteOverlayFilename">Name of differencing image file to use for write overlay operation. Flags fields
+    /// must also specify read-only device and write overlay operation for this field to be used.</param>
+    /// <param name="WriteOverlayNativePath">Specifies whether WriteOverlayFilename parameter specifies a path in Windows
+    /// native path format, the path format used by drivers in Windows NT kernels, for example
+    /// \Device\Harddisk0\Partition1\imagefile.img. If this parameter is False path in Filename parameter will be interpreted
+    /// as an ordinary user application path.</param>
+    /// <param name="DeviceNumber">Device number for device to create. Device number must not be in use by an existing
+    /// virtual disk. For automatic allocation of device number, pass ScsiAdapter.AutoDeviceNumber.</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Device number for created device.</returns>
+    public async Task<uint> CreateDeviceAsync(long DiskSize,
+                                              uint BytesPerSector,
+                                              long ImageOffset,
+                                              DeviceFlags Flags,
+                                              string Filename,
+                                              bool NativePath,
+                                              string WriteOverlayFilename,
+                                              bool WriteOverlayNativePath,
+                                              uint DeviceNumber,
+                                              CancellationToken cancellationToken)
+    {
+        // ' Temporary variable for passing through lambda function
+        var devnr = DeviceNumber;
+
+        // ' Both UInt32.MaxValue and AutoDeviceNumber can be used
+        // ' for auto-selecting device number, but only AutoDeviceNumber
+        // ' is accepted by driver.
+        if (devnr == uint.MaxValue)
+        {
+            devnr = AutoDeviceNumber;
+        }
+
+        // ' Translate Win32 path to native NT path that kernel understands
+        if (!string.IsNullOrWhiteSpace(Filename) && !NativePath)
+        {
+            switch (Flags.GetDiskType())
+            {
+                case DeviceFlags.TypeProxy:
+                    switch (Flags.GetProxyType())
+                    {
+                        case DeviceFlags.ProxyTypeSharedMemory:
+                            Filename = $@"\BaseNamedObjects\Global\{Filename}";
+                            break;
+
+                        case DeviceFlags.ProxyTypeComm:
+                        case DeviceFlags.ProxyTypeTCP:
+                            break;
+
+                        default:
+                            Filename = NativeFileIO.GetNtPath(Filename);
+                            break;
+                    }
+
+                    break;
+
+                default:
+                    Filename = NativeFileIO.GetNtPath(Filename);
+                    break;
+            }
+        }
+
+        // ' Show what we got
+        Trace.WriteLine($"ScsiAdapter.CreateDevice: Native filename='{Filename}'");
+
+        GlobalCriticalMutex? write_filter_added = null;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(WriteOverlayFilename))
+            {
+
+                if (!WriteOverlayNativePath)
+                {
+                    WriteOverlayFilename = NativeFileIO.GetNtPath(WriteOverlayFilename);
+                }
+
+                Trace.WriteLine($"ScsiAdapter.CreateDevice: Thread {Environment.CurrentManagedThreadId} entering global critical section");
+
+                write_filter_added = new GlobalCriticalMutex();
+
+                NativeFileIO.AddFilter(NativeConstants.DiskDriveGuid, "aimwrfltr", addfirst: true);
+            }
+
+            // ' Show what we got
+            Trace.WriteLine($"ScsiAdapter.CreateDevice: Native write overlay filename='{WriteOverlayFilename}'");
+
+            var deviceConfig = new IMSCSI_DEVICE_CONFIGURATION(deviceNumber: devnr, diskSize: DiskSize,
+                                                               bytesPerSector: BytesPerSector, imageOffset: ImageOffset,
+                                                               flags: (int)Flags,
+                                                               fileNameLength: (ushort)MemoryMarshal.AsBytes(Filename.AsSpan()).Length,
+                                                               writeOverlayFileNameLength: (ushort)MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan()).Length);
+
+            var Request = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize
+                + deviceConfig.FileNameLength
+                + deviceConfig.WriteOverlayFileNameLength);
+
+            MemoryMarshal.Write(Request, ref deviceConfig);
+
+            if (!string.IsNullOrWhiteSpace(Filename))
+            {
+                MemoryMarshal.AsBytes(Filename.AsSpan())
+                    .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize));
+            }
+
+            if (!string.IsNullOrWhiteSpace(WriteOverlayFilename))
+            {
+                MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan())
+                    .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength));
+            }
+
+            static IMSCSI_DEVICE_CONFIGURATION CreateDevice(SafeFileHandle SafeFileHandle, byte[] Request)
+            {
+                var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                                          NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
+                                                                          0U, Request, out var ReturnCode);
+
+                if (ReturnCode != 0)
+                {
+                    throw NativeFileIO.GetExceptionForNtStatus(ReturnCode);
+                }
+
+                return MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(Response);
+            }
+
+            deviceConfig = CreateDevice(SafeFileHandle, Request);
+
+            DeviceNumber = deviceConfig.DeviceNumber;
+            DiskSize = deviceConfig.DiskSize;
+            BytesPerSector = deviceConfig.BytesPerSector;
+            ImageOffset = deviceConfig.ImageOffset;
+            Flags = (DeviceFlags)deviceConfig.Flags;
+
+            while (!GetDeviceList().Contains(DeviceNumber))
+            {
+                Trace.WriteLine($"Waiting for new device {DeviceNumber:X6} to be registered by driver...");
+                await Task.Delay(2500, cancellationToken).ConfigureAwait(false);
+            }
+
+            DiskDevice DiskDevice;
+
+            var waittime = TimeSpan.FromMilliseconds(500);
+
+            for (; ; )
+            {
+                await Task.Delay(waittime, cancellationToken).ConfigureAwait(false);
+
+                try
+                {
+                    DiskDevice = OpenDevice(DeviceNumber, FileAccess.Read);
+                }
+                catch (DriveNotFoundException ex)
+                {
+                    Trace.WriteLine($"Error opening device: {ex.JoinMessages()}");
+                    waittime += TimeSpan.FromMilliseconds(500d);
+
+                    Trace.WriteLine("Not ready, rescanning SCSI adapter...");
+
+                    RescanBus();
+
+                    continue;
+                }
+
+                using (DiskDevice)
+                {
+                    if (DiskDevice.DiskSize.GetValueOrDefault() == 0)
+                    {
+                        // ' Wait at most 20 x 500 msec for device to get initialized by driver
+                        for (var i = 1; i <= 20; i++)
+                        {
+                            await Task.Delay(500 * i, cancellationToken).ConfigureAwait(false);
+
+                            if (DiskDevice.DiskSize.GetValueOrDefault(0) != 0)
+                            {
+                                break;
+                            }
+
+                            Trace.WriteLine("Updating disk properties...");
+                            DiskDevice.UpdateProperties();
+                        }
+                    }
+
+                    if (Flags.HasFlag(DeviceFlags.WriteOverlay) && !string.IsNullOrWhiteSpace(WriteOverlayFilename))
+                    {
+                        var status = DiskDevice.WriteOverlayStatus;
+
+                        if (status.HasValue)
+                        {
+                            Trace.WriteLine($"Write filter attached, {status.Value.UsedDiffSize} differencing bytes used.");
+
+                            break;
+                        }
+
+                        Trace.WriteLine("Write filter not registered. Registering and restarting device...");
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                try
+                {
+                    API.RegisterWriteFilter(DeviceInstance, DeviceNumber, API.RegisterWriteFilterOperation.Register);
+                }
+                catch (Exception ex)
+                {
+                    RemoveDevice(DeviceNumber);
+                    throw new Exception("Failed to register write filter driver", ex);
+                }
+            }
+        }
+        finally
+        {
+            if (write_filter_added is not null)
+            {
+                NativeFileIO.RemoveFilter(NativeConstants.DiskDriveGuid, "aimwrfltr");
+
+                Trace.WriteLine($"ScsiAdapter.CreateDevice: Thread {Environment.CurrentManagedThreadId} leaving global critical section");
+
+                write_filter_added.Dispose();
             }
         }
 
         Trace.WriteLine("CreateDevice done.");
 
+        return DeviceNumber;
     }
 
     /// <summary>
@@ -517,49 +760,39 @@ public class ScsiAdapter : DeviceObject
     /// in this parameter causes all present virtual disks to be removed from this adapter.</param>
     public void RemoveDeviceSafe(uint DeviceNumber)
     {
-
         if (DeviceNumber == AutoDeviceNumber)
         {
-
             RemoveAllDevicesSafe();
 
             return;
-
         }
 
         IEnumerable<string>? volumes = null;
 
         using (var disk = OpenDevice(DeviceNumber, FileAccess.ReadWrite))
         {
-
             if (disk.IsDiskWritable)
             {
-
                 volumes = disk.EnumerateDiskVolumes();
-
             }
         }
 
         if (volumes is not null)
         {
-
-            foreach (var volname in volumes.Select(v => v.AsMemory().TrimEnd('\\')))
+            foreach (var volname in volumes.Select(v => v.TrimEnd('\\')))
             {
                 Trace.WriteLine($"Dismounting volume: {volname}");
 
                 using var vol = NativeFileIO.OpenFileHandle(volname, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, FileOptions.None);
                 if (NativeFileIO.IsDiskWritable(vol))
                 {
-
                     try
                     {
                         NativeFileIO.FlushBuffers(vol);
                     }
-
                     catch (Exception ex)
                     {
                         Trace.WriteLine($"Failed flushing buffers for volume {volname}: {ex.JoinMessages()}");
-
                     }
 
                     // NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(vol, Force:=False))
@@ -570,7 +803,6 @@ public class ScsiAdapter : DeviceObject
         }
 
         RemoveDevice(DeviceNumber);
-
     }
 
     /// <summary>
@@ -821,17 +1053,14 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public void RescanBus()
     {
-
         try
         {
             NativeFileIO.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_SCSI_RESCAN_BUS, default, 0);
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine($"IOCTL_SCSI_RESCAN_BUS failed: {ex.JoinMessages()}");
             API.RescanScsiAdapter(DeviceInstance);
-
         }
     }
 
@@ -842,7 +1071,6 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public void UpdateDiskProperties()
     {
-
         foreach (var device in GetDeviceList())
         {
             UpdateDiskProperties(device);
@@ -856,31 +1084,24 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public bool UpdateDiskProperties(uint DeviceNumber)
     {
-
         try
         {
-            using (var disk = OpenDevice(DeviceNumber, 0))
+            using var disk = OpenDevice(DeviceNumber, 0);
+            
+            if (!NativeFileIO.UpdateDiskProperties(disk.SafeFileHandle, throwOnFailure: false))
             {
+                Trace.WriteLine($"Error updating disk properties for device {DeviceNumber:X6}: {new Win32Exception().Message}");
 
-                if (!NativeFileIO.UpdateDiskProperties(disk.SafeFileHandle, throwOnFailure: false))
-                {
-
-                    Trace.WriteLine($"Error updating disk properties for device {DeviceNumber:X6}: {new Win32Exception().Message}");
-
-                    return false;
-
-                }
+                return false;
             }
 
             return true;
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine($"Error updating disk properties for device {DeviceNumber:X6}: {ex.JoinMessages()}");
 
             return false;
-
         }
     }
 
@@ -891,20 +1112,17 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public DiskDevice OpenDevice(uint DeviceNumber, FileAccess AccessMode)
     {
-
         try
         {
             var device_name = GetDeviceName(DeviceNumber);
 
             return device_name is null
                 ? throw new DriveNotFoundException($"No drive found for device number {DeviceNumber:X6}")
-                : new DiskDevice($@"\\?\{device_name}".AsMemory(), AccessMode);
+                : new DiskDevice($@"\\?\{device_name}", AccessMode);
         }
-
         catch (Exception ex)
         {
             throw new DriveNotFoundException($"Device {DeviceNumber:X6} is not ready", ex);
-
         }
     }
 
@@ -916,7 +1134,6 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public DiskDevice OpenDevice(uint DeviceNumber)
     {
-
         try
         {
             var device_name = GetDeviceName(DeviceNumber);
@@ -925,34 +1142,29 @@ public class ScsiAdapter : DeviceObject
                 ? throw new DriveNotFoundException($"No drive found for device number {DeviceNumber:X6}")
                 : new DiskDevice($@"\\?\{device_name}");
         }
-
         catch (Exception ex)
         {
             throw new DriveNotFoundException($"Device {DeviceNumber:X6} is not ready", ex);
-
         }
     }
 
     /// <summary>
     /// Returns a PhysicalDrive or CdRom device name for specified device number. Device numbers
     /// are created when a new virtual disk is created and returned in a reference parameter to
-    /// CreateDevice method.
+    /// CreateDevice method or as a return value from CreateDeviceAsync method.
     /// </summary>
     public string? GetDeviceName(uint DeviceNumber)
     {
-
         try
         {
             var raw_device = GetRawDeviceName(DeviceNumber);
 
             return raw_device is null ? null : NativeFileIO.GetPhysicalDriveNameForNtDevice(raw_device);
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine($"Error getting device name for device number {DeviceNumber}: {ex.JoinMessages()}");
             return null;
-
         }
     }
 
@@ -968,5 +1180,4 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public IEnumerable<string> GetPnPDeviceName(uint DeviceNumber, CmDevNodeRegistryProperty prop)
         => API.EnumerateDeviceProperty(DeviceInstance, DeviceNumber, prop);
-
 }

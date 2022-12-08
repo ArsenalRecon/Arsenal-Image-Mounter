@@ -1,13 +1,13 @@
-﻿// '''' DevioServiceBase.vb
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
-// ''''
+﻿//  DevioServiceBase.vb
+//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
 
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
@@ -20,6 +20,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -197,7 +198,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// </summary>
     public virtual bool StartServiceThread()
     {
-
         using var ServiceReadyEvent = new ManualResetEvent(initialState: false);
         using var ServiceInitFailedEvent = new ManualResetEvent(initialState: false);
 
@@ -214,7 +214,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
         ServiceInitFailed -= ServiceInitFailedHandler;
 
         return ServiceReadyEvent.WaitOne(0);
-
     }
 
     private void ServiceThreadProcedure()
@@ -306,7 +305,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
         try
         {
-            ScsiAdapter.CreateDevice(DiskSize, SectorSize, Offset, Flags | AdditionalFlags | ProxyModeFlags, ProxyObjectName.AsMemory(), false, WriteOverlayImageName.AsMemory(), false, ref diskDeviceNumber);
+            ScsiAdapter.CreateDevice(DiskSize, SectorSize, Offset, Flags | AdditionalFlags | ProxyModeFlags, ProxyObjectName, false, WriteOverlayImageName, false, ref diskDeviceNumber);
 
             OnDiskDeviceCreated(EventArgs.Empty);
         }
@@ -376,7 +375,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
         var i = 1;
 
-        for(; ;)
+        for (; ; )
         {
             try
             {
@@ -392,6 +391,52 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
                 i += 1;
                 Thread.Sleep(100);
+                continue;
+            }
+            catch (Win32Exception ex) when (ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND)
+            {
+                Trace.WriteLine($"Attempt to remove non-existent device {diskDeviceNumber:X6}");
+
+                EmergencyStopServiceThread();
+
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Dismounts an Arsenal Image Mounter Disk Device created by StartServiceThreadAndMount(). If device
+    /// was already removed, it calls EmergencyStopServiceThread() to notify service thread.
+    /// </summary>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    protected async Task RemoveDeviceAndStopServiceThreadAsync(CancellationToken cancellationToken)
+    {
+        Trace.WriteLine($"Notifying service stopping for device {diskDeviceNumber:X6}...");
+
+        OnServiceStopping(EventArgs.Empty);
+
+        Trace.WriteLine($"Removing device {diskDeviceNumber:X6}...");
+
+        var i = 1;
+
+        for (; ; )
+        {
+            try
+            {
+                ScsiAdapter?.RemoveDevice(diskDeviceNumber);
+
+                Trace.WriteLine($"Device {diskDeviceNumber:X6} removed.");
+
+                break;
+            }
+            catch (Win32Exception ex) when (i < 40 && ex.NativeErrorCode == NativeConstants.ERROR_ACCESS_DENIED)
+            {
+                Trace.WriteLine($"Access denied attempting to remove device {diskDeviceNumber:X6}, retrying...");
+
+                i += 1;
+
+                await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+
                 continue;
             }
             catch (Win32Exception ex) when (ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND)

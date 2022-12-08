@@ -1,2 +1,2 @@
 #!/bin/bash
-exec -a "$0" dotnet "$0.dll" "$@"
+exec -a "$0" dotnet "$(dirname "$(readlink -f -- "$0")")/aim_cli.dll" "$@"

@@ -1,14 +1,14 @@
-﻿// '''' DiskDevice.vb
-// '''' Class for controlling Arsenal Image Mounter Disk Devices.
-// '''' 
-// '''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
-// '''' This source code and API are available under the terms of the Affero General Public
-// '''' License v3.
-// ''''
-// '''' Please see LICENSE.txt for full license terms, including the availability of
-// '''' proprietary exceptions.
-// '''' Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
-// ''''
+﻿//  DiskDevice.vb
+//  Class for controlling Arsenal Image Mounter Disk Devices.
+//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
 
 using Arsenal.ImageMounter.IO.Native;
 using Arsenal.ImageMounter.IO.Streams;
@@ -45,7 +45,7 @@ public class DiskDevice : DeviceObject
     /// If the object was opened in any other way, such as by supplying an already
     /// open handle, this property returns null/Nothing.
     /// </summary>
-    public ReadOnlyMemory<char> DevicePath { get; }
+    public string DevicePath { get; }
 
     private void AllowExtendedDasdIo()
     {
@@ -68,37 +68,7 @@ public class DiskDevice : DeviceObject
     protected internal DiskDevice(KeyValuePair<string, SafeFileHandle> DeviceNameAndHandle, FileAccess AccessMode)
         : base(DeviceNameAndHandle.Value, AccessMode)
     {
-
-        DevicePath = DeviceNameAndHandle.Key.AsMemory();
-
-        AllowExtendedDasdIo();
-    }
-
-    /// <summary>
-    /// Opens an disk device object without requesting read or write permissions. The
-    /// resulting object can only be used to query properties like SCSI address, disk
-    /// size and similar, but not for reading or writing raw disk data.
-    /// </summary>
-    /// <param name="DevicePath"></param>
-    public DiskDevice(ReadOnlyMemory<char> DevicePath)
-        : base(DevicePath)
-    {
-
-        this.DevicePath = DevicePath;
-
-        AllowExtendedDasdIo();
-    }
-
-    /// <summary>
-    /// Opens an disk device object, requesting read, write or both permissions.
-    /// </summary>
-    /// <param name="DevicePath"></param>
-    /// <param name="AccessMode"></param>
-    public DiskDevice(ReadOnlyMemory<char> DevicePath, FileAccess AccessMode)
-        : base(DevicePath, AccessMode)
-    {
-
-        this.DevicePath = DevicePath;
+        DevicePath = DeviceNameAndHandle.Key;
 
         AllowExtendedDasdIo();
     }
@@ -110,9 +80,11 @@ public class DiskDevice : DeviceObject
     /// </summary>
     /// <param name="DevicePath"></param>
     public DiskDevice(string DevicePath)
-        : this(DevicePath.AsMemory())
+        : base(DevicePath)
     {
+        this.DevicePath = DevicePath;
 
+        AllowExtendedDasdIo();
     }
 
     /// <summary>
@@ -121,9 +93,11 @@ public class DiskDevice : DeviceObject
     /// <param name="DevicePath"></param>
     /// <param name="AccessMode"></param>
     public DiskDevice(string DevicePath, FileAccess AccessMode)
-        : this(DevicePath.AsMemory(), AccessMode)
+        : base(DevicePath, AccessMode)
     {
+        this.DevicePath = DevicePath;
 
+        AllowExtendedDasdIo();
     }
 
     /// <summary>
@@ -135,7 +109,6 @@ public class DiskDevice : DeviceObject
     public DiskDevice(SCSI_ADDRESS ScsiAddress, FileAccess AccessMode)
         : this(NativeFileIO.OpenDiskByScsiAddress(ScsiAddress, AccessMode), AccessMode)
     {
-
     }
 
     /// <summary>
@@ -151,15 +124,12 @@ public class DiskDevice : DeviceObject
                 var scsi_address = ScsiAddress
                     ?? throw new KeyNotFoundException("Cannot find SCSI address for this instance");
 
-                using (var driver = new ScsiAdapter(scsi_address.PortNumber))
-                {
-                }
+                using var driver = new ScsiAdapter(scsi_address.PortNumber);
 
                 cachedAddress = scsi_address;
             }
 
             return cachedAddress.Value.DWordDeviceNumber;
-
         }
     }
 
@@ -197,7 +167,6 @@ public class DiskDevice : DeviceObject
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public IEnumerable<string>? EnumerateDiskVolumes()
     {
-
         var disk_number = StorageDeviceNumber;
 
         if (!disk_number.HasValue)
@@ -208,7 +177,6 @@ public class DiskDevice : DeviceObject
         Trace.WriteLine($"Found disk number: {disk_number.Value.DeviceNumber}");
 
         return NativeFileIO.EnumerateDiskVolumes(disk_number.Value.DeviceNumber);
-
     }
 
     /// <summary>
@@ -331,7 +299,6 @@ public class DiskDevice : DeviceObject
     /// </summary>
     public byte[]? ReadBootSector()
     {
-
         var bootsect = new byte[Geometry?.BytesPerSector ?? 512];
         int bytesread;
 
@@ -348,7 +315,6 @@ public class DiskDevice : DeviceObject
         }
 
         return bootsect;
-
     }
 
     private int ReadBootSector(Span<byte> bootsect)
@@ -367,7 +333,6 @@ public class DiskDevice : DeviceObject
     {
         get
         {
-
             var bytesPerSector = Geometry?.BytesPerSector ?? 512;
 
             var bootsect = bytesPerSector <= 512
@@ -375,7 +340,7 @@ public class DiskDevice : DeviceObject
                 : new byte[bytesPerSector];
 
             return ReadBootSector(bootsect) >= 512
-&& MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
+                && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
                 && (bootsect[0x1BE] & 0x7F) == 0
                 && (bootsect[0x1CE] & 0x7F) == 0
                 && (bootsect[0x1DE] & 0x7F) == 0
@@ -391,7 +356,6 @@ public class DiskDevice : DeviceObject
     {
         get
         {
-
             var bytesPerSector = Geometry?.BytesPerSector ?? 512;
 
             var bootsect = bytesPerSector <= 512

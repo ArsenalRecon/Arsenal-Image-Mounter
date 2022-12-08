@@ -1,3 +1,13 @@
+//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
 using Arsenal.ImageMounter.Data;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
@@ -85,7 +95,6 @@ public static class DriverSetup
 
         new Thread(() =>
         {
-
             try
             {
                 var stopwatch = Stopwatch.StartNew();
@@ -255,7 +264,7 @@ public static class DriverSetup
 
         var infPath = Path.Combine(setupsource, API.Kernel, "phdskmnt.inf");
 
-        NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, @"root\phdskmnt".AsMemory(), ForceReplaceExistingDrivers: false, out var reboot_required);
+        NativeFileIO.CreateRootPnPDevice(ownerWindow.Handle, infPath, @"root\phdskmnt", ForceReplaceExistingDrivers: false, out var reboot_required);
 
         if (!reboot_required)
         {
@@ -269,7 +278,7 @@ public static class DriverSetup
 
                 Trace.WriteLine($"Pending file replace operations: '{string.Join("', '", array)}'");
 
-                var pending_install_file = (from item in CachedIniFile.EnumerateFileSectionValuePairs(infPath.AsMemory(), "PhysicalDiskMounterDevice.Services".AsMemory())
+                var pending_install_file = (from item in CachedIniFile.EnumerateFileSectionValuePairs(infPath, "PhysicalDiskMounterDevice.Services")
                                             where "AddService".Equals(item.Key, StringComparison.OrdinalIgnoreCase)
                                             select $"{item.Value.AsMemory().Split(',').First()}.sys").FirstOrDefault(installfile => array.Contains(installfile, StringComparer.OrdinalIgnoreCase));
 
@@ -308,7 +317,7 @@ public static class DriverSetup
     /// console window.</param>
     internal static void RemoveDevices(IWin32Window ownerWindow)
     {
-        if (NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt".AsMemory(), out var hwinstances) != 0u
+        if (NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var hwinstances) != 0u
             || hwinstances is null)
         {
             return;
@@ -316,7 +325,7 @@ public static class DriverSetup
 
         foreach (var hwinstance in hwinstances)
         {
-            NativeFileIO.RemovePnPDevice(hwid: hwinstance, OwnerWindow: ownerWindow.Handle);
+            NativeFileIO.RemovePnPDevice(hwid: hwinstance.ToString(), OwnerWindow: ownerWindow.Handle);
         }
     }
 
@@ -369,7 +378,7 @@ public static class DriverSetup
             var array = new[] { "phdskmnt", "aimwrfltr" };
             for (var i = 0; i < array.Length; i++)
             {
-                using var svc = NativeFileIO.UnsafeNativeMethods.OpenServiceW(scm, array[i].AsSpan()[0], 983103);
+                using var svc = NativeFileIO.UnsafeNativeMethods.OpenServiceW(scm, array[i].AsRef(), 983103);
                 if (svc.IsInvalid)
                 {
                     throw new Exception("OpenService", new Win32Exception());

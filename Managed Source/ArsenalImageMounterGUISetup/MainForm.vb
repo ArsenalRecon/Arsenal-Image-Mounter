@@ -54,13 +54,17 @@ Public Class MainForm
         Dim eulaconfirmed = Registry.GetValue("HKEY_CURRENT_USER\Software\Arsenal Recon\Image Mounter", "EULAConfirmed", 0)
 
         If TypeOf eulaconfirmed IsNot Integer OrElse CType(eulaconfirmed, Integer) < 1 Then
+
             If MessageBox.Show(Me,
                                GetEULA(),
                                "Arsenal Image Mounter",
                                MessageBoxButtons.OKCancel,
                                MessageBoxIcon.Information) <> DialogResult.OK Then
+
                 Application.Exit()
+
                 Return
+
             End If
 
         End If

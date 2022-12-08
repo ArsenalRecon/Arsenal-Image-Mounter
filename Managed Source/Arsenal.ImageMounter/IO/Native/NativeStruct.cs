@@ -1,4 +1,14 @@
-﻿using Arsenal.ImageMounter.Extensions;
+﻿//  
+//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  This source code and API are available under the terms of the Affero General Public
+//  License v3.
+// 
+//  Please see LICENSE.txt for full license terms, including the availability of
+//  proprietary exceptions.
+//  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+// 
+
+using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
 using Microsoft.Win32.SafeHandles;
 using System;
@@ -22,13 +32,16 @@ public static class NativeStruct
 
     public static byte[] ReadAllBytes(string path)
     {
-
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             return File.ReadAllBytes(path);
         }
 
-        using var stream = NativeFileIO.OpenFileStream(path.AsMemory(), FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, (FileOptions)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS);
+        using var stream = NativeFileIO.OpenFileStream(path,
+                                                       FileMode.Open,
+                                                       FileAccess.Read,
+                                                       FileShare.Read | FileShare.Delete,
+                                                       (FileOptions)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS);
 
         var buffer = new byte[(int)(stream.Length - 1L) + 1];
 
@@ -47,7 +60,7 @@ public static class NativeStruct
             return await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
         }
 
-        using var stream = NativeFileIO.OpenFileStream(path.AsMemory(), FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, (FileOptions)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS | FileOptions.Asynchronous);
+        using var stream = NativeFileIO.OpenFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, (FileOptions)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS | FileOptions.Asynchronous);
 
         var buffer = new byte[(int)(stream.Length - 1L) + 1];
 
@@ -88,11 +101,13 @@ public static class NativeStruct
 ;
     }
 
-    public static long? GetDiskSize(SafeFileHandle SafeFileHandle) => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+    public static long? GetDiskSize(SafeFileHandle SafeFileHandle)
+        => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? NativeFileIO.GetDiskSize(SafeFileHandle)
             : NativeUnixIO.GetDiskSize(SafeFileHandle);
 
-    public static DISK_GEOMETRY? GetDiskGeometry(SafeFileHandle SafeFileHandle) => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+    public static DISK_GEOMETRY? GetDiskGeometry(SafeFileHandle SafeFileHandle)
+        => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? NativeFileIO.GetDiskGeometry(SafeFileHandle)
             : NativeUnixIO.GetDiskGeometry(SafeFileHandle);
 
@@ -104,9 +119,10 @@ public static class NativeStruct
     /// <param name="ShareMode">Share mode to request.</param>
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
-    public static SafeFileHandle OpenFileHandle(ReadOnlyMemory<char> FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, bool Overlapped) => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, bool Overlapped)
+        => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? NativeFileIO.OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped)
-            : new FileStream(FileName.ToString(), CreationDisposition, DesiredAccess, ShareMode, 1, Overlapped).SafeFileHandle;
+            : new FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode, 1, Overlapped).SafeFileHandle;
 
     private static readonly Dictionary<string, long> KnownFormatsOffsets = new(StringComparer.OrdinalIgnoreCase)
     {
