@@ -277,10 +277,10 @@ public static partial class API
         }
 
         var pdo_path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devInst)
-            ?? throw new KeyNotFoundException($"Cannot find physical device object for devInst = {devInst}");
+            ?? throw new DriveNotFoundException($"Cannot find physical device object for devInst = {devInst}");
 
         var dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDriveNameForNtDevice(pdo_path)).FirstOrDefault()
-            ?? throw new KeyNotFoundException($"Cannot find symbolic link for devInst = {devInst}");
+            ?? throw new DriveNotFoundException($"Cannot find symbolic link for devInst = {devInst}");
 
         Trace.WriteLine($"Device {pdo_path} devinst {devInst}. Registering write overlay '{nativepath}', FakeNonRemovable={FakeNonRemovable}");
 
@@ -313,11 +313,21 @@ public static partial class API
 
         for (var r = 1; r <= 4; r++)
         {
-            NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, devInst);
-
             var statistics = new WriteFilterStatistics();
 
-            last_error = GetWriteOverlayStatus(pdo_path, out statistics);
+            try
+            {
+                NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, devInst);
+
+                last_error = GetWriteOverlayStatus(pdo_path, out statistics);
+            }
+            catch (SystemException ex)
+            when (ex is DriveNotFoundException
+                || ex.GetBaseException() is Win32Exception win32ex && win32ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND)
+            {
+                Trace.WriteLine($"DevInst {devInst} disappeared during restart: {ex.JoinMessages()}");
+                last_error = NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND;
+            }
 
             Trace.WriteLine($"Overlay path '{nativepath}', I/O error code: {last_error}, aimwrfltr error code: 0x{statistics.LastErrorCode:X}, protection: {statistics.IsProtected}, initialized: {statistics.Initialized}");
 
@@ -327,13 +337,21 @@ public static partial class API
                 Thread.Sleep(300);
                 continue;
             }
-            else if (nativepath is not null && (last_error == NativeConstants.ERROR_INVALID_FUNCTION || last_error == NativeConstants.ERROR_INVALID_PARAMETER || last_error == NativeConstants.ERROR_NOT_SUPPORTED))
+            else if (nativepath is not null
+                && (last_error == NativeConstants.ERROR_INVALID_FUNCTION
+                || last_error == NativeConstants.ERROR_INVALID_PARAMETER
+                || last_error == NativeConstants.ERROR_NOT_SUPPORTED))
             {
                 Trace.WriteLine("Filter driver not yet loaded, retrying...");
                 Thread.Sleep(300);
                 continue;
             }
-            else if (nativepath is not null && last_error != NativeConstants.NO_ERROR || nativepath is null && last_error != NativeConstants.ERROR_INVALID_FUNCTION && last_error != NativeConstants.ERROR_INVALID_PARAMETER && last_error != NativeConstants.ERROR_NOT_SUPPORTED)
+            else if (nativepath is not null
+                && last_error != NativeConstants.NO_ERROR
+                || nativepath is null
+                && last_error != NativeConstants.ERROR_INVALID_FUNCTION
+                && last_error != NativeConstants.ERROR_INVALID_PARAMETER
+                && last_error != NativeConstants.ERROR_NOT_SUPPORTED)
             {
                 throw new NotSupportedException("Error checking write filter driver status", new Win32Exception(last_error));
             }
@@ -383,7 +401,16 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
             {
                 if (NativeFileIO.RemoveFilter(dev.devinstChild, "aimwrfltr"))
                 {
-                    NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, dev.devinstChild);
+                    try
+                    {
+                        NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, dev.devinstChild);
+                    }
+                    catch (SystemException ex)
+                    when (ex is DriveNotFoundException
+                        || ex.GetBaseException() is Win32Exception win32ex && win32ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND)
+                    {
+                        Trace.WriteLine($"DevInst {dev.devinstChild} disappeared during restart: {ex.JoinMessages()}");
+                    }
                 }
 
                 return;
@@ -460,10 +487,10 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
         }
 
         var pdo_path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devInst)
-            ?? throw new KeyNotFoundException($"Cannot find physical device object for devInst = {devInst}");
+            ?? throw new DriveNotFoundException($"Cannot find physical device object for devInst = {devInst}");
 
         var dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDriveNameForNtDevice(pdo_path)).FirstOrDefault()
-            ?? throw new KeyNotFoundException($"Cannot find symbolic link object for devInst = {devInst}");
+            ?? throw new DriveNotFoundException($"Cannot find symbolic link object for devInst = {devInst}");
 
         Trace.WriteLine($"Device {pdo_path} devinst {devInst}. Registering write overlay '{nativepath}', FakeNonRemovable={FakeNonRemovable}");
 
@@ -496,11 +523,22 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
 
         for (var r = 1; r <= 4; r++)
         {
-            NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, devInst);
-
             var statistics = new WriteFilterStatistics();
 
-            last_error = GetWriteOverlayStatus(pdo_path, out statistics);
+            try
+            {
+                NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, devInst);
+
+                last_error = GetWriteOverlayStatus(pdo_path, out statistics);
+            }
+            catch (SystemException ex)
+            when (ex is DriveNotFoundException
+                || (ex.GetBaseException() is Win32Exception win32ex
+                && win32ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND))
+            {
+                Trace.WriteLine($"DevInst {devInst} disappeared during restart: {ex.JoinMessages()}");
+                last_error = NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND;
+            }
 
             Trace.WriteLine($"Overlay path '{nativepath}', I/O error code: {last_error}, aimwrfltr error code: 0x{statistics.LastErrorCode:X}, protection: {statistics.IsProtected}, initialized: {statistics.Initialized}");
 
@@ -510,13 +548,21 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 await Task.Delay(300, cancel).ConfigureAwait(false);
                 continue;
             }
-            else if (nativepath is not null && (last_error == NativeConstants.ERROR_INVALID_FUNCTION || last_error == NativeConstants.ERROR_INVALID_PARAMETER || last_error == NativeConstants.ERROR_NOT_SUPPORTED))
+            else if (nativepath is not null
+                && (last_error == NativeConstants.ERROR_INVALID_FUNCTION
+                || last_error == NativeConstants.ERROR_INVALID_PARAMETER
+                || last_error == NativeConstants.ERROR_NOT_SUPPORTED))
             {
                 Trace.WriteLine("Filter driver not yet loaded, retrying...");
                 await Task.Delay(300, cancel).ConfigureAwait(false);
                 continue;
             }
-            else if (nativepath is not null && last_error != NativeConstants.NO_ERROR || nativepath is null && last_error != NativeConstants.ERROR_INVALID_FUNCTION && last_error != NativeConstants.ERROR_INVALID_PARAMETER && last_error != NativeConstants.ERROR_NOT_SUPPORTED)
+            else if (nativepath is not null
+                && last_error != NativeConstants.NO_ERROR
+                || nativepath is null
+                && last_error != NativeConstants.ERROR_INVALID_FUNCTION
+                && last_error != NativeConstants.ERROR_INVALID_PARAMETER
+                && last_error != NativeConstants.ERROR_NOT_SUPPORTED)
             {
                 throw new NotSupportedException("Error checking write filter driver status", new Win32Exception(last_error));
             }
@@ -566,7 +612,15 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
             {
                 if (NativeFileIO.RemoveFilter(dev.devinstChild, "aimwrfltr"))
                 {
-                    NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, dev.devinstChild);
+                    try
+                    {
+                        NativeFileIO.RestartDevice(NativeConstants.DiskClassGuid, dev.devinstChild);
+                    }
+                    catch (SystemException ex)
+                    when (ex is DriveNotFoundException
+                        || ex.GetBaseException() is Win32Exception win32ex && win32ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND)
+                    {
+                    }
                 }
 
                 return;

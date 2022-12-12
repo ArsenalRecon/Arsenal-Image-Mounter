@@ -894,7 +894,7 @@ public class ScsiAdapter : DeviceObject
             var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_DEVICE, 0U, Request, out var ReturnCode);
 
             // ' STATUS_OBJECT_NAME_NOT_FOUND. Possible "zombie" device, just return empty data.
-            if (ReturnCode == 0xC0000034)
+            if (ReturnCode == NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND)
             {
                 return;
             }

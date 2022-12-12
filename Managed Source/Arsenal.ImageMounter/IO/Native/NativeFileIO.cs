@@ -572,13 +572,13 @@ public static partial class NativeFileIO
         internal static partial bool AdjustTokenPrivileges(SafeFileHandle TokenHandle, [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges, in byte NewStates, int BufferLength, out byte PreviousState, out int ReturnLength);
 
         [LibraryImport("ntdll")]
-        internal static partial uint NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
+        internal static partial int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
 
         [LibraryImport("ntdll")]
-        internal static partial uint NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
+        internal static partial int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
 
         [LibraryImport("ntdll")]
-        internal static partial uint NtDuplicateObject(SafeHandle SourceProcessHandle, IntPtr SourceHandle, IntPtr TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
+        internal static partial int NtDuplicateObject(SafeHandle SourceProcessHandle, IntPtr SourceHandle, IntPtr TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
 
         [LibraryImport("kernel32", SetLastError = true)]
         internal static partial IntPtr GetCurrentProcess();
@@ -1003,13 +1003,13 @@ public static partial class NativeFileIO
         internal static extern bool AdjustTokenPrivileges(SafeAccessTokenHandle TokenHandle, bool DisableAllPrivileges, in byte NewStates, int BufferLength, out byte PreviousState, out int ReturnLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern uint NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
+        internal static extern int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern uint NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
+        internal static extern int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern uint NtDuplicateObject(SafeHandle SourceProcessHandle, IntPtr SourceHandle, IntPtr TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
+        internal static extern int NtDuplicateObject(SafeHandle SourceProcessHandle, IntPtr SourceHandle, IntPtr TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern IntPtr GetCurrentProcess();
@@ -1082,7 +1082,7 @@ public static partial class NativeFileIO
         /// <param name="returncode">ReturnCode value from SRB_IO_CONTROL header upon return.</param>
         /// <returns>This method returns a BinaryReader object that can be used to read and parse data returned after the
         /// SRB_IO_CONTROL header.</returns>
-        public static unsafe Span<byte> SendSrbIoControl(SafeFileHandle adapter, uint ctrlcode, uint timeout, Span<byte> databytes, out uint returncode)
+        public static unsafe Span<byte> SendSrbIoControl(SafeFileHandle adapter, uint ctrlcode, uint timeout, Span<byte> databytes, out int returncode)
         {
             var header = new SRB_IO_CONTROL(SrbIoCtlSignature, timeout, ctrlcode, databytes.Length);
 
@@ -1178,8 +1178,8 @@ public static partial class NativeFileIO
     /// code to a Win32 error code and throws a managed exception for that error code.
     /// </summary>
     /// <param name="result">Return code from a ntdll.dll API function call.</param>
-    public static uint NtDllTry(uint result)
-        => (result & 0x80000000u) != 0
+    public static int NtDllTry(int result)
+        => result < 0
         ? throw new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(result))
         : result;
 
@@ -1205,7 +1205,8 @@ public static partial class NativeFileIO
                         device.FlushBuffers();
                         device.DismountVolumeFilesystem(Force: false);
                     }
-                    catch (Win32Exception ex) when (ex.NativeErrorCode is NativeConstants.ERROR_WRITE_PROTECT or NativeConstants.ERROR_NOT_READY or NativeConstants.ERROR_DEV_NOT_EXIST)
+                    catch (Win32Exception ex)
+                    when (ex.NativeErrorCode is NativeConstants.ERROR_WRITE_PROTECT or NativeConstants.ERROR_NOT_READY or NativeConstants.ERROR_DEV_NOT_EXIST)
                     {
                         device.DismountVolumeFilesystem(Force: true);
                     }
@@ -3819,7 +3820,7 @@ Currently, the following application has files open on this volume:
 
         if (devinfo.IsInvalid)
         {
-            throw new Exception("Device not found");
+            throw new DriveNotFoundException("Device not found");
         }
 
         var devInfoData = new SP_DEVINFO_DATA();
@@ -3833,7 +3834,10 @@ Currently, the following application has files open on this volume:
         {
             if (devInfoData.DevInst == devinst)
             {
-                var pcp = new SP_PROPCHANGE_PARAMS(classInstallHeader: new SP_CLASSINSTALL_HEADER(installFunction: NativeConstants.DIF_PROPERTYCHANGE), hwProfile: 0U, scope: NativeConstants.DICS_FLAG_CONFIGSPECIFIC, stateChange: NativeConstants.DICS_PROPCHANGE);
+                var pcp = new SP_PROPCHANGE_PARAMS(classInstallHeader: new SP_CLASSINSTALL_HEADER(installFunction: NativeConstants.DIF_PROPERTYCHANGE),
+                                                   hwProfile: 0U,
+                                                   scope: NativeConstants.DICS_FLAG_CONFIGSPECIFIC,
+                                                   stateChange: NativeConstants.DICS_PROPCHANGE);
 
                 if (UnsafeNativeMethods.SetupDiSetClassInstallParamsW(devinfo, devInfoData, pcp, PinnedBuffer<SP_PROPCHANGE_PARAMS>.TypeSize) &&
                     UnsafeNativeMethods.SetupDiCallClassInstaller(NativeConstants.DIF_PROPERTYCHANGE, devinfo, devInfoData))
@@ -3841,13 +3845,18 @@ Currently, the following application has files open on this volume:
                     return;
                 }
 
-                throw new Exception($"Device restart failed", new Win32Exception());
+                if (Marshal.GetLastWin32Error() == NativeConstants.ERROR_NO_SUCH_DEVINST)
+                {
+                    throw new DriveNotFoundException("Device not found");
+                }
+
+                throw new IOException("Device restart failed", new Win32Exception());
             }
 
             deviceIndex += 1U;
         }
 
-        throw new Exception("Device not found");
+        throw new DriveNotFoundException("Device not found");
     }
 
     public static void RunDLLInstallHinfSection(IntPtr OwnerWindow, string InfPath, ReadOnlySpan<char> InfSection)

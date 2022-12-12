@@ -36,10 +36,10 @@ public partial class NtDirectoryObject : IDisposable
 
 #if NET7_0_OR_GREATER
     [LibraryImport("ntdll", SetLastError = false)]
-    private static partial uint NtOpenDirectoryObject(out SafeFileHandle handle, NtObjectAccess access, in ObjectAttributes objectAttributes);
+    private static partial int NtOpenDirectoryObject(out SafeFileHandle handle, NtObjectAccess access, in ObjectAttributes objectAttributes);
 
     [LibraryImport("ntdll", SetLastError = false)]
-    private static partial uint NtQueryDirectoryObject(
+    private static partial int NtQueryDirectoryObject(
         SafeFileHandle DirectoryHandle,
         out byte buffer,
         int length,
@@ -49,10 +49,10 @@ public partial class NtDirectoryObject : IDisposable
         out int returnLength);
 #else
     [DllImport("ntdll", SetLastError = false)]
-    private static extern uint NtOpenDirectoryObject(out SafeFileHandle handle, NtObjectAccess access, in ObjectAttributes objectAttributes);
+    private static extern int NtOpenDirectoryObject(out SafeFileHandle handle, NtObjectAccess access, in ObjectAttributes objectAttributes);
 
     [DllImport("ntdll", SetLastError = false)]
-    private static extern uint NtQueryDirectoryObject(
+    private static extern int NtQueryDirectoryObject(
         SafeFileHandle DirectoryHandle,
         out byte buffer,
         int length,
