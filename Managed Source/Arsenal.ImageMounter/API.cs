@@ -326,7 +326,7 @@ public static partial class API
                 || ex.GetBaseException() is Win32Exception win32ex && win32ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND)
             {
                 Trace.WriteLine($"DevInst {devInst} disappeared during restart: {ex.JoinMessages()}");
-                last_error = NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND;
+                last_error = NativeConstants.ERROR_FILE_NOT_FOUND;
             }
 
             Trace.WriteLine($"Overlay path '{nativepath}', I/O error code: {last_error}, aimwrfltr error code: 0x{statistics.LastErrorCode:X}, protection: {statistics.IsProtected}, initialized: {statistics.Initialized}");
@@ -351,7 +351,8 @@ public static partial class API
                 || nativepath is null
                 && last_error != NativeConstants.ERROR_INVALID_FUNCTION
                 && last_error != NativeConstants.ERROR_INVALID_PARAMETER
-                && last_error != NativeConstants.ERROR_NOT_SUPPORTED)
+                && last_error != NativeConstants.ERROR_NOT_SUPPORTED
+                && last_error != NativeConstants.ERROR_FILE_NOT_FOUND)
             {
                 throw new NotSupportedException("Error checking write filter driver status", new Win32Exception(last_error));
             }
@@ -537,7 +538,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 && win32ex.NativeErrorCode == NativeConstants.ERROR_FILE_NOT_FOUND))
             {
                 Trace.WriteLine($"DevInst {devInst} disappeared during restart: {ex.JoinMessages()}");
-                last_error = NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND;
+                last_error = NativeConstants.ERROR_FILE_NOT_FOUND;
             }
 
             Trace.WriteLine($"Overlay path '{nativepath}', I/O error code: {last_error}, aimwrfltr error code: 0x{statistics.LastErrorCode:X}, protection: {statistics.IsProtected}, initialized: {statistics.Initialized}");
@@ -562,7 +563,8 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 || nativepath is null
                 && last_error != NativeConstants.ERROR_INVALID_FUNCTION
                 && last_error != NativeConstants.ERROR_INVALID_PARAMETER
-                && last_error != NativeConstants.ERROR_NOT_SUPPORTED)
+                && last_error != NativeConstants.ERROR_NOT_SUPPORTED
+                && last_error != NativeConstants.ERROR_FILE_NOT_FOUND)
             {
                 throw new NotSupportedException("Error checking write filter driver status", new Win32Exception(last_error));
             }
