@@ -41,9 +41,10 @@ public static class NativeStruct
                                                        FileMode.Open,
                                                        FileAccess.Read,
                                                        FileShare.Read | FileShare.Delete,
-                                                       (FileOptions)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS);
+                                                       65536,
+                                                       NativeConstants.FILE_FLAG_BACKUP_SEMANTICS);
 
-        var buffer = new byte[(int)(stream.Length - 1L) + 1];
+        var buffer = new byte[stream.Length];
 
         return stream.Read(buffer, 0, buffer.Length) != stream.Length
             ? throw new IOException($"Incomplete read from '{path}'")
@@ -54,15 +55,19 @@ public static class NativeStruct
 
     public static async Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken = default)
     {
-
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             return await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
         }
 
-        using var stream = NativeFileIO.OpenFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, (FileOptions)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS | FileOptions.Asynchronous);
+        using var stream = NativeFileIO.OpenFileStream(path,
+                                                       FileMode.Open,
+                                                       FileAccess.Read,
+                                                       FileShare.Read | FileShare.Delete,
+                                                       65536,
+                                                       NativeConstants.FILE_FLAG_BACKUP_SEMANTICS | FileOptions.Asynchronous);
 
-        var buffer = new byte[(int)(stream.Length - 1L) + 1];
+        var buffer = new byte[stream.Length];
 
         return await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false) != stream.Length
             ? throw new IOException($"Incomplete read from '{path}'")
@@ -71,7 +76,8 @@ public static class NativeStruct
 
 #endif
 
-    public static long GetFileOrDiskSize(string imagefile) => imagefile.StartsWith("/dev/", StringComparison.Ordinal)
+    public static long GetFileOrDiskSize(string imagefile)
+        => imagefile.StartsWith("/dev/", StringComparison.Ordinal)
             || RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             && (imagefile.StartsWith(@"\\?\", StringComparison.OrdinalIgnoreCase) || imagefile.StartsWith(@"\\.\", StringComparison.OrdinalIgnoreCase))
             && !HasExtension(imagefile)
@@ -80,25 +86,19 @@ public static class NativeStruct
             : GetFileSize(imagefile);
 
     public static bool HasExtension(string filepath) =>
-
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-
         !Path.GetExtension(filepath.AsSpan()).IsEmpty;
-
 #else
-
         !string.IsNullOrEmpty(Path.GetExtension(filepath));
 #endif
 
     public static long GetDiskSize(string imagefile)
     {
-
         using var disk = new DiskDevice(imagefile, FileAccess.Read);
 
         var diskSize = disk.DiskSize;
 
-        return diskSize ?? throw new NotSupportedException($"Failed to identify size of device '{imagefile}'")
-;
+        return diskSize ?? throw new NotSupportedException($"Failed to identify size of device '{imagefile}'");
     }
 
     public static long? GetDiskSize(SafeFileHandle SafeFileHandle)
@@ -144,13 +144,11 @@ public static class NativeStruct
     /// <param name="imagefile">Name of disk image file.</param>
     public static uint GetSectorSizeFromFileName(string imagefile)
     {
-
         imagefile.NullCheck(nameof(imagefile));
 
         return imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) || imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase)
             ? 2048U
             : 512U;
-
     }
 
     private static readonly IReadOnlyList<(ulong Size, string Suffix)> Multipliers = new List<(ulong Size, string Suffix)>
@@ -180,7 +178,6 @@ public static class NativeStruct
 
     public static string FormatBytes(ulong size, int precision)
     {
-
         foreach (var (Size, Suffix) in Multipliers)
         {
             if (size >= Size)
@@ -194,7 +191,6 @@ public static class NativeStruct
         }
 
         return $"{size} byte";
-
     }
 
     public static string FormatBytes(long size)

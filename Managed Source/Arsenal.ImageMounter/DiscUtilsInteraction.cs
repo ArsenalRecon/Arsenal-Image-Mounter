@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
@@ -22,6 +23,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0057 // Use range operator
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter;
@@ -35,16 +38,26 @@ public enum InitializeFileSystem
 
 public static class DiscUtilsInteraction
 {
+    public static int PartitionOffsetMBR { get; set; } = 65536;
 
-    public static int RAMDiskPartitionOffset { get; set; } = 65536;
-
-    public static int RAMDiskEndOfDiskFreeSpace { get; set; } = 1 << 20;
+    public static int PartitionOffsetGPT { get; set; } = 1 << 20;
 
     public static bool DiscUtilsInitialized { get; } = DevioServiceFactory.DiscUtilsInitialized;
 
-    public static void InitializeVirtualDisk(VirtualDisk disk, Geometry discutils_geometry, PARTITION_STYLE partition_style, InitializeFileSystem file_system, string? label)
+    public static void InitializeVirtualDisk(VirtualDisk disk,
+                                             Geometry discutils_geometry,
+                                             PARTITION_STYLE partition_style,
+                                             InitializeFileSystem file_system,
+                                             string? label)
     {
-        Func<Stream> open_volume;
+        Span<byte> mbr = stackalloc byte[512];
+        disk.GetMasterBootRecord(mbr);
+        NativeConstants.DefaultBootCode.Span.CopyTo(mbr);
+        var signature = NativeCalls.GenerateDiskSignature();
+        MemoryMarshal.Write(mbr.Slice(0x1B8), ref signature);
+        disk.SetMasterBootRecord(mbr);
+
+        Stream volume;
         long first_sector;
         long sector_count;
 
@@ -52,9 +65,10 @@ public static class DiscUtilsInteraction
         {
             case PARTITION_STYLE.MBR:
                 {
-                    var partition_table = BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsNtfs);
-                    var partition = partition_table[0];
-                    open_volume = partition.Open;
+                    var partition_table = BiosPartitionTable.Initialize(disk);
+                    var partition_number = partition_table.CreateAligned(WellKnownPartitionType.WindowsNtfs, active: true, alignment: PartitionOffsetMBR);
+                    var partition = partition_table[partition_number];
+                    volume = partition.Open();
                     first_sector = partition.FirstSector;
                     sector_count = partition.SectorCount;
                     break;
@@ -62,9 +76,10 @@ public static class DiscUtilsInteraction
 
             case PARTITION_STYLE.GPT:
                 {
-                    var partition_table = GuidPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsNtfs);
-                    var partition = partition_table[1];
-                    open_volume = partition.Open;
+                    var partition_table = GuidPartitionTable.Initialize(disk);
+                    var partition_number = partition_table.CreateAligned(WellKnownPartitionType.WindowsNtfs, active: true, alignment: PartitionOffsetGPT);
+                    var partition = partition_table[partition_number];
+                    volume = partition.Open();
                     first_sector = partition.FirstSector;
                     sector_count = partition.SectorCount;
                     break;
@@ -72,7 +87,7 @@ public static class DiscUtilsInteraction
 
             case PARTITION_STYLE.RAW:
                 {
-                    open_volume = () => disk.Content;
+                    volume = disk.Content;
                     first_sector = 0L;
                     sector_count = disk.Capacity / disk.SectorSize;
                     break;
@@ -85,25 +100,18 @@ public static class DiscUtilsInteraction
         }
 
         // Format file system
-
         switch (file_system)
         {
-
             case InitializeFileSystem.NTFS:
                 {
-
-                    using var fs = DiscUtils.Ntfs.NtfsFileSystem.Format(open_volume(), label, discutils_geometry, 0L, sector_count);
-
+                    using var fs = DiscUtils.Ntfs.NtfsFileSystem.Format(volume, label, discutils_geometry, 0L, sector_count);
                     fs.SetSecurity(@"\", new RawSecurityDescriptor("O:LAG:BUD:(A;OICI;FA;;;BA)(A;OICI;FA;;;SY)(A;OICI;FA;;;CO)(A;OICI;FA;;;WD)"));
-
                     break;
                 }
 
             case InitializeFileSystem.FAT:
                 {
-
-                    using var fs = DiscUtils.Fat.FatFileSystem.FormatPartition(open_volume(), label, discutils_geometry, 0, (int)Math.Min(sector_count, int.MaxValue), 0);
-
+                    using var fs = DiscUtils.Fat.FatFileSystem.FormatPartition(volume, label, discutils_geometry, 0, (int)Math.Min(sector_count, int.MaxValue), 0);
                     break;
                 }
 
@@ -114,31 +122,43 @@ public static class DiscUtilsInteraction
 
             default:
                 {
-
                     throw new NotSupportedException($"File system {file_system} is not currently supported.");
                 }
         }
 
         // ' Adjust hidden sectors count
-        if (partition_style == PARTITION_STYLE.MBR)
+        var sector_size = disk.SectorSize;
+
+        byte[]? allocated = null;
+
+        var vbr = sector_size <= 512
+            ? stackalloc byte[sector_size]
+            : (allocated = ArrayPool<byte>.Shared.Rent(sector_size)).AsSpan(0, sector_size);
+
+        try
         {
+            volume.Position = 0;
 
-            using var raw = open_volume();
+            volume.Read(vbr);
 
-            var sector_size = disk.SectorSize;
-
-            Span<byte> vbr = sector_size <= 512
-                ? stackalloc byte[sector_size]
-                : new byte[sector_size];
-
-            raw.Read(vbr);
+            NativeConstants.DefaultBootCode.Span.CopyTo(vbr);
 
             var argvalue = (uint)first_sector;
             MemoryMarshal.Write(vbr.Slice(0x1C), ref argvalue);
 
-            raw.Position = 0L;
+            vbr[0x1fe] = 0x55;
+            vbr[0x1ff] = 0xaa;
 
-            raw.Write(vbr);
+            volume.Position = 0;
+
+            volume.Write(vbr);
+        }
+        finally
+        {
+            if (allocated is not null)
+            {
+                ArrayPool<byte>.Shared.Return(allocated);
+            }
         }
     }
 
@@ -146,10 +166,18 @@ public static class DiscUtilsInteraction
                                                         Geometry discutils_geometry,
                                                         PARTITION_STYLE partition_style,
                                                         InitializeFileSystem file_system,
-                                                        string label,
+                                                        string? label,
                                                         CancellationToken cancellationToken)
     {
-        Func<Stream> open_volume;
+        using var mbrMem = MemoryPool<byte>.Shared.Rent(512);
+        var mbr = mbrMem.Memory.Slice(0, 512);
+        await disk.GetMasterBootRecordAsync(mbr, cancellationToken).ConfigureAwait(false);
+        NativeConstants.DefaultBootCode.CopyTo(mbr);
+        var signature = NativeCalls.GenerateDiskSignature();
+        MemoryMarshal.Write(mbr.Span.Slice(0x1B8), ref signature);
+        await disk.SetMasterBootRecordAsync(mbr, cancellationToken).ConfigureAwait(false);
+
+        Stream volume;
         long first_sector;
         long sector_count;
 
@@ -157,9 +185,10 @@ public static class DiscUtilsInteraction
         {
             case PARTITION_STYLE.MBR:
                 {
-                    var partition_table = BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsNtfs);
-                    var partition = partition_table[0];
-                    open_volume = partition.Open;
+                    var partition_table = BiosPartitionTable.Initialize(disk);
+                    var partition_number = partition_table.CreateAligned(WellKnownPartitionType.WindowsNtfs, active: true, alignment: PartitionOffsetMBR);
+                    var partition = partition_table[partition_number];
+                    volume = partition.Open();
                     first_sector = partition.FirstSector;
                     sector_count = partition.SectorCount;
                     break;
@@ -167,9 +196,10 @@ public static class DiscUtilsInteraction
 
             case PARTITION_STYLE.GPT:
                 {
-                    var partition_table = GuidPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsNtfs);
-                    var partition = partition_table[1];
-                    open_volume = partition.Open;
+                    var partition_table = GuidPartitionTable.Initialize(disk);
+                    var partition_number = partition_table.CreateAligned(WellKnownPartitionType.WindowsNtfs, active: true, alignment: PartitionOffsetGPT);
+                    var partition = partition_table[partition_number];
+                    volume = partition.Open();
                     first_sector = partition.FirstSector;
                     sector_count = partition.SectorCount;
                     break;
@@ -177,7 +207,7 @@ public static class DiscUtilsInteraction
 
             case PARTITION_STYLE.RAW:
                 {
-                    open_volume = () => disk.Content;
+                    volume = disk.Content;
                     first_sector = 0L;
                     sector_count = disk.Capacity / disk.SectorSize;
                     break;
@@ -190,25 +220,18 @@ public static class DiscUtilsInteraction
         }
 
         // Format file system
-
         switch (file_system)
         {
-
             case InitializeFileSystem.NTFS:
                 {
-
-                    using var fs = DiscUtils.Ntfs.NtfsFileSystem.Format(open_volume(), label, discutils_geometry, 0L, sector_count);
-
+                    using var fs = DiscUtils.Ntfs.NtfsFileSystem.Format(volume, label, discutils_geometry, 0, sector_count);
                     fs.SetSecurity(@"\", new RawSecurityDescriptor("O:LAG:BUD:(A;OICI;FA;;;BA)(A;OICI;FA;;;SY)(A;OICI;FA;;;CO)(A;OICI;FA;;;WD)"));
-
                     break;
                 }
 
             case InitializeFileSystem.FAT:
                 {
-
-                    using var fs = DiscUtils.Fat.FatFileSystem.FormatPartition(open_volume(), label, discutils_geometry, 0, (int)Math.Min(sector_count, int.MaxValue), 0);
-
+                    using var fs = DiscUtils.Fat.FatFileSystem.FormatPartition(volume, label, discutils_geometry, 0, (int)Math.Min(sector_count, int.MaxValue), 0);
                     break;
                 }
 
@@ -219,36 +242,32 @@ public static class DiscUtilsInteraction
 
             default:
                 {
-
                     throw new NotSupportedException($"File system {file_system} is not currently supported.");
                 }
         }
 
         // ' Adjust hidden sectors count
-        if (partition_style == PARTITION_STYLE.MBR)
-        {
+        var sector_size = disk.SectorSize;
 
-            using var raw = open_volume();
+        using var allocated = MemoryPool<byte>.Shared.Rent(sector_size);
 
-            var sector_size = disk.SectorSize;
+        var vbr = allocated.Memory.Slice(0, sector_size);
 
-            var vbr = ArrayPool<byte>.Shared.Rent(sector_size);
+        volume.Position = 0;
 
-            try
-            {
-                await raw.ReadAsync(vbr.AsMemory(0, sector_size), cancellationToken).ConfigureAwait(false);
+        await volume.ReadAsync(vbr, cancellationToken).ConfigureAwait(false);
 
-                var argvalue = (uint)first_sector;
-                MemoryMarshal.Write(vbr.AsSpan(0x1C), ref argvalue);
+        NativeConstants.DefaultBootCode.CopyTo(vbr);
 
-                raw.Position = 0L;
+        var argvalue = (uint)first_sector;
+        MemoryMarshal.Write(vbr.Span.Slice(0x1C), ref argvalue);
 
-                await raw.WriteAsync(vbr.AsMemory(0, sector_size), cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(vbr);
-            }
-        }
+        vbr.Span[0x1fe] = 0x55;
+        vbr.Span[0x1ff] = 0xaa;
+
+        volume.Position = 0L;
+
+        await volume.WriteAsync(vbr, cancellationToken).ConfigureAwait(false);
     }
 }
+

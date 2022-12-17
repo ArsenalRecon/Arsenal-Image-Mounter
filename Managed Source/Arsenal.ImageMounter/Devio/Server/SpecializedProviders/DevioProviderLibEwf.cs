@@ -644,28 +644,22 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public override int Read(IntPtr buffer, int bufferoffset, int count, long fileoffset)
     {
-
         var done_count = 0;
 
         while (done_count < count)
         {
-
             var offset = libewf_handle_seek_offset(SafeHandle, fileoffset, Whence.Set, out var errobj);
 
             if (offset != fileoffset || Failed(errobj))
             {
-
                 ThrowError(errobj, $"Error seeking to position {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-
             }
 
             var iteration_count = count - done_count;
 
             if (iteration_count > MaxIoSize)
             {
-
                 iteration_count = MaxIoSize;
-
             }
 
             // Dim chunk_offset = CInt(fileoffset And (_ChunkSize - 1))
@@ -680,28 +674,21 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
             if (result < 0 || Failed(errobj))
             {
-
                 ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-
             }
 
             if (result > 0)
             {
-
                 done_count += result;
                 fileoffset += result;
                 bufferoffset += result;
             }
-
             else if (result == 0)
             {
-
                 break;
             }
-
             else if (iteration_count >= SectorSize << 1)
             {
-
                 errobj?.Dispose();
 
                 MaxIoSize = iteration_count >> 1 & ~(int)(SectorSize - 1L);
@@ -710,22 +697,17 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
                 continue;
             }
-
             else
             {
-
                 ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-
             }
         }
 
         return done_count;
-
     }
 
     public override int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset)
     {
-
         if (!CanWrite)
         {
             throw new InvalidOperationException("Cannot write to read-only ewf image files");
@@ -760,12 +742,10 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         }
 
         return sizedone;
-
     }
 
     protected override void Dispose(bool disposing)
     {
-
         Finishing?.Invoke(this, EventArgs.Empty);
 
         if (disposing && SafeHandle is not null)
@@ -774,7 +754,6 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         }
 
         base.Dispose(disposing);
-
     }
 
     public override uint SectorSize { get; }
@@ -785,7 +764,6 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public void SetOutputStringParameter(string identifier, string? value)
     {
-
         if (value is null || string.IsNullOrWhiteSpace(value))
         {
             return;
@@ -801,7 +779,6 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public void SetOutputHashParameter(string identifier, byte[] value)
     {
-
         if (value is null)
         {
             return;
@@ -821,7 +798,6 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     private void SetOutputValueParameter<TValue>(libewf_handle_set_header_value_func<TValue> func, TValue value) where TValue : unmanaged
     {
-
         var retval = func(SafeHandle, value, out var errobj);
 
         if (retval != 1 || Failed(errobj))
@@ -834,7 +810,6 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         where TValue1 : unmanaged
         where TValue2 : unmanaged
     {
-
         var retval = func(SafeHandle, value1, value2, out var errobj);
 
         if (retval != 1 || Failed(errobj))
@@ -845,7 +820,6 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public void SetOutputParameters(ImagingParameters ImagingParameters)
     {
-
         SetOutputStringParameter("case_number", ImagingParameters.CaseNumber);
         SetOutputStringParameter("description", ImagingParameters.Description);
         SetOutputStringParameter("evidence_number", ImagingParameters.EvidenceNumber);
@@ -875,12 +849,10 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         }
 
         SetOutputValueParameter(libewf_handle_set_error_granularity, ImagingParameters.SectorErrorGranularity);
-
     }
 
     public class ImagingParameters
     {
-
         public const int LIBEWF_CODEPAGE_ASCII = 20127;
 
         public int CodePage { get; set; } = LIBEWF_CODEPAGE_ASCII;
@@ -937,12 +909,10 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         public LIBEWF_COMPRESSION_FLAGS CompressionFlags { get; set; }
 
         public ulong SegmentFileSize { get; set; } = 2UL << 40;
-
     }
 
     public enum LIBEWF_FORMAT : byte
     {
-
         ENCASE1 = 0x1,
         ENCASE2 = 0x2,
         ENCASE3 = 0x3,
@@ -987,11 +957,9 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     [Flags]
     public enum LIBEWF_MEDIA_FLAGS : byte
     {
-
         PHYSICAL = 0x2,
         FASTBLOC = 0x4,
         TABLEAU = 0x8
-
     }
 
     public enum LIBEWF_COMPRESSION_METHOD : ushort

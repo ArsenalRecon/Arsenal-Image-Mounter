@@ -730,7 +730,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                                                    Statistics.Version,
                                                    out _,
                                                    default)
-            ? (int)NativeConstants.NO_ERROR
+            ? NativeConstants.NO_ERROR
             : Marshal.GetLastWin32Error();
     }
 

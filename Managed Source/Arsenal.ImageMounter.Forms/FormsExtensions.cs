@@ -9,6 +9,7 @@
 // 
 
 using Microsoft.Win32;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms;
 
 namespace Arsenal.ImageMounter.Dialogs;
@@ -23,6 +24,9 @@ public static class FormsExtensions
     /// </summary>
     /// <param name="form">Window where search should start</param>
     /// <returns>Topmost window that owns child windows down to supplied window</returns>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    [return: NotNullIfNotNull(nameof(form))]
+#endif
     public static Form? GetTopMostOwner(this Form? form)
     {
         while (form?.Owner is not null)
@@ -31,7 +35,6 @@ public static class FormsExtensions
         }
 
         return form;
-
     }
 
     /// <summary>

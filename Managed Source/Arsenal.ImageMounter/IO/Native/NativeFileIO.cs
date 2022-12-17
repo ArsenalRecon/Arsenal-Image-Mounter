@@ -2334,16 +2334,17 @@ Currently, the following application has files open on this volume:
     /// <param name="FileName">Name of file to open.</param>
     /// <param name="DesiredAccess">File access to request.</param>
     /// <param name="ShareMode">Share mode to request.</param>
+    /// <param name="bufferSize"></param>
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Options">Specifies whether to request overlapped I/O.</param>
-    public static FileStream OpenFileStream(string FileName, FileMode CreationDisposition, FileAccess DesiredAccess, FileShare ShareMode, FileOptions Options)
+    public static FileStream OpenFileStream(string FileName, FileMode CreationDisposition, FileAccess DesiredAccess, FileShare ShareMode, int bufferSize, FileOptions Options)
         => new(OpenFileHandle(FileName,
                               DesiredAccess,
                               ShareMode,
                               CreationDisposition,
                               Options),
             GetFileStreamLegalAccessValue(DesiredAccess),
-            1,
+            bufferSize,
             Options.HasFlag(FileOptions.Asynchronous));
 
     private static unsafe void SetFileCompressionState(SafeFileHandle SafeFileHandle, ushort State)

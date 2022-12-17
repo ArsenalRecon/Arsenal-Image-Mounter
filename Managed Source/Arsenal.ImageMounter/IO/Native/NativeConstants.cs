@@ -9,6 +9,7 @@
 // 
 
 using System;
+using System.IO;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
 
@@ -31,10 +32,12 @@ public static class NativeConstants
 
     public const uint STANDARD_RIGHTS_REQUIRED = 0xF0000U;
 
-    public const uint FILE_ATTRIBUTE_NORMAL = 0x80U;
-    public const uint FILE_FLAG_OVERLAPPED = 0x40000000U;
-    public const uint FILE_FLAG_BACKUP_SEMANTICS = 0x2000000U;
-    public const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x200000U;
+    public const FileAttributes FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = (FileAttributes)0x400000;
+
+    public const FileOptions FILE_FLAG_OVERLAPPED = (FileOptions)0x40000000;
+    public const FileOptions FILE_FLAG_BACKUP_SEMANTICS = (FileOptions)0x2000000;
+    public const FileOptions FILE_FLAG_OPEN_REPARSE_POINT = (FileOptions)0x200000;
+
     public const uint OPEN_ALWAYS = 4U;
     public const uint OPEN_EXISTING = 3U;
     public const uint CREATE_ALWAYS = 2U;

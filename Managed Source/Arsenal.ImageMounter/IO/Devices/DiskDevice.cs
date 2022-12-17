@@ -26,6 +26,8 @@ using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0057 // Use range operator
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.IO.Devices;
@@ -210,22 +212,35 @@ public class DiskDevice : DeviceObject
         get
         {
             var bytesPerSector = Geometry?.BytesPerSector ?? 512;
-            Span<byte> rawsig = bytesPerSector <= 512
+            
+            byte[]? allocated = null;
+            
+            var rawsig = bytesPerSector <= 512
                 ? stackalloc byte[bytesPerSector]
-                : new byte[bytesPerSector];
+                : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
+            
+            try
+            {
+                var stream = GetRawDiskStream();
+                stream.Position = 0L;
+                stream.Read(rawsig);
 
-            var stream = GetRawDiskStream();
-            stream.Position = 0L;
-            stream.Read(rawsig);
-
-            return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
-                && rawsig[0x1C2] != 0xEE
-                && (rawsig[0x1BE] & 0x7F) == 0
-                && (rawsig[0x1CE] & 0x7F) == 0
-                && (rawsig[0x1DE] & 0x7F) == 0
-                && (rawsig[0x1EE] & 0x7F) == 0
-                ? MemoryMarshal.Read<uint>(rawsig.Slice(0x1B8))
-                : (uint?)default;
+                return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
+                    && rawsig[0x1C2] != 0xEE
+                    && (rawsig[0x1BE] & 0x7F) == 0
+                    && (rawsig[0x1CE] & 0x7F) == 0
+                    && (rawsig[0x1DE] & 0x7F) == 0
+                    && (rawsig[0x1EE] & 0x7F) == 0
+                    ? MemoryMarshal.Read<uint>(rawsig.Slice(0x1B8))
+                    : (uint?)default;
+            }
+            finally
+            {
+                if (allocated is not null)
+                {
+                    ArrayPool<byte>.Shared.Return(allocated);
+                }
+            }
         }
         set
         {
@@ -236,17 +251,29 @@ public class DiskDevice : DeviceObject
 
             var bytesPerSector = Geometry?.BytesPerSector ?? 512;
 
-            Span<byte> rawsig = bytesPerSector <= 512
-                ? stackalloc byte[bytesPerSector]
-                : new byte[bytesPerSector];
+            byte[]? allocated = null;
 
-            var stream = GetRawDiskStream();
-            stream.Position = 0L;
-            stream.Read(rawsig);
-            var argvalue = value.Value;
-            MemoryMarshal.Write(rawsig.Slice(0x1B8), ref argvalue);
-            stream.Position = 0L;
-            stream.Write(rawsig);
+            var rawsig = bytesPerSector <= 512
+                ? stackalloc byte[bytesPerSector]
+                : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
+
+            try
+            {
+                var stream = GetRawDiskStream();
+                stream.Position = 0L;
+                stream.Read(rawsig);
+                var argvalue = value.Value;
+                MemoryMarshal.Write(rawsig.Slice(0x1B8), ref argvalue);
+                stream.Position = 0L;
+                stream.Write(rawsig);
+            }
+            finally
+            {
+                if (allocated is not null)
+                {
+                    ArrayPool<byte>.Shared.Return(allocated);
+                }
+            }
         }
     }
 
@@ -259,17 +286,29 @@ public class DiskDevice : DeviceObject
         {
             var bytesPerSector = Geometry?.BytesPerSector ?? 512;
 
-            Span<byte> rawsig = bytesPerSector <= 512
+            byte[]? allocated = null;
+
+            var rawsig = bytesPerSector <= 512
                 ? stackalloc byte[bytesPerSector]
-                : new byte[bytesPerSector];
+                : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
-            var stream = GetRawDiskStream();
-            stream.Position = 0L;
-            stream.Read(rawsig);
+            try
+            {
+                var stream = GetRawDiskStream();
+                stream.Position = 0L;
+                stream.Read(rawsig);
 
-            return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
-                ? MemoryMarshal.Read<uint>(rawsig.Slice(0x1C))
-                : (uint?)default;
+                return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
+                    ? MemoryMarshal.Read<uint>(rawsig.Slice(0x1C))
+                    : (uint?)default;
+            }
+            finally
+            {
+                if (allocated is not null)
+                {
+                    ArrayPool<byte>.Shared.Return(allocated);
+                }
+            }
         }
         set
         {
@@ -280,17 +319,29 @@ public class DiskDevice : DeviceObject
 
             var bytesPerSector = Geometry?.BytesPerSector ?? 512;
 
-            Span<byte> rawsig = bytesPerSector <= 512
-                ? stackalloc byte[bytesPerSector]
-                : new byte[bytesPerSector];
+            byte[]? allocated = null;
 
-            var stream = GetRawDiskStream();
-            stream.Position = 0L;
-            stream.Read(rawsig);
-            var argvalue = value.Value;
-            MemoryMarshal.Write(rawsig.Slice(0x1C), ref argvalue);
-            stream.Position = 0L;
-            stream.Write(rawsig);
+            var rawsig = bytesPerSector <= 512
+                ? stackalloc byte[bytesPerSector]
+                : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
+
+            try
+            {
+                var stream = GetRawDiskStream();
+                stream.Position = 0L;
+                stream.Read(rawsig);
+                var argvalue = value.Value;
+                MemoryMarshal.Write(rawsig.Slice(0x1C), ref argvalue);
+                stream.Position = 0L;
+                stream.Write(rawsig);
+            }
+            finally
+            {
+                if (allocated is not null)
+                {
+                    ArrayPool<byte>.Shared.Return(allocated);
+                }
+            }
         }
     }
 
@@ -335,16 +386,28 @@ public class DiskDevice : DeviceObject
         {
             var bytesPerSector = Geometry?.BytesPerSector ?? 512;
 
+            byte[]? allocated = null;
+
             var bootsect = bytesPerSector <= 512
                 ? stackalloc byte[bytesPerSector]
-                : new byte[bytesPerSector];
+                : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
-            return ReadBootSector(bootsect) >= 512
+            try
+            {
+                return ReadBootSector(bootsect) >= 512
                 && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
                 && (bootsect[0x1BE] & 0x7F) == 0
                 && (bootsect[0x1CE] & 0x7F) == 0
                 && (bootsect[0x1DE] & 0x7F) == 0
                 && (bootsect[0x1EE] & 0x7F) == 0;
+            }
+            finally
+            {
+                if (allocated is not null)
+                {
+                    ArrayPool<byte>.Shared.Return(allocated);
+                }
+            }
         }
     }
 
@@ -358,18 +421,31 @@ public class DiskDevice : DeviceObject
         {
             var bytesPerSector = Geometry?.BytesPerSector ?? 512;
 
+            byte[]? allocated = null;
+
             var bootsect = bytesPerSector <= 512
                 ? stackalloc byte[bytesPerSector]
-                : new byte[bytesPerSector];
+                : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
-            return ReadBootSector(bootsect) >= 512 && bootsect[0] != 0 &&
-!bootsect.Slice(0, NativeConstants.DefaultBootCode.Length)
+            try
+            {
+                return ReadBootSector(bootsect) >= 512
+                && bootsect[0] != 0 &&
+                !bootsect.Slice(0, NativeConstants.DefaultBootCode.Length)
                     .SequenceEqual(NativeConstants.DefaultBootCode.Span)
-&& MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
+                && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
                 && (bootsect[0x1BE] & 0x7F) == 0
                 && (bootsect[0x1CE] & 0x7F) == 0
                 && (bootsect[0x1DE] & 0x7F) == 0
                 && (bootsect[0x1EE] & 0x7F) == 0;
+            }
+            finally
+            {
+                if (allocated is not null)
+                {
+                    ArrayPool<byte>.Shared.Return(allocated);
+                }
+            }
         }
     }
 
