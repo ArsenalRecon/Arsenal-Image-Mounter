@@ -207,7 +207,6 @@ public class DevioTcpService : DevioServiceBase
 
     private void ReadData(BinaryReader Reader, BinaryWriter Writer, ref byte[]? Data)
     {
-
         var Offset = Reader.ReadInt64();
         var ReadLength = (int)Reader.ReadUInt64();
         if (Data is null || Data.Length < ReadLength)
@@ -243,10 +242,9 @@ public class DevioTcpService : DevioServiceBase
 
     private void WriteData(BinaryReader Reader, BinaryWriter Writer, ref byte[]? Data)
     {
-
         var Offset = Reader.ReadInt64();
         var Length = Reader.ReadUInt64();
-        if (Data is null || Data.Length < (decimal)Length)
+        if (Data is null || (ulong)Data.Length < Length)
         {
             Array.Resize(ref Data, (int)Length);
         }

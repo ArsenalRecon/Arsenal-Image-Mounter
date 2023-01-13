@@ -1409,7 +1409,8 @@ public struct OSVERSIONINFO
 
     private unsafe fixed char csdVersion[128];
 
-    public unsafe ReadOnlySpan<char> CSDVersion => BufferExtensions.CreateReadOnlySpan(csdVersion[0], 128).ReadNullTerminatedUnicode();
+    public unsafe ReadOnlySpan<char> CSDVersion
+        => BufferExtensions.CreateReadOnlySpan(csdVersion[0], 128).ReadNullTerminatedUnicode();
 
     public unsafe OSVERSIONINFO()
     {
@@ -1428,7 +1429,8 @@ public struct OSVERSIONINFOEX
 
     private unsafe fixed char csdVersion[128];
 
-    public unsafe ReadOnlySpan<char> CSDVersion => BufferExtensions.CreateReadOnlySpan(csdVersion[0], 128).ReadNullTerminatedUnicode();
+    public unsafe ReadOnlySpan<char> CSDVersion
+        => BufferExtensions.CreateReadOnlySpan(csdVersion[0], 128).ReadNullTerminatedUnicode();
 
     public ushort ServicePackMajor { get; }
 

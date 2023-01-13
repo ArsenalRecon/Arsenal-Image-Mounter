@@ -1730,7 +1730,7 @@ Currently, the following application has files open on this volume:
 
                         LastObjectNameQuueryTime = 0L;
 
-                        if (status < 0 && newbuffersize > (decimal)buffer.ByteLength)
+                        if (status < 0 && (ulong)newbuffersize > buffer.ByteLength)
                         {
                             buffer.Resize(newbuffersize);
                             continue;
@@ -2378,8 +2378,15 @@ Currently, the following application has files open on this volume:
         return FileSize;
     }
 
-    public static long? GetDiskSize(SafeFileHandle SafeFileHandle) => UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_GET_LENGTH_INFO, IntPtr.Zero, 0U, out
-        long FileSize, 8U, out _, IntPtr.Zero)
+    public static long? GetDiskSize(SafeFileHandle SafeFileHandle)
+        => UnsafeNativeMethods.DeviceIoControl(SafeFileHandle,
+                                               NativeConstants.IOCTL_DISK_GET_LENGTH_INFO,
+                                               IntPtr.Zero,
+                                               0U,
+                                               out long FileSize,
+                                               8U,
+                                               out _,
+                                               IntPtr.Zero)
             ? FileSize
             : (GetPartitionInformationEx(SafeFileHandle)?.PartitionLength);
 

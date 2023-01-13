@@ -197,9 +197,9 @@ public static class NativeStruct
     {
         foreach (var (Size, Suffix) in Multipliers)
         {
-            if (Math.Abs(size) >= (decimal)Size)
+            if (Math.Abs(size) >= (long)Size)
             {
-                return $"{size / (double)Size:0.000}{Suffix}";
+                return $"{size / (double)Size:0.0}{Suffix}";
             }
         }
 
@@ -210,7 +210,7 @@ public static class NativeStruct
     {
         foreach (var (Size, Suffix) in Multipliers)
         {
-            if (size >= (decimal)Size)
+            if (size >= (long)Size)
             {
                 var precisionFormatString =
                     PrecisionFormatStrings.GetOrAdd(precision,

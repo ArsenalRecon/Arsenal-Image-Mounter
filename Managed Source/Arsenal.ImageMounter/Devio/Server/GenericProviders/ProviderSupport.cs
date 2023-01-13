@@ -241,18 +241,16 @@ public static class ProviderSupport
         }
         else if ("dynamic".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase))
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new PlatformNotSupportedException("Sparse files not supported on target platform or OS");
-            }
-
-            try
-            {
-                NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, true);
-            }
-            catch (Exception ex)
-            {
-                throw new NotSupportedException("Sparse files not supported on target platform or OS", ex);
+                try
+                {
+                    NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, true);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Sparse files not supported on target platform or file system: {ex.JoinMessages()}");
+                }
             }
         }
         else
