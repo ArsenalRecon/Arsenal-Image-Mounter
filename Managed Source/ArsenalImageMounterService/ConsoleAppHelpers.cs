@@ -1,5 +1,5 @@
 ﻿//  
-//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 //  This source code and API are available under the terms of the Affero General Public
 //  License v3.
 // 
@@ -14,7 +14,7 @@ using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.ConsoleSupport;
+using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Native;
 using Microsoft.Win32.SafeHandles;
 using System;
@@ -180,8 +180,8 @@ Process CPU architecture: {RuntimeInformation.ProcessArchitecture}
 Arsenal Image Mounter version {ConsoleApp.AssemblyFileVersion}
 
 {driver_ver}
-            
-Copyright (c) 2012-2022 Arsenal Recon.
+
+Copyright (c) 2012-2023 Arsenal Recon.
 
 http://www.ArsenalRecon.com
 

@@ -2,7 +2,7 @@
 ''''' MainForm.vb
 ''''' GUI mount tool.
 ''''' 
-''''' Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+''''' Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ''''' This source code and API are available under the terms of the Affero General Public
 ''''' License v3.
 '''''
@@ -20,7 +20,7 @@ Imports Arsenal.ImageMounter.Devio
 Imports Arsenal.ImageMounter.Devio.Server.Interaction
 Imports Arsenal.ImageMounter.Devio.Server.Services
 Imports Arsenal.ImageMounter.Extensions
-Imports Arsenal.ImageMounter.IO.ConsoleSupport
+Imports Arsenal.ImageMounter.IO.ConsoleIO
 Imports Arsenal.ImageMounter.IO.Devices
 Imports Arsenal.ImageMounter.IO.Native
 Imports Arsenal.ImageMounter.Views

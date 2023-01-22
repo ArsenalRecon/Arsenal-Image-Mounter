@@ -1,4 +1,4 @@
-﻿using Arsenal.ImageMounter.IO.ConsoleSupport;
+﻿using Arsenal.ImageMounter.IO.ConsoleIO;
 using System;
 using System.Collections.Generic;
 using System.Linq;

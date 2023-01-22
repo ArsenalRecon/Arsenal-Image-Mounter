@@ -1,5 +1,5 @@
 ﻿//  
-//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 //  This source code and API are available under the terms of the Affero General Public
 //  License v3.
 // 
@@ -22,7 +22,7 @@ using System.Text;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable IDE0057 // Use range operator
 
-namespace Arsenal.ImageMounter.IO.ConsoleSupport;
+namespace Arsenal.ImageMounter.IO.ConsoleIO;
 
 public static class ConsoleSupport
 {

@@ -2,7 +2,7 @@
 //  Support routines for creating provider and service instances given a known
 //  proxy provider.
 //  
-//  Copyright (c) 2012-2022, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
+//  Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https://www.ArsenalRecon.com>
 //  This source code and API are available under the terms of the Affero General Public
 //  License v3.
 // 
@@ -16,7 +16,7 @@ using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.ConsoleSupport;
+using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
