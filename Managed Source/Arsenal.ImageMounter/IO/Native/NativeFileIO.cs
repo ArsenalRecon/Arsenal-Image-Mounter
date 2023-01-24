@@ -76,7 +76,7 @@ public static partial class NativeFileIO
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool SetFileAttributesW(in char lpFileName, FileAttributes dwFileAttributes);
 
-        [LibraryImport("kernel32", SetLastError = true)]
+        [LibraryImport("kernel32", SetLastError = true), Obsolete]
         public static partial long GetTickCount64();
 #else
         [DllImport("kernel32", SetLastError = true)]
@@ -1611,9 +1611,13 @@ Currently, the following application has files open on this volume:
     /// System uptime
     /// </summary>
     /// <returns>Time elapsed since system startup</returns>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    public static TimeSpan SystemUptime => TimeSpan.FromMilliseconds(Environment.TickCount64);
+#else
     public static TimeSpan SystemUptime => TimeSpan.FromMilliseconds(SafeNativeMethods.GetTickCount64());
+#endif
 
-    public static long LastObjectNameQuueryTime { get; private set; }
+    public static TimeSpan LastObjectNameQuueryTime { get; private set; }
 
     public static uint LastObjectNameQueryGrantedAccess { get; private set; }
 
@@ -1724,11 +1728,9 @@ Currently, the following application has files open on this volume:
                     for(; ;)
                     {
                         LastObjectNameQueryGrantedAccess = handle.GrantedAccess;
-                        LastObjectNameQuueryTime = SafeNativeMethods.GetTickCount64();
+                        LastObjectNameQuueryTime = SystemUptime;
 
                         status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectNameInformation, buffer, (int)buffer.ByteLength, out newbuffersize);
-
-                        LastObjectNameQuueryTime = 0L;
 
                         if (status < 0 && (ulong)newbuffersize > buffer.ByteLength)
                         {
@@ -2392,7 +2394,6 @@ Currently, the following application has files open on this volume:
 
     public static bool IsDiskWritable(SafeFileHandle SafeFileHandle)
     {
-
         var rc = UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.IOCTL_DISK_IS_WRITABLE, IntPtr.Zero, 0U, IntPtr.Zero, 0U, out _, IntPtr.Zero);
         if (rc)
         {
@@ -2423,11 +2424,9 @@ Currently, the following application has files open on this volume:
 
     public static void GrowPartition(SafeFileHandle DiskHandle, int PartitionNumber, long BytesToGrow)
     {
-
         var DiskGrowPartition = new DISK_GROW_PARTITION(PartitionNumber, BytesToGrow);
 
         Win32Try(UnsafeNativeMethods.DeviceIoControl(DiskHandle, NativeConstants.IOCTL_DISK_GROW_PARTITION, DiskGrowPartition, (uint)PinnedBuffer<DISK_GROW_PARTITION>.TypeSize, IntPtr.Zero, 0U, out _, IntPtr.Zero));
-
     }
 
     public static void CompressFile(SafeFileHandle SafeFileHandle)
@@ -2446,23 +2445,22 @@ Currently, the following application has files open on this volume:
                                                         out _,
                                                         IntPtr.Zero));
 
+#if NETFRAMEWORK
     public static string GetLongFullPath(string path)
     {
-
         var newpath = GetNtPath(path);
 
         if (newpath.StartsWith(@"\??\", StringComparison.Ordinal))
         {
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-            newpath = string.Concat(@"\\?\", newpath.AsSpan(4));
-#else
             newpath = string.Concat(@"\\?\", newpath.Substring(4));
-#endif
         }
 
         return newpath;
-
     }
+#else
+    public static string GetLongFullPath(string path)
+        => Path.GetFullPath(path);
+#endif
 
     /// <summary>
     /// Adds a semicolon separated list of paths to the PATH environment variable of
@@ -2473,7 +2471,6 @@ Currently, the following application has files open on this volume:
     /// existing of specified paths first if True, or add new paths after existing path list if False.</param>
     public static void AddProcessPaths(bool BeforeExisting, string AddPaths)
     {
-
         if (string.IsNullOrEmpty(AddPaths))
         {
             return;
@@ -2482,7 +2479,6 @@ Currently, the following application has files open on this volume:
         var AddPathsArray = AddPaths.Split(';', StringSplitOptions.RemoveEmptyEntries);
 
         AddProcessPaths(BeforeExisting, AddPathsArray);
-
     }
 
     /// <summary>
@@ -2494,7 +2490,6 @@ Currently, the following application has files open on this volume:
     /// existing of specified paths first if True, or add new paths after existing path list if False.</param>
     public static void AddProcessPaths(bool BeforeExisting, params string[] AddPathsArray)
     {
-
         if (AddPathsArray is null || AddPathsArray.Length == 0)
         {
             return;
