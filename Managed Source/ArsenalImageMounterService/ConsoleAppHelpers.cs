@@ -197,7 +197,7 @@ Please see EULA.txt for license information.");
         var listen_port = 0;
         var buffer_size = DevioShmService.DefaultBufferSize;
         long? disk_size = null;
-        var disk_access = FileAccess.ReadWrite;
+        var disk_access = FileAccess.Read;
         var mount = false;
         string? provider_name = null;
         var show_help = false;
@@ -276,6 +276,10 @@ Please see EULA.txt for license information.");
             {
                 disk_access = FileAccess.Read;
             }
+            else if (arg.Equals("writable", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
+            {
+                disk_access = FileAccess.ReadWrite;
+            }
             else if (arg.Equals("fakesig", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
                 device_flags |= DeviceFlags.FakeDiskSignatureIfZero;
@@ -290,14 +294,9 @@ Please see EULA.txt for license information.");
                 disk_access = FileAccess.Read;
                 device_flags = device_flags | DeviceFlags.ReadOnly | DeviceFlags.WriteOverlay;
             }
-            else if (arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
+            else if (arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
+                && commands.ContainsKey("writeoverlay"))
             {
-                if (!commands.ContainsKey("writeoverlay"))
-                {
-                    show_help = true;
-                    break;
-                }
-
                 auto_delete = true;
             }
             else if (arg.Equals("mount", StringComparison.OrdinalIgnoreCase))
@@ -392,7 +391,7 @@ Please see EULA.txt for license information.");
             }
             else if (arg.Equals("version", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
-                ConsoleAppHelpers.ShowVersionInfo();
+                ShowVersionInfo();
                 return 0;
             }
             else if (arg.Equals("list", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
@@ -440,16 +439,16 @@ Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to th
 
 Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
 
-Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01), AFF4 forensic disk images or QEMU Qcow images, you must make the Libewf (libewf.dll), LibAFF4 (libaff4.dll) and Libqcow (libqcow.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI mounts disk images in write-original mode by default, to maintain compatibility with a large number of scripts in which users have replaced other solutions with AIM CLI.
+Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01), AFF4 forensic disk images or QEMU Qcow images, you must make the Libewf (libewf.dll), LibAFF4 (libaff4.dll) and Libqcow (libqcow.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI now mounts disk images in read-only mode by default.
 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
-{asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly] [--fakesig] [--fakembr] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile [--autodelete]] [--background]
+{asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly|--writable] [--fakesig] [--fakembr] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile [--autodelete]] [--background]
 
 Syntax to start shared memory service mode, for mounting from other applications:
-{asmname} --name=objectname [--buffersize=bytes] [--readonly] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
+{asmname} --name=objectname [--buffersize=bytes] [--readonly|--writable] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
 
 Syntax to start TCP/IP service mode, for mounting from other computers:
-{asmname} [--ipaddress=listenaddress] --port=tcpport [--readonly] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
+{asmname} [--ipaddress=listenaddress] --port=tcpport [--readonly|--writable] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
 
 Syntax to convert a disk image without mounting:
 {asmname} --filename=imagefilename [--fakembr] [--provider={providers}] --convert=outputimagefilename [--variant=fixed|dynamic] [--background]
@@ -735,8 +734,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             }
 
-            ConsoleAppHelpers.
-                        CloseConsole(detach_event);
+
+            CloseConsole(detach_event);
         }
 
         else
