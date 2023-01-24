@@ -508,7 +508,7 @@ Public Class MainForm
 
                             Dim time = NativeFileIO.LastObjectNameQuueryTime
 
-                            If time = 0 OrElse NativeFileIO.SafeNativeMethods.GetTickCount64() - time < 4000 Then
+                            If time = Nothing OrElse (NativeFileIO.SystemUptime - time).TotalSeconds < 4 Then
                                 Continue While
                             End If
 
