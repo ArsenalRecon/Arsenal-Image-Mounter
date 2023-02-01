@@ -50,8 +50,8 @@ public class BufferedBinaryWriter : BinaryWriter
 
         var baseStream = (MemoryStream)BaseStream;
         baseStream.WriteTo(stream);
-        baseStream.SetLength(0L);
-        baseStream.Position = 0L;
+        baseStream.SetLength(0);
+        baseStream.Position = 0;
 
         stream.Flush();
     }
@@ -66,8 +66,8 @@ public class BufferedBinaryWriter : BinaryWriter
 
         var ms = (MemoryStream)BaseStream;
         var ToArrayRet = ms.ToArray();
-        ms.SetLength(0L);
-        ms.Position = 0L;
+        ms.SetLength(0);
+        ms.Position = 0;
 
         return ToArrayRet;
     }
@@ -83,8 +83,8 @@ public class BufferedBinaryWriter : BinaryWriter
         }
 
         var ms = (MemoryStream)BaseStream;
-        ms.SetLength(0L);
-        ms.Position = 0L;
+        ms.SetLength(0);
+        ms.Position = 0;
     }
 
     public bool IsDisposed { get; private set; }

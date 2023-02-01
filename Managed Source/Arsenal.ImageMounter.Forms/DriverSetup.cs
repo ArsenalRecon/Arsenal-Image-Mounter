@@ -317,7 +317,7 @@ public static class DriverSetup
     /// console window.</param>
     internal static void RemoveDevices(IWin32Window ownerWindow)
     {
-        if (NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var hwinstances) != 0u
+        if (NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var hwinstances) != 0
             || hwinstances is null)
         {
             return;
@@ -368,7 +368,7 @@ public static class DriverSetup
     /// </summary>
     internal static void RemoveDriver()
     {
-        using (var scm = NativeFileIO.UnsafeNativeMethods.OpenSCManagerW(IntPtr.Zero, IntPtr.Zero, 983103))
+        using (var scm = NativeFileIO.UnsafeNativeMethods.OpenSCManagerW(0, 0, 983103))
         {
             if (scm.IsInvalid)
             {

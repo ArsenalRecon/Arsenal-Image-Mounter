@@ -46,7 +46,7 @@ public static class NativePE
     {
         if (exe.CanSeek)
         {
-            exe.Position = 0L;
+            exe.Position = 0;
 
             var buffer = ArrayPool<byte>.Shared.Rent((int)exe.Length);
             try
@@ -74,7 +74,7 @@ public static class NativePE
     {
         if (exe.CanSeek)
         {
-            exe.Position = 0L;
+            exe.Position = 0;
 
             var buffer = ArrayPool<byte>.Shared.Rent((int)exe.Length);
             try

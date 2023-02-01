@@ -74,7 +74,7 @@ public abstract class DevioProviderManagedBase : IDevioProvider
     /// <returns>Returns number of bytes read from device that were stored in byte array.</returns>
     public abstract int Read(byte[] buffer, int bufferoffset, int count, long fileoffset);
 
-    int IDevioProvider.Read(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    int IDevioProvider.Read(nint buffer, int bufferoffset, int count, long fileoffset)
     {
 
         var _byte_buffer = ArrayPool<byte>.Shared.Rent(count);
@@ -122,7 +122,7 @@ public abstract class DevioProviderManagedBase : IDevioProvider
     /// <returns>Returns number of bytes written to device.</returns>
     public abstract int Write(byte[] buffer, int bufferoffset, int count, long fileoffset);
 
-    int IDevioProvider.Write(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset)
     {
 
         var _byte_buffer = ArrayPool<byte>.Shared.Rent(count);

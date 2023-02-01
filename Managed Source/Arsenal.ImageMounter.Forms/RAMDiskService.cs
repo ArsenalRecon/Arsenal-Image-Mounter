@@ -198,7 +198,7 @@ public class RAMDiskService : DevioNoneService
             return null;
         }
 
-        if (!long.TryParse(strsize, out var size_mb) || size_mb <= 0L)
+        if (!long.TryParse(strsize, out var size_mb) || size_mb <= 0)
         {
             return null;
         }

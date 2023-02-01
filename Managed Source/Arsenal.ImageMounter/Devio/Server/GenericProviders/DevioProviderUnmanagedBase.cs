@@ -63,7 +63,6 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
 
     unsafe int IDevioProvider.Read(byte[] buffer, int bufferoffset, int count, long fileoffset)
     {
-
         if (buffer is null)
         {
             throw new ArgumentNullException(nameof(buffer));
@@ -75,16 +74,15 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
 
         fixed (byte* pinptr = buffer)
         {
-            return Read(new IntPtr(pinptr), bufferoffset, count, fileoffset);
+            return Read((nint)pinptr, bufferoffset, count, fileoffset);
         }
     }
 
     unsafe int IDevioProvider.Read(Span<byte> buffer, long fileoffset)
     {
-
         fixed (void* pinptr = buffer)
         {
-            return Read(new IntPtr(pinptr), 0, buffer.Length, fileoffset);
+            return Read((nint)pinptr, 0, buffer.Length, fileoffset);
         }
     }
 
@@ -96,11 +94,10 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
     /// <param name="count">Number of bytes to read from virtual disk device.</param>
     /// <param name="fileoffset">Offset at virtual disk device where read starts.</param>
     /// <returns>Returns number of bytes read from device that were stored at specified memory position.</returns>
-    public abstract int Read(IntPtr buffer, int bufferoffset, int count, long fileoffset);
+    public abstract int Read(nint buffer, int bufferoffset, int count, long fileoffset);
 
     unsafe int IDevioProvider.Write(byte[] buffer, int bufferoffset, int count, long fileoffset)
     {
-
         if (buffer is null)
         {
             throw new ArgumentNullException(nameof(buffer));
@@ -112,16 +109,15 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
 
         fixed (byte* pinptr = buffer)
         {
-            return Write(new IntPtr(pinptr), bufferoffset, count, fileoffset);
+            return Write((nint)pinptr, bufferoffset, count, fileoffset);
         }
     }
 
     unsafe int IDevioProvider.Write(ReadOnlySpan<byte> buffer, long fileoffset)
     {
-
         fixed (void* pinptr = buffer)
         {
-            return Write(new IntPtr(pinptr), 0, buffer.Length, fileoffset);
+            return Write((nint)pinptr, 0, buffer.Length, fileoffset);
         }
     }
 
@@ -133,7 +129,7 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
     /// <param name="count">Number of bytes to write to virtual disk device.</param>
     /// <param name="fileoffset">Offset at virtual disk device where write starts.</param>
     /// <returns>Returns number of bytes written to device.</returns>
-    public abstract int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset);
+    public abstract int Write(nint buffer, int bufferoffset, int count, long fileoffset);
 
     /// <summary>
     /// Manage registrations and reservation keys for shared images.
@@ -195,5 +191,4 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
     /// </summary>
     /// <param name="e">Event arguments</param>
     protected virtual void OnDisposed(EventArgs e) => Disposed?.Invoke(this, e);
-
 }

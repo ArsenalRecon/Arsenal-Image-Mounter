@@ -71,7 +71,7 @@ public partial interface IDevioProvider : IDisposable
     /// <param name="count">Number of bytes to read from virtual disk device.</param>
     /// <param name="fileoffset">Offset at virtual disk device where read starts.</param>
     /// <returns>Returns number of bytes read from device that were stored at specified memory position.</returns>
-    int Read(IntPtr buffer, int bufferoffset, int count, long fileoffset);
+    int Read(nint buffer, int bufferoffset, int count, long fileoffset);
 
     /// <summary>
     /// Writes out bytes to virtual disk device from a memory area specified by a pointer to unmanaged memory.
@@ -81,7 +81,7 @@ public partial interface IDevioProvider : IDisposable
     /// <param name="count">Number of bytes to write to virtual disk device.</param>
     /// <param name="fileoffset">Offset at virtual disk device where write starts.</param>
     /// <returns>Returns number of bytes written to device.</returns>
-    int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset);
+    int Write(nint buffer, int bufferoffset, int count, long fileoffset);
 
     /// <summary>
     /// Reads bytes from virtual disk to a memory area.

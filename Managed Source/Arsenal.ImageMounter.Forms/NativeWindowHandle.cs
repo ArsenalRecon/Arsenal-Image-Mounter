@@ -21,13 +21,13 @@ public readonly struct NativeWindowHandle : IWin32Window
     /// <summary>
     /// Native window handle
     /// </summary>
-    public IntPtr Handle { get; }
+    public nint Handle { get; }
 
     /// <summary>
     /// Initializes a new instance
     /// </summary>
     /// <param name="handle">Native window handle to use</param>
-    public NativeWindowHandle(IntPtr handle)
+    public NativeWindowHandle(nint handle)
     {
         Handle = handle;
     }

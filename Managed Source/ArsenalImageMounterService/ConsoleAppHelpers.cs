@@ -382,7 +382,11 @@ Please see EULA.txt for license information.");
             }
             else if (arg.Equals("detach", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                detach_event = new SafeWaitHandle(new IntPtr(long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo)), ownsHandle: true);
+#if NETCOREAPP
+                detach_event = new SafeWaitHandle(nint.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
+#else
+                detach_event = new SafeWaitHandle((nint)long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
+#endif
             }
             else if (arg.Length == 0 || arg == "?" || arg.Equals("help", StringComparison.OrdinalIgnoreCase))
             {
@@ -596,7 +600,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             throw new NotSupportedException("Unknown image file format. Try with another format provider!");
         }
 
-        if (provider.Length <= 0L)
+        if (provider.Length <= 0)
         {
             throw new NotSupportedException("Unknown size of source device");
         }

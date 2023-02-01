@@ -44,13 +44,13 @@ public sealed class DummyProvider : IDevioProvider
 
     void IDevioProvider.SharedKeys(IMDPROXY_SHARED_REQ Request, out IMDPROXY_SHARED_RESP Response, out ulong[] Keys) => throw new NotImplementedException();
 
-    int IDevioProvider.Read(IntPtr buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
+    int IDevioProvider.Read(nint buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
 
     int IDevioProvider.Read(byte[] buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
 
     int IDevioProvider.Read(Span<byte> buffer, long fileoffset) => throw new NotImplementedException();
 
-    int IDevioProvider.Write(IntPtr buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
+    int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
 
     int IDevioProvider.Write(byte[] buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
 

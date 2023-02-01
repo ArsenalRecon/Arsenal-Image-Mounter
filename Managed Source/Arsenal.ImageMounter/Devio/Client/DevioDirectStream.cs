@@ -57,7 +57,7 @@ public partial class DevioDirectStream : DevioStream
     {
         fixed (void* ptr = buffer)
         {
-            var bytesread = Provider.Read(new IntPtr(ptr), 0, buffer.Length, Position);
+            var bytesread = Provider.Read((nint)ptr, 0, buffer.Length, Position);
 
             if (bytesread > 0)
             {
@@ -95,7 +95,7 @@ public partial class DevioDirectStream : DevioStream
     {
         fixed (void* ptr = buffer)
         {
-            var byteswritten = Provider.Write(new IntPtr(ptr), 0, buffer.Length, Position);
+            var byteswritten = Provider.Write((nint)ptr, 0, buffer.Length, Position);
             if (byteswritten > 0)
             {
                 Position += byteswritten;

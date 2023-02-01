@@ -116,7 +116,7 @@ public class DiskStream : AligningStream
             ? stackalloc byte[bytesPerSector]
             : new byte[bytesPerSector];
 
-        Position = 0L;
+        Position = 0;
 
         if (this.Read(vbr) < bytesPerSector)
         {
@@ -134,20 +134,20 @@ public class DiskStream : AligningStream
 
         total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
 
-        if (total_sectors == 0L)
+        if (total_sectors == 0)
         {
 
             total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
 
         }
 
-        if (total_sectors == 0L)
+        if (total_sectors == 0)
         {
 
             total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
 
         }
 
-        return total_sectors < 0L ? default : (long?)(total_sectors * vbr_sector_size);
+        return total_sectors < 0 ? default : (long?)(total_sectors * vbr_sector_size);
     }
 }

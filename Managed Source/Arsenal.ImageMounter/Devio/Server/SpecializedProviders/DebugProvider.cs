@@ -62,7 +62,7 @@ public class DebugProvider : DevioProviderUnmanagedBase
 
     private byte[]? read_buf2;
 
-    public override int Read(IntPtr buf1, int bufferoffset, int count, long fileoffset)
+    public override int Read(nint buf1, int bufferoffset, int count, long fileoffset)
     {
 
         if (read_buf2 is null || read_buf2.Length < count)
@@ -89,7 +89,7 @@ public class DebugProvider : DevioProviderUnmanagedBase
         return rc1;
     }
 
-    public override int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    public override int Write(nint buffer, int bufferoffset, int count, long fileoffset)
         => BaseProvider.Write(buffer, bufferoffset, count, fileoffset);
 
     public override bool SupportsShared => BaseProvider.SupportsShared;

@@ -49,7 +49,7 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
     /// </summary>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static void Flush()
-        => NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+        => NativeFileIO.UnsafeNativeMethods.WritePrivateProfileStringW(0, 0, 0, 0);
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static IEnumerable<string> EnumerateFileSectionNames(string filename)

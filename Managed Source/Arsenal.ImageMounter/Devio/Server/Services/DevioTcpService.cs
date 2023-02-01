@@ -181,7 +181,7 @@ public class DevioTcpService : DevioServiceBase
 
                 var baseStream = (MemoryStream)Writer.BaseStream;
                 baseStream.WriteTo(TcpStream);
-                baseStream.SetLength(0L);
+                baseStream.SetLength(0);
             }
         }
         catch (Exception ex)

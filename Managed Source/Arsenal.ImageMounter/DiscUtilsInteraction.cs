@@ -88,7 +88,7 @@ public static class DiscUtilsInteraction
             case PARTITION_STYLE.RAW:
                 {
                     volume = disk.Content;
-                    first_sector = 0L;
+                    first_sector = 0;
                     sector_count = disk.Capacity / disk.SectorSize;
                     break;
                 }
@@ -104,7 +104,7 @@ public static class DiscUtilsInteraction
         {
             case InitializeFileSystem.NTFS:
                 {
-                    using var fs = DiscUtils.Ntfs.NtfsFileSystem.Format(volume, label, discutils_geometry, 0L, sector_count);
+                    using var fs = DiscUtils.Ntfs.NtfsFileSystem.Format(volume, label, discutils_geometry, 0, sector_count);
                     fs.SetSecurity(@"\", new RawSecurityDescriptor("O:LAG:BUD:(A;OICI;FA;;;BA)(A;OICI;FA;;;SY)(A;OICI;FA;;;CO)(A;OICI;FA;;;WD)"));
                     break;
                 }
@@ -208,7 +208,7 @@ public static class DiscUtilsInteraction
             case PARTITION_STYLE.RAW:
                 {
                     volume = disk.Content;
-                    first_sector = 0L;
+                    first_sector = 0;
                     sector_count = disk.Capacity / disk.SectorSize;
                     break;
                 }
@@ -265,7 +265,7 @@ public static class DiscUtilsInteraction
         vbr.Span[0x1fe] = 0x55;
         vbr.Span[0x1ff] = 0xaa;
 
-        volume.Position = 0L;
+        volume.Position = 0;
 
         await volume.WriteAsync(vbr, cancellationToken).ConfigureAwait(false);
     }

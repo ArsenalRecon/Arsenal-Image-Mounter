@@ -5,10 +5,14 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>aim_cli</AssemblyName>
-    <Title>Arsenal Image Mounter Console Service</Title>
+    <Title>Arsenal Image Mounter Command Line application</Title>
     <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>Arsenal.ImageMounter.Cli</PackageId>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="System.Text.Json" Version="7.0.0" />
   </ItemGroup>

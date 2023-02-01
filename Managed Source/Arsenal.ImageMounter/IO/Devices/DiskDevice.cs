@@ -56,7 +56,7 @@ public class DiskDevice : DeviceObject
             return;
         }
 
-        if (!NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0U, IntPtr.Zero, 0U, out _, IntPtr.Zero))
+        if (!NativeFileIO.UnsafeNativeMethods.DeviceIoControl(SafeFileHandle, NativeConstants.FSCTL_ALLOW_EXTENDED_DASD_IO, 0, 0U, 0, 0U, out _, 0))
         {
             var errcode = Marshal.GetLastWin32Error();
             if (errcode is not NativeConstants.ERROR_INVALID_PARAMETER and not NativeConstants.ERROR_INVALID_FUNCTION)
@@ -222,7 +222,7 @@ public class DiskDevice : DeviceObject
             try
             {
                 var stream = GetRawDiskStream();
-                stream.Position = 0L;
+                stream.Position = 0;
                 stream.Read(rawsig);
 
                 return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
@@ -260,11 +260,11 @@ public class DiskDevice : DeviceObject
             try
             {
                 var stream = GetRawDiskStream();
-                stream.Position = 0L;
+                stream.Position = 0;
                 stream.Read(rawsig);
                 var argvalue = value.Value;
                 MemoryMarshal.Write(rawsig.Slice(0x1B8), ref argvalue);
-                stream.Position = 0L;
+                stream.Position = 0;
                 stream.Write(rawsig);
             }
             finally
@@ -295,7 +295,7 @@ public class DiskDevice : DeviceObject
             try
             {
                 var stream = GetRawDiskStream();
-                stream.Position = 0L;
+                stream.Position = 0;
                 stream.Read(rawsig);
 
                 return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
@@ -328,11 +328,11 @@ public class DiskDevice : DeviceObject
             try
             {
                 var stream = GetRawDiskStream();
-                stream.Position = 0L;
+                stream.Position = 0;
                 stream.Read(rawsig);
                 var argvalue = value.Value;
                 MemoryMarshal.Write(rawsig.Slice(0x1C), ref argvalue);
-                stream.Position = 0L;
+                stream.Position = 0;
                 stream.Write(rawsig);
             }
             finally
@@ -371,7 +371,7 @@ public class DiskDevice : DeviceObject
     private int ReadBootSector(Span<byte> bootsect)
     {
         var stream = GetRawDiskStream();
-        stream.Position = 0L;
+        stream.Position = 0;
         var bytesread = stream.Read(bootsect);
         return bytesread;
     }

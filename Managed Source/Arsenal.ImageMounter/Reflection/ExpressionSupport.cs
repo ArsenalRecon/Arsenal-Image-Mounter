@@ -9,9 +9,13 @@
 // 
 
 using Arsenal.ImageMounter.Collections;
+using Arsenal.ImageMounter.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+#if NET6_0_OR_GREATER
+using System.Collections.Immutable;
+#endif
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
@@ -279,11 +283,11 @@ public static class ExpressionSupport
 
     private class PropertiesAssigners<T>
     {
-        public static ReadOnlyDictionary<string, Func<T, object?>> Getters { get; }
+        public static IReadOnlyDictionary<string, Func<T, object?>> Getters { get; }
 
-        public static ReadOnlyDictionary<string, Action<T, object?>> Setters { get; }
+        public static IReadOnlyDictionary<string, Action<T, object?>> Setters { get; }
 
-        public static ReadOnlyDictionary<string, Type> Types { get; }
+        public static IReadOnlyDictionary<string, Type> Types { get; }
 
         static PropertiesAssigners()
         {
@@ -303,7 +307,13 @@ public static class ExpressionSupport
                             ? Expression.Convert(m.member, typeof(object))
                             : Expression.TypeAs(m.member, typeof(object)));
 
-            Getters = new(getters.ToDictionary(m => m.name, m => Expression.Lambda<Func<T, object?>>(m.valueconverted, target).Compile(), StringComparer.OrdinalIgnoreCase));
+            Getters = getters
+#if NET6_0_OR_GREATER
+                .ToImmutableDictionary(m => m.name, m => Expression.Lambda<Func<T, object?>>(m.valueconverted, target).Compile(), StringComparer.OrdinalIgnoreCase);
+#else
+                .ToDictionary(m => m.name, m => Expression.Lambda<Func<T, object?>>(m.valueconverted, target).Compile(), StringComparer.OrdinalIgnoreCase)
+                .AsReadOnly();
+#endif
 
             var setters = from m in props
                           let value = Expression.Parameter(typeof(object), "value")
@@ -314,9 +324,21 @@ public static class ExpressionSupport
                                                                Expression.ConvertChecked(value, m.proptype))
                           select (m.name, assign: Expression.Assign(m.member, valueconverted), value);
 
-            Setters = new(setters.ToDictionary(m => m.name, m => Expression.Lambda<Action<T, object?>>(m.assign, target, m.value).Compile(), StringComparer.OrdinalIgnoreCase));
+            Setters = setters
+#if NET6_0_OR_GREATER
+                .ToImmutableDictionary(m => m.name, m => Expression.Lambda<Action<T, object?>>(m.assign, target, m.value).Compile(), StringComparer.OrdinalIgnoreCase);
+#else
+                .ToDictionary(m => m.name, m => Expression.Lambda<Action<T, object?>>(m.assign, target, m.value).Compile(), StringComparer.OrdinalIgnoreCase)
+                .AsReadOnly();
+#endif
 
-            Types = new(props.ToDictionary(m => m.name, m => m.proptype, StringComparer.OrdinalIgnoreCase));
+            Types = props
+#if NET6_0_OR_GREATER
+                .ToImmutableDictionary(m => m.name, m => m.proptype, StringComparer.OrdinalIgnoreCase);
+#else
+                .ToDictionary(m => m.name, m => m.proptype, StringComparer.OrdinalIgnoreCase)
+                .AsReadOnly();
+#endif
         }
     }
 

@@ -96,7 +96,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
     void IDevioProvider.SharedKeys(IMDPROXY_SHARED_REQ Request, out IMDPROXY_SHARED_RESP Response, out ulong[] Keys)
         => throw new NotImplementedException();
 
-    public int Read(IntPtr data, int bufferoffset, int count, long fileoffset)
+    public int Read(nint data, int bufferoffset, int count, long fileoffset)
     {
 
         var prefix_count = 0;
@@ -253,7 +253,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
         return prefix_count + base_count + suffix_count;
     }
 
-    public int Write(IntPtr data, int bufferoffset, int count, long fileoffset)
+    public int Write(nint data, int bufferoffset, int count, long fileoffset)
     {
         var prefix_count = 0;
 

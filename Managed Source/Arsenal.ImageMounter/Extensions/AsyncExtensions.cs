@@ -92,19 +92,19 @@ public static partial class AsyncExtensions
 #if NET7_0_OR_GREATER
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static partial bool DuplicateHandle(IntPtr hSourceProcessHandle, IntPtr hSourceHandle, IntPtr hTargetProcessHandle, out SafeWaitHandle lpTargetHandle, uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, uint dwOptions);
+        private static partial bool DuplicateHandle(nint hSourceProcessHandle, nint hSourceHandle, nint hTargetProcessHandle, out SafeWaitHandle lpTargetHandle, uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, uint dwOptions);
 
         [LibraryImport("kernel32", SetLastError = true)]
-        private static partial IntPtr GetCurrentProcess();
+        private static partial nint GetCurrentProcess();
 #else
         [DllImport("kernel32", SetLastError = true)]
-        private static extern bool DuplicateHandle(IntPtr hSourceProcessHandle, IntPtr hSourceHandle, IntPtr hTargetProcessHandle, out SafeWaitHandle lpTargetHandle, uint dwDesiredAccess, bool bInheritHandle, uint dwOptions);
+        private static extern bool DuplicateHandle(nint hSourceProcessHandle, nint hSourceHandle, nint hTargetProcessHandle, out SafeWaitHandle lpTargetHandle, uint dwDesiredAccess, bool bInheritHandle, uint dwOptions);
 
         [DllImport("kernel32", SetLastError = true)]
-        private static extern IntPtr GetCurrentProcess();
+        private static extern nint GetCurrentProcess();
 #endif
 
-        public static NativeWaitHandle DuplicateExisting(IntPtr handle, bool inheritable) => !DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), out var new_handle, 0, inheritable, 0x2)
+        public static NativeWaitHandle DuplicateExisting(nint handle, bool inheritable) => !DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), out var new_handle, 0, inheritable, 0x2)
                 ? throw new Win32Exception()
                 : (new(new_handle));
 

@@ -35,7 +35,7 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
 
         protected internal DLLCloseMethod? DLLClose { get; set; }
 
-        public SafeDevioProviderDLLHandle(IntPtr handle, bool ownsHandle)
+        public SafeDevioProviderDLLHandle(nint handle, bool ownsHandle)
             : base(ownsHandle)
         {
 
@@ -94,14 +94,14 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
 
     public delegate SafeDevioProviderDLLHandle DLLOpenMethod([MarshalAs(UnmanagedType.LPStr)][In] string filename, [MarshalAs(UnmanagedType.Bool)] bool read_only, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllread, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllwrite, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLCloseMethod dllclose, out long size);
 
-    public delegate int DLLReadWriteMethod(SafeDevioProviderDLLHandle handle, IntPtr buffer, int size, long offset);
+    public delegate int DLLReadWriteMethod(SafeDevioProviderDLLHandle handle, nint buffer, int size, long offset);
 
-    public delegate int DLLCloseMethod(IntPtr handle);
+    public delegate int DLLCloseMethod(nint handle);
 
-    public override int Read(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    public override int Read(nint buffer, int bufferoffset, int count, long fileoffset)
         => DLLRead(SafeHandle, buffer + bufferoffset, count, fileoffset);
 
-    public override int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    public override int Write(nint buffer, int bufferoffset, int count, long fileoffset)
         => DLLWrite(SafeHandle, buffer + bufferoffset, count, fileoffset);
 
     protected override void Dispose(bool disposing)

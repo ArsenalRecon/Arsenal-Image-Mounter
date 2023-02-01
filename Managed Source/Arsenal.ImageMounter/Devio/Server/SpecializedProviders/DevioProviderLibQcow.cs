@@ -39,7 +39,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     public sealed class SafeLibQcowFileHandle : SafeHandleZeroOrMinusOneIsInvalid
     {
 
-        public SafeLibQcowFileHandle(IntPtr handle, bool ownsHandle)
+        public SafeLibQcowFileHandle(nint handle, bool ownsHandle)
             : base(ownsHandle)
         {
 
@@ -70,7 +70,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     public sealed class SafeLibQcowErrorObjectHandle : SafeHandleZeroOrMinusOneIsInvalid
     {
 
-        public SafeLibQcowErrorObjectHandle(IntPtr handle, bool ownsHandle)
+        public SafeLibQcowErrorObjectHandle(nint handle, bool ownsHandle)
             : base(ownsHandle)
         {
 
@@ -182,20 +182,20 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     [Obsolete]
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial IntPtr libqcow_read_random(SafeLibQcowFileHandle handle, IntPtr buffer, IntPtr buffer_size, long offset);
+    private static partial nint libqcow_read_random(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial IntPtr libqcow_file_read_buffer(SafeLibQcowFileHandle handle, IntPtr buffer, IntPtr buffer_size, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial nint libqcow_file_read_buffer(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, out SafeLibQcowErrorObjectHandle errobj);
 
     [Obsolete]
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_close(IntPtr handle);
+    private static partial int libqcow_close(nint handle);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_file_close(IntPtr handle, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_file_close(nint handle, out SafeLibQcowErrorObjectHandle errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -203,15 +203,15 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_notify_set_stream(IntPtr FILE, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_notify_set_stream(nint FILE, out SafeLibQcowErrorObjectHandle errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_error_fprint(SafeLibQcowErrorObjectHandle errobj, IntPtr clibfile);
+    private static partial int libqcow_error_fprint(SafeLibQcowErrorObjectHandle errobj, nint clibfile);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_error_free(ref IntPtr errobj);
+    private static partial int libqcow_error_free(ref nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -263,29 +263,29 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [Obsolete]
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern IntPtr libqcow_read_random(SafeLibQcowFileHandle handle, IntPtr buffer, IntPtr buffer_size, long offset);
+    private static extern nint libqcow_read_random(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern IntPtr libqcow_file_read_buffer(SafeLibQcowFileHandle handle, IntPtr buffer, IntPtr buffer_size, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern nint libqcow_file_read_buffer(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, out SafeLibQcowErrorObjectHandle errobj);
 
     [Obsolete]
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_close(IntPtr handle);
+    private static extern int libqcow_close(nint handle);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_file_close(IntPtr handle, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_file_close(nint handle, out SafeLibQcowErrorObjectHandle errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern int libqcow_notify_stream_close(out SafeLibQcowErrorObjectHandle errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_notify_set_stream(IntPtr FILE, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_notify_set_stream(nint FILE, out SafeLibQcowErrorObjectHandle errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_error_fprint(SafeLibQcowErrorObjectHandle errobj, IntPtr clibfile);
+    private static extern int libqcow_error_fprint(SafeLibQcowErrorObjectHandle errobj, nint clibfile);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_error_free(ref IntPtr errobj);
+    private static extern int libqcow_error_free(ref nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl)]
     private static extern int libqcow_error_sprint(SafeLibQcowErrorObjectHandle errobj, out byte buffer, int length);
@@ -412,7 +412,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     public override uint SectorSize { get; } = 512U;
 
-    public override int Read(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    public override int Read(nint buffer, int bufferoffset, int count, long fileoffset)
     {
 
         var done_count = 0;
@@ -446,7 +446,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
             // End If
 
-            var result = libqcow_file_read_buffer(SafeHandle, buffer + bufferoffset, new IntPtr(iteration_count), out errobj).ToInt32();
+            var result = (int)libqcow_file_read_buffer(SafeHandle, buffer + bufferoffset, iteration_count, out errobj);
 
             if (result < 0 || Failed(errobj))
             {
@@ -507,6 +507,6 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     }
 
-    public override int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    public override int Write(nint buffer, int bufferoffset, int count, long fileoffset)
         => throw new NotImplementedException("Write operations not implemented in libqcow");
 }

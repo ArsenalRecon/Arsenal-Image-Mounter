@@ -49,16 +49,16 @@ public static class ProviderSupport
             ? stackalloc byte[bytesPerSector]
             : new byte[bytesPerSector];
 
-        if (baseProvider.Read(vbr, 0L) < bytesPerSector)
+        if (baseProvider.Read(vbr, 0) < bytesPerSector)
         {
-            return 0L;
+            return 0;
         }
 
         var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
 
         if (vbr_sector_size <= 0)
         {
-            return 0L;
+            return 0;
         }
 
         var sector_bits = 0;
@@ -78,21 +78,21 @@ public static class ProviderSupport
 
         total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
 
-        if (total_sectors == 0L)
+        if (total_sectors == 0)
         {
 
             total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
 
         }
 
-        if (total_sectors == 0L)
+        if (total_sectors == 0)
         {
 
             total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
 
         }
 
-        return total_sectors < 0L ? 0L : (total_sectors << sector_bits);
+        return total_sectors < 0 ? 0 : (total_sectors << sector_bits);
     }
 
     public static string[] GetMultiSegmentFiles(string FirstFile)

@@ -49,26 +49,26 @@ public readonly struct UNICODE_STRING
     /// <summary>
     /// Unicode character buffer in unmanaged memory
     /// </summary>
-    public IntPtr Buffer { get; }
+    public nint Buffer { get; }
 
     /// <summary>
     /// Returns a <see cref="Span{Char}"/> for the length of the buffer
     /// that is currently in use.
     /// </summary>
-    public unsafe Span<char> Span => MemoryMarshal.Cast<byte, char>(new(Buffer.ToPointer(), Length));
+    public unsafe Span<char> Span => MemoryMarshal.Cast<byte, char>(new((void*)Buffer, Length));
 
     /// <summary>
     /// Returns a <see cref="Span{Char}"/> for the complete buffer, including
     /// any currently unused part.
     /// </summary>
-    public unsafe Span<char> MaximumSpan => MemoryMarshal.Cast<byte, char>(new(Buffer.ToPointer(), MaximumLength));
+    public unsafe Span<char> MaximumSpan => MemoryMarshal.Cast<byte, char>(new((void*)Buffer, MaximumLength));
 
     /// <summary>
     /// Initialize with pointer to existing unmanaged string
     /// </summary>
     /// <param name="str">Pointer to existing unicode string in managed memory</param>
     /// <param name="byte_count">Length in bytes of string pointed to by <paramref name="str"/></param>
-    public UNICODE_STRING(IntPtr str, ushort byte_count)
+    public UNICODE_STRING(nint str, ushort byte_count)
     {
         Length = byte_count;
         MaximumLength = byte_count;
@@ -146,7 +146,6 @@ public class UnicodeString
 [Flags]
 public enum NtObjectAttributes
 {
-
     Inherit = 0x2,
     Permanent = 0x10,
     Exclusive = 0x20,
@@ -160,15 +159,15 @@ public readonly struct ObjectAttributes
 {
     public int Length { get; }
 
-    public IntPtr RootDirectory { get; }
+    public nint RootDirectory { get; }
 
-    public IntPtr ObjectName { get; }
+    public nint ObjectName { get; }
 
     public NtObjectAttributes Attributes { get; }
 
-    public IntPtr SecurityDescriptor { get; }
+    public nint SecurityDescriptor { get; }
 
-    public IntPtr SecurityQualityOfService { get; }
+    public nint SecurityQualityOfService { get; }
 
     public ObjectAttributes(SafeFileHandle? rootDirectory,
                             SafeBuffer? objectName,
@@ -193,7 +192,6 @@ public readonly struct ObjectAttributes
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct IMSCSI_DEVICE_CONFIGURATION
 {
-
     public IMSCSI_DEVICE_CONFIGURATION(uint deviceNumber,
                                        long diskSize = 0,
                                        uint bytesPerSector = 0,
@@ -409,11 +407,11 @@ public enum SystemInformationClass : uint
 
 public enum ObjectInformationClass : uint
 {
-    ObjectBasicInformation,  // ' 0 Y N 
-    ObjectNameInformation,   // ' 1 Y N 
-    ObjectTypeInformation,   // ' 2 Y N 
-    ObjectAllTypesInformation,   // ' 3 Y N 
-    ObjectHandleInformation // ' 4 Y Y 
+    ObjectBasicInformation,     // ' 0 Y N 
+    ObjectNameInformation,      // ' 1 Y N 
+    ObjectTypeInformation,      // ' 2 Y N 
+    ObjectAllTypesInformation,  // ' 3 Y N 
+    ObjectHandleInformation     // ' 4 Y Y 
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -436,9 +434,9 @@ public readonly struct FILE_FS_FULL_SIZE_INFORMATION
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct IoStatusBlock
 {
-    public IntPtr Status { get; }
+    public nint Status { get; }
 
-    public IntPtr Information { get; }
+    public nint Information { get; }
 }
 
 public enum NtCreateDisposition
@@ -625,7 +623,7 @@ public readonly struct SP_DEVINFO_DATA
     public int Size { get; }
     public Guid ClassGuid { get; }
     public uint DevInst { get; }
-    public IntPtr Reserved { get; }
+    public nint Reserved { get; }
 }
 
 public enum CmClassRegistryProperty : uint
@@ -692,7 +690,7 @@ public readonly struct SystemHandleTableEntryInformation
     public byte ObjectType { get; }     // ' OB_TYPE_* (OB_TYPE_TYPE, etc.) 
     public byte Flags { get; }      // ' HANDLE_FLAG_* (HANDLE_FLAG_INHERIT, etc.) 
     public ushort Handle { get; }
-    public IntPtr ObjectPtr { get; }
+    public nint ObjectPtr { get; }
     public uint GrantedAccess { get; }
 }
 
@@ -794,7 +792,7 @@ public enum DEFINE_DOS_DEVICE_FLAGS : uint
 
 public class HGlobalBuffer : SafeBuffer
 {
-    public HGlobalBuffer(IntPtr numBytes)
+    public HGlobalBuffer(nint numBytes)
         : base(ownsHandle: true)
     {
         var ptr = Marshal.AllocHGlobal(numBytes);
@@ -810,7 +808,7 @@ public class HGlobalBuffer : SafeBuffer
         Initialize((ulong)numBytes);
     }
 
-    public HGlobalBuffer(IntPtr address, ulong numBytes, bool ownsHandle)
+    public HGlobalBuffer(nint address, ulong numBytes, bool ownsHandle)
         : base(ownsHandle)
     {
         SetHandle(address);
@@ -828,7 +826,7 @@ public class HGlobalBuffer : SafeBuffer
         Initialize((ulong)newSize);
     }
 
-    public void Resize(IntPtr newSize)
+    public void Resize(nint newSize)
     {
         if (handle != IntPtr.Zero)
         {
@@ -877,10 +875,10 @@ public sealed partial class SafeFindHandle : SafeHandleMinusOneIsInvalid
 #if NET7_0_OR_GREATER
     [LibraryImport("kernel32", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool FindClose(IntPtr h);
+    private static partial bool FindClose(nint h);
 #else
     [DllImport("kernel32", SetLastError = true)]
-    private static extern bool FindClose(IntPtr h);
+    private static extern bool FindClose(nint h);
 #endif
 
     /// <summary>
@@ -889,7 +887,7 @@ public sealed partial class SafeFindHandle : SafeHandleMinusOneIsInvalid
     /// <param name="open_handle">Existing open handle.</param>
     /// <param name="owns_handle">Indicates whether handle should be closed when this
     /// instance is released.</param>
-    public SafeFindHandle(IntPtr open_handle, bool owns_handle)
+    public SafeFindHandle(nint open_handle, bool owns_handle)
         : base(owns_handle)
     {
 
@@ -1568,9 +1566,9 @@ public readonly struct DRIVE_LAYOUT_INFORMATION_GPT
 [Flags]
 public enum DiskAttributes : long
 {
-    None = 0L,
-    Offline = 1L,
-    ReadOnly = 2L
+    None = 0,
+    Offline = 1,
+    ReadOnly = 2
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -1729,7 +1727,7 @@ public readonly struct SP_DEVICE_INTERFACE_DATA
     public int Size { get; }
     public Guid InterfaceClassGuid { get; }
     public uint Flags { get; }
-    public IntPtr Reserved { get; }
+    public nint Reserved { get; }
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -1756,7 +1754,7 @@ public struct SP_DEVINFO_LIST_DETAIL_DATA
 
     public Guid ClassGUID { get; }
 
-    public IntPtr RemoteMachineHandle { get; }
+    public nint RemoteMachineHandle { get; }
 
     private unsafe fixed char remoteMachineName[SP_MAX_MACHINENAME_LENGTH];
 

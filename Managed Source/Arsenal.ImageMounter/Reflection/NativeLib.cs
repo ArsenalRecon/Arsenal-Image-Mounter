@@ -23,10 +23,10 @@ public static class NativeLib
 
 #if NETSTANDARD || NETCOREAPP
 
-    public static TDelegate GetProcAddress<TDelegate>(IntPtr hModule, string procedureName) where TDelegate : Delegate
+    public static TDelegate GetProcAddress<TDelegate>(nint hModule, string procedureName) where TDelegate : Delegate
         => Marshal.GetDelegateForFunctionPointer<TDelegate>(NativeLibrary.GetExport(hModule, procedureName));
 
-    public static TDelegate? GetProcAddressNoThrow<TDelegate>(IntPtr hModule, string procedureName) where TDelegate : Delegate
+    public static TDelegate? GetProcAddressNoThrow<TDelegate>(nint hModule, string procedureName) where TDelegate : Delegate
         => NativeLibrary.TryGetExport(hModule, procedureName, out var fptr)
             ? Marshal.GetDelegateForFunctionPointer<TDelegate>(fptr)
             : null;
@@ -38,7 +38,7 @@ public static class NativeLib
         return Marshal.GetDelegateForFunctionPointer<TDelegate>(NativeLibrary.GetExport(hModule, procedureName));
     }
 
-    public static IntPtr GetProcAddressNoThrow(string moduleName, string procedureName)
+    public static nint GetProcAddressNoThrow(string moduleName, string procedureName)
     {
         if (!NativeLibrary.TryLoad(moduleName, out var hModule))
         {
@@ -50,10 +50,10 @@ public static class NativeLib
 
 #else
 
-    public static TDelegate GetProcAddress<TDelegate>(IntPtr hModule, string procedureName) where TDelegate : Delegate
+    public static TDelegate GetProcAddress<TDelegate>(nint hModule, string procedureName) where TDelegate : Delegate
         => Marshal.GetDelegateForFunctionPointer<TDelegate>(Win32Try(UnsafeNativeMethods.GetProcAddress(hModule, procedureName)));
 
-    public static TDelegate? GetProcAddressNoThrow<TDelegate>(IntPtr hModule, string procedureName) where TDelegate : Delegate
+    public static TDelegate? GetProcAddressNoThrow<TDelegate>(nint hModule, string procedureName) where TDelegate : Delegate
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {

@@ -129,16 +129,6 @@ public static partial class BufferExtensions
     public static string JoinMessages(this Exception exception, string separator) =>
         string.Join(separator, exception.EnumerateMessages());
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string? FormatLogMessages(this Exception exception) =>
-#if DEBUG
-        Debugger.IsAttached
-        ? exception.JoinMessages()
-        : exception?.ToString();
-#else
-        exception.JoinMessages();
-#endif
-
     /// <summary>
     /// Workaround for Visual Basic Span consumers
     /// </summary>
@@ -1309,12 +1299,12 @@ public static partial class BufferExtensions
     public static void AddRange<T>(this List<T> list, params T[] collection) => list.AddRange(collection);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static unsafe Span<byte> AsSpan(this IntPtr ptr, int length) =>
-        new(ptr.ToPointer(), length);
+    public static unsafe Span<byte> AsSpan(this nint ptr, int length) =>
+        new((void*)ptr, length);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static unsafe ReadOnlySpan<byte> AsReadOnlySpan(this IntPtr ptr, int length) =>
-        new(ptr.ToPointer(), length);
+    public static unsafe ReadOnlySpan<byte> AsReadOnlySpan(this nint ptr, int length) =>
+        new((void*)ptr, length);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe Span<byte> AsSpan(this SafeBuffer ptr) =>
@@ -1472,10 +1462,10 @@ public static partial class BufferExtensions
 #if NET7_0_OR_GREATER
     [LibraryImport("msvcrt", SetLastError = false)]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-    private static partial int memcmp(in byte ptr1, in byte ptr2, IntPtr count);
+    private static partial int memcmp(in byte ptr1, in byte ptr2, nint count);
 #else
     [DllImport("msvcrt", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-    private static extern int memcmp(in byte ptr1, in byte ptr2, IntPtr count);
+    private static extern int memcmp(in byte ptr1, in byte ptr2, nint count);
 #endif
 
     /// <summary>
@@ -1494,7 +1484,7 @@ public static partial class BufferExtensions
 
         return first.Length == second.Length
             && (first == second ||
-            memcmp(first[0], second[0], new IntPtr(first.Length)) == 0);
+            memcmp(first[0], second[0], first.Length) == 0);
     }
 
     /// <summary>
@@ -1513,7 +1503,7 @@ public static partial class BufferExtensions
 
         return first.Length == second.Length
             && (first == second ||
-            memcmp(first[0], second[0], new IntPtr(first.Length)) == 0);
+            memcmp(first[0], second[0], first.Length) == 0);
     }
 
     /// <summary>
@@ -1524,7 +1514,7 @@ public static partial class BufferExtensions
     /// <returns>Result of memcmp comparison.</returns>
     public static int BinaryCompare(this ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)
         => (first.IsEmpty && second.IsEmpty) || (first == second)
-        ? 0 : memcmp(first[0], second[0], new IntPtr(first.Length));
+        ? 0 : memcmp(first[0], second[0], first.Length);
 
     /// <summary>
     /// Compares two byte spans using C runtime memcmp function.
@@ -1534,7 +1524,7 @@ public static partial class BufferExtensions
     /// <returns>Result of memcmp comparison.</returns>
     public static int BinaryCompare(this Span<byte> first, ReadOnlySpan<byte> second)
         => (first.IsEmpty && second.IsEmpty) || (first == second)
-        ? 0 : memcmp(first[0], second[0], new IntPtr(first.Length));
+        ? 0 : memcmp(first[0], second[0], first.Length);
 
     /// <summary>
     /// Compares two spans using C runtime memcmp function.
@@ -1674,7 +1664,7 @@ public static partial class BufferExtensions
     }
 
     [return: MarshalAs(UnmanagedType.I1)]
-    private delegate bool RtlIsZeroMemoryFunc(in byte buffer, IntPtr length);
+    private delegate bool RtlIsZeroMemoryFunc(in byte buffer, nint length);
 
     private static readonly RtlIsZeroMemoryFunc FuncRtlIsZeroMemory =
         GetRtlIsZeroMemory() ??
@@ -1725,7 +1715,7 @@ public static partial class BufferExtensions
     /// <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsBufferZero(this Span<byte> buffer) =>
-        FuncRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), new(buffer.Length));
+        FuncRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), buffer.Length);
 
     /// <summary>
     /// Determines whether all bytes in a buffer are zero. If ntdll.RtlIsZeroMemory is available it is used,
@@ -1735,23 +1725,23 @@ public static partial class BufferExtensions
     /// <returns>If all bytes are zero, buffer is empty, true is returned, false otherwise.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsBufferZero(this ReadOnlySpan<byte> buffer) =>
-        FuncRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), new(buffer.Length));
+        FuncRtlIsZeroMemory(MemoryMarshal.GetReference(buffer), buffer.Length);
 
-    private static unsafe bool InternalIsZeroMemory(in byte buffer, IntPtr length)
+    private static unsafe bool InternalIsZeroMemory(in byte buffer, nint length)
     {
-        if (length == IntPtr.Zero)
+        if (length == 0)
         {
             return true;
         }
 
         fixed (byte* ptr = &buffer)
         {
-            var pointervalue = new IntPtr(ptr).ToInt64();
+            var pointervalue = (nint)ptr;
 
             if ((pointervalue & sizeof(long) - 1) == 0 &&
-                (length.ToInt64() & sizeof(long) - 1) == 0)
+                (length & sizeof(long) - 1) == 0)
             {
-                for (var p = (long*)ptr; p < ptr + length.ToInt64(); p++)
+                for (var p = (long*)ptr; p < ptr + length; p++)
                 {
                     if (*p != 0)
                     {
@@ -1760,9 +1750,9 @@ public static partial class BufferExtensions
                 }
             }
             else if ((pointervalue & sizeof(int) - 1) == 0 &&
-                (length.ToInt64() & sizeof(int) - 1) == 0)
+                (length & sizeof(int) - 1) == 0)
             {
-                for (var p = (int*)ptr; p < ptr + length.ToInt64(); p++)
+                for (var p = (int*)ptr; p < ptr + length; p++)
                 {
                     if (*p != 0)
                     {
@@ -1771,9 +1761,9 @@ public static partial class BufferExtensions
                 }
             }
             else if ((pointervalue & sizeof(short) - 1) == 0 &&
-                (length.ToInt64() & sizeof(short) - 1) == 0)
+                (length & sizeof(short) - 1) == 0)
             {
-                for (var p = (short*)ptr; p < ptr + length.ToInt64(); p++)
+                for (var p = (short*)ptr; p < ptr + length; p++)
                 {
                     if (*p != 0)
                     {
@@ -1783,7 +1773,7 @@ public static partial class BufferExtensions
             }
             else
             {
-                for (var p = ptr; p < ptr + length.ToInt64(); p++)
+                for (var p = ptr; p < ptr + length; p++)
                 {
                     if (*p != 0)
                     {

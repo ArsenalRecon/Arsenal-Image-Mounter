@@ -14,6 +14,9 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+#if NET6_0_OR_GREATER
+using System.Collections.Immutable;
+#endif
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -124,18 +127,24 @@ public static class NativeStruct
             ? NativeFileIO.OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped)
             : new FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode, 1, Overlapped).SafeFileHandle;
 
-    private static readonly Dictionary<string, long> KnownFormatsOffsets = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { "nrg", 600 << 9 },
-        { "sdi", 8 << 9 }
-    };
+    private static readonly IReadOnlyDictionary<string, long> KnownFormatsOffsets
+        = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "nrg", 600 << 9 },
+            { "sdi", 8 << 9 }
+        }
+#if NET6_0_OR_GREATER
+        .ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+#else
+        .AsReadOnly();
+#endif
 
     /// <summary>
     /// Checks if filename contains a known extension for which PhDskMnt knows of a constant offset value. That value can be
     /// later passed as Offset parameter to CreateDevice method.
     /// </summary>
     /// <param name="ImageFile">Name of disk image file.</param>
-    public static long GetOffsetByFileExt(string ImageFile) => KnownFormatsOffsets.TryGetValue(Path.GetExtension(ImageFile), out var Offset) ? Offset : 0L;
+    public static long GetOffsetByFileExt(string ImageFile) => KnownFormatsOffsets.TryGetValue(Path.GetExtension(ImageFile), out var Offset) ? Offset : 0;
 
     /// <summary>
     /// Returns sector size typically used for image file name extensions. Returns 2048 for

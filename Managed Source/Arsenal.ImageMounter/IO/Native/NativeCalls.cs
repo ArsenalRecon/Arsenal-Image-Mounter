@@ -24,7 +24,7 @@ namespace Arsenal.ImageMounter.IO.Native;
 public static partial class NativeCalls
 {
 #if NETCOREAPP
-    public static IntPtr CrtDllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath) => !OperatingSystem.IsWindows() &&
+    public static nint CrtDllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath) => !OperatingSystem.IsWindows() &&
             (libraryName.StartsWith("msvcr", StringComparison.OrdinalIgnoreCase) ||
             libraryName.StartsWith("msvcp", StringComparison.OrdinalIgnoreCase) ||
             libraryName.Equals("ntdll", StringComparison.OrdinalIgnoreCase) ||
@@ -32,7 +32,7 @@ public static partial class NativeCalls
             libraryName.Equals("kernel32", StringComparison.OrdinalIgnoreCase) ||
             libraryName.Equals("crtdll", StringComparison.OrdinalIgnoreCase))
             ? NativeLibrary.Load("c", assembly, searchPath)
-            : IntPtr.Zero;
+            : 0;
 #endif
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
@@ -48,7 +48,7 @@ public static partial class NativeCalls
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, in byte InBuffer, int InBufferSize, out byte OutBuffer, int OutBufferSize, out int BytesReturned, IntPtr overlapped);
+        public static partial bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, in byte InBuffer, int InBufferSize, out byte OutBuffer, int OutBufferSize, out int BytesReturned, nint overlapped);
 
         [LibraryImport("advapi32", EntryPoint = "SystemFunction036", SetLastError = true)]
         public static partial byte RtlGenRandom(out byte buffer, int length);
@@ -63,7 +63,7 @@ public static partial class NativeCalls
         public static extern unsafe bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, void* InBuffer, int InBufferSize, void* OutBuffer, int OutBufferSize, out int BytesReturned, void* overlapped);
 
         [DllImport("kernel32", SetLastError = true)]
-        public static extern bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, in byte InBuffer, int InBufferSize, out byte OutBuffer, int OutBufferSize, out int BytesReturned, IntPtr overlapped);
+        public static extern bool DeviceIoControl(SafeFileHandle FileHandle, uint IoControlCode, in byte InBuffer, int InBufferSize, out byte OutBuffer, int OutBufferSize, out int BytesReturned, nint overlapped);
 
         [DllImport("advapi32", SetLastError = true, EntryPoint = "SystemFunction036")]
         public static extern byte RtlGenRandom(out byte buffer, int length);

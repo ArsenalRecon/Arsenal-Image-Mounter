@@ -10,7 +10,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 
@@ -79,4 +81,8 @@ public static class ExtensionMethods
 
     public static string ToMembersString<T>(this T o) where T : struct => Reflection.MembersStringParser<T>.ToString(o);
 
+#if NETFRAMEWORK
+    public static ReadOnlyDictionary<TKey, TValue> AsReadOnly<TKey, TValue>(this IDictionary<TKey, TValue> dictionary) where TKey : notnull
+        => new(dictionary);
+#endif
 }

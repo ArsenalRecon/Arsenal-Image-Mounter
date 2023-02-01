@@ -76,7 +76,7 @@ public partial class DevioProviderLibAFF4 : DevioProviderDLLWrapperBase
         {
             var SectorSizeRet = getsectorsize(SafeHandle);
 
-            if (SectorSizeRet == 0L)
+            if (SectorSizeRet == 0)
             {
                 SectorSizeRet = 512U;
             }

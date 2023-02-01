@@ -98,11 +98,11 @@ public static partial class API
     /// Builds a list of device paths for active Arsenal Image Mounter
     /// objects.
     /// </summary>
-    public static IEnumerable<string> EnumerateAdapterDevicePaths(IntPtr HwndParent)
+    public static IEnumerable<string> EnumerateAdapterDevicePaths(nint HwndParent)
     {
         var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var devinstances);
 
-        if (status != 0L || devinstances is null)
+        if (status != 0 || devinstances is null)
         {
             Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}");
             yield break;
@@ -127,7 +127,7 @@ public static partial class API
                 var DeviceInterfaceData = new SP_DEVICE_INTERFACE_DATA();
 
                 if (!NativeFileIO.UnsafeNativeMethods.SetupDiEnumDeviceInterfaces(DevInfoSet,
-                                                                                  IntPtr.Zero,
+                                                                                  0,
                                                                                   NativeConstants.SerenumBusEnumeratorGuid,
                                                                                   i,
                                                                                   ref DeviceInterfaceData))
@@ -142,7 +142,7 @@ public static partial class API
                                                                                       ref DeviceInterfaceDetailData,
                                                                                       DeviceInterfaceData.Size,
                                                                                       out _,
-                                                                                      IntPtr.Zero)
+                                                                                      0)
                     && !DeviceInterfaceDetailData.DevicePath.IsEmpty)
                 {
                     yield return DeviceInterfaceDetailData.DevicePath.ToString();
@@ -204,7 +204,7 @@ public static partial class API
     {
         var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var devinstances);
 
-        if (status != 0L || devinstances is null)
+        if (status != 0 || devinstances is null)
         {
 
             Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}");
@@ -223,7 +223,7 @@ public static partial class API
         var rc = false;
 
         var status = NativeFileIO.UnsafeNativeMethods.CM_Reenumerate_DevNode(devInst, 0U);
-        if (status != 0L)
+        if (status != 0)
         {
             Trace.WriteLine($"Re-enumeration of '{devInst}' failed: 0x{status:X}");
         }
@@ -724,7 +724,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
 
         return UnsafeNativeMethods.DeviceIoControl(hDevice,
                                                    UnsafeNativeMethods.IOCTL_AIMWRFLTR_GET_DEVICE_DATA,
-                                                   IntPtr.Zero,
+                                                   0,
                                                    0,
                                                    ref Statistics,
                                                    Statistics.Version,
@@ -756,7 +756,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
     /// <param name="hDevice">Handle to device.</param>
     /// <returns>Returns 0 on success or Win32 error code on failure</returns>
     public static int SetWriteOverlayDeleteOnClose(SafeFileHandle hDevice)
-        => UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_DELETE_ON_CLOSE, IntPtr.Zero, 0, IntPtr.Zero, 0, out _, default)
+        => UnsafeNativeMethods.DeviceIoControl(hDevice, UnsafeNativeMethods.IOCTL_AIMWRFLTR_DELETE_ON_CLOSE, 0, 0, 0, 0, out _, default)
         ? NativeConstants.NO_ERROR
         : Marshal.GetLastWin32Error();
 
@@ -772,43 +772,43 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool DeviceIoControl(SafeFileHandle hDevice,
                                                    uint dwIoControlCode,
-                                                   IntPtr lpInBuffer,
+                                                   nint lpInBuffer,
                                                    int nInBufferSize,
                                                    ref WriteFilterStatistics lpOutBuffer,
                                                    int nOutBufferSize,
                                                    out int lpBytesReturned,
-                                                   IntPtr lpOverlapped);
+                                                   nint lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool DeviceIoControl(SafeFileHandle hDevice,
                                                    uint dwIoControlCode,
-                                                   IntPtr lpInBuffer,
+                                                   nint lpInBuffer,
                                                    int nInBufferSize,
-                                                   IntPtr lpOutBuffer,
+                                                   nint lpOutBuffer,
                                                    int nOutBufferSize,
                                                    out int lpBytesReturned,
-                                                   IntPtr lpOverlapped);
+                                                   nint lpOverlapped);
 #else
         [DllImport("kernel32", SetLastError = true)]
         public static extern bool DeviceIoControl(SafeFileHandle hDevice,
                                                   uint dwIoControlCode,
-                                                  IntPtr lpInBuffer,
+                                                  nint lpInBuffer,
                                                   int nInBufferSize,
                                                   ref WriteFilterStatistics lpOutBuffer,
                                                   int nOutBufferSize,
                                                   out int lpBytesReturned,
-                                                  IntPtr lpOverlapped);
+                                                  nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         public static extern bool DeviceIoControl(SafeFileHandle hDevice,
                                                   uint dwIoControlCode,
-                                                  IntPtr lpInBuffer,
+                                                  nint lpInBuffer,
                                                   int nInBufferSize,
-                                                  IntPtr lpOutBuffer,
+                                                  nint lpOutBuffer,
                                                   int nOutBufferSize,
                                                   out int lpBytesReturned,
-                                                  IntPtr lpOverlapped);
+                                                  nint lpOverlapped);
 #endif
     }
 }

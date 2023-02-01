@@ -11,6 +11,9 @@
 using Arsenal.ImageMounter.Extensions;
 using System;
 using System.Collections.Generic;
+#if NET6_0_OR_GREATER
+using System.Collections.Immutable;
+#endif
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -221,7 +224,7 @@ public class NativeFileVersion
     /// <summary>
     /// Common string fields, if present
     /// </summary>
-    public Dictionary<string, string> Fields { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyDictionary<string, string> Fields { get; }
 
     /// <summary>
     /// File version from fixed numeric fields
@@ -340,17 +343,21 @@ public class NativeFileVersion
 
         Fixed = ptr.FixedFileInfo;
 
+        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         var lpdwTranslationCode = QueryValueInt(ptr, @"\VarFileInfo\Translation");
 
         DWORD dwTranslationCode;
+
         if (lpdwTranslationCode.HasValue)
         {
             dwTranslationCode = lpdwTranslationCode.Value;
             Span<char> tcLanguageName = stackalloc char[128];
+
             if (WindowsSpecific.VerLanguageNameW(dwTranslationCode.LOWORD(), out tcLanguageName[0], 128) != 0)
             {
-                Fields.Add("TranslationCode", dwTranslationCode.ToString("X"));
-                Fields.Add("LanguageName", tcLanguageName.ReadNullTerminatedUnicodeString());
+                fields.Add("TranslationCode", dwTranslationCode.ToString("X"));
+                fields.Add("LanguageName", tcLanguageName.ReadNullTerminatedUnicodeString());
             }
         }
         else
@@ -364,9 +371,15 @@ public class NativeFileVersion
 
             if (fieldvalue != null)
             {
-                Fields.Add(fieldname, fieldvalue);
+                fields.Add(fieldname, fieldvalue);
             }
         }
+
+#if NET6_0_OR_GREATER
+        Fields = fields.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+#else
+        Fields = fields.AsReadOnly();
+#endif
     }
 }
 

@@ -85,7 +85,7 @@ public class DevioProviderFromStream : IDevioProvider
     public event EventHandler? Disposing;
     public event EventHandler? Disposed;
 
-    public int Read(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    public int Read(nint buffer, int bufferoffset, int count, long fileoffset)
     {
 
         BaseStream.Position = fileoffset;
@@ -103,7 +103,7 @@ public class DevioProviderFromStream : IDevioProvider
 
     }
 
-    public int Write(IntPtr buffer, int bufferoffset, int count, long fileoffset)
+    public int Write(nint buffer, int bufferoffset, int count, long fileoffset)
     {
 
         BaseStream.Position = fileoffset;

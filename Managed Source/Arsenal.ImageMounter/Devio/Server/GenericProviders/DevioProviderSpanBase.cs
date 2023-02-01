@@ -69,7 +69,7 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <returns>Returns number of bytes read from device that were stored in byte array.</returns>
     public abstract int Read(Span<byte> buffer, long fileoffset);
 
-    unsafe int IDevioProvider.Read(IntPtr buffer, int bufferoffset, int count, long fileoffset) => Read(new Span<byte>((byte*)buffer.ToPointer() + bufferoffset, count), fileoffset);
+    unsafe int IDevioProvider.Read(nint buffer, int bufferoffset, int count, long fileoffset) => Read(new Span<byte>((byte*)buffer + bufferoffset, count), fileoffset);
 
     int IDevioProvider.Read(byte[] buffer, int bufferoffset, int count, long fileoffset) => Read(buffer.AsSpan(bufferoffset, count), fileoffset);
 
@@ -81,7 +81,7 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <returns>Returns number of bytes written to device.</returns>
     public abstract int Write(ReadOnlySpan<byte> buffer, long fileoffset);
 
-    unsafe int IDevioProvider.Write(IntPtr buffer, int bufferoffset, int count, long fileoffset) => Write(new ReadOnlySpan<byte>((byte*)buffer.ToPointer() + bufferoffset, count), fileoffset);
+    unsafe int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset) => Write(new ReadOnlySpan<byte>((byte*)buffer + bufferoffset, count), fileoffset);
 
     int IDevioProvider.Write(byte[] buffer, int bufferoffset, int count, long fileoffset) => Write(buffer.AsSpan(bufferoffset, count), fileoffset);
 
