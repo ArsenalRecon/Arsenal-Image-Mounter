@@ -2,7 +2,7 @@
 /// aimapi.cpp
 /// Implementation of public API routines.
 /// 
-/// Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -225,7 +225,7 @@ ImScsiOpenScsiAdapter(OUT LPBYTE PortNumber)
 
         if (PortNumber != NULL)
         {
-            SCSI_ADDRESS scsi_address;
+            SCSI_ADDRESS scsi_address = { 0 };
 
             DWORD dw;
 
@@ -271,7 +271,7 @@ ImScsiOpenScsiAdapterByScsiPortNumber(IN BYTE PortNumber)
         return INVALID_HANDLE_VALUE;
     }
 
-    SRB_IMSCSI_CHECK check;
+    SRB_IMSCSI_CHECK check = { 0 };
     ImScsiInitializeSrbIoBlock(&check.SrbIoControl, sizeof(check),
         SMP_IMSCSI_CHECK, 0);
 
@@ -684,7 +684,7 @@ ImScsiOpenDiskByDeviceNumberEx(IN DEVICE_NUMBER DeviceNumber,
 
             DWORD dw;
 
-            SCSI_ADDRESS address;
+            SCSI_ADDRESS address = { 0 };
 
             if (!DeviceIoControl(disk, IOCTL_SCSI_GET_ADDRESS, NULL, 0,
                 &address, sizeof(address), &dw, NULL))
@@ -733,7 +733,7 @@ ImScsiOpenDiskByDeviceNumberEx(IN DEVICE_NUMBER DeviceNumber,
                 continue;
             }
 
-            STORAGE_DEVICE_NUMBER device_number;
+            STORAGE_DEVICE_NUMBER device_number = { 0 };
 
             if (!DeviceIoControl(disk, IOCTL_STORAGE_GET_DEVICE_NUMBER,
                 NULL, 0,
@@ -812,7 +812,7 @@ BOOL
 WINAPI
 ImScsiCheckDriverVersion(HANDLE Device)
 {
-    SRB_IMSCSI_QUERY_VERSION check;
+    SRB_IMSCSI_QUERY_VERSION check = { 0 };
     ImScsiInitializeSrbIoBlock(&check.SrbIoControl,
         sizeof(check), SMP_IMSCSI_QUERY_VERSION, 0);
 
@@ -895,7 +895,7 @@ PULONG DriverVersion)
             return FALSE;
         }
 
-        SRB_IMSCSI_QUERY_VERSION check;
+        SRB_IMSCSI_QUERY_VERSION check = { 0 };
         ImScsiInitializeSrbIoBlock(&check.SrbIoControl,
             sizeof(check), SMP_IMSCSI_QUERY_VERSION, 0);
 
@@ -1419,7 +1419,7 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
         DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
             &dw, NULL);
 
-        GET_LENGTH_INFORMATION disk_size;
+        GET_LENGTH_INFORMATION disk_size = { 0 };
         if (DeviceIoControl(disk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0,
             &disk_size, sizeof(disk_size), &dw, NULL))
         {
@@ -2022,7 +2022,7 @@ DWORD Flags)
 
     ImScsiSetStatusMsg(hWnd, L"Setting device flags...");
 
-    SRB_IMSCSI_SET_DEVICE_FLAGS device_flags;
+    SRB_IMSCSI_SET_DEVICE_FLAGS device_flags = { 0 };
 
     device_flags.DeviceNumber = DeviceNumber;
     device_flags.FlagsToChange = FlagsToChange;
@@ -2055,7 +2055,7 @@ ImScsiExtendDevice(HWND hWnd,
 
     ImScsiSetStatusMsg(hWnd, L"Extending virtual disk size...");
 
-    SRB_IMSCSI_EXTEND_DEVICE device_flags;
+    SRB_IMSCSI_EXTEND_DEVICE device_flags = { 0 };
 
     device_flags.DeviceNumber = DeviceNumber;
     device_flags.ExtendSize = *ExtendSize;

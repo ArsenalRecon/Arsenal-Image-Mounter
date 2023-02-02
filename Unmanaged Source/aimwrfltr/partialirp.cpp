@@ -1,3 +1,20 @@
+
+/// partialirp.c
+/// AIM Write Filter - Partial IRP routines. These routines make it possible to split
+/// an IRP into several partial that can be sent to different locations, in the case
+/// where parts of the requested data have been modified and parts need to be requested
+/// from original source. A completion routine and reference counters cause the original
+/// IRP to be automatically completed when the last partial IRP is completed.
+/// 
+/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// This source code and API are available under the terms of the Affero General Public
+/// License v3.
+///
+/// Please see LICENSE.txt for full license terms, including the availability of
+/// proprietary exceptions.
+/// Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+///
+
 #include "aimwrfltr.h"
 
 PIRP SCATTERED_IRP::BuildIrp(

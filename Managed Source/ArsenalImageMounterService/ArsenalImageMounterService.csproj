@@ -3,9 +3,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Title>Arsenal Image Mounter Command Line application</Title>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <OutputType>Exe</OutputType>
     <AssemblyName>aim_cli</AssemblyName>
-    <Title>Arsenal Image Mounter Command Line application</Title>
     <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
 

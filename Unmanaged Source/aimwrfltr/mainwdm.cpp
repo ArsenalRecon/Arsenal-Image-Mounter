@@ -1,3 +1,17 @@
+
+/// mainwdm.c
+/// AIM Write Filter - Basic routines for driver entry, unload, PnP start/stop routines
+/// etc.
+/// 
+/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// This source code and API are available under the terms of the Affero General Public
+/// License v3.
+///
+/// Please see LICENSE.txt for full license terms, including the availability of
+/// proprietary exceptions.
+/// Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+///
+
 #include "aimwrfltr.h"
 
 #include <common.h>

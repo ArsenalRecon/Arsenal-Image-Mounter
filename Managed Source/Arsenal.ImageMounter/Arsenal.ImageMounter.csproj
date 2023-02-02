@@ -4,6 +4,7 @@
 
   <PropertyGroup>
     <Description>Arsenal Image Mounter .NET API Library</Description>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>

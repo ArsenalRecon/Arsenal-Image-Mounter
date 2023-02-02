@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net48;net6.0-windows;net7.0-windows</TargetFrameworks>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <Description>Arsenal Image Mounter Windows Forms Library</Description>
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>

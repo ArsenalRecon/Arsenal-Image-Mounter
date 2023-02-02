@@ -2,7 +2,7 @@
 /// aimcmd.cpp
 /// Command line access to Arsenal Image Mounter features.
 /// 
-/// Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -1944,7 +1944,7 @@ wmain(int argc, LPWSTR argv[])
             "\n"
             "Version " PHDSKMNT_RC_VERSION_STR " - (Compiled " __DATE__ ")\n"
             "\n"
-            "Copyright (C) 2012-2021 Arsenal Recon.\n"
+            "Copyright (C) 2012-2023 Arsenal Recon.\n"
             "\n"
             "\n"
             "http://www.ArsenalRecon.com\n"
