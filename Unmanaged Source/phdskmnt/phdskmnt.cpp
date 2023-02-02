@@ -3,7 +3,7 @@
 /// Driver entry routines, miniport callback definitions and other support
 /// routines.
 /// 
-/// Copyright (c) 2012-2021, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -743,7 +743,7 @@ __in pHW_HBA_EXT pHBAExt
 
     if (pending > 0)
     {
-        KdPrint2(("PhDskMnt::MpHwTimer finished, %i items pending, restarting in %u µs.\n", pending, wait));
+        KdPrint2(("PhDskMnt::MpHwTimer finished, %i items pending, restarting in %u ï¿½s.\n", pending, wait));
         ScsiPortNotification(RequestTimerCall, pHBAExt, MpHwTimer, wait);
     }
     else
