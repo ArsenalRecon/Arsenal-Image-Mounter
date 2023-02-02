@@ -372,7 +372,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     PGET_CONFIGURATION_HEADER output_buffer = (PGET_CONFIGURATION_HEADER)pSrb->DataBuffer;
     PCDB   cdb = (PCDB)pSrb->Cdb;
 
-    USHORT length;
+    USHORT length = 0;
     REVERSE_BYTES_SHORT(&length, cdb->GET_CONFIGURATION.AllocationLength);
 
     if (pSrb->DataTransferLength == 0)
@@ -439,7 +439,7 @@ ScsiOpGetEventStatus(__in pHW_HBA_EXT          pHBAExt,      // Adapter device-o
     PNOTIFICATION_EVENT_STATUS_HEADER output_buffer = (PNOTIFICATION_EVENT_STATUS_HEADER)pSrb->DataBuffer;
     PCDB   cdb = (PCDB)pSrb->Cdb;
 
-    USHORT length;
+    USHORT length = 0;
     REVERSE_BYTES_SHORT(&length, cdb->GET_EVENT_STATUS_NOTIFICATION.EventListLength);
 
     if (pSrb->DataTransferLength == 0)
@@ -678,7 +678,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
             /* Max time address is 00:FF:3B:4A */
 
             if (num_lbas >=
-                (0xff * CD_SECS + CD_SECS - 1) * CD_FRAMES +
+                (0xffll * CD_SECS + CD_SECS - 1) * CD_FRAMES +
                 CD_FRAMES - 1 - CD_MSF_OFFSET)
             {
                 cdrom_toc->TrackData[1].Address[1] = 0xFF;
@@ -868,7 +868,7 @@ __in PKIRQL                                 LowestAssumedIrql
     PLIST_ENTRY           list_ptr;
     pHW_LU_EXTENSION *    pPortLunExt = NULL;
     UCHAR                 status;
-    KLOCK_QUEUE_HANDLE    LockHandle;
+    KLOCK_QUEUE_HANDLE    LockHandle = { 0 };
 
     *ppLUExt = NULL;
 
@@ -1187,7 +1187,29 @@ ScsiOpVPDDiskUnit(
         PVPD_SUPPORTED_PAGES_PAGE pSupportedPages;
         ULONG len;
 
-        len = FIELD_OFFSET(VPD_SUPPORTED_PAGES_PAGE, SupportedPageList) + 5;
+#if 1
+
+        static const UCHAR supported_pages[] = {
+            VPD_SUPPORTED_PAGES,
+            VPD_SERIAL_NUMBER,
+            VPD_DEVICE_IDENTIFIERS,
+            VPD_BLOCK_LIMITS,
+            VPD_BLOCK_DEVICE_CHARACTERISTICS,
+            VPD_LOGICAL_BLOCK_PROVISIONING
+        };
+
+#else
+
+        static const UCHAR supported_pages[] = {
+            VPD_SUPPORTED_PAGES,
+            VPD_BLOCK_LIMITS,
+            VPD_BLOCK_DEVICE_CHARACTERISTICS,
+            VPD_LOGICAL_BLOCK_PROVISIONING
+        };
+
+#endif
+
+        len = FIELD_OFFSET(VPD_SUPPORTED_PAGES_PAGE, SupportedPageList) + sizeof(supported_pages);
 
         if (pSrb->DataTransferLength < len)
         {
@@ -1201,25 +1223,8 @@ ScsiOpVPDDiskUnit(
         pSupportedPages->DeviceType = pLUExt->DeviceType;
         pSupportedPages->PageCode = VPD_SUPPORTED_PAGES;
 
-#if 1
-
-        pSupportedPages->PageLength = 6;
-        pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
-        pSupportedPages->SupportedPageList[1] = VPD_SERIAL_NUMBER;
-        pSupportedPages->SupportedPageList[2] = VPD_DEVICE_IDENTIFIERS;
-        pSupportedPages->SupportedPageList[3] = VPD_BLOCK_LIMITS;
-        pSupportedPages->SupportedPageList[4] = VPD_BLOCK_DEVICE_CHARACTERISTICS;
-        pSupportedPages->SupportedPageList[5] = VPD_LOGICAL_BLOCK_PROVISIONING;
-
-#else
-
-        pSupportedPages->PageLength = 4;
-        pSupportedPages->SupportedPageList[0] = VPD_SUPPORTED_PAGES;
-        pSupportedPages->SupportedPageList[1] = VPD_BLOCK_LIMITS;
-        pSupportedPages->SupportedPageList[2] = VPD_BLOCK_DEVICE_CHARACTERISTICS;
-        pSupportedPages->SupportedPageList[3] = VPD_LOGICAL_BLOCK_PROVISIONING;
-
-#endif
+        pSupportedPages->PageLength = sizeof(supported_pages);
+        RtlCopyMemory(pSupportedPages->SupportedPageList, supported_pages, sizeof(supported_pages));
 
         ScsiSetSuccess(pSrb, len);
     }
@@ -1340,9 +1345,10 @@ ScsiOpVPDDiskUnit(
             outputBuffer->PageCode = VPD_LOGICAL_BLOCK_PROVISIONING;
             outputBuffer->PageLength[1] = 0x04;      // 8 bytes data in total 
             outputBuffer->ProvisioningType = pLUExt->ProvisioningType;
-            outputBuffer->DP = 0;
-            outputBuffer->ANC_SUP = pLUExt->SupportsUnmap;
-            outputBuffer->LBPRZ = pLUExt->SupportsUnmap;
+            outputBuffer->ThresholdExponent = 0;         // does not support provisioning threshold exponent
+            outputBuffer->DP = 0;                        // does not support provisioning group descriptor
+            outputBuffer->ANC_SUP = 0;                   // does not support ANCHOR
+            outputBuffer->LBPRZ = 0;                     // does not support read zero after unmap
             outputBuffer->LBPWS10 = 0;                   // does not support WRITE SAME(10) 
             outputBuffer->LBPWS = 0;                     // does not support WRITE SAME 
             outputBuffer->LBPU = pLUExt->SupportsUnmap;  // supports UNMAP
@@ -1576,7 +1582,7 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
     UNREFERENCED_PARAMETER(pHBAExt);
 
     PREAD_CAPACITY_DATA     readCapacity = (PREAD_CAPACITY_DATA)pSrb->DataBuffer;
-    ULARGE_INTEGER          maxBlocks;
+    ULARGE_INTEGER          maxBlocks = { 0 };
     ULONG                   blockSize;
 
     KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p, Action=0x%X\n", pHBAExt, pLUExt, pSrb, (int)pSrb->Cdb[0]));
@@ -1646,11 +1652,11 @@ __in PKIRQL               LowestAssumedIrql
 )
 {
     PCDB                         pCdb = (PCDB)pSrb->Cdb;
-    LONGLONG                     startingSector;
+    LONGLONG                     startingSector = 0;
     LONGLONG                     startingOffset;
     ULONG                        numBlocks;
     pMP_WorkRtnParms             pWkRtnParms;
-    KLOCK_QUEUE_HANDLE           lock_handle;
+    KLOCK_QUEUE_HANDLE           lock_handle = { 0 };
 
     KdPrint2(("PhDskMnt::ScsiOpReadWrite:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
@@ -1889,7 +1895,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
     UCHAR                 count;
     PLIST_ENTRY           list_ptr;
     PLUN_LIST             pLunList = (PLUN_LIST)pSrb->DataBuffer;
-    KLOCK_QUEUE_HANDLE    LockHandle;
+    KLOCK_QUEUE_HANDLE    LockHandle = { 0 };
 
     KdPrint(("PhDskMnt::ScsiOpReportLuns:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
