@@ -28,6 +28,13 @@ awealloc.sys = 1, x86
 deviodrv.sys = 1, x86
 dokan2.sys = 1, x86
 
+[SourceDisksFiles.ia64]
+phdskmnt.sys = 1, 64
+aimwrfltr.sys = 1, 64
+vhdaccess.sys = 1, 64
+deviodrv.sys = 1, 64
+awealloc.sys = 1, 64
+
 [SourceDisksFiles.amd64]
 phdskmnt.sys = 1, x64
 aimwrfltr.sys = 1, x64
@@ -56,7 +63,7 @@ dokan2.sys = 1, arm64
 DefaultDestDir = 12
 
 [Manufacturer]
-%ARSENALRECON%=ARSENALRECON, NTx86, NTamd64, NTARM, NTARM64
+%ARSENALRECON%=ARSENALRECON, NTx86, NTia64, NTamd64, NTARM, NTARM64
 
 ; [DeviceInstall32]
 ; AddDevice = ROOT\PhDskMnt,,PhDskMnt_RootEnumInstall
@@ -65,6 +72,9 @@ DefaultDestDir = 12
 ; HardwareIds = ROOT\PhDskMnt
 
 [ARSENALRECON.NTx86]
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+
+[ARSENALRECON.NTia64]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [ARSENALRECON.NTamd64]
@@ -79,6 +89,9 @@ DefaultDestDir = 12
 [PhysicalDiskMounterDevice]
 CopyFiles = PhysicalDiskMounterSysFiles
 CopyFiles = DokanSysFiles
+
+[PhysicalDiskMounterDevice.NTia64]
+CopyFiles = PhysicalDiskMounterSysFiles
 
 [PhysicalDiskMounterSysFiles]
 phdskmnt.sys

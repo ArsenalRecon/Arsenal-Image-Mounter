@@ -4,7 +4,7 @@
 ; Intended for use on 32 or 64 bit editions of Windows Server 2003 or newer,
 ; or Windows Vista or newer.
 ; 
-; Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+; Copyright (c) 2012-2020, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 ; This source code and API are available under the terms of the Affero General Public
 ; License v3.
 ;
@@ -26,7 +26,13 @@ aimwrfltr.sys = 1, x86
 vhdaccess.sys = 1, x86
 awealloc.sys = 1, x86
 deviodrv.sys = 1, x86
-dokan2.sys = 1, x86
+
+[SourceDisksFiles.ia64]
+phdskmnt.sys = 1, 64
+aimwrfltr.sys = 1, 64
+vhdaccess.sys = 1, 64
+awealloc.sys = 1, 64
+deviodrv.sys = 1, 64
 
 [SourceDisksFiles.amd64]
 phdskmnt.sys = 1, x64
@@ -34,29 +40,12 @@ aimwrfltr.sys = 1, x64
 vhdaccess.sys = 1, x64
 awealloc.sys = 1, x64
 deviodrv.sys = 1, x64
-dokan2.sys = 1, x64
-
-[SourceDisksFiles.arm]
-phdskmnt.sys = 1, arm
-aimwrfltr.sys = 1, arm
-vhdaccess.sys = 1, arm
-awealloc.sys = 1, arm
-deviodrv.sys = 1, arm
-dokan2.sys = 1, arm
-
-[SourceDisksFiles.arm64]
-phdskmnt.sys = 1, arm64
-aimwrfltr.sys = 1, arm64
-vhdaccess.sys = 1, arm64
-awealloc.sys = 1, arm64
-deviodrv.sys = 1, arm64
-dokan2.sys = 1, arm64
 
 [DestinationDirs]
 DefaultDestDir = 12
 
 [Manufacturer]
-%ARSENALRECON%=ARSENALRECON, NTx86, NTamd64, NTARM, NTARM64
+%ARSENALRECON%=ARSENALRECON, NTx86, NTia64, NTamd64
 
 ; [DeviceInstall32]
 ; AddDevice = ROOT\PhDskMnt,,PhDskMnt_RootEnumInstall
@@ -67,18 +56,14 @@ DefaultDestDir = 12
 [ARSENALRECON.NTx86]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
+[ARSENALRECON.NTia64]
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+
 [ARSENALRECON.NTamd64]
-%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
-
-[ARSENALRECON.NTARM]
-%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
-
-[ARSENALRECON.NTARM64]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [PhysicalDiskMounterDevice]
 CopyFiles = PhysicalDiskMounterSysFiles
-CopyFiles = DokanSysFiles
 
 [PhysicalDiskMounterSysFiles]
 phdskmnt.sys
@@ -86,9 +71,6 @@ aimwrfltr.sys
 vhdaccess.sys
 awealloc.sys
 deviodrv.sys
-
-[DokanSysFiles]
-dokan2.sys
 
 [PhysicalDiskMounterDevice.HW]
 AddReg = PhDskMnt_ScsiPort_AddReg
@@ -99,7 +81,6 @@ AddService = aimwrfltr, , AIMWrFltr_Service_Inst
 AddService = vhdaccess, , VhdAccess_Service_Inst
 AddService = awealloc, , AWEAlloc_Service_Inst
 AddService = deviodrv, , DevIoDrv_Service_Inst
-AddService = dokan2, , Dokan2_Service_Inst
 
 [PhDskMnt_ScsiPort_AddReg]
 HKR, "ScsiPort", "NeedsSystemShutdownNotification", 0x00010001, 1
@@ -159,14 +140,6 @@ ServiceType    = %SERVICE_KERNEL_DRIVER%
 StartType      = %SERVICE_AUTO_START%
 ErrorControl   = %SERVICE_ERROR_IGNORE%
 ServiceBinary  = %12%\deviodrv.sys
-
-[Dokan2_Service_Inst]
-DisplayName    = "dokan2"
-Description    = "dokan2 virtual file system driver"
-ServiceType    = %SERVICE_FILESYS_DRIVER%
-StartType      = %SERVICE_AUTO_START%
-ErrorControl   = %SERVICE_ERROR_IGNORE%
-ServiceBinary  = %12%\dokan2.sys
 
 [Strings]
 ARSENALRECON     = "Arsenal Recon"
