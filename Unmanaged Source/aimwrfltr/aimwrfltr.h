@@ -75,22 +75,23 @@
 #define InterlockedExchangeAddPtr InterlockedExchangeAdd
 #endif
 
-#ifdef POOL_TAGGING
-#ifdef ExAllocatePool
-#undef ExAllocatePool
+#if defined(NTDDI_WIN10_VB) && (NTDDI_VERSION >= NTDDI_WIN10_VB)
+#define ExAllocatePagedPool(b) ExAllocatePool2(POOL_FLAG_PAGED,b,POOL_TAG)
+#define ExAllocateNonPagedPool(b) ExAllocatePool2(POOL_FLAG_NON_PAGED,b,POOL_TAG)
+#else
+#define ExAllocatePagedPool(b) ExAllocatePoolWithTag(PagedPool,b,POOL_TAG)
+#define ExAllocateNonPagedPool(b) ExAllocatePoolWithTag(NonPagedPool,b,POOL_TAG)
 #endif
-#define ExAllocatePool(a,b) ExAllocatePoolWithTag(a,b,POOL_TAG)
 #ifdef ExFreePool
 #undef ExFreePool
 #endif
 #define ExFreePool(a) ExFreePoolWithTag(a,POOL_TAG)
-#endif
 
 #pragma warning(disable: 4200)
 
 inline void *operator_new(size_t Size, UCHAR FillByte)
 {
-    void * result = ExAllocatePoolWithTag(NonPagedPool, Size, POOL_TAG);
+    void * result = ExAllocateNonPagedPool(Size);
 
     if (result != NULL)
     {
@@ -104,7 +105,7 @@ inline void operator_delete(void *Ptr)
 {
     if (Ptr != NULL)
     {
-        ExFreePoolWithTag(Ptr, POOL_TAG);
+        ExFreePool(Ptr);
     }
 }
 
@@ -222,7 +223,7 @@ template<typename T> class WPagedPoolMem : public WPoolMem < T >
 {
 public:
     explicit WPagedPoolMem(SIZE_T AllocateSize)
-        : WPoolMem((T*)ExAllocatePool(PagedPool, AllocateSize), AllocateSize)
+        : WPoolMem((T*)ExAllocatePagedPool(AllocateSize), AllocateSize)
     {
     }
 
@@ -233,7 +234,7 @@ public:
 
     bool ReAlloc(SIZE_T AllocateSize)
     {
-        return WPoolMem::ReAlloc((T*)ExAllocatePool(PagedPool, AllocateSize), AllocateSize);
+        return WPoolMem::ReAlloc((T*)ExAllocatePagedPool(AllocateSize), AllocateSize);
     }
 };
 
@@ -241,7 +242,7 @@ template<typename T> class WNonPagedPoolMem : public WPoolMem < T >
 {
 public:
     explicit WNonPagedPoolMem(SIZE_T AllocateSize)
-        : WPoolMem((T*)ExAllocatePool(NonPagedPool, AllocateSize), AllocateSize)
+        : WPoolMem((T*)ExAllocateNonPagedPool(AllocateSize), AllocateSize)
     {
     }
 
@@ -252,7 +253,7 @@ public:
 
     bool ReAlloc(SIZE_T AllocateSize)
     {
-        return WPoolMem::ReAlloc((T*)ExAllocatePool(NonPagedPool, AllocateSize), AllocateSize);
+        return WPoolMem::ReAlloc((T*)ExAllocateNonPagedPool(AllocateSize), AllocateSize);
     }
 };
 
@@ -504,7 +505,7 @@ typedef struct _CACHED_IRP
             }
 
             SIZE_T cached_irp_size = FIELD_OFFSET(CACHED_IRP, Buffer) + (SIZE_T)io_stack->Parameters.Write.Length;
-            cached_irp = (PCACHED_IRP)ExAllocatePool(NonPagedPool, cached_irp_size);
+            cached_irp = (PCACHED_IRP)ExAllocateNonPagedPool(cached_irp_size);
 
             if (cached_irp == NULL)
             {
@@ -523,7 +524,7 @@ typedef struct _CACHED_IRP
             PUCHAR buffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
 
             SIZE_T cached_irp_size = FIELD_OFFSET(CACHED_IRP, Buffer) + (SIZE_T)io_stack->Parameters.DeviceIoControl.InputBufferLength;
-            cached_irp = (PCACHED_IRP)ExAllocatePool(NonPagedPool, cached_irp_size);
+            cached_irp = (PCACHED_IRP)ExAllocateNonPagedPool(cached_irp_size);
                 
             if (cached_irp == NULL)
             {
