@@ -12,6 +12,7 @@ using Arsenal.ImageMounter.IO.Native;
 using System;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Threading;
 
 namespace Arsenal.ImageMounter.IO.Devices;
 
@@ -61,9 +62,18 @@ public partial class SystemNeeded : IDisposable
     private static extern uint GetCurrentThreadId();
 #endif
 
-    private readonly ExecutionState previous_state;
+    /// <summary>
+    /// The previous execution state, that will be restored when
+    /// this object is disposed.
+    /// </summary>
+    public ExecutionState PreviousState { get; }
 
-    private readonly uint thread_id;
+    /// <summary>
+    /// Synchronization context for which execution state was set.
+    /// This will also be used to restore the previous one when this
+    /// object is disposed.
+    /// </summary>
+    public SynchronizationContext? SynchronizationContext { get; }
 
     /// <summary>
     /// Initializes a block of code that is done with SystemRequired and Continous requirements
@@ -78,9 +88,11 @@ public partial class SystemNeeded : IDisposable
     /// </summary>
     public SystemNeeded(ExecutionState executionState)
     {
-        thread_id = GetCurrentThreadId();
-        previous_state = SetThreadExecutionState(executionState);
-        if (previous_state == 0)
+        SynchronizationContext = SynchronizationContext.Current;
+        
+        PreviousState = SetThreadExecutionState(executionState);
+        
+        if (PreviousState == 0)
         {
             throw new Exception("SetThreadExecutionState failed.");
         }
@@ -90,9 +102,10 @@ public partial class SystemNeeded : IDisposable
     /// </summary>
     protected virtual void Dispose(bool disposing)
     {
-        if (previous_state != 0 && thread_id == GetCurrentThreadId())
+        if (PreviousState != 0 && SynchronizationContext is not null)
         {
-            SetThreadExecutionState(previous_state);
+            SynchronizationContext.Send(_ =>
+                SetThreadExecutionState(PreviousState), null);
         }
     }
 
