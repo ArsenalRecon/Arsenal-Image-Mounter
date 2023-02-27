@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
@@ -95,112 +96,161 @@ public static class ProviderSupport
         return total_sectors < 0 ? 0 : (total_sectors << sector_bits);
     }
 
-    public static string[] GetMultiSegmentFiles(string FirstFile)
+    public static IEnumerable<string> EnumerateMultiSegmentFiles(string FirstFile)
     {
+
+        var found = false;
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
 
         var pathpart = Path.GetDirectoryName(FirstFile.AsSpan());
         var filepart = Path.GetFileNameWithoutExtension(FirstFile.AsSpan());
         var extension = Path.GetExtension(FirstFile.AsSpan());
-        string[]? foundfiles = null;
 
-        if (extension.EndsWith("01", StringComparison.Ordinal) || extension.EndsWith("00", StringComparison.Ordinal))
+        if (extension.EndsWith("01", StringComparison.Ordinal) ||
+            extension.EndsWith("00", StringComparison.Ordinal))
         {
-            var start = extension.Length - 3;
-
-            while (start >= 0 && char.IsDigit(extension.GetItem(start)))
+            static string? GetNextSegmentFile(string currentFile)
             {
-                start -= 1;
+                for (var pos = currentFile.Length - 1; pos >= 0; pos--)
+                {
+                    if (currentFile[pos] >= '0' && currentFile[pos] < '9')
+                    {
+                        currentFile = $"{currentFile.AsSpan()[..pos]}{(char)(currentFile[pos] + 1)}{currentFile.AsSpan()[(pos + 1)..]}";
+                        return currentFile;
+                    }
+                    else if (currentFile[pos] == '9')
+                    {
+                        currentFile = $"{currentFile.AsSpan()[..pos]}0{currentFile.AsSpan()[(pos + 1)..]}";
+                    }
+                    else if (currentFile[pos] >= 'A' && currentFile[pos] <= 'Z'
+                        && pos < (currentFile.Length - 1)
+                        && currentFile.Skip(pos + 1).All('0'.Equals))
+                    {
+                        currentFile = $"{currentFile.AsSpan()[..(pos + 1)]}{new string('A', currentFile.Length - pos - 1)}";
+                        return currentFile;
+                    }
+                    else if (currentFile[pos] >= 'a' && currentFile[pos] <= 'z'
+                        && pos < (currentFile.Length - 1)
+                        && currentFile.Skip(pos + 1).All('0'.Equals))
+                    {
+                        currentFile = $"{currentFile.AsSpan()[..(pos + 1)]}{new string('a', currentFile.Length - pos - 1)}";
+                        return currentFile;
+                    }
+                    else if ((currentFile[pos] >= 'A' && currentFile[pos] < 'Z')
+                        || (currentFile[pos] >= 'a' && currentFile[pos] < 'z'))
+                    {
+                        currentFile = $"{currentFile.AsSpan()[..pos]}{(char)(currentFile[pos] + 1)}{currentFile.AsSpan()[(pos + 1)..]}";
+                        return currentFile;
+                    }
+                    else if (currentFile[pos] == 'Z' || currentFile[pos] == 'z')
+                    {
+                        currentFile = $"{currentFile.AsSpan()[..pos]}{(char)(currentFile[pos] - ('Z' - 'A'))}{currentFile.AsSpan()[(pos + 1)..]}";
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return null;
             }
 
-            start += 1;
-
-            var segmentnumberchars = new string('?', extension.Length - start);
-            var dir_pattern = string.Concat(filepart, extension.Slice(0, start), segmentnumberchars);
-            var dir_name = pathpart.IsWhiteSpace() ? "." : pathpart.ToString();
-
-            try
+            for (var currentFile = FirstFile;
+                File.Exists(currentFile);
+                currentFile = GetNextSegmentFile(currentFile))
             {
-                foundfiles = Directory.GetFiles(dir_name, dir_pattern);
+                found = true;
+                yield return (currentFile);
             }
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed enumerating files '{dir_pattern}' in directory '{dir_name}'", ex);
-            }
-
-            for (int i = 0, loopTo = foundfiles.Length - 1; i <= loopTo; i++)
-            {
-                foundfiles[i] = Path.GetFullPath(foundfiles[i]);
-            }
-
-            Array.Sort(foundfiles, StringComparer.Ordinal);
         }
-        else if (File.Exists(FirstFile))
+        else
         {
-            foundfiles = new[] { FirstFile };
+            if (File.Exists(FirstFile))
+            {
+                found = true;
+                yield return FirstFile;
+            }
         }
-
-        return foundfiles is null || foundfiles.Length == 0
-            ? throw new FileNotFoundException("Image file not found", FirstFile)
-            : foundfiles;
 
 #else
 
         var pathpart = Path.GetDirectoryName(FirstFile);
         var filepart = Path.GetFileNameWithoutExtension(FirstFile);
         var extension = Path.GetExtension(FirstFile);
-        string[]? foundfiles = null;
 
-        if (extension.EndsWith("01", StringComparison.Ordinal) || extension.EndsWith("00", StringComparison.Ordinal))
+        if (extension.EndsWith("01", StringComparison.Ordinal) ||
+            extension.EndsWith("00", StringComparison.Ordinal))
         {
-
-            var start = extension.Length - 3;
-
-            while (start >= 0 && char.IsDigit(extension, start))
+            static string? GetNextSegmentFile(string currentFile)
             {
-                start -= 1;
+                for (var pos = currentFile.Length - 1; pos >= 0; pos--)
+                {
+                    if (currentFile[pos] >= '0' && currentFile[pos] < '9')
+                    {
+                        currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] + 1)}{currentFile.Substring(pos + 1)}";
+                        return currentFile;
+                    }
+                    else if (currentFile[pos] == '9')
+                    {
+                        currentFile = $"{currentFile.Substring(0, pos)}0{currentFile.Substring(pos + 1)}";
+                    }
+                    else if (currentFile[pos] >= 'A' && currentFile[pos] <= 'Z'
+                        && pos < (currentFile.Length - 1)
+                        && currentFile.Skip(pos + 1).All('0'.Equals))
+                    {
+                        currentFile = $"{currentFile.Substring(0, pos + 1)}{new string('A', currentFile.Length - pos - 1)}";
+                        return currentFile;
+                    }
+                    else if (currentFile[pos] >= 'a' && currentFile[pos] <= 'z'
+                        && pos < (currentFile.Length - 1)
+                        && currentFile.Skip(pos + 1).All('0'.Equals))
+                    {
+                        currentFile = $"{currentFile.Substring(0, pos + 1)}{new string('a', currentFile.Length - pos - 1)}";
+                        return currentFile;
+                    }
+                    else if ((currentFile[pos] >= 'A' && currentFile[pos] < 'Z')
+                        || (currentFile[pos] >= 'a' && currentFile[pos] < 'z'))
+                    {
+                        currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] + 1)}{currentFile.Substring(pos + 1)}";
+                        return currentFile;
+                    }
+                    else if (currentFile[pos] == 'Z' || currentFile[pos] == 'z')
+                    {
+                        currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] - ('Z' - 'A'))}{currentFile.Substring(pos + 1)}";
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return null;
             }
 
-            start += 1;
-
-            var segmentnumberchars = new string('?', extension.Length - start);
-            var dir_pattern = string.Concat(filepart, extension.Remove(start), segmentnumberchars);
-            var dir_name = pathpart;
-
-            if (string.IsNullOrWhiteSpace(dir_name))
+            for (var currentFile = FirstFile;
+                currentFile is not null && File.Exists(currentFile);
+                currentFile = GetNextSegmentFile(currentFile))
             {
-                dir_name = ".";
+                found = true;
+                yield return (currentFile);
             }
-
-            try
-            {
-                foundfiles = Directory.GetFiles(dir_name, dir_pattern);
-            }
-
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed enumerating files '{dir_pattern}' in directory '{dir_name}'", ex);
-
-            }
-
-            for (int i = 0, loopTo = foundfiles.Length - 1; i <= loopTo; i++)
-            {
-                foundfiles[i] = Path.GetFullPath(foundfiles[i]);
-            }
-
-            Array.Sort(foundfiles, StringComparer.Ordinal);
         }
-        else if (File.Exists(FirstFile))
+        else
         {
-            foundfiles = new[] { FirstFile };
+            if (File.Exists(FirstFile))
+            {
+                found = true;
+                yield return FirstFile;
+            }
         }
-
-        return foundfiles is null || foundfiles.Length == 0
-            ? throw new FileNotFoundException("Image file not found", FirstFile)
-            : foundfiles;
 
 #endif
+
+        if (!found)
+        {
+            throw new FileNotFoundException("Image file not found", FirstFile);
+        }
     }
 
     public static void ConvertToDiscUtilsImage(this IDevioProvider provider,

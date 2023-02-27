@@ -50,16 +50,9 @@ public partial class SystemNeeded : IDisposable
     [LibraryImport("KERNEL32", SetLastError = true)]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvStdcall) })]
     private static partial ExecutionState SetThreadExecutionState(ExecutionState executionState);
-
-    [LibraryImport("KERNEL32", SetLastError = true)]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvStdcall) })]
-    private static partial uint GetCurrentThreadId();
 #else
     [DllImport("KERNEL32", CallingConvention = CallingConvention.StdCall, SetLastError = true)]
     private static extern ExecutionState SetThreadExecutionState(ExecutionState executionState);
-
-    [DllImport("KERNEL32", CallingConvention = CallingConvention.StdCall, SetLastError = true)]
-    private static extern uint GetCurrentThreadId();
 #endif
 
     /// <summary>

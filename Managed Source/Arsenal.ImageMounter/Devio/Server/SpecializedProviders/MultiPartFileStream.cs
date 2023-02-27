@@ -12,6 +12,7 @@
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.IO.Streams;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -23,60 +24,55 @@ namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 public class MultiPartFileStream : CombinedSeekStream
 {
 
-    public MultiPartFileStream(string[] Imagefiles, FileAccess DiskAccess)
+    public MultiPartFileStream(IEnumerable<string> Imagefiles, FileAccess DiskAccess)
         : this(Imagefiles, DiskAccess, FileShare.Read | FileShare.Delete)
     {
-
     }
 
-    public MultiPartFileStream(string[] Imagefiles, FileAccess DiskAccess, FileShare ShareMode)
+    public MultiPartFileStream(IEnumerable<string> Imagefiles, FileAccess DiskAccess, FileShare ShareMode)
         : base(DiskAccess.HasFlag(FileAccess.Write), OpenImagefiles(Imagefiles, DiskAccess, ShareMode))
     {
-
     }
 
-    private static FileStream[] OpenImagefiles(string[] Imagefiles, FileAccess DiskAccess, FileShare ShareMode)
+    private static IReadOnlyCollection<FileStream> OpenImagefiles(IEnumerable<string> Imagefiles, FileAccess DiskAccess, FileShare ShareMode)
     {
         if (Imagefiles is null)
         {
             throw new ArgumentNullException(nameof(Imagefiles));
         }
 
-        if (Imagefiles.Length == 0)
-        {
-            throw new ArgumentException("No image file names provided.", nameof(Imagefiles));
-        }
-
-        FileStream[]? imagestreams = null;
+        var imagestreams = new List<FileStream>();
 
         try
         {
-            imagestreams = Array.ConvertAll(Imagefiles, Imagefile =>
+            foreach (var Imagefile in Imagefiles)
             {
                 Trace.WriteLine($"Opening image {Imagefile}");
-                return new FileStream(Imagefile, FileMode.Open, DiskAccess, ShareMode);
-            });
+                imagestreams.Add(new FileStream(Imagefile, FileMode.Open, DiskAccess, ShareMode));
+            }
+
+            if (imagestreams.Count == 0)
+            {
+                throw new ArgumentException("No image file names provided.", nameof(Imagefiles));
+            }
 
             return imagestreams;
         }
         catch (Exception ex)
         {
-            if (imagestreams is not null)
-            {
-                Array.ForEach(imagestreams, imagestream => imagestream.Close());
-            }
+            imagestreams.ForEach(imagestream => imagestream.Close());
 
             throw new IOException($"Error opening image files '{Imagefiles.FirstOrDefault()}'", ex);
         }
     }
 
     public MultiPartFileStream(string FirstImagefile, FileAccess DiskAccess)
-        : this(ProviderSupport.GetMultiSegmentFiles(FirstImagefile), DiskAccess)
+        : this(ProviderSupport.EnumerateMultiSegmentFiles(FirstImagefile), DiskAccess)
     {
     }
 
     public MultiPartFileStream(string FirstImagefile, FileAccess DiskAccess, FileShare ShareMode)
-        : this(ProviderSupport.GetMultiSegmentFiles(FirstImagefile), DiskAccess, ShareMode)
+        : this(ProviderSupport.EnumerateMultiSegmentFiles(FirstImagefile), DiskAccess, ShareMode)
     {
     }
 }

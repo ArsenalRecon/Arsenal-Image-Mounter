@@ -44,6 +44,11 @@ public class CombinedSeekStream : Stream
     {
     }
 
+    public CombinedSeekStream(IEnumerable<Stream> inputStreams)
+        : this(false, inputStreams)
+    {
+    }
+
     public CombinedSeekStream(bool writable, params Stream[] inputStreams)
     {
         if (inputStreams is null || inputStreams.Length == 0)
@@ -58,6 +63,27 @@ public class CombinedSeekStream : Stream
 
             Array.ForEach(inputStreams, AddStream);
 
+            Seek(0, SeekOrigin.Begin);
+        }
+
+        CanWrite = writable;
+    }
+
+    public CombinedSeekStream(bool writable, IEnumerable<Stream> inputStreams)
+    {
+        streams = new();
+
+        foreach (var stream in inputStreams)
+        {
+            AddStream(stream);
+        }
+
+        if (streams.Count == 0)
+        {
+            Extendable = true;
+        }
+        else
+        {
             Seek(0, SeekOrigin.Begin);
         }
 

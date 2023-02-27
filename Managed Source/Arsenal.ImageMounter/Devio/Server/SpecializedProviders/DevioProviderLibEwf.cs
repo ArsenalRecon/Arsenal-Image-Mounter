@@ -551,7 +551,6 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public DevioProviderLibEwf(string[] filenames, byte Flags)
     {
-
         this.Flags = Flags;
 
         if (libewf_handle_initialize(out var safeHandle, out var errobj) != 1 || safeHandle.IsInvalid || Failed(errobj))
@@ -620,7 +619,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     }
 
     public DevioProviderLibEwf(string firstfilename, byte Flags)
-        : this(ProviderSupport.GetMultiSegmentFiles(firstfilename), Flags)
+        : this(ProviderSupport.EnumerateMultiSegmentFiles(firstfilename).ToArray(), Flags)
     {
     }
 

@@ -17,12 +17,14 @@ using System.Collections.Generic;
 #if NET6_0_OR_GREATER
 using System.Collections.Immutable;
 #endif
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0056 // Use index operator
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.IO.Native;
@@ -230,6 +232,121 @@ public static class NativeStruct
         }
 
         return $"{size} byte";
+    }
+
+    public static long? ParseSuffixedSize(string Str)
+        => TryParseSuffixedSize(Str, out var result) ? result : null;
+
+    public static bool TryParseSuffixedSize(string Str, out long ParseSuffixedSizeRet)
+    {
+        ParseSuffixedSizeRet = 0;
+
+        if (string.IsNullOrEmpty(Str))
+        {
+            return false;
+        }
+
+        if (Str.StartsWith("0x", StringComparison.Ordinal) || Str.StartsWith("&H", StringComparison.Ordinal))
+        {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+            return long.TryParse(Str.AsSpan(2), NumberStyles.AllowHexSpecifier, provider: null, out ParseSuffixedSizeRet);
+#else
+            return long.TryParse(Str.Substring(2), NumberStyles.AllowHexSpecifier, provider: null, out ParseSuffixedSizeRet);
+#endif
+        }
+
+        var Suffix = Str[Str.Length - 1];
+
+        if (char.IsLetter(Suffix))
+        {
+            var factor = char.ToUpper(Suffix) switch
+            {
+                'E' => 1L << 60,
+                'P' => 1L << 50,
+                'T' => 1L << 40,
+                'G' => 1L << 30,
+                'M' => 1L << 20,
+                'K' => 1L << 10,
+                _ => throw new FormatException($"Bad suffix: {Suffix}"),
+            };
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+            if (long.TryParse(Str.AsSpan(0, Str.Length - 1), NumberStyles.Any, provider: null, out ParseSuffixedSizeRet))
+            {
+                ParseSuffixedSizeRet *= factor;
+                return true;
+            }
+#else
+            if (long.TryParse(Str.Substring(0, Str.Length - 1), NumberStyles.Any, provider: null, out ParseSuffixedSizeRet))
+            {
+                ParseSuffixedSizeRet *= factor;
+                return true;
+            }
+#endif
+
+            return false;
+        }
+        else
+        {
+            return long.TryParse(Str, NumberStyles.Any, provider: null, out ParseSuffixedSizeRet);
+        }
+    }
+
+    public static byte[] ParseHexString(string str)
+    {
+        var bytes = new byte[(str.Length >> 1)];
+
+        for (int i = 0, loopTo = bytes.Length - 1; i <= loopTo; i++)
+        {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+            bytes[i] = byte.Parse(str.AsSpan(i << 1, 2), NumberStyles.HexNumber);
+#else
+            bytes[i] = byte.Parse(str.Substring(i << 1, 2), NumberStyles.HexNumber);
+#endif
+        }
+
+        return bytes;
+    }
+
+    public static IEnumerable<byte> ParseHexString(IEnumerable<char> str)
+    {
+        var buffer = new char[2];
+
+        foreach (var c in str)
+        {
+            if (buffer[0] == default(char))
+            {
+                buffer[0] = c;
+            }
+            else
+            {
+                buffer[1] = c;
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+                yield return byte.Parse(buffer, NumberStyles.HexNumber);
+#else
+                yield return byte.Parse(new string(buffer), NumberStyles.HexNumber);
+#endif
+
+                Array.Clear(buffer, 0, 2);
+            }
+        }
+    }
+
+    public static byte[] ParseHexString(string str, int offset, int count)
+    {
+        var bytes = new byte[(count >> 1)];
+
+        for (int i = 0, loopTo = count - 1; i <= loopTo; i++)
+        {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+            bytes[i] = byte.Parse(str.AsSpan(i + offset << 1, 2), NumberStyles.HexNumber);
+#else
+            bytes[i] = byte.Parse(str.Substring(i + offset << 1, 2), NumberStyles.HexNumber);
+#endif
+        }
+
+        return bytes;
     }
 
     /// <summary>
