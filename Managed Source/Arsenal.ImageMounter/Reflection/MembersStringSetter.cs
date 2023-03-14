@@ -37,7 +37,7 @@ public static class MembersStringSetter
 
             var param_this = Expression.Parameter(typeof(T), "this");
 
-            var param_value = Expression.Parameter(typeof(string), "value");             // ' the member's new value
+            var param_value = Expression.Parameter(typeof(string), "value");             // the member's new value
 
             var member_info = typeof(T).GetMember(member_name, BindingFlags.FlattenHierarchy | BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(m => m is PropertyInfo or FieldInfo);
 
@@ -97,7 +97,7 @@ public static class MembersStringSetter
 
             assign_value = Expression.Condition(Expression.ReferenceEqual(param_value, Expression.Constant(null)), Expression.Default(member.Type), assign_value);
 
-            var assign = Expression.Assign(member, assign_value);                // ' i.e., 'this.member_name = value'
+            var assign = Expression.Assign(member, assign_value);                // i.e., 'this.member_name = value'
 
             var lambda = Expression.Lambda<Action<T, string>>(assign, param_this, param_value);
 

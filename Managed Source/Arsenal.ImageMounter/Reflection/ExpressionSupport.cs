@@ -60,16 +60,12 @@ public static class ExpressionSupport
 
         var staticArgsTypes = Array.ConvertAll(staticArgs, arg => arg.Type);
 
-        var newMethod = GetCompatibleMethod(typeof(Enumerable), true, MethodName, GenericArguments, ReturnType, staticArgsTypes);
+        var newMethod = GetCompatibleMethod(typeof(Enumerable), true, MethodName, GenericArguments, ReturnType, staticArgsTypes)
+            ?? throw new NotSupportedException($"Expression calls unsupported method {MethodName}.");
 
-        if (newMethod is null)
-        {
-            throw new NotSupportedException($"Expression calls unsupported method {MethodName}.");
-        }
-
-        // ' Substitute first argument (extension method source object) with a parameter that
-        // ' will be substituted with the result sequence when resulting lambda conversion
-        // ' routine is called locally after data has been fetched from external data service.
+        // Substitute first argument (extension method source object) with a parameter that
+        // will be substituted with the result sequence when resulting lambda conversion
+        // routine is called locally after data has been fetched from external data service.
         var sourceObject = Expression.Parameter(newMethod.GetParameters()[0].ParameterType, "source");
 
         staticArgs[0] = sourceObject;
@@ -169,7 +165,10 @@ public static class ExpressionSupport
                                        where i.IsGenericType && i.GetGenericArguments().Length == GenericArguments.Length
                                        select i)
                 {
-                    newMethod = interf.GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(m => methodNames.Contains(m.Name) && ParameterCompatibilityComparer.Compatible(m, ReturnType, AlternateArgsTypes));
+                    newMethod = interf
+                        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                        .FirstOrDefault(m => methodNames.Contains(m.Name, StringComparer.Ordinal)
+                            && ParameterCompatibilityComparer.Compatible(m, ReturnType, AlternateArgsTypes));
 
                     if (newMethod is not null)
                     {

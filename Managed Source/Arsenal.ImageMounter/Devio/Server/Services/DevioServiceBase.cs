@@ -34,7 +34,6 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// </summary>
 public abstract class DevioServiceBase : IVirtualDiskService
 {
-
     public Exception? Exception { get; set; }
 
     protected Thread? ServiceThread { get; private set; }
@@ -142,9 +141,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
             && ForceRemoveDiskDeviceOnCrash
             && ScsiAdapter is not null)
         {
-
             ScsiAdapter.RemoveDevice(diskDeviceNumber);
-
         }
     }
 
@@ -166,7 +163,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// instance is disposed.</param>
     protected DevioServiceBase(IDevioProvider DevioProvider, bool OwnsProvider)
     {
-
         this.OwnsProvider = OwnsProvider;
 
         this.DevioProvider = DevioProvider.NullCheck(nameof(DevioProvider));
@@ -174,7 +170,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
         DiskSize = DevioProvider.Length;
 
         SectorSize = DevioProvider.SectorSize;
-
     }
 
     /// <summary>
@@ -201,9 +196,10 @@ public abstract class DevioServiceBase : IVirtualDiskService
         using var ServiceReadyEvent = new ManualResetEvent(initialState: false);
         using var ServiceInitFailedEvent = new ManualResetEvent(initialState: false);
 
-        var ServiceReadyHandler = new EventHandler((sender, e) => ServiceReadyEvent.Set());
+        void ServiceReadyHandler(object? sender, EventArgs e) => ServiceReadyEvent.Set();
+        void ServiceInitFailedHandler(object? sender, EventArgs e) => ServiceInitFailedEvent.Set();
+
         ServiceReady += ServiceReadyHandler;
-        var ServiceInitFailedHandler = new EventHandler((sender, e) => ServiceInitFailedEvent.Set());
         ServiceInitFailed += ServiceInitFailedHandler;
 
         ServiceThread = new Thread(ServiceThreadProcedure);
@@ -218,16 +214,13 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
     private void ServiceThreadProcedure()
     {
-
         try
         {
             RunService();
         }
-
         finally
         {
             Dispose();
-
         }
     }
 
@@ -241,20 +234,15 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// created, or False if timeout occurred.</returns>
     public virtual bool WaitForServiceThreadExit(TimeSpan timeout)
     {
-
         if (ServiceThread is not null && ServiceThread.ManagedThreadId != Environment.CurrentManagedThreadId && ServiceThread.IsAlive)
         {
-
             Trace.WriteLine($"Waiting for service thread to terminate.");
 
             return ServiceThread.Join(timeout);
         }
-
         else
         {
-
             return true;
-
         }
     }
 
@@ -264,14 +252,11 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// </summary>
     public virtual void WaitForServiceThreadExit()
     {
-
         if (ServiceThread is not null && ServiceThread.ManagedThreadId != Environment.CurrentManagedThreadId && ServiceThread.IsAlive)
         {
-
             Trace.WriteLine($"Waiting for service thread to terminate.");
 
             ServiceThread.Join();
-
         }
     }
 
@@ -288,7 +273,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual void StartServiceThreadAndMount(ScsiAdapter ScsiAdapter, DeviceFlags Flags)
     {
-
         this.ScsiAdapter = ScsiAdapter.NullCheck(nameof(ScsiAdapter));
 
         if (!StartServiceThread())
@@ -305,20 +289,69 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
         try
         {
-            ScsiAdapter.CreateDevice(DiskSize, SectorSize, Offset, Flags | AdditionalFlags | ProxyModeFlags, ProxyObjectName, false, WriteOverlayImageName, false, ref diskDeviceNumber);
+            ScsiAdapter.CreateDevice(DiskSize,
+                                     SectorSize,
+                                     Offset,
+                                     Flags | AdditionalFlags | ProxyModeFlags,
+                                     ProxyObjectName,
+                                     false,
+                                     WriteOverlayImageName,
+                                     false,
+                                     ref diskDeviceNumber);
 
             OnDiskDeviceCreated(EventArgs.Empty);
-        }
 
+            if (!string.IsNullOrWhiteSpace(WriteOverlayImageName))
+            {
+                // Register handler for diff device full etc failures
+                AIMWrFltrDiffFullEvent = new(new SystemNotificationEvent(SystemNotificationEvent.AIMWrFltrDiffFullEvent), ownsHandle: true);
+                
+                AIMWrFltrDiffFullEvent.Signalled += AIMWrFltrDiffFullEventSignalled;
+
+                // In case it already happened before event handler was registered
+                AIMWrFltrDiffFullEventSignalled(null, EventArgs.Empty);
+            }
+        }
         catch (Exception ex)
         {
-
             OnStopServiceThread(EventArgs.Empty);
 
             throw new Exception($"Error when starting service thread or mounting {ProxyObjectName}", ex);
-
         }
     }
+
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    private void AIMWrFltrDiffFullEventSignalled(object? sender, EventArgs e)
+    {
+        try
+        {
+            using var device = OpenDiskDevice(0);
+
+            if (device is null
+                || API.GetWriteOverlayStatus(device.SafeFileHandle, out var writeFilterStatistics) != 0
+                || !writeFilterStatistics.DelayWriteFailed)
+            {
+                return;
+            }
+
+            Trace.WriteLine($"Write filter failed for device {DiskDeviceNumber:X6}, further device writes will fail.");
+
+            OnDiffDeviceFailed(EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"Failed to check write filter statistics for device {DiskDeviceNumber:X6}: {ex.JoinMessages()}");
+        }
+    }
+
+    /// <summary>
+    /// Event when write overlay is used and the diff file volume is full. In
+    /// this case, further write requests to the mounted virtual disk will fail.
+    /// </summary>
+    public event EventHandler? DiffDeviceFailed;
+
+    protected virtual void OnDiffDeviceFailed(EventArgs e)
+        => DiffDeviceFailed?.Invoke(this, e);
 
     /// <summary>
     /// Dismounts an Arsenal Image Mounter Disk Device created by StartServiceThreadAndMount() and waits
@@ -327,11 +360,9 @@ public abstract class DevioServiceBase : IVirtualDiskService
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual void DismountAndStopServiceThread()
     {
-
         RemoveDeviceAndStopServiceThread();
 
         WaitForServiceThreadExit();
-
     }
 
     /// <summary>
@@ -342,7 +373,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual bool DismountAndStopServiceThread(TimeSpan timeout)
     {
-
         RemoveDeviceAndStopServiceThread();
 
         var rc = WaitForServiceThreadExit(timeout);
@@ -357,7 +387,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
         }
 
         return rc;
-
     }
 
     /// <summary>
@@ -488,6 +517,8 @@ public abstract class DevioServiceBase : IVirtualDiskService
     public string? WriteOverlayImageName { get; set; }
 
     private uint diskDeviceNumber = uint.MaxValue;
+    
+    private WaitEventHandler? AIMWrFltrDiffFullEvent;
 
     /// <summary>
     /// After successful call to StartServiceThreadAndMount(), this property returns disk device
@@ -573,7 +604,8 @@ public abstract class DevioServiceBase : IVirtualDiskService
             if (disposing)
             {
 #if NETSTANDARD || NETCOREAPP
-
+                // On non-Windows systems, we have never a mounted device
+                // but only the server end of devio service.
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     try
@@ -590,6 +622,8 @@ public abstract class DevioServiceBase : IVirtualDiskService
 #endif
 
                 // TODO: dispose managed state (managed objects).
+                AIMWrFltrDiffFullEvent?.Dispose();
+
                 if (HasDiskDevice)
                 {
                     try

@@ -27,16 +27,13 @@ namespace Arsenal.ImageMounter.IO.Devices;
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public class SystemNotificationEvent : WaitHandle
 {
-
     /// <summary>
     /// Opens a system notification event object. Well known paths are available as constants of SystemNotificationEvent class.
     /// </summary>
     /// <param name="EventName">NT name and path to event to open</param>
     public SystemNotificationEvent(string EventName)
     {
-
-        SafeWaitHandle = NativeFileIO.NtOpenEvent(EventName, 0, (uint)((long)FileSystemRights.Synchronize | NativeConstants.EVENT_QUERY_STATE), null);
-
+        SafeWaitHandle = NativeFileIO.NtOpenEvent(EventName, 0, FileSystemRights.Synchronize | NativeConstants.EVENT_QUERY_STATE, null);
     }
 
     public const string PrefetchTracesReady = @"\KernelObjects\PrefetchTracesReady";
@@ -55,12 +52,11 @@ public class SystemNotificationEvent : WaitHandle
     public const string HighPagedPoolCondition = @"\KernelObjects\HighPagedPoolCondition";
     public const string LowMemoryCondition = @"\KernelObjects\LowMemoryCondition";
     public const string LowPagedPoolCondition = @"\KernelObjects\LowPagedPoolCondition";
-
+    public const string AIMWrFltrDiffFullEvent = @"\Device\AIMWrFltrDiffFullEvent";
 }
 
 public sealed class RegisteredEventHandler : IDisposable
 {
-
     private readonly RegisteredWaitHandle registered_wait_handle;
 
     public WaitHandle WaitHandle { get; }
@@ -68,65 +64,91 @@ public sealed class RegisteredEventHandler : IDisposable
 
     public RegisteredEventHandler(WaitHandle waitObject, EventHandler handler)
     {
-
         WaitHandle = waitObject;
 
         EventHandler = handler;
 
         registered_wait_handle = ThreadPool.RegisterWaitForSingleObject(waitObject, Callback, this, -1, executeOnlyOnce: true);
-
     }
 
     private static void Callback(object? state, bool timedOut)
     {
-
-        var obj = state as RegisteredEventHandler;
+        var obj = (RegisteredEventHandler?)state;
 
         obj?.EventHandler?.Invoke(obj.WaitHandle, EventArgs.Empty);
-
     }
 
     public void Dispose()
     {
-
         registered_wait_handle?.Unregister(null);
 
         GC.SuppressFinalize(this);
-
     }
 }
 
-public class WaitEventHandler
+public class WaitEventHandler : IDisposable
 {
-
     public WaitHandle WaitHandle { get; }
 
+    private readonly bool ownsHandle;
     private readonly List<RegisteredEventHandler> event_handlers = new();
 
-    public WaitEventHandler(WaitHandle WaitHandle)
+    public WaitEventHandler(WaitHandle WaitHandle, bool ownsHandle)
     {
         this.WaitHandle = WaitHandle;
-
+        this.ownsHandle = ownsHandle;
     }
 
     public event EventHandler Signalled
     {
         add => event_handlers.Add(new RegisteredEventHandler(WaitHandle, value));
         remove => event_handlers.RemoveAll(handler =>
-                           {
-                               if (handler.EventHandler.Equals(value))
-                               {
-                                   handler.Dispose();
-                                   return true;
-                               }
-                               else
-                               {
-                                   return false;
-                               }
-                           });
+        {
+            if (handler.EventHandler.Equals(value))
+            {
+                handler.Dispose();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        });
     }
 
     private void OnSignalled(object sender, EventArgs e)
         => event_handlers.ForEach(handler => handler.EventHandler?.Invoke(sender, e));
 
+    private bool disposedValue;
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                event_handlers.ForEach(handler => handler.Dispose());
+                event_handlers.Clear();
+                
+                if (ownsHandle)
+                {
+                    WaitHandle.Dispose();
+                }
+            }
+
+            disposedValue = true;
+        }
+    }
+
+    ~WaitEventHandler()
+    {
+        Dispose(disposing: false);
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
 }

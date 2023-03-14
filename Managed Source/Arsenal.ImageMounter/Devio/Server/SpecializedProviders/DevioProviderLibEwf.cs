@@ -935,11 +935,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         V2_LOGICAL_ENCASE7 = 0x47,
 
-        // ' The format as specified by Andrew Rosen
+        // The format as specified by Andrew Rosen
 
         EWF = 0x70,
 
-        // ' Libewf eXtended EWF format
+        // Libewf eXtended EWF format
 
         EWFX = 0x71
     }

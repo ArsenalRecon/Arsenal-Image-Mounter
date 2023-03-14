@@ -59,14 +59,14 @@ public class DisposableList<T> : List<T>, IDisposable where T : IDisposable
 
         if (disposing)
         {
-            // ' Dispose each object in list
+            // Dispose each object in list
             foreach (var obj in this)
             {
                 obj?.Dispose();
             }
         }
 
-        // ' Clear list
+        // Clear list
         Clear();
 
     }

@@ -709,7 +709,6 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                                                       out _);
 
         return GetWriteOverlayStatus(hDevice, out Statistics);
-
     }
 
     /// <summary>

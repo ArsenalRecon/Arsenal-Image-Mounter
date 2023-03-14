@@ -272,14 +272,8 @@ public static class DevioServiceFactory
 
         try
         {
-            var vmdk = DiscUtils.Archives.TarFile.EnumerateFiles(ova).FirstOrDefault(file => file.Name.EndsWith(".vmdk", StringComparison.OrdinalIgnoreCase));
-
-            if (vmdk is null)
-            {
-
-                throw new NotSupportedException($"The OVA file {imagefile} does not contain an embedded vmdk file.");
-
-            }
+            var vmdk = DiscUtils.Archives.TarFile.EnumerateFiles(ova).FirstOrDefault(file => file.Name.EndsWith(".vmdk", StringComparison.OrdinalIgnoreCase))
+                ?? throw new NotSupportedException($"The OVA file {imagefile} does not contain an embedded vmdk file.");
 
             var virtual_disk = new DiscUtils.Vmdk.Disk(vmdk.GetStream(), Ownership.Dispose);
             virtual_disk.Disposed += (sender, e) => ova.Dispose();

@@ -712,7 +712,10 @@ public class DiskDevice : DeviceObject
     /// Get live statistics from write filter driver.
     /// </summary>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public WriteFilterStatistics? WriteOverlayStatus => API.GetWriteOverlayStatus(SafeFileHandle, out var statistics) != NativeConstants.NO_ERROR ? default : (WriteFilterStatistics?)statistics;
+    public WriteFilterStatistics? WriteOverlayStatus
+        => API.GetWriteOverlayStatus(SafeFileHandle, out var statistics) == NativeConstants.NO_ERROR
+        ? (WriteFilterStatistics?)statistics
+        : default;
 
     /// <summary>
     /// Deletes the write overlay image file after use. Also sets the filter driver to

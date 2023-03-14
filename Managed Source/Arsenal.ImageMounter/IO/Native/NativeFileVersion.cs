@@ -58,6 +58,7 @@ public enum IMAGE_FILE_MACHINE : WORD
     EBC = 0x0EBC,
     AMD64 = 0x8664,
     M32R = 0x9041,
+    ARM64 = 0xAA64,
     CEE = 0xC0EE
 }
 

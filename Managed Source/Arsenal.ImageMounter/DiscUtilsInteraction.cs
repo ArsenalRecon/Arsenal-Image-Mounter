@@ -126,7 +126,7 @@ public static class DiscUtilsInteraction
                 }
         }
 
-        // ' Adjust hidden sectors count
+        // Adjust hidden sectors count
         var sector_size = disk.SectorSize;
 
         byte[]? allocated = null;
@@ -246,7 +246,7 @@ public static class DiscUtilsInteraction
                 }
         }
 
-        // ' Adjust hidden sectors count
+        // Adjust hidden sectors count
         var sector_size = disk.SectorSize;
 
         using var allocated = MemoryPool<byte>.Shared.Rent(sector_size);

@@ -24,6 +24,8 @@ public interface IVirtualDiskService : IDisposable
     event EventHandler? ServiceStopping;
 
     event ThreadExceptionEventHandler? ServiceUnhandledException;
+    
+    event EventHandler? DiffDeviceFailed;
 
     bool IsDisposed { get; }
 

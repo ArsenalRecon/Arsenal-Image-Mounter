@@ -30,7 +30,8 @@ public static class NativeConstants
     public const string SUPPORTED_WINDOWS_PLATFORM = "windows";
 #endif
 
-    public const uint STANDARD_RIGHTS_REQUIRED = 0xF0000U;
+    [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
+    public const FileSystemRights STANDARD_RIGHTS_REQUIRED = (FileSystemRights)0xF0000;
 
     public const FileAttributes FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = (FileAttributes)0x400000;
 
@@ -43,11 +44,15 @@ public static class NativeConstants
     public const uint CREATE_ALWAYS = 2U;
     public const uint CREATE_NEW = 1U;
     public const uint TRUNCATE_EXISTING = 5U;
-    public const uint EVENT_QUERY_STATE = 1U;
-    public const uint EVENT_MODIFY_STATE = 2U;
 
     [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
-    public const uint EVENT_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | (uint)(FileSystemRights.Synchronize | FileSystemRights.ReadData | FileSystemRights.WriteData);
+    public const FileSystemRights EVENT_QUERY_STATE = FileSystemRights.ReadData;
+
+    [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
+    public const FileSystemRights EVENT_MODIFY_STATE = FileSystemRights.WriteData;
+
+    [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
+    public const FileSystemRights EVENTALLACCESS = STANDARD_RIGHTS_REQUIRED | FileSystemRights.Synchronize | FileSystemRights.ReadData | FileSystemRights.WriteData;
 
     public const int NO_ERROR = 0;
     public const int ERROR_INVALID_FUNCTION = 1;
@@ -142,7 +147,7 @@ public static class NativeConstants
     public const uint CM_GETIDLIST_FILTER_SERVICE = 0x2U;
 
     public const uint DIF_PROPERTYCHANGE = 0x12U;
-    public const uint DICS_FLAG_CONFIGSPECIFIC = 0x2U;  // ' make change in specified profile only
+    public const uint DICS_FLAG_CONFIGSPECIFIC = 0x2U;  // make change in specified profile only
     public const uint DICS_PROPCHANGE = 0x3U;
 
     public const uint CR_SUCCESS = 0x0U;

@@ -84,7 +84,7 @@ public partial class AsyncMessageBox : Form
             sized = true;
         }
 
-        // ' Yes, properties assigned to themselves. Just triggers properties changed events.
+        // Yes, properties assigned to themselves. Just triggers properties changed events.
 
 #pragma warning disable CA2245 // Do not assign a property to itself
         ForeColor = ForeColor;

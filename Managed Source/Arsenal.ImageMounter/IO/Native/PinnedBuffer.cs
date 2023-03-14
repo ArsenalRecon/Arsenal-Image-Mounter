@@ -131,10 +131,10 @@ public class PinnedBuffer : SafeBuffer
 
     /// <summary>
     /// Calls ToString implementation of pinned object, or returns the string
-    /// '{Unallocated}' if object is not initialized.
+    ///{Unallocated}' if object is not initialized.
     /// </summary>
     /// <returns>Calls ToString implementation of pinned object, or returns the string
-    /// '{Unallocated}' if object is not initialized.</returns>
+    ///{Unallocated}' if object is not initialized.</returns>
     public override string? ToString()
         => GCHandle.IsAllocated
         ? GCHandle.Target?.ToString()

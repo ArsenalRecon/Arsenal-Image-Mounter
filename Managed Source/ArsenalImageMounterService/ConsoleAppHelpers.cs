@@ -533,25 +533,20 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 {
                     if (!adapter.GetDeviceList().Contains(devicenumber))
                     {
-
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.Error.WriteLine($"No device mounted with device number {devicenumber:X6}.");
                         Console.ResetColor();
-                        return 2;
 
+                        return 2;
                     }
 
                     if (force_dismount)
                     {
-
                         adapter.RemoveDevice(devicenumber);
                     }
-
                     else
                     {
-
                         adapter.RemoveDeviceSafe(devicenumber);
-
                     }
 
                     Console.WriteLine("Devices dismounted.");
@@ -593,13 +588,9 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
         }
 
-        var provider = DevioServiceFactory.GetProvider(image_path, disk_access, provider_name);
-
-        if (provider is null)
-        {
-            throw new NotSupportedException("Unknown image file format. Try with another format provider!");
-        }
-
+        var provider = DevioServiceFactory.GetProvider(image_path, disk_access, provider_name)
+            ?? throw new NotSupportedException("Unknown image file format. Try with another format provider!");
+        
         if (provider.Length <= 0)
         {
             throw new NotSupportedException("Unknown size of source device");
@@ -614,9 +605,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
         if (fake_mbr)
         {
-
             provider = new DevioProviderWithFakeMBR(provider);
-
         }
 
         Console.WriteLine($"Image virtual size is {NativeStruct.FormatBytes(provider.Length)}");
@@ -672,7 +661,6 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             {
                 Trace.WriteLine($"Failed to open SCSI adapter: {ex.JoinMessages()}");
                 throw new IOException("Cannot access Arsenal Image Mounter driver. Check that the driver is installed and that you are running this application with administrative privileges.", ex);
-
             }
 
             if (disk_size.HasValue)
@@ -701,7 +689,6 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
                 foreach (var vol in NativeFileIO.EnumerateDiskVolumes(device_name))
                 {
-
                     Console.WriteLine($"Contains volume {vol}");
 
                     foreach (var mnt in NativeFileIO.EnumerateVolumeMountPoints(vol))
@@ -713,38 +700,28 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             catch (Exception ex)
             {
                 Console.WriteLine($"Error displaying volume mount points: {ex.JoinMessages()}");
-
             }
         }
         else
         {
             service.StartServiceThread();
-
         }
 
         if (detach_event is not null)
         {
-
             if (mount)
             {
-
                 Console.WriteLine($"Virtual disk created. To dismount, type aim_cli --dismount={service.DiskDeviceNumber:X6}");
             }
-
             else
             {
-
                 Console.WriteLine("Image file opened, ready for incoming connections.");
-
             }
-
 
             CloseConsole(detach_event);
         }
-
         else
         {
-
             if (mount)
             {
                 Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.");

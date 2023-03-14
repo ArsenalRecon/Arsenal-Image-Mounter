@@ -77,12 +77,12 @@ public class ScsiAdapter : DeviceObject
             catch (Win32Exception ex)
             when (ex.NativeErrorCode is NativeConstants.ERROR_INVALID_FUNCTION or NativeConstants.ERROR_IO_DEVICE)
             {
-                // ' In case of SCSIPORT (Win XP) miniport, there is always a risk
-                // ' that we lose contact with IOCTL_SCSI_MINIPORT after device adds
-                // ' and removes. Therefore, in case we know that we have a handle to
-                // ' the SCSI adapter and it fails IOCTL_SCSI_MINIPORT requests, just
-                // ' issue a bus re-enumeration to find the dummy IOCTL device, which
-                // ' will make SCSIPORT let control requests through again.
+                // In case of SCSIPORT (Win XP) miniport, there is always a risk
+                // that we lose contact with IOCTL_SCSI_MINIPORT after device adds
+                // and removes. Therefore, in case we know that we have a handle to
+                // the SCSI adapter and it fails IOCTL_SCSI_MINIPORT requests, just
+                // issue a bus re-enumeration to find the dummy IOCTL device, which
+                // will make SCSIPORT let control requests through again.
                 if (!API.HasStorPort)
                 {
                     Trace.WriteLine("PhDskMnt::OpenAdapterHandle: Lost contact with miniport, rescanning...");
@@ -128,14 +128,8 @@ public class ScsiAdapter : DeviceObject
     private static AdapterDeviceInstance OpenAdapter()
     {
 
-        var devinstNames = API.EnumerateAdapterDeviceInstanceNames();
-
-        if (devinstNames is null)
-        {
-
-            throw new FileNotFoundException("No Arsenal Image Mounter adapter found.");
-
-        }
+        var devinstNames = API.EnumerateAdapterDeviceInstanceNames()
+            ?? throw new FileNotFoundException("No Arsenal Image Mounter adapter found.");
 
         var found = (from devInstName in devinstNames
                      let devinst = NativeFileIO.GetDevInst(devInstName.ToString())
@@ -144,13 +138,9 @@ public class ScsiAdapter : DeviceObject
                      where path is not null
                      let handle = OpenAdapterHandle(path, devinst.Value)
                      where handle is not null
-                     select new AdapterDeviceInstance(devInstName, devinst.Value, handle)).FirstOrDefault();
-
-        if (found is null)
-        {
-            throw new FileNotFoundException("No Arsenal Image Mounter adapter found.");
-        }
-
+                     select new AdapterDeviceInstance(devInstName, devinst.Value, handle)).FirstOrDefault()
+                     ?? throw new FileNotFoundException("No Arsenal Image Mounter adapter found.");
+        
         return found;
     }
 
@@ -304,18 +294,18 @@ public class ScsiAdapter : DeviceObject
                              bool WriteOverlayNativePath,
                              ref uint DeviceNumber)
     {
-        // ' Temporary variable for passing through lambda function
+        // Temporary variable for passing through lambda function
         var devnr = DeviceNumber;
 
-        // ' Both UInt32.MaxValue and AutoDeviceNumber can be used
-        // ' for auto-selecting device number, but only AutoDeviceNumber
-        // ' is accepted by driver.
+        // Both UInt32.MaxValue and AutoDeviceNumber can be used
+        // for auto-selecting device number, but only AutoDeviceNumber
+        // is accepted by driver.
         if (devnr == uint.MaxValue)
         {
             devnr = AutoDeviceNumber;
         }
 
-        // ' Translate Win32 path to native NT path that kernel understands
+        // Translate Win32 path to native NT path that kernel understands
         if (Filename is not null && !string.IsNullOrWhiteSpace(Filename) && !NativePath)
         {
             switch (Flags.GetDiskType())
@@ -344,7 +334,7 @@ public class ScsiAdapter : DeviceObject
             }
         }
 
-        // ' Show what we got
+        // Show what we got
         Trace.WriteLine($"ScsiAdapter.CreateDevice: Native filename='{Filename}'");
 
         GlobalCriticalMutex? write_filter_added = null;
@@ -366,7 +356,7 @@ public class ScsiAdapter : DeviceObject
                 NativeFileIO.AddFilter(NativeConstants.DiskDriveGuid, "aimwrfltr", addfirst: true);
             }
 
-            // ' Show what we got
+            // Show what we got
             Trace.WriteLine($"ScsiAdapter.CreateDevice: Native write overlay filename='{WriteOverlayFilename}'");
 
             var deviceConfig = new IMSCSI_DEVICE_CONFIGURATION(deviceNumber: devnr,
@@ -447,7 +437,7 @@ public class ScsiAdapter : DeviceObject
                 {
                     if (DiskDevice.DiskSize.GetValueOrDefault() == 0)
                     {
-                        // ' Wait at most 20 x 500 msec for device to get initialized by driver
+                        // Wait at most 20 x 500 msec for device to get initialized by driver
                         for (var i = 1; i <= 20; i++)
                         {
                             Thread.Sleep(500 * i);
@@ -545,18 +535,18 @@ public class ScsiAdapter : DeviceObject
                                               uint DeviceNumber,
                                               CancellationToken cancellationToken)
     {
-        // ' Temporary variable for passing through lambda function
+        // Temporary variable for passing through lambda function
         var devnr = DeviceNumber;
 
-        // ' Both UInt32.MaxValue and AutoDeviceNumber can be used
-        // ' for auto-selecting device number, but only AutoDeviceNumber
-        // ' is accepted by driver.
+        // Both UInt32.MaxValue and AutoDeviceNumber can be used
+        // for auto-selecting device number, but only AutoDeviceNumber
+        // is accepted by driver.
         if (devnr == uint.MaxValue)
         {
             devnr = AutoDeviceNumber;
         }
 
-        // ' Translate Win32 path to native NT path that kernel understands
+        // Translate Win32 path to native NT path that kernel understands
         if (!string.IsNullOrWhiteSpace(Filename) && !NativePath)
         {
             switch (Flags.GetDiskType())
@@ -585,7 +575,7 @@ public class ScsiAdapter : DeviceObject
             }
         }
 
-        // ' Show what we got
+        // Show what we got
         Trace.WriteLine($"ScsiAdapter.CreateDevice: Native filename='{Filename}'");
 
         GlobalCriticalMutex? write_filter_added = null;
@@ -607,7 +597,7 @@ public class ScsiAdapter : DeviceObject
                 NativeFileIO.AddFilter(NativeConstants.DiskDriveGuid, "aimwrfltr", addfirst: true);
             }
 
-            // ' Show what we got
+            // Show what we got
             Trace.WriteLine($"ScsiAdapter.CreateDevice: Native write overlay filename='{WriteOverlayFilename}'");
 
             var deviceConfig = new IMSCSI_DEVICE_CONFIGURATION(deviceNumber: devnr, diskSize: DiskSize,
@@ -690,7 +680,7 @@ public class ScsiAdapter : DeviceObject
                 {
                     if (DiskDevice.DiskSize.GetValueOrDefault() == 0)
                     {
-                        // ' Wait at most 20 x 500 msec for device to get initialized by driver
+                        // Wait at most 20 x 500 msec for device to get initialized by driver
                         for (var i = 1; i <= 20; i++)
                         {
                             await Task.Delay(500 * i, cancellationToken).ConfigureAwait(false);
@@ -893,7 +883,7 @@ public class ScsiAdapter : DeviceObject
 
             var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_DEVICE, 0U, Request, out var ReturnCode);
 
-            // ' STATUS_OBJECT_NAME_NOT_FOUND. Possible "zombie" device, just return empty data.
+            // STATUS_OBJECT_NAME_NOT_FOUND. Possible "zombie" device, just return empty data.
             if (ReturnCode == NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND)
             {
                 return;

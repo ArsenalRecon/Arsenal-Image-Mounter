@@ -32,14 +32,14 @@ public class DisposableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IDis
     {
         if (disposing)
         {
-            // ' Dispose each object in list
+            // Dispose each object in list
             foreach (var value in Values)
             {
                 value?.Dispose();
             }
         }
 
-        // ' Clear list
+        // Clear list
         Clear();
     }
 

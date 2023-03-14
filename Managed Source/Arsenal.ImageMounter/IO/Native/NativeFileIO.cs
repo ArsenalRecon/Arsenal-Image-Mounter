@@ -133,7 +133,7 @@ public static partial class NativeFileIO
         internal static partial int NtCreateFile(out SafeFileHandle hFile, FileSystemRights AccessMask, in ObjectAttributes ObjectAttributes, out IoStatusBlock IoStatusBlock, in long AllocationSize, FileAttributes FileAttributes, FileShare ShareAccess, NtCreateDisposition CreateDisposition, NtCreateOptions CreateOptions, nint EaBuffer, uint EaLength);
 
         [LibraryImport("ntdll")]
-        internal static partial int NtOpenEvent(out SafeWaitHandle hEvent, uint AccessMask, in ObjectAttributes ObjectAttributes);
+        internal static partial int NtOpenEvent(out SafeWaitHandle hEvent, FileSystemRights AccessMask, in ObjectAttributes ObjectAttributes);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -637,7 +637,7 @@ public static partial class NativeFileIO
         internal static extern int NtCreateFile(out SafeFileHandle hFile, FileSystemRights AccessMask, in ObjectAttributes ObjectAttributes, out IoStatusBlock IoStatusBlock, in long AllocationSize, FileAttributes FileAttributes, FileShare ShareAccess, NtCreateDisposition CreateDisposition, NtCreateOptions CreateOptions, nint EaBuffer, uint EaLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern int NtOpenEvent(out SafeWaitHandle hEvent, uint AccessMask, in ObjectAttributes ObjectAttributes);
+        internal static extern int NtOpenEvent(out SafeWaitHandle hEvent, FileSystemRights AccessMask, in ObjectAttributes ObjectAttributes);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool GetFileInformationByHandle(SafeFileHandle hFile, out ByHandleFileInformation lpFileInformation);
@@ -2127,7 +2127,7 @@ Currently, the following application has files open on this volume:
     /// <param name="ObjectAttributes">Object attributes.</param>
     /// <param name="RootDirectory">Root directory to start path parsing from, or null for rooted path.</param>
     /// <returns>NTSTATUS value indicating result of the operation.</returns>
-    public static SafeWaitHandle NtOpenEvent(string EventName, NtObjectAttributes ObjectAttributes, uint DesiredAccess, SafeFileHandle? RootDirectory)
+    public static SafeWaitHandle NtOpenEvent(string EventName, NtObjectAttributes ObjectAttributes, FileSystemRights DesiredAccess, SafeFileHandle? RootDirectory)
     {
         if (string.IsNullOrEmpty(EventName))
         {
@@ -3831,7 +3831,7 @@ Currently, the following application has files open on this volume:
 
     public static void RestartDevice(Guid devclass, uint devinst)
     {
-        // ' get a list of devices which support the given interface
+        // get a list of devices which support the given interface
         using var devinfo = UnsafeNativeMethods.SetupDiGetClassDevsW(devclass,
                            default,
                            default,
@@ -3846,9 +3846,9 @@ Currently, the following application has files open on this volume:
 
         var devInfoData = new SP_DEVINFO_DATA();
 
-        // ' step through the list of devices for this handle
-        // ' get device info at index deviceIndex, the function returns FALSE
-        // ' when there is no device at the given index.
+        // step through the list of devices for this handle
+        // get device info at index deviceIndex, the function returns FALSE
+        // when there is no device at the given index.
         var deviceIndex = 0U;
 
         while (UnsafeNativeMethods.SetupDiEnumDeviceInfo(devinfo, deviceIndex, ref devInfoData))
@@ -3913,9 +3913,9 @@ Currently, the following application has files open on this volume:
 
         Trace.WriteLine($"InstallFromInfSection: InfPath=\"{InfPath}\", InfSection=\"{InfSection}\"");
 
-        // '
-        // ' Inf must be a full pathname
-        // '
+        //
+        // Inf must be a full pathname
+        //
         InfPath = Path.GetFullPath(InfPath);
         if (!File.Exists(InfPath))
         {
@@ -3953,23 +3953,23 @@ Currently, the following application has files open on this volume:
 
         Trace.WriteLine($"CreateOrUpdateRootPnPDevice: InfPath=\"{infPath}\", hwid=\"{hwid}\"");
 
-        // '
-        // ' Inf must be a full pathname
-        // '
+        //
+        // Inf must be a full pathname
+        //
         infPath = Path.GetFullPath(infPath);
         if (!File.Exists(infPath))
         {
             throw new FileNotFoundException($"File {infPath} not found", infPath);
         }
 
-        // '
-        // ' List of hardware ID's must be double zero-terminated
-        // '
+        //
+        // List of hardware ID's must be double zero-terminated
+        //
         var hwIdList = MemoryMarshal.AsBytes($"{hwid}\0\0".AsSpan());
 
-        // '
-        // ' Use the INF File to extract the Class GUID.
-        // '
+        //
+        // Use the INF File to extract the Class GUID.
+        //
         Span<char> ClassName = stackalloc char[32];
         Win32Try(UnsafeNativeMethods.SetupDiGetINFClassW(infPath,
                                                          out var ClassGUID,
@@ -3983,9 +3983,9 @@ Currently, the following application has files open on this volume:
         Trace.WriteLine($"CreateOrUpdateRootPnPDevice: ClassGUID=\"{ClassGUID}\", ClassName=\"{ClassName.ToString()}\"");
 #endif
 
-        // '
-        // ' Create the container for the to-be-created Device Information Element.
-        // '
+        //
+        // Create the container for the to-be-created Device Information Element.
+        //
         var DeviceInfoSet = UnsafeNativeMethods.SetupDiCreateDeviceInfoList(ClassGUID, OwnerWindow);
 
         if (DeviceInfoSet.IsInvalid)
@@ -3997,10 +3997,10 @@ Currently, the following application has files open on this volume:
         {
             var DeviceInfoData = new SP_DEVINFO_DATA();
 
-            // '
-            // ' Now create the element.
-            // ' Use the Class GUID and Name from the INF file.
-            // '
+            //
+            // Now create the element.
+            // Use the Class GUID and Name from the INF file.
+            //
             Win32Try(UnsafeNativeMethods.SetupDiCreateDeviceInfoW(DeviceInfoSet,
                                                                   ClassName[0],
                                                                   ClassGUID,
@@ -4009,27 +4009,27 @@ Currently, the following application has files open on this volume:
                                                                   0x1U,
                                                                   ref DeviceInfoData));
 
-            // '
-            // ' Add the HardwareID to the Device's HardwareID property.
-            // '
+            //
+            // Add the HardwareID to the Device's HardwareID property.
+            //
             Win32Try(UnsafeNativeMethods.SetupDiSetDeviceRegistryPropertyW(DeviceInfoSet,
                                                                            ref DeviceInfoData,
                                                                            0x1U,
                                                                            hwIdList[0],
                                                                            (uint)hwIdList.Length));
 
-            // '
-            // ' Transform the registry element into an actual devnode
-            // ' in the PnP HW tree.
-            // '
+            //
+            // Transform the registry element into an actual devnode
+            // in the PnP HW tree.
+            //
             Win32Try(UnsafeNativeMethods.SetupDiCallClassInstaller(DIF_REGISTERDEVICE,
                                                                     DeviceInfoSet,
                                                                     DeviceInfoData));
         }
 
-        // '
-        // ' update the driver for the device we just created
-        // '
+        //
+        // update the driver for the device we just created
+        //
         UpdateDriverForPnPDevices(OwnerWindow, infPath, hwid, ForceReplaceExistingDrivers, out RebootRequired);
     }
 
@@ -4157,8 +4157,8 @@ Currently, the following application has files open on this volume:
         }
     }
 
-    // ' Switched to querying registry directly instead. CM_Get_Class_Registry_PropertyW seems to
-    // ' return 0x13 CR_FAILURE on Win7.
+    // Switched to querying registry directly instead. CM_Get_Class_Registry_PropertyW seems to
+    // return 0x13 CR_FAILURE on Win7.
 #if USE_CM_API
 
             Public Shared Function GetRegisteredFilters(devClass As Guid) As String()
@@ -4361,9 +4361,9 @@ Currently, the following application has files open on this volume:
     {
         Trace.WriteLine($"RemovePnPDevice: hwid='{hwid}'");
 
-        // '
-        // ' Create the container for the to-be-created Device Information Element.
-        // '
+        //
+        // Create the container for the to-be-created Device Information Element.
+        //
         using var DeviceInfoSet = UnsafeNativeMethods.SetupDiCreateDeviceInfoList(0, OwnerWindow);
 
         if (DeviceInfoSet.IsInvalid)
@@ -4407,18 +4407,18 @@ Currently, the following application has files open on this volume:
     {
         Trace.WriteLine($"UpdateDriverForPnPDevices: InfPath=\"{InfPath}\", hwid=\"{hwid}\", forceReplaceExisting={forceReplaceExisting}");
 
-        // '
-        // ' Inf must be a full pathname
-        // '
+        //
+        // Inf must be a full pathname
+        //
         InfPath = Path.GetFullPath(InfPath);
         if (!File.Exists(InfPath))
         {
             throw new FileNotFoundException("File not found", InfPath);
         }
 
-        // '
-        // ' make use of UpdateDriverForPlugAndPlayDevices
-        // '
+        //
+        // make use of UpdateDriverForPlugAndPlayDevices
+        //
         Win32Try(UnsafeNativeMethods.UpdateDriverForPlugAndPlayDevicesW(OwnerWindow,
                                                                         hwid.AsRef(),
                                                                         InfPath.AsRef(),
@@ -4430,9 +4430,9 @@ Currently, the following application has files open on this volume:
     public static string SetupCopyOEMInf(string InfPath, bool NoOverwrite)
     {
 
-        // '
-        // ' Inf must be a full pathname
-        // '
+        //
+        // Inf must be a full pathname
+        //
         InfPath = Path.GetFullPath(InfPath);
         if (!File.Exists(InfPath))
         {
@@ -4456,9 +4456,9 @@ Currently, the following application has files open on this volume:
     public static void DriverPackagePreinstall(string InfPath)
     {
 
-        // '
-        // ' Inf must be a full pathname
-        // '
+        //
+        // Inf must be a full pathname
+        //
         InfPath = Path.GetFullPath(InfPath);
         if (!File.Exists(InfPath))
         {
@@ -4476,9 +4476,9 @@ Currently, the following application has files open on this volume:
     public static void DriverPackageInstall(string InfPath, out bool NeedReboot)
     {
 
-        // '
-        // ' Inf must be a full pathname
-        // '
+        //
+        // Inf must be a full pathname
+        //
         InfPath = Path.GetFullPath(InfPath);
         if (!File.Exists(InfPath))
         {
@@ -4496,9 +4496,9 @@ Currently, the following application has files open on this volume:
     public static void DriverPackageUninstall(string InfPath, DriverPackageUninstallFlags Flags, out bool NeedReboot)
     {
 
-        // '
-        // ' Inf must be a full pathname
-        // '
+        //
+        // Inf must be a full pathname
+        //
         InfPath = Path.GetFullPath(InfPath);
         if (!File.Exists(InfPath))
         {

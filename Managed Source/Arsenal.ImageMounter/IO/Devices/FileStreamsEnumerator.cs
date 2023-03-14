@@ -119,9 +119,9 @@ public readonly struct FileStreamsEnumerator : IEnumerable<FindStreamData>
             disposedValue = true;
         }
 
-        // ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+        // TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
         // Protected Overrides Sub Finalize()
-        // ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+        // Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
         // Dispose(False)
         // MyBase.Finalize()
         // End Sub

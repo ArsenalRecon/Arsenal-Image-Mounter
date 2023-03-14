@@ -17,7 +17,6 @@ namespace Arsenal.ImageMounter.Views;
 
 public class DiskStateView : INotifyPropertyChanged
 {
-
     public DiskStateView()
     {
     }
@@ -45,7 +44,7 @@ public class DiskStateView : INotifyPropertyChanged
 
     public string? ImagePath
     {
-        get => imagePath ?? (DeviceProperties?.Filename);
+        get => imagePath ?? DeviceProperties?.Filename;
         set => imagePath = value;
     }
 
@@ -58,13 +57,14 @@ public class DiskStateView : INotifyPropertyChanged
         get
         {
             var state = IsOffline;
-            if (!state.HasValue)
+            
+            if (state.HasValue)
             {
-                return "N/A";
+                return state.Value ? "Offline" : "Online";
             }
             else
             {
-                return state.Value ? "Offline" : "Online";
+                return "N/A";
             }
         }
     }
@@ -77,30 +77,13 @@ public class DiskStateView : INotifyPropertyChanged
         {
             if (NativePartitionLayout.HasValue)
             {
-
-                switch (NativePartitionLayout.Value)
+                return NativePartitionLayout.Value switch
                 {
-
-                    case IO.Native.PARTITION_STYLE.GPT:
-                        {
-                            return "GPT";
-                        }
-
-                    case IO.Native.PARTITION_STYLE.MBR:
-                        {
-                            return "MBR";
-                        }
-
-                    case IO.Native.PARTITION_STYLE.RAW:
-                        {
-                            return "RAW";
-                        }
-
-                    default:
-                        {
-                            return "Unknown";
-                        }
-                }
+                    IO.Native.PARTITION_STYLE.GPT => "GPT",
+                    IO.Native.PARTITION_STYLE.MBR => "MBR",
+                    IO.Native.PARTITION_STYLE.RAW => "RAW",
+                    _ => "Unknown",
+                };
             }
             else
             {
@@ -240,11 +223,13 @@ public class DiskStateView : INotifyPropertyChanged
         get => selected;
         set
         {
-            if (!(selected == value))
+            if (selected == value)
             {
-                selected = value;
-                NotifyPropertyChanged("Selected");
+                return;
             }
+
+            selected = value;
+            NotifyPropertyChanged("Selected");
         }
     }
 
@@ -252,5 +237,4 @@ public class DiskStateView : INotifyPropertyChanged
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
     public event PropertyChangedEventHandler? PropertyChanged;
-
 }
