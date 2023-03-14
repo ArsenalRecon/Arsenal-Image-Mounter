@@ -80,7 +80,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     KIRQL current_irql = PASSIVE_LEVEL;
 
-    KLOCK_QUEUE_HANDLE lock_handle;
+    KLOCK_QUEUE_HANDLE lock_handle = { 0 };
 
     // For testing purposes, builds a driver that always queues read requests so that they appear
     // in worker thread queue in correct order vs queued write requests. Useful to troubleshoot
@@ -409,7 +409,8 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     {
         ULONG original_irp_offset = clear_index << 9;
 
-        LARGE_INTEGER lower_offset;
+        LARGE_INTEGER lower_offset = { 0 };
+
         lower_offset.QuadPart = io_stack->Parameters.Read.ByteOffset.QuadPart + original_irp_offset;
 
         ULONG lower_length = clear_bits << 9;
@@ -663,7 +664,8 @@ AIMWrFltrDeferredRead(
         LONG block_address = DeviceExtension->AllocationTable[i];
         if (block_address == DIFF_BLOCK_UNALLOCATED)
         {
-            LARGE_INTEGER offset;
+            LARGE_INTEGER offset = { 0 };
+
             offset.QuadPart =
                 DIFF_GET_BLOCK_BASE_FROM_ABS_OFFSET(abs_offset_this_iter) +
                 page_offset_this_iter;

@@ -33,12 +33,12 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 
     PLIST_ENTRY request = &device_extension->ListHead;
 
+    KLOCK_QUEUE_HANDLE lock_handle = { 0 };
+
+    KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
+
     for (;;)
     {
-        KLOCK_QUEUE_HANDLE lock_handle;
-
-        KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
-
         AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
             lowest_assumed_irql);
 
@@ -120,6 +120,23 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 
             case IRP_MJ_WRITE:
                 status = AIMWrFltrDeferredWrite(device_extension, cached_irp, block_buffer);
+
+                if (!NT_SUCCESS(status) &&
+                    cached_irp->Irp == NULL)
+                {
+                    KdBreakPoint();
+
+                    device_extension->Statistics.DelayWriteFailed = TRUE;
+
+                    DbgPrint("AimWrFltrDeviceWorkerThread: Delayed write failed: 0x%X\n",
+                        status);
+
+                    if (AIMWrFltrDiffFullEvent != NULL)
+                    {
+                        KePulseEvent(AIMWrFltrDiffFullEvent, 0, FALSE);
+                    }
+                }
+
                 break;
 
             case IRP_MJ_FLUSH_BUFFERS:
@@ -156,6 +173,14 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
             {
                 cached_irp->Irp->IoStatus.Status = status;
                 IoCompleteRequest(cached_irp->Irp, IO_NO_INCREMENT);
+            }
+            else if (!NT_SUCCESS(status))
+            {
+                DbgPrint("AimWrFltrDeviceWorkerThread: Delayed 0x%X failed: 0x%X\n",
+                    (int)io_stack->MajorFunction,
+                    status);
+
+                device_extension->Statistics.LastErrorCode = status;
             }
         }
 

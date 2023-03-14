@@ -48,6 +48,15 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         }
     }
 
+    if (device_extension->Statistics.DelayWriteFailed)
+    {
+        status = STATUS_DEVICE_REMOVED;
+
+        Irp->IoStatus.Status = status;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+        return status;
+    }
+
     InterlockedIncrement64(&device_extension->Statistics.WriteRequests);
 
     if (io_stack->Parameters.Write.Length == 0)
@@ -84,8 +93,16 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         device_extension->Statistics.LargestWriteSize =
             io_stack->Parameters.Write.Length;
 
-        KdPrint(("AIMWrFltrWrite: Largest write size is now %u KB\n",
-            device_extension->Statistics.LargestWriteSize >> 10));
+        if (device_extension->Statistics.LargestWriteSize >= 4096)
+        {
+            KdPrint(("AIMWrFltrWrite: Largest write size is now %u KB\n",
+                device_extension->Statistics.LargestWriteSize >> 10));
+        }
+        else
+        {
+            KdPrint(("AIMWrFltrWrite: Largest write size is now %u bytes\n",
+                device_extension->Statistics.LargestWriteSize));
+        }
     }
 
     KIRQL current_irql = PASSIVE_LEVEL;
@@ -309,8 +326,8 @@ PUCHAR BlockBuffer)
 
                     if (!NT_SUCCESS(status))
                     {
-                        KdPrint(("AIMWrFltrDeferredWrite: Fill read from original device failed: 0x%X\n",
-                            status));
+                        DbgPrint("AIMWrFltrDeferredWrite: Fill read from original device failed: 0x%X\n",
+                            status);
 
                         //KdBreakPoint();
 
@@ -319,8 +336,8 @@ PUCHAR BlockBuffer)
 
                     if (io_status.Information != page_offset_this_iter)
                     {
-                        KdPrint(("AIMWrFltrDeferredWrite: Fill read request 0x%X bytes, got 0x%IX.\n",
-                            page_offset_this_iter, io_status.Information));
+                        DbgPrint("AIMWrFltrDeferredWrite: Fill read request 0x%X bytes, got 0x%IX.\n",
+                            page_offset_this_iter, io_status.Information);
                     }
 
                     ++DeviceExtension->Statistics.FillReads;
@@ -339,30 +356,51 @@ PUCHAR BlockBuffer)
                         DIFF_GET_BLOCK_BASE_FROM_ABS_OFFSET(abs_offset_this_iter) +
                         bytes_this_iter;
 
+                    // If at end of media, we cannot read up to a full block. Instead,
+                    // read as much as possible and then pad the rest with zeroes.
+                    ULONG fill_length = DIFF_BLOCK_SIZE - bytes_this_iter;
+
+                    if (offset.QuadPart + fill_length >
+                        DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.Size.QuadPart)
+                    {
+                        fill_length = (ULONG)(DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.Size.QuadPart -
+                            offset.QuadPart);
+                    }
+
                     status = AIMWrFltrSynchronousReadWrite(
                         DeviceExtension->TargetDeviceObject,
                         NULL,
                         IRP_MJ_READ,
                         BlockBuffer + bytes_this_iter,
-                        DIFF_BLOCK_SIZE - bytes_this_iter,
+                        fill_length,
                         &offset,
                         NULL,
                         &io_status);
 
                     if (!NT_SUCCESS(status))
                     {
-                        KdPrint(("AIMWrFltrDeferredWrite: Fill read from original device failed: 0x%X\n",
-                            status));
+                        DbgPrint("AIMWrFltrDeferredWrite: Fill read from original device failed: 0x%X\n",
+                            status);
 
                         //KdBreakPoint();
 
                         return status;
                     }
 
-                    if (io_status.Information != DIFF_BLOCK_SIZE - bytes_this_iter)
+                    if (io_status.Information != fill_length)
                     {
-                        KdPrint(("AIMWrFltrDeferredWrite: Fill read request 0x%X bytes, got 0x%IX.\n",
-                            (ULONG)(DIFF_BLOCK_SIZE - bytes_this_iter), io_status.Information));
+                        DbgPrint("AIMWrFltrDeferredWrite: Fill read request 0x%X bytes, got 0x%IX.\n",
+                            (ULONG)(DIFF_BLOCK_SIZE - bytes_this_iter), io_status.Information);
+                    }
+
+                    ULONG pad_length = (ULONG)(DIFF_BLOCK_SIZE - bytes_this_iter - io_status.Information);
+
+                    if (pad_length > 0)
+                    {
+                        DbgPrint("AIMWrFltrDeferredWrite: Padding 0x%X bytes at end block.\n",
+                            pad_length);
+
+                        RtlZeroMemory(BlockBuffer + bytes_this_iter + io_status.Information, pad_length);
                     }
 
                     ++DeviceExtension->Statistics.FillReads;
@@ -393,16 +431,16 @@ PUCHAR BlockBuffer)
         if (NT_SUCCESS(status) &&
             io_status.Information != bytes_this_iter)
         {
-            KdPrint(("AIMWrFltrDeferredWrite: Write request 0x%X bytes, done 0x%IX.\n",
-                bytes_this_iter, io_status.Information));
+            DbgPrint("AIMWrFltrDeferredWrite: Write request 0x%X bytes, done 0x%IX.\n",
+                bytes_this_iter, io_status.Information);
 
             KdBreakPoint();
         }
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint(("AIMWrFltrDeferredWrite: IRQL=%i Write 0x%X bytes at 0x%I64X to diff device failed: 0x%X\n",
-                (int)KeGetCurrentIrql(), bytes_this_iter, lower_offset.QuadPart, status));
+            DbgPrint("AIMWrFltrDeferredWrite: IRQL=%i Write 0x%X bytes at 0x%I64X to diff device failed: 0x%X\n",
+                (int)KeGetCurrentIrql(), bytes_this_iter, lower_offset.QuadPart, status);
 
             KdBreakPoint();
 

@@ -261,7 +261,13 @@ typedef struct _AIMWRFLTR_DEVICE_STATISTICS
     //
     ULONG Initialized : 1;
 
-    ULONG Reserved2 : 7;
+    //
+    // TRUE if a delayed write operation has failed and further write
+    // requests will be blocked (STATUS_DEVICE_REMOVED)
+    //
+    ULONG DelayWriteFailed : 1;
+
+    ULONG Reserved2 : 6;
 
     //
     // TRUE if all IRP_MJ_FLUSH_BUFFERS requests are silently ignored

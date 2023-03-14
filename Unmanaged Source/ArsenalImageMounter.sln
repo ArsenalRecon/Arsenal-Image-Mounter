@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CCDE959C-C0CA-4F98-B379-64931C7C91D0}"
 	ProjectSection(SolutionItems) = preProject
 		..\LICENSE.md = ..\LICENSE.md
+		phdskmnt\inc\phdskmntver.h = phdskmnt\inc\phdskmntver.h
 		..\Public-API-reference.txt = ..\Public-API-reference.txt
 		..\README.md = ..\README.md
 	EndProjectSection

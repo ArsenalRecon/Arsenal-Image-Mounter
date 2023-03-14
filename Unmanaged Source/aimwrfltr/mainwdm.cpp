@@ -128,7 +128,8 @@ STATUS_SUCCESS if successful
             FALSE);
     }
 
-    OBJECT_ATTRIBUTES event_obj_attrs;
+    OBJECT_ATTRIBUTES event_obj_attrs = { 0 };
+
     InitializeObjectAttributes(&event_obj_attrs,
         &event_path,
         OBJ_PERMANENT | OBJ_OPENIF,
@@ -172,7 +173,7 @@ STATUS_SUCCESS if successful
 
     static const WCHAR parameters_suffix[] = L"\\Parameters";
 
-    UNICODE_STRING param_key_path;
+    UNICODE_STRING param_key_path = { 0 };
 
     param_key_path.MaximumLength = RegistryPath->Length
         + sizeof(parameters_suffix);
@@ -194,7 +195,7 @@ STATUS_SUCCESS if successful
     RtlAppendUnicodeToString(&param_key_path, parameters_suffix);
     param_key_path.Buffer[param_key_path.Length / sizeof(WCHAR)] = 0;
 
-    OBJECT_ATTRIBUTES param_key_obj_attrs;
+    OBJECT_ATTRIBUTES param_key_obj_attrs = { 0 };
     InitializeObjectAttributes(&param_key_obj_attrs, &param_key_path,
         OBJ_CASE_INSENSITIVE | OBJ_OPENIF, NULL, NULL);
 
@@ -296,7 +297,7 @@ AIMWrFltrSyncFilterWithTarget(IN PDEVICE_OBJECT FilterDevice,
 NTSTATUS
 AIMWrFltSaveDiffHeader(IN PDEVICE_EXTENSION DeviceExtension)
 {
-    LARGE_INTEGER offset;
+    LARGE_INTEGER offset = { 0 };
     IO_STATUS_BLOCK io_status;
 
     offset.QuadPart = 0;
@@ -750,14 +751,15 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
             "AIMWrFltrOpenDiffDevice: Attempting to open device '%wZ' as diff device for %p.\n",
             DiffDevicePath, DeviceExtension->DeviceObject));
 
-        OBJECT_ATTRIBUTES obj_attrs;
+        OBJECT_ATTRIBUTES obj_attrs = { 0 };
         InitializeObjectAttributes(&obj_attrs,
             DiffDevicePath,
             OBJ_CASE_INSENSITIVE | OBJ_OPENIF,
             NULL,
             NULL);
 
-        LARGE_INTEGER allocation_size;
+        LARGE_INTEGER allocation_size = { 0 };
+
         allocation_size.QuadPart = DIFF_BLOCK_SIZE;
 
         IO_STATUS_BLOCK io_status;
@@ -941,7 +943,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
     if (DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.Size.QuadPart ==
         0)
     {
-        GET_LENGTH_INFORMATION length;
+        GET_LENGTH_INFORMATION length = { 0 };
 
         status = AIMWrFltrSynchronousDeviceControl(
             DeviceExtension->TargetDeviceObject,
@@ -1274,7 +1276,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    UNICODE_STRING diff_device_path;
+    UNICODE_STRING diff_device_path = { 0 };
     PSRB_IMSCSI_CREATE_DATA create_data = NULL;
     HANDLE diff_device_handle = NULL;
 
@@ -1283,7 +1285,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
     if (RtlEqualUnicodeString(&PhysicalDeviceObject->DriverObject->DriverName,
         &phdskmnt_driver_name, FALSE))
     {
-        SCSI_ADDRESS scsi_address;
+        SCSI_ADDRESS scsi_address = { 0 };
 
         status = AIMWrFltrSynchronousDeviceControl(
             PhysicalDeviceObject,
@@ -1480,7 +1482,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (diff_device_path.Length > non_removable_suffix.Length)
         {
-            UNICODE_STRING suffix;
+            UNICODE_STRING suffix = { 0 };
             suffix.MaximumLength = suffix.Length = non_removable_suffix.Length;
             suffix.Buffer = (PWSTR)((PUCHAR)diff_device_path.Buffer + diff_device_path.Length - suffix.Length);
 

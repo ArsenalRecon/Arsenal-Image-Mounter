@@ -123,7 +123,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             return status;
         }
 
-        LARGE_INTEGER lower_offset;
+        LARGE_INTEGER lower_offset = { 0 };
         lower_offset.QuadPart = (device_extension->Statistics.DiffDeviceVbr.
             Fields.Head.OffsetToPrivateData << SECTOR_BITS) +
             offset->QuadPart;
@@ -226,7 +226,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             return status;
         }
 
-        LARGE_INTEGER lower_offset;
+        LARGE_INTEGER lower_offset = { 0 };
         lower_offset.QuadPart = (device_extension->Statistics.DiffDeviceVbr.
             Fields.Head.OffsetToPrivateData << SECTOR_BITS) +
             offset->QuadPart;
@@ -320,7 +320,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             return status;
         }
 
-        LARGE_INTEGER lower_offset;
+        LARGE_INTEGER lower_offset = { 0 };
         lower_offset.QuadPart = (device_extension->Statistics.DiffDeviceVbr.
             Fields.Head.OffsetToLogData << SECTOR_BITS) +
             offset->QuadPart;
@@ -414,7 +414,8 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             return status;
         }
 
-        LARGE_INTEGER lower_offset;
+        LARGE_INTEGER lower_offset = { 0 };
+        
         lower_offset.QuadPart = (device_extension->Statistics.DiffDeviceVbr.
             Fields.Head.OffsetToLogData << SECTOR_BITS) +
             offset->QuadPart;
@@ -675,7 +676,16 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
     case IOCTL_DISK_IS_WRITABLE:
     {
-        if (device_extension->Statistics.Initialized)
+        if (device_extension->Statistics.DelayWriteFailed)
+        {
+            status = STATUS_MEDIA_WRITE_PROTECTED;
+
+            Irp->IoStatus.Status = status;
+            IoCompleteRequest(Irp, IO_DISK_INCREMENT);
+
+            return status;
+        }
+        else if (device_extension->Statistics.Initialized)
         {
             status = STATUS_SUCCESS;
 

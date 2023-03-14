@@ -1728,7 +1728,8 @@ __in PKIRQL               LowestAssumedIrql
     // Check disk bounds
     if ((startingSector + numBlocks) > (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower))
     {      // Starting sector beyond the bounds?
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Out of bounds: sector: %I64X, blocks: %d\n", startingSector, numBlocks));
+        KdPrint(("PhDskMnt::ScsiOpReadWrite: Out of bounds: sector: %I64X, blocks: %d, max: %I64X\n",
+            startingSector, numBlocks, pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower));
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_ILLEGAL_BLOCK, 0);
 

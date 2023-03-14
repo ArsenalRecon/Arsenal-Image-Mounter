@@ -1039,7 +1039,7 @@ LPWSTR FormatOptions)
 
             default:
             {
-                STORAGE_DEVICE_NUMBER device_number;
+                STORAGE_DEVICE_NUMBER device_number = { 0 };
                 if (!DeviceIoControl(vol_handle,
                     IOCTL_STORAGE_GET_DEVICE_NUMBER,
                     NULL, 0,
@@ -1422,6 +1422,21 @@ ImScsiCliQueryStatusWriteFilter(HANDLE Device)
 
         return err_code;
     }
+    else if (stats.Initialized && stats.DelayWriteFailed)
+    {
+        auto used_diff_size = stats.UsedDiffSize();
+
+        printf(
+            "Write filter driver is attached and initialized for this device.\n"
+            "Differencing overlay image size used: %I64i bytes (%.4g %s)\n"
+            "Delayed write operations have failed (differencing volume full?), further write\n"
+            "write operations will fail.\n\n",
+            used_diff_size,
+            _h(used_diff_size),
+            _p(used_diff_size));
+
+        return NO_ERROR;
+    }
     else if (stats.Initialized)
     {
         auto used_diff_size = stats.UsedDiffSize();
@@ -1469,7 +1484,7 @@ ImScsiCliQueryStatusDevice(DEVICE_NUMBER DeviceNumber,
     STORAGE_DEVICE_NUMBER device_number;
 
     SCSI_ADDRESS scsi_addresses[max_extent_count];
-    DWORD disk_numbers[max_extent_count];
+    DWORD disk_numbers[max_extent_count] = { 0 };
     DWORD number_of_disks = 1;
 
     if (MountPoint != NULL)
@@ -1720,7 +1735,7 @@ ImScsiCliQueryStatusDevice(DEVICE_NUMBER DeviceNumber,
                 break;
 
             default:
-                STORAGE_DEVICE_NUMBER volume_device_number;
+                STORAGE_DEVICE_NUMBER volume_device_number = { 0 };
 
                 if (!DeviceIoControl(vol_handle,
                     IOCTL_STORAGE_GET_DEVICE_NUMBER,
@@ -2040,7 +2055,7 @@ wmain(int argc, LPWSTR argv[])
     LPWSTR overlay_image_file_name = NULL;
     LPWSTR format_options = NULL;
     BOOL save_settings = FALSE;
-    DEVICE_NUMBER device_number;
+    DEVICE_NUMBER device_number = { 0 };
     device_number.LongNumber = IMSCSI_AUTO_DEVICE_NUMBER;
     LPWSTR mount_point = NULL;
     LARGE_INTEGER disk_geometry = { 0 };
