@@ -195,7 +195,8 @@ public static class DevioServiceFactory
             throw new ArgumentException($"Provider type not supported: {ProviderType}", nameof(ProviderType));
         }
 
-        if (ProviderType == ProviderType.DiscUtils && NotSupportedFormatsForWriteOverlay.Contains(Path.GetExtension(imagePath), StringComparer.OrdinalIgnoreCase))
+        if (ProviderType == ProviderType.DiscUtils
+            && NotSupportedFormatsForWriteOverlay.Contains(Path.GetExtension(imagePath), StringComparer.OrdinalIgnoreCase))
         {
             supportedVirtualDiskAccess = supportedVirtualDiskAccess
                 .Where(acc => acc != VirtualDiskAccess.ReadWriteOverlay)
@@ -990,7 +991,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
     public static Stream OpenImageAsStream(string imageFile)
     {
-        switch (Path.GetExtension(imageFile).ToLowerInvariant() ?? "")
+        switch (Path.GetExtension(imageFile).ToLowerInvariant())
         {
             case ".vhd":
             case ".vdi":

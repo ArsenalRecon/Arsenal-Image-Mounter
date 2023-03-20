@@ -2388,23 +2388,6 @@ Currently, the following application has files open on this volume:
                                                         out _,
                                                         0));
 
-#if NETFRAMEWORK
-    public static string GetLongFullPath(string path)
-    {
-        var newpath = GetNtPath(path);
-
-        if (newpath.StartsWith(@"\??\", StringComparison.Ordinal))
-        {
-            newpath = string.Concat(@"\\?\", newpath.Substring(4));
-        }
-
-        return newpath;
-    }
-#else
-    public static string GetLongFullPath(string path)
-        => Path.GetFullPath(path);
-#endif
-
     /// <summary>
     /// Adds a semicolon separated list of paths to the PATH environment variable of
     /// current process. Any paths already in present PATH variable are not added again.

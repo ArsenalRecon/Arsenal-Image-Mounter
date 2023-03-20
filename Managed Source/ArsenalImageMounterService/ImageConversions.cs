@@ -146,7 +146,11 @@ internal static class ImageConversions
                 };
             }
 
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+            var image_type = Path.GetExtension(outputImage.AsSpan()).TrimStart('.').ToString().ToUpperInvariant();
+#else
             var image_type = Path.GetExtension(outputImage).TrimStart('.').ToUpperInvariant();
+#endif
 
             StreamWriter? metafile = null;
 
