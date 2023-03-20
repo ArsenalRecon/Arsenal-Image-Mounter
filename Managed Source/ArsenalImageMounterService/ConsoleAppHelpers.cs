@@ -104,7 +104,7 @@ internal static class ConsoleAppHelpers
                     {
                         using var h = NativeFileIO.NtCreateFile(dev.DevicePath,
                                                                 NtObjectAttributes.OpenIf,
-                                                                (FileAccess)0,
+                                                                0,
                                                                 FileShare.ReadWrite,
                                                                 NtCreateDisposition.Open,
                                                                 NtCreateOptions.NonDirectoryFile | NtCreateOptions.SynchronousIoNonAlert,

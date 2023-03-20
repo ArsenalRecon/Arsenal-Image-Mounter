@@ -120,7 +120,7 @@ public static class DriverSetup
     /// </summary>
     /// <param name="zipStream">Stream containing a zip archive with setup files</param>
     public static Version GetDriverVersionFromZipStream(Stream zipStream) =>
-        GetDriverVersionFromZipArchive(new ZipArchive(zipStream, (ZipArchiveMode)0));
+        GetDriverVersionFromZipArchive(new ZipArchive(zipStream, 0));
 
     /// <summary>
     /// Installs Arsenal Image Mounter driver components from a zip archive.
@@ -138,7 +138,7 @@ public static class DriverSetup
     /// that is, one subdirectory for each kernel version followed by one
     /// subdirectory for each architecture.</param>
     public static void InstallFromZipStream(IWin32Window ownerWindow, Stream zipStream) =>
-        InstallFromZipArchive(ownerWindow, new ZipArchive(zipStream, (ZipArchiveMode)0));
+        InstallFromZipArchive(ownerWindow, new ZipArchive(zipStream, 0));
 
     /// <summary>
     /// Returns version of driver located in setup files directory.

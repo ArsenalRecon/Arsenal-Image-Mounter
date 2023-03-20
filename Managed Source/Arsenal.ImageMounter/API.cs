@@ -472,7 +472,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
         throw new FileNotFoundException("Error adding write overlay: Device not found.");
     }
 
-    public static async Task RegisterWriteOverlayImageAsync(uint devInst, string? OverlayImagePath, bool FakeNonRemovable, CancellationToken cancel)
+    public static async Task RegisterWriteOverlayImageAsync(uint devInst, string? OverlayImagePath, bool FakeNonRemovable, CancellationToken cancellationToken)
     {
         string? nativepath;
 
@@ -546,7 +546,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
             if (nativepath is null && last_error == NativeConstants.NO_ERROR)
             {
                 Trace.WriteLine("Filter driver not yet unloaded, retrying...");
-                await Task.Delay(300, cancel).ConfigureAwait(false);
+                await Task.Delay(300, cancellationToken).ConfigureAwait(false);
                 continue;
             }
             else if (nativepath is not null
@@ -555,7 +555,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 || last_error == NativeConstants.ERROR_NOT_SUPPORTED))
             {
                 Trace.WriteLine("Filter driver not yet loaded, retrying...");
-                await Task.Delay(300, cancel).ConfigureAwait(false);
+                await Task.Delay(300, cancellationToken).ConfigureAwait(false);
                 continue;
             }
             else if (nativepath is not null
@@ -599,7 +599,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
         throw new FileNotFoundException("Error adding write overlay: Device not found.");
     }
 
-    public static async Task RegisterWriteFilterAsync(uint devinstAdapter, uint DeviceNumber, RegisterWriteFilterOperation operation, CancellationToken cancel)
+    public static async Task RegisterWriteFilterAsync(uint devinstAdapter, uint DeviceNumber, RegisterWriteFilterOperation operation, CancellationToken cancellationToken)
     {
         foreach (var dev in from devinstChild in NativeFileIO.EnumerateChildDevices(devinstAdapter)
                             let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinstChild)
@@ -644,7 +644,7 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 if (last_error == NativeConstants.ERROR_INVALID_FUNCTION)
                 {
                     Trace.WriteLine("Filter driver not loaded, retrying...");
-                    await Task.Delay(200, cancel).ConfigureAwait(false);
+                    await Task.Delay(200, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 else if (last_error != NativeConstants.NO_ERROR)

@@ -70,7 +70,7 @@ public static class NativePE
         }
     }
 
-    public static async Task<FixedFileVerInfo> GetFixedFileVerInfoAsync(Stream exe, CancellationToken cancel)
+    public static async Task<FixedFileVerInfo> GetFixedFileVerInfoAsync(Stream exe, CancellationToken cancellationToken)
     {
         if (exe.CanSeek)
         {
@@ -79,7 +79,7 @@ public static class NativePE
             var buffer = ArrayPool<byte>.Shared.Rent((int)exe.Length);
             try
             {
-                var length = await exe.ReadAsync(buffer.AsMemory(0, (int)exe.Length), cancel).ConfigureAwait(false);
+                var length = await exe.ReadAsync(buffer.AsMemory(0, (int)exe.Length), cancellationToken).ConfigureAwait(false);
 
                 return GetFixedFileVerInfo(buffer.AsSpan(0, length));
             }
@@ -92,7 +92,7 @@ public static class NativePE
         {
             using var buffer = new MemoryStream();
 
-            await exe.CopyToAsync(buffer, 81920, cancel).ConfigureAwait(false);
+            await exe.CopyToAsync(buffer, 81920, cancellationToken).ConfigureAwait(false);
 
             return GetFixedFileVerInfo(buffer.AsSpan());
         }

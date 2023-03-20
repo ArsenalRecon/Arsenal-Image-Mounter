@@ -510,8 +510,8 @@ public class DiskDevice : DeviceObject
     /// disk volumes, not physical disk drives.
     /// </summary>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public void SetVolumeOffline(bool value)
-        => NativeFileIO.SetVolumeOffline(SafeFileHandle, value);
+    public void SetVolumeOffline(bool offline)
+        => NativeFileIO.SetVolumeOffline(SafeFileHandle, offline);
 
     /// <summary>
     /// Gets information about a partition stored on a disk with MBR

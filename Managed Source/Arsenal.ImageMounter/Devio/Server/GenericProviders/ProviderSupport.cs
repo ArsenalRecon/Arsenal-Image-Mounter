@@ -259,7 +259,7 @@ public static class ProviderSupport
                                                string OutputImageVariant,
                                                Dictionary<string, byte[]?>? hashResults,
                                                CompletionPosition? completionPosition,
-                                               CancellationToken cancel)
+                                               CancellationToken cancellationToken)
     {
         if (!DevioServiceFactory.DiscUtilsInitialized)
         {
@@ -274,7 +274,7 @@ public static class ProviderSupport
                                         adjustTargetSize: false,
                                         hashResults,
                                         completionPosition,
-                                        cancel);
+                                        cancellationToken);
     }
 
     public static void ConvertToRawImage(this IDevioProvider provider,
@@ -282,7 +282,7 @@ public static class ProviderSupport
                                          string OutputImageVariant,
                                          Dictionary<string, byte[]?>? hashResults,
                                          CompletionPosition? completionPosition,
-                                         CancellationToken cancel)
+                                         CancellationToken cancellationToken)
     {
         using var target = new FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageConversionIoBufferSize);
 
@@ -314,14 +314,14 @@ public static class ProviderSupport
                                         hashResults: hashResults,
                                         adjustTargetSize: true,
                                         completionPosition: completionPosition,
-                                        cancel: cancel);
+                                        cancellationToken: cancellationToken);
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static void WriteToPhysicalDisk(this IDevioProvider provider,
                                            string outputDevice,
                                            CompletionPosition? completionPosition,
-                                           CancellationToken cancel)
+                                           CancellationToken cancellationToken)
     {
         using var disk = new DiskDevice(outputDevice, FileAccess.ReadWrite);
 
@@ -331,14 +331,14 @@ public static class ProviderSupport
                                         hashResults: null,
                                         adjustTargetSize: false,
                                         completionPosition: completionPosition,
-                                        cancel: cancel);
+                                        cancellationToken: cancellationToken);
     }
 
     public static void ConvertToLibEwfImage(this IDevioProvider provider,
                                             string outputImage,
                                             Dictionary<string, byte[]?>? hashResults,
                                             CompletionPosition? completionPosition,
-                                            CancellationToken cancel)
+                                            CancellationToken cancellationToken)
     {
         var imaging_parameters = new DevioProviderLibEwf.ImagingParameters
         {
@@ -373,7 +373,7 @@ public static class ProviderSupport
                                             hashResults: hashResults,
                                             adjustTargetSize: false,
                                             completionPosition: completionPosition,
-                                            cancel: cancel);
+                                            cancellationToken: cancellationToken);
         }
 
         if (hashResults is not null)
@@ -395,7 +395,7 @@ public static class ProviderSupport
                                               bool adjustTargetSize,
                                               Dictionary<string, byte[]?>? hashResults,
                                               CompletionPosition? completionPosition,
-                                              CancellationToken cancel)
+                                              CancellationToken cancellationToken)
     {
         using var hashProviders = new DisposableDictionary<string, HashAlgorithm>(StringComparer.OrdinalIgnoreCase);
 
@@ -422,7 +422,7 @@ public static class ProviderSupport
         for (; ; )
         {
 
-            cancel.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
 
             var length_to_read = (int)Math.Min(buffer.Length, source.Length - source_position);
 
@@ -462,7 +462,7 @@ public static class ProviderSupport
             }
             else
             {
-                cancel.ThrowIfCancellationRequested();
+                cancellationToken.ThrowIfCancellationRequested();
 
                 target.Write(buffer, 0, count);
             }

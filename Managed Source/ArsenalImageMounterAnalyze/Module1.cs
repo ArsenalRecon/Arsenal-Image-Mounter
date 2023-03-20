@@ -104,6 +104,6 @@ public static class Module1
     {
         _ = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION, 0U, null, out var ReturnCode);
 
-        return (int)ReturnCode;
+        return ReturnCode;
     }
 }
