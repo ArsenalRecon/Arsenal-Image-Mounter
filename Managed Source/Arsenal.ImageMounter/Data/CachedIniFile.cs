@@ -35,7 +35,6 @@ namespace Arsenal.ImageMounter.Data;
 [ComVisible(false)]
 public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<string, string>>
 {
-
     protected override NullSafeDictionary<string, string> GetDefaultValue(string Key)
     {
         var new_section = new NullSafeStringDictionary(StringComparer.CurrentCultureIgnoreCase);
@@ -525,59 +524,47 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
     /// <param name="Stream">Stream containing INI file data</param>
     public void Load(TextReader Stream)
     {
-        SyncRoot.Wait();
+        var CurrentSection = this[string.Empty];
 
-        try
+        for (; ; )
         {
-            var CurrentSection = this[string.Empty];
+            var Linestr = Stream.ReadLine();
 
-            for (; ; )
+            if (Linestr is null)
             {
-                var Linestr = Stream.ReadLine();
-
-                if (Linestr is null)
-                {
-                    break;
-                }
-
-                var Line = Linestr.AsSpan().Trim();
-
-                if (Line.Length == 0 || Line.StartsWith(";".AsSpan(), StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (Line.StartsWith("[".AsSpan(), StringComparison.Ordinal)
-                    && Line.EndsWith("]".AsSpan(), StringComparison.Ordinal))
-                {
-                    var SectionKey = Line.Slice(1, Line.Length - 2).Trim().ToString();
-                    CurrentSection = this[SectionKey];
-                    continue;
-                }
-
-                var EqualSignPos = Line.IndexOf('=');
-                if (EqualSignPos < 0)
-                {
-                    continue;
-                }
-
-                var Key = Line.Slice(0, EqualSignPos).Trim().ToString();
-                var Value = Line.Slice(EqualSignPos + 1).Trim().ToString();
-
-                if (CurrentSection is null)
-                {
-                    continue;
-                }
-
-                CurrentSection[Key] = Value;
+                break;
             }
-        }
-        catch
-        {
-        }
-        finally
-        {
-            SyncRoot.Release();
+
+            var Line = Linestr.AsSpan().Trim();
+
+            if (Line.Length == 0 || Line.StartsWith(";".AsSpan(), StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (Line.StartsWith("[".AsSpan(), StringComparison.Ordinal)
+                && Line.EndsWith("]".AsSpan(), StringComparison.Ordinal))
+            {
+                var SectionKey = Line.Slice(1, Line.Length - 2).Trim().ToString();
+                CurrentSection = this[SectionKey];
+                continue;
+            }
+
+            var EqualSignPos = Line.IndexOf('=');
+            if (EqualSignPos < 0)
+            {
+                continue;
+            }
+
+            var Key = Line.Slice(0, EqualSignPos).Trim().ToString();
+            var Value = Line.Slice(EqualSignPos + 1).Trim().ToString();
+
+            if (CurrentSection is null)
+            {
+                continue;
+            }
+
+            CurrentSection[Key] = Value;
         }
     }
 
@@ -589,59 +576,47 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
     /// <param name="cancellationToken"></param>
     public async Task LoadAsync(TextReader Stream, CancellationToken cancellationToken)
     {
-        await SyncRoot.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var CurrentSection = this[string.Empty];
 
-        try
+        for (; ; )
         {
-            var CurrentSection = this[string.Empty];
+            var Linestr = await Stream.ReadLineAsync(cancellationToken).ConfigureAwait(false);
 
-            for (; ; )
+            if (Linestr is null)
             {
-                var Linestr = await Stream.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-
-                if (Linestr is null)
-                {
-                    break;
-                }
-
-                var Line = Linestr.Trim();
-
-                if (Line.Length == 0 || Line.StartsWith(';'))
-                {
-                    continue;
-                }
-
-                if (Line.StartsWith('[')
-                    && Line.EndsWith(']'))
-                {
-                    var SectionKey = Line.AsSpan(1, Line.Length - 2).Trim().ToString();
-                    CurrentSection = this[SectionKey];
-                    continue;
-                }
-
-                var EqualSignPos = Line.IndexOf('=');
-                if (EqualSignPos < 0)
-                {
-                    continue;
-                }
-
-                var Key = Line.AsSpan(0, EqualSignPos).Trim().ToString();
-                var Value = Line.AsSpan(EqualSignPos + 1).Trim().ToString();
-
-                if (CurrentSection is null)
-                {
-                    continue;
-                }
-
-                CurrentSection[Key] = Value;
+                break;
             }
-        }
-        catch
-        {
-        }
-        finally
-        {
-            SyncRoot.Release();
+
+            var Line = Linestr.Trim();
+
+            if (Line.Length == 0 || Line.StartsWith(';'))
+            {
+                continue;
+            }
+
+            if (Line.StartsWith('[')
+                && Line.EndsWith(']'))
+            {
+                var SectionKey = Line.AsSpan(1, Line.Length - 2).Trim().ToString();
+                CurrentSection = this[SectionKey];
+                continue;
+            }
+
+            var EqualSignPos = Line.IndexOf('=');
+            if (EqualSignPos < 0)
+            {
+                continue;
+            }
+
+            var Key = Line.AsSpan(0, EqualSignPos).Trim().ToString();
+            var Value = Line.AsSpan(EqualSignPos + 1).Trim().ToString();
+
+            if (CurrentSection is null)
+            {
+                continue;
+            }
+
+            CurrentSection[Key] = Value;
         }
     }
 }
