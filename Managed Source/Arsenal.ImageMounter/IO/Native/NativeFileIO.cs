@@ -1740,7 +1740,8 @@ Currently, the following application has files open on this volume:
                     and not 0x1f01ff
                     and not 0x120196
                     and not 0x100003
-                    and not 0x1200a9)
+                    and not 0x1200a9
+                    and not 0x100020)
                 {
                     for(; ;)
                     {

@@ -8,6 +8,8 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.Extensions;
+using System;
 using System.IO;
 using System.Text;
 
@@ -71,6 +73,13 @@ public class BufferedBinaryWriter : BinaryWriter
 
         return ToArrayRet;
     }
+
+    /// <summary>
+    /// Provides direct access to the byte buffer used by this instance.
+    /// Only valid until next Write/Clear/ToArray etc modifying methods.
+    /// </summary>
+    /// <returns>Span access to byte buffer</returns>
+    public Span<byte> AsSpan() => ((MemoryStream)BaseStream).AsSpan();
 
     /// <summary>
     /// Clears contents of internal MemoryStream.
