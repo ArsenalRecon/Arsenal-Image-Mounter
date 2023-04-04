@@ -573,6 +573,51 @@ public static partial class BufferExtensions
         return result;
     }
 
+    public static bool TryFormatHexString(this byte[] data, ReadOnlySpan<char> delimiter, Span<char> destination, bool upperCase)
+        => TryFormatHexString(data.AsSpan(), delimiter, destination, upperCase);
+
+    public static bool TryFormatHexString(this Span<byte> data, ReadOnlySpan<char> delimiter, Span<char> destination, bool upperCase)
+        => TryFormatHexString((ReadOnlySpan<byte>)data, delimiter, destination, upperCase);
+
+    public static bool TryFormatHexString(this ReadOnlySpan<byte> data, ReadOnlySpan<char> delimiter, Span<char> destination, bool upperCase)
+    {
+        if (data.IsEmpty)
+        {
+            return true;
+        }
+
+        var capacity = data.Length << 1;
+        if (!delimiter.IsEmpty)
+        {
+            capacity += delimiter.Length * (data.Length - 1);
+        }
+
+        if (capacity > destination.Length)
+        {
+            return false;
+        }
+
+        var ptr = destination;
+
+        foreach (var b in data)
+        {
+            if (!delimiter.IsEmpty && ptr.Length < capacity)
+            {
+                delimiter.CopyTo(ptr);
+                ptr = ptr.Slice(delimiter.Length);
+            }
+
+#if NETCOREAPP
+            b.TryFormat(ptr, out _, upperCase ? "X2" : "x2", NumberFormatInfo.InvariantInfo);
+#else
+            b.ToString(upperCase ? "X2" : "x2", NumberFormatInfo.InvariantInfo).AsSpan().CopyTo(ptr);
+#endif
+            ptr = ptr.Slice(2);
+        }
+
+        return true;
+    }
+
     public static string ToHexString(this byte[] data) => ((ReadOnlySpan<byte>)data).ToHexString(default);
 
     public static string ToHexString(this byte[] data, string? delimiter) => ((ReadOnlySpan<byte>)data).ToHexString(delimiter.AsSpan());

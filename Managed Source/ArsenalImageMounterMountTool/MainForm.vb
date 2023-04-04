@@ -24,6 +24,7 @@ Imports Arsenal.ImageMounter.IO.ConsoleIO
 Imports Arsenal.ImageMounter.IO.Devices
 Imports Arsenal.ImageMounter.IO.Native
 Imports Arsenal.ImageMounter.Views
+Imports Microsoft.Win32.SafeHandles
 
 #Disable Warning IDE1006 ' Naming Styles
 
@@ -506,9 +507,9 @@ Public Class MainForm
                     Sub()
                         While Not item.Wait(TimeSpan.FromSeconds(2))
 
-                            Dim time = NativeFileIO.LastObjectNameQuueryTime
+                            Dim time = NativeFileIO.LastObjectNameQueryTime
 
-                            If time = Nothing OrElse (NativeFileIO.SystemUptime - time).TotalSeconds < 4 Then
+                            If time = Nothing OrElse (NativeFileIO.SystemUptime - time).TotalSeconds < 6 Then
                                 Continue While
                             End If
 

@@ -39,6 +39,13 @@ public static class NativeConstants
     public const FileOptions FILE_FLAG_BACKUP_SEMANTICS = (FileOptions)0x2000000;
     public const FileOptions FILE_FLAG_OPEN_REPARSE_POINT = (FileOptions)0x200000;
 
+    public const int VOLUME_NAME_DOS = 0x0;
+    public const int VOLUME_NAME_GUID = 0x1;
+    public const int VOLUME_NAME_NONE = 0x4;
+    public const int VOLUME_NAME_NT = 0x2;
+    public const int FILE_NAME_NORMALIZED = 0x0;
+    public const int FILE_NAME_OPENED = 0x8;
+
     public const uint OPEN_ALWAYS = 4U;
     public const uint OPEN_EXISTING = 3U;
     public const uint CREATE_ALWAYS = 2U;

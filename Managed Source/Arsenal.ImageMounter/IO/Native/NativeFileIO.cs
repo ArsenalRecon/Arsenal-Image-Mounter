@@ -582,6 +582,9 @@ public static partial class NativeFileIO
         [LibraryImport("ntdll")]
         internal static partial int NtDuplicateObject(SafeHandle SourceProcessHandle, nint SourceHandle, nint TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
 
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int GetFinalPathNameByHandle(SafeFileHandle ObjectHandle, SafeBuffer filePath, int filePathSize, int flags);
+
         [LibraryImport("kernel32", SetLastError = true)]
         internal static partial nint GetCurrentProcess();
 
@@ -1012,6 +1015,9 @@ public static partial class NativeFileIO
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern int NtDuplicateObject(SafeHandle SourceProcessHandle, nint SourceHandle, nint TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern int GetFinalPathNameByHandle(SafeFileHandle ObjectHandle, SafeBuffer filePath, int filePathSize, int flags);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern nint GetCurrentProcess();
@@ -1623,7 +1629,7 @@ Currently, the following application has files open on this volume:
     public static TimeSpan SystemUptime => TimeSpan.FromMilliseconds(SafeNativeMethods.GetTickCount64());
 #endif
 
-    public static TimeSpan LastObjectNameQuueryTime { get; private set; }
+    public static TimeSpan LastObjectNameQueryTime { get; private set; }
 
     public static uint LastObjectNameQueryGrantedAccess { get; private set; }
 
@@ -1699,13 +1705,11 @@ Currently, the following application has files open on this volume:
 
             try
             {
-                int newbuffersize;
-
                 object_type ??= ObjectTypes.GetOrAdd(handle.ObjectType, b =>
                 {
                     for (; ; )
                     {
-                        var rc = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectTypeInformation, buffer, (int)buffer.ByteLength, out newbuffersize);
+                        var rc = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectTypeInformation, buffer, (int)buffer.ByteLength, out var newbuffersize);
                         if (rc is NativeConstants.STATUS_BUFFER_TOO_SMALL or NativeConstants.STATUS_BUFFER_OVERFLOW)
                         {
                             buffer.Resize(newbuffersize);
@@ -1728,49 +1732,37 @@ Currently, the following application has files open on this volume:
                 }
 
                 if (object_type != "File"
-                    || handle.GrantedAccess
-                    is not 0x12019F
-                    and not 0x12008D
-                    and not 0x120189
-                    and not 0x16019F
-                    and not 0x1A0089
-                    and not 0x1A019F
-                    and not 0x120089
-                    and not 0x100000
-                    and not 0x1f01ff
-                    and not 0x120196
-                    and not 0x100003
-                    and not 0x1200a9
-                    and not 0x100020)
+                    || UnsafeNativeMethods.GetFileType(duphandle) is not Win32FileType.Pipe and not Win32FileType.Character)
                 {
-                    for(; ;)
+                    for (; ; )
                     {
                         LastObjectNameQueryGrantedAccess = handle.GrantedAccess;
-                        LastObjectNameQuueryTime = SystemUptime;
+                        LastObjectNameQueryTime = SystemUptime;
 
-                        status = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectNameInformation, buffer, (int)buffer.ByteLength, out newbuffersize);
+                        status = UnsafeNativeMethods.NtQueryObject(duphandle,
+                                                                   ObjectInformationClass.ObjectNameInformation,
+                                                                   buffer,
+                                                                   (int)buffer.ByteLength,
+                                                                   out var newbuffersize);
 
                         if (status < 0 && (ulong)newbuffersize > buffer.ByteLength)
                         {
                             buffer.Resize(newbuffersize);
                             continue;
                         }
-                        else if (status < 0)
+
+                        if (status >= 0)
                         {
-                            continue;
+                            var nameStr = buffer.Read<UNICODE_STRING>(0UL);
+
+                            if (nameStr.Length > 0)
+                            {
+                                object_name = nameStr.ToString();
+                            }
                         }
 
                         break;
                     }
-
-                    var name = buffer.Read<UNICODE_STRING>(0UL);
-
-                    if (name.Length == 0)
-                    {
-                        continue;
-                    }
-
-                    object_name = name.ToString();
                 }
             }
             catch
@@ -1781,7 +1773,10 @@ Currently, the following application has files open on this volume:
                 duphandle.Dispose();
             }
 
-            yield return new(handle, object_type, object_name, processInfo);
+            if (object_name is not null)
+            {
+                yield return new(handle, object_type, object_name, processInfo);
+            }
         }
     }
 
