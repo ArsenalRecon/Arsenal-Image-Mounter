@@ -30,6 +30,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -577,6 +578,9 @@ public static partial class NativeFileIO
         internal static partial int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
 
         [LibraryImport("ntdll")]
+        internal static unsafe partial int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, void* ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
+
+        [LibraryImport("ntdll")]
         internal static partial int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
 
         [LibraryImport("ntdll")]
@@ -1009,6 +1013,9 @@ public static partial class NativeFileIO
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
+
+        [DllImport("ntdll", CharSet = CharSet.Unicode)]
+        internal static extern unsafe int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, void* ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
@@ -1709,7 +1716,12 @@ Currently, the following application has files open on this volume:
                 {
                     for (; ; )
                     {
-                        var rc = UnsafeNativeMethods.NtQueryObject(duphandle, ObjectInformationClass.ObjectTypeInformation, buffer, (int)buffer.ByteLength, out var newbuffersize);
+                        var rc = UnsafeNativeMethods.NtQueryObject(duphandle,
+                                                                   ObjectInformationClass.ObjectTypeInformation,
+                                                                   buffer,
+                                                                   (int)buffer.ByteLength,
+                                                                   out var newbuffersize);
+
                         if (rc is NativeConstants.STATUS_BUFFER_TOO_SMALL or NativeConstants.STATUS_BUFFER_OVERFLOW)
                         {
                             buffer.Resize(newbuffersize);
@@ -1726,13 +1738,13 @@ Currently, the following application has files open on this volume:
                     return string.Intern(buffer.Read<UNICODE_STRING>(0UL).ToString());
                 });
 
-                if (object_type is null || filterObjectType is not null && !ReferenceEquals(filterObjectType, object_type))
+                if (object_type is null || (filterObjectType is not null && filterObjectType != object_type))
                 {
                     continue;
                 }
 
                 if (object_type != "File"
-                    || UnsafeNativeMethods.GetFileType(duphandle) is not Win32FileType.Pipe and not Win32FileType.Character)
+                    || GetDeviceType(duphandle) is not DeviceType.NamedPipe and not DeviceType.Console)
                 {
                     for (; ; )
                     {
@@ -1744,6 +1756,8 @@ Currently, the following application has files open on this volume:
                                                                    buffer,
                                                                    (int)buffer.ByteLength,
                                                                    out var newbuffersize);
+
+                        LastObjectNameQueryTime = default;
 
                         if (status < 0 && (ulong)newbuffersize > buffer.ByteLength)
                         {
@@ -1778,6 +1792,38 @@ Currently, the following application has files open on this volume:
                 yield return new(handle, object_type, object_name, processInfo);
             }
         }
+    }
+
+    public enum FsInformationClass
+    {
+        FileFsVolumeInformation = 1,
+        FileFsLabelInformation,	// 2 
+        FileFsSizeInformation,	// 3 
+        FileFsDeviceInformation,	// 4 
+        FileFsAttributeInformation,	// 5 
+        FileFsControlInformation,	// 6 
+        FileFsFullSizeInformation,	// 7 
+        FileFsObjectIdInformation,	// 8 
+        FileFsMaximumInformation
+    }
+
+    public readonly struct FILE_FS_DEVICE_INFORMATION
+    {
+        public DeviceType DeviceType { get; }
+        public int Characteristics { get; }
+    }
+
+    public static unsafe DeviceType? GetDeviceType(SafeFileHandle handle)
+    {
+        FILE_FS_DEVICE_INFORMATION device_information;
+
+        var status = UnsafeNativeMethods.NtQueryVolumeInformationFile(handle,
+                                                                      out var iostatus,
+                                                                      &device_information,
+                                                                      sizeof(FILE_FS_DEVICE_INFORMATION),
+                                                                      FsInformationClass.FileFsDeviceInformation);
+
+        return status >= 0 ? device_information.DeviceType : null;
     }
 
     public static IEnumerable<int> EnumerateProcessesHoldingFileHandle(params string[] nativeFullPaths)

@@ -1064,7 +1064,6 @@ public enum DeviceType
     VirtualBlock = 0x53,
 
     PointOfService = 0x54
-
 }
 
 [StructLayout(LayoutKind.Sequential)]

@@ -509,7 +509,7 @@ Public Class MainForm
 
                             Dim time = NativeFileIO.LastObjectNameQueryTime
 
-                            If time = Nothing OrElse (NativeFileIO.SystemUptime - time).TotalSeconds < 6 Then
+                            If time = Nothing OrElse (NativeFileIO.SystemUptime - time).TotalSeconds < 2 Then
                                 Continue While
                             End If
 
