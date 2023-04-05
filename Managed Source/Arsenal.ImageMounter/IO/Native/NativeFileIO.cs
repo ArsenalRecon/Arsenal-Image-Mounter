@@ -1744,7 +1744,10 @@ Currently, the following application has files open on this volume:
                 }
 
                 if (object_type != "File"
-                    || GetDeviceType(duphandle) is not DeviceType.NamedPipe and not DeviceType.Console)
+                    || GetDeviceType(duphandle)
+                    is not DeviceType.NamedPipe
+                    and not DeviceType.Console
+                    and not DeviceType.Network)
                 {
                     for (; ; )
                     {
