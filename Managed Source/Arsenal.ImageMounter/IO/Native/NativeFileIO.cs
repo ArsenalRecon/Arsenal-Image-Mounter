@@ -584,7 +584,7 @@ public static partial class NativeFileIO
         internal static partial int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
 
         [LibraryImport("ntdll")]
-        internal static partial int NtDuplicateObject(SafeHandle SourceProcessHandle, nint SourceHandle, nint TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
+        internal static partial int NtDuplicateObject(SafeHandle SourceProcessHandle, nint SourceHandle, nint TargetProcessHandle, out SafeFileHandle TargetHandle, FileSystemRights DesiredAccess, uint HandleAttributes, uint Options);
 
         [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         internal static partial int GetFinalPathNameByHandle(SafeFileHandle ObjectHandle, SafeBuffer filePath, int filePathSize, int flags);
@@ -1021,7 +1021,7 @@ public static partial class NativeFileIO
         internal static extern int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern int NtDuplicateObject(SafeHandle SourceProcessHandle, nint SourceHandle, nint TargetProcessHandle, out SafeFileHandle TargetHandle, uint DesiredAccess, uint HandleAttributes, uint Options);
+        internal static extern int NtDuplicateObject(SafeHandle SourceProcessHandle, nint SourceHandle, nint TargetProcessHandle, out SafeFileHandle TargetHandle, FileSystemRights DesiredAccess, uint HandleAttributes, uint Options);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern int GetFinalPathNameByHandle(SafeFileHandle ObjectHandle, SafeBuffer filePath, int filePathSize, int flags);
@@ -1704,7 +1704,7 @@ Currently, the following application has files open on this volume:
                                                                handle.Handle,
                                                                UnsafeNativeMethods.GetCurrentProcess(),
                                                                out duphandle,
-                                                               0U,
+                                                               FileSystemRights.Synchronize | FileSystemRights.ReadAttributes,
                                                                0U,
                                                                0U);
 
@@ -1748,16 +1748,9 @@ Currently, the following application has files open on this volume:
 
                 if (object_type != "File"
                     || GetDeviceType(duphandle)
-                    is DeviceType.Controller
-                    or DeviceType.Disk
-                    or DeviceType.MailSlot
-                    or DeviceType.Unknown
-                    or DeviceType.BusExtender
-                    or DeviceType.VirtualDisk
-                    or DeviceType.CdRom
-                    or DeviceType.DVD
-                    or DeviceType.Null
-                    or DeviceType.Tape)
+                    is not DeviceType.NamedPipe
+                    and not DeviceType.Console
+                    and not DeviceType.Network)
                 {
                     for (; ; )
                     {
