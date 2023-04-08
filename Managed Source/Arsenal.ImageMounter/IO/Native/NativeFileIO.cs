@@ -1386,7 +1386,7 @@ Currently, the following application has files open on this volume:
         return refresh;
     }
 
-    public static async Task<string[]> WaitForDiskIoIdleAsync(string device_path,
+    public static async Task<HandleTableEntryInformation[]> WaitForDiskIoIdleAsync(string device_path,
                                                               int iterations,
                                                               TimeSpan waitTime,
                                                               CancellationToken cancellationToken)
@@ -1398,7 +1398,7 @@ Currently, the following application has files open on this volume:
             .SelectMany(volume => QueryDosDevice(volume.Substring(4, 44)))
             .ToArray();
 
-        string[]? in_use_apps = null;
+        HandleTableEntryInformation[]? in_use_apps = null;
 
         for (int i = 1; i <= iterations; i++)
         {
@@ -1406,20 +1406,21 @@ Currently, the following application has files open on this volume:
 
             in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths)
                 .Take(10)
-                .Select(FormatProcessName)
                 .ToArray();
             
             if (in_use_apps.Length == 0)
             {
-                return Array.Empty<string>();
+                return Array.Empty<HandleTableEntryInformation>();
             }
 
-            Trace.WriteLine($"File systems still in use by process {string.Join(", ", in_use_apps)}");
+#if DEBUG
+            Trace.WriteLine($"File systems still in use by process {string.Join(", ", in_use_apps.Select(FormatProcessName))}");
+#endif
 
             await Task.Delay(waitTime, cancellationToken).ConfigureAwait(false);
         }
 
-        return in_use_apps ?? Array.Empty<string>();
+        return in_use_apps ?? Array.Empty<HandleTableEntryInformation>();
     }
 
     public static void EnableFileSecurityBypassPrivileges()
@@ -1605,6 +1606,8 @@ Currently, the following application has files open on this volume:
 
     public sealed class HandleTableEntryInformation
     {
+        public override string ToString() => NativeFileIO.FormatProcessName(this);
+
         public SystemHandleTableEntryInformation HandleTableEntry { get; }
 
         public string? ObjectType { get; }
@@ -1745,9 +1748,16 @@ Currently, the following application has files open on this volume:
 
                 if (object_type != "File"
                     || GetDeviceType(duphandle)
-                    is not DeviceType.NamedPipe
-                    and not DeviceType.Console
-                    and not DeviceType.Network)
+                    is DeviceType.Controller
+                    or DeviceType.Disk
+                    or DeviceType.MailSlot
+                    or DeviceType.Unknown
+                    or DeviceType.BusExtender
+                    or DeviceType.VirtualDisk
+                    or DeviceType.CdRom
+                    or DeviceType.DVD
+                    or DeviceType.Null
+                    or DeviceType.Tape)
                 {
                     for (; ; )
                     {
@@ -1821,7 +1831,7 @@ Currently, the following application has files open on this volume:
         FILE_FS_DEVICE_INFORMATION device_information;
 
         var status = UnsafeNativeMethods.NtQueryVolumeInformationFile(handle,
-                                                                      out var iostatus,
+                                                                      out _,
                                                                       &device_information,
                                                                       sizeof(FILE_FS_DEVICE_INFORMATION),
                                                                       FsInformationClass.FileFsDeviceInformation);
@@ -1829,7 +1839,7 @@ Currently, the following application has files open on this volume:
         return status >= 0 ? device_information.DeviceType : null;
     }
 
-    public static IEnumerable<int> EnumerateProcessesHoldingFileHandle(params string[] nativeFullPaths)
+    public static IEnumerable<HandleTableEntryInformation> EnumerateProcessesHoldingFileHandle(params string[] nativeFullPaths)
     {
         var paths = Array.ConvertAll(nativeFullPaths, path => (path, dir_path: string.Concat(path, @"\")));
 
@@ -1837,21 +1847,32 @@ Currently, the following application has files open on this volume:
                 where handle.ObjectName is not null && !string.IsNullOrWhiteSpace(handle.ObjectName)
                     && paths.Any(path => handle.ObjectName.Equals(path.path, StringComparison.OrdinalIgnoreCase)
                         || handle.ObjectName.StartsWith(path.dir_path, StringComparison.OrdinalIgnoreCase))
-                select handle.HandleTableEntry.ProcessId).Distinct();
+                select handle);
     }
 
-    public static string FormatProcessName(int processId)
+    public static string FormatProcessName(HandleTableEntryInformation handle)
     {
         try
         {
-            using var ps = Process.GetProcessById(processId);
-            return ps.SessionId == 0 || string.IsNullOrWhiteSpace(ps.MainWindowTitle)
-                ? $"'{ps.ProcessName}' (id={processId})"
-                : $"'{ps.MainWindowTitle}' (id={processId})";
+            if (handle.SessionId == 0)
+            {
+                return $"'{handle.ProcessName}' (id = {handle.HandleTableEntry.ProcessId})";
+            }
+
+            using var ps = Process.GetProcessById(handle.HandleTableEntry.ProcessId);
+            
+            if (string.IsNullOrWhiteSpace(ps.MainWindowTitle))
+            {
+                return $"'{handle.ProcessName}' (id = {handle.HandleTableEntry.ProcessId})";
+            }
+            else
+            {
+                return $"'{ps.MainWindowTitle}' (id = {handle.HandleTableEntry.ProcessId})";
+            }
         }
         catch
         {
-            return $"id={processId}";
+            return $"'{handle.ProcessName}' (id = {handle.HandleTableEntry.ProcessId})";
         }
     }
 
