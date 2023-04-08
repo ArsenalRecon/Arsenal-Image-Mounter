@@ -13,6 +13,7 @@ using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using Arsenal.ImageMounter.Reflection;
+using DiscUtils.Streams;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;
@@ -551,9 +552,22 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public DevioProviderLibEwf(string[] filenames, byte Flags)
     {
+        using (var file = File.OpenRead(filenames[0]))
+        {
+            var adCryptMagic = "ADCRYPT\0"u8;
+            Span<byte> buffer = stackalloc byte[adCryptMagic.Length];
+            if (file.ReadMaximum(buffer) >= adCryptMagic.Length
+                && buffer.BinaryEqual(adCryptMagic))
+            {
+                throw new NotSupportedException("AD encryption is not currently supported.");
+            }
+        }
+
         this.Flags = Flags;
 
-        if (libewf_handle_initialize(out var safeHandle, out var errobj) != 1 || safeHandle.IsInvalid || Failed(errobj))
+        if (libewf_handle_initialize(out var safeHandle, out var errobj) != 1
+            || safeHandle.IsInvalid 
+            || Failed(errobj))
         {
             ThrowError(errobj, "Error initializing libewf handle.");
         }
