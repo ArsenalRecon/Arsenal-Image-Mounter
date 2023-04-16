@@ -1750,7 +1750,8 @@ Currently, the following application has files open on this volume:
                     || GetDeviceType(duphandle)
                     is not DeviceType.NamedPipe
                     and not DeviceType.Console
-                    and not DeviceType.Network)
+                    and not DeviceType.Network
+                    and not DeviceType.Unknown)
                 {
                     for (; ; )
                     {

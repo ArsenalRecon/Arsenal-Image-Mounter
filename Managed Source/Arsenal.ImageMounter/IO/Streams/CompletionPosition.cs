@@ -12,19 +12,22 @@
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
 public class CompletionPosition
 {
     private readonly Stopwatch stopwatch = Stopwatch.StartNew();
+    
+    private long lengthComplete;
 
     public CompletionPosition(long totalLength)
     {
         LengthTotal = totalLength;
     }
 
-    public virtual long LengthComplete { get; set; }
+    public virtual long LengthComplete { get => lengthComplete; set => lengthComplete = value; }
 
     public virtual long LengthTotal { get; set; }
 
@@ -46,7 +49,7 @@ public class CompletionPosition
             var totalTicks = elapsedTicks / ((double)LengthComplete / LengthTotal);
 
             var ticksLeft = totalTicks - elapsedTicks;
-            
+
             if (double.IsInfinity(ticksLeft) || double.IsNaN(ticksLeft))
             {
                 return null;
@@ -55,4 +58,7 @@ public class CompletionPosition
             return TimeSpan.FromMilliseconds(ticksLeft);
         }
     }
+
+    public void InterlockedIncrement()
+        => Interlocked.Increment(ref lengthComplete);
 }

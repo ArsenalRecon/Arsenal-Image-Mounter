@@ -206,17 +206,13 @@ public static class DiscUtilsInteraction
                 }
 
             case PARTITION_STYLE.RAW:
-                {
-                    volume = disk.Content;
-                    first_sector = 0;
-                    sector_count = disk.Capacity / disk.SectorSize;
-                    break;
-                }
+                volume = disk.Content;
+                first_sector = 0;
+                sector_count = disk.Capacity / disk.SectorSize;
+                break;
 
             default:
-                {
-                    throw new ArgumentOutOfRangeException(nameof(partition_style));
-                }
+                throw new ArgumentOutOfRangeException(nameof(partition_style));
         }
 
         // Format file system
@@ -236,14 +232,10 @@ public static class DiscUtilsInteraction
                 }
 
             case InitializeFileSystem.None:
-                {
-                    break;
-                }
+                break;
 
             default:
-                {
-                    throw new NotSupportedException($"File system {file_system} is not currently supported.");
-                }
+                throw new NotSupportedException($"File system {file_system} is not currently supported.");
         }
 
         // Adjust hidden sectors count
