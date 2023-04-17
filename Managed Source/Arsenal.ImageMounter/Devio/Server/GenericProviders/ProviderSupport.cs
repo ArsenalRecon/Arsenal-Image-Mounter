@@ -36,12 +36,10 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
 public static class ProviderSupport
 {
-
     public static int ImageConversionIoBufferSize { get; set; } = 2 << 20;
 
     public static long GetVBRPartitionLength(this IDevioProvider baseProvider)
     {
-
         baseProvider.NullCheck(nameof(baseProvider));
 
         var bytesPerSector = (int)baseProvider.SectorSize;
@@ -64,6 +62,7 @@ public static class ProviderSupport
 
         var sector_bits = 0;
         var sector_shift = vbr_sector_size;
+
         while ((sector_shift & 1) == 0)
         {
             sector_shift >>= 1;
@@ -81,16 +80,12 @@ public static class ProviderSupport
 
         if (total_sectors == 0)
         {
-
             total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
-
         }
 
         if (total_sectors == 0)
         {
-
             total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
-
         }
 
         return total_sectors < 0 ? 0 : (total_sectors << sector_bits);
@@ -421,25 +416,20 @@ public static class ProviderSupport
 
         for (; ; )
         {
-
             cancellationToken.ThrowIfCancellationRequested();
 
             var length_to_read = (int)Math.Min(buffer.Length, source.Length - source_position);
 
             if (length_to_read == 0)
             {
-
                 break;
-
             }
 
             count = source.Read(buffer, 0, length_to_read, source_position);
 
             if (count == 0)
             {
-
                 throw new IOException($"Read error, {length_to_read} bytes from {source_position}");
-
             }
 
             Parallel.ForEach(hashProviders.Values, hashProvider => hashProvider.TransformBlock(buffer, 0, count, null, 0));
@@ -472,9 +462,7 @@ public static class ProviderSupport
             adjustTargetSize &&
             target.Length != target.Position)
         {
-
             target.SetLength(target.Position);
-
         }
 
         if (hashResults is not null)

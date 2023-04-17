@@ -552,8 +552,9 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public DevioProviderLibEwf(string[] filenames, byte Flags)
     {
-        using (var file = File.OpenRead(filenames[0]))
+        if (File.Exists(filenames[0]))
         {
+            using var file = File.OpenRead(filenames[0]);
             var adCryptMagic = "ADCRYPT\0"u8;
             Span<byte> buffer = stackalloc byte[adCryptMagic.Length];
             if (file.ReadMaximum(buffer) >= adCryptMagic.Length
