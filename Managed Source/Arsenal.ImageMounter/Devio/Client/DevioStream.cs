@@ -11,6 +11,7 @@
 using Arsenal.ImageMounter.Extensions;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -118,27 +119,19 @@ public abstract partial class DevioStream : Stream
         switch (origin)
         {
             case SeekOrigin.Begin:
-                {
-                    Position = offset;
-                    break;
-                }
+                Position = offset;
+                break;
 
             case SeekOrigin.Current:
-                {
-                    Position += offset;
-                    break;
-                }
+                Position += offset;
+                break;
 
             case SeekOrigin.End:
-                {
-                    Position = Size + offset;
-                    break;
-                }
+                Position = Size + offset;
+                break;
 
             default:
-                {
-                    throw new ArgumentException("Invalid origin", nameof(origin));
-                }
+                throw new ArgumentException("Invalid origin", nameof(origin));
         }
 
         return Position;
@@ -184,11 +177,21 @@ public abstract partial class DevioStream : Stream
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
-        new(Read(buffer.Span));
+        MemoryMarshal.TryGetArray((ReadOnlyMemory<byte>)buffer, out var segment)
+        ? new(Read(segment.Array!, segment.Offset, segment.Count))
+        : new(Read(buffer.Span));
 
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        Write(buffer.Span);
+        if (MemoryMarshal.TryGetArray(buffer, out var segment))
+        {
+            Write(segment.Array!, segment.Offset, segment.Count);
+        }
+        else
+        {
+            Write(buffer.Span);
+        }
+
         return default;
     }
 #endif
