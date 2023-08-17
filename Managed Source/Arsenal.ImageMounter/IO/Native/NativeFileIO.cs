@@ -1641,7 +1641,11 @@ Currently, the following application has files open on this volume:
 
     public static TimeSpan LastObjectNameQueryTime { get; private set; }
 
-    public static uint LastObjectNameQueryGrantedAccess { get; private set; }
+    public static SystemHandleTableEntryInformation? LastObjectNameQueryHandleTableEntry { get; private set; }
+
+    public static DeviceType? LastObjectNameQueryDeviceType { get; private set; }
+
+    public static string? LastObjectNameQueryObjectType { get; private set; }
 
     /// <summary>
     /// Enumerates open handles in the system.
@@ -1746,8 +1750,10 @@ Currently, the following application has files open on this volume:
                     continue;
                 }
 
+                LastObjectNameQueryDeviceType = null;
+
                 if (object_type != "File"
-                    || GetDeviceType(duphandle)
+                    || (LastObjectNameQueryDeviceType = GetDeviceType(duphandle))
                     is not DeviceType.NamedPipe
                     and not DeviceType.Console
                     and not DeviceType.Network
@@ -1755,7 +1761,16 @@ Currently, the following application has files open on this volume:
                 {
                     for (; ; )
                     {
-                        LastObjectNameQueryGrantedAccess = handle.GrantedAccess;
+                        // Hangs could also happen for regular files opened for
+                        // directory listing and monitoring only
+                        if (LastObjectNameQueryDeviceType == DeviceType.Disk
+                            && handle.GrantedAccess == 0x00100081)
+                        {
+                            break;
+                        }
+
+                        LastObjectNameQueryObjectType = object_type;
+                        LastObjectNameQueryHandleTableEntry = handle;
                         LastObjectNameQueryTime = SystemUptime;
 
                         status = UnsafeNativeMethods.NtQueryObject(duphandle,

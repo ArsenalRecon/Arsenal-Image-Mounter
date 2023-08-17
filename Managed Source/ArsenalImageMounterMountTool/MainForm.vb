@@ -516,7 +516,7 @@ Public Class MainForm
                             Invoke(Sub()
 
                                        MessageBox.Show(Me,
-                                                       $"Handle enumeration hung. Last checked object access was 0x{NativeFileIO.LastObjectNameQueryGrantedAccess:X}",
+                                                       $"Handle enumeration hung. Last checked object access was 0x{NativeFileIO.LastObjectNameQueryHandleTableEntry:X}",
                                                        "Process list failed",
                                                        MessageBoxButtons.OK,
                                                        MessageBoxIcon.Error)
