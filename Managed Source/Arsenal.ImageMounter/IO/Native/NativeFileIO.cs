@@ -1763,7 +1763,8 @@ Currently, the following application has files open on this volume:
                     {
                         // Hangs could also happen for regular files opened for
                         // directory listing and monitoring only
-                        if (LastObjectNameQueryDeviceType == DeviceType.Disk
+                        if (object_type == "File"
+                            && LastObjectNameQueryDeviceType == DeviceType.Disk
                             && handle.GrantedAccess == 0x00100081)
                         {
                             break;
