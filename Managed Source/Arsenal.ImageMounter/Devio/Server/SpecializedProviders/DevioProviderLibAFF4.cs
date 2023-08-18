@@ -15,6 +15,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
@@ -22,11 +23,12 @@ namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 [SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")]
 public partial class DevioProviderLibAFF4 : DevioProviderDLLWrapperBase
 {
-#if NET7_0_OR_GREATER
-    [LibraryImport("libaff4_devio")]
-    [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    public static partial SafeDevioProviderDLLHandle dllopen([MarshalAs(UnmanagedType.LPStr)] string filename, [MarshalAs(UnmanagedType.Bool)] bool read_only, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllread, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllwrite, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLCloseMethod dllclose, out long size);
+    [DllImport("libaff4_devio", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
+    [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most likely analyzer bug")]
+    [SuppressMessage("Interoperability", "SYSLIB1054:Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time", Justification = "Types not supported")]
+    public static extern SafeDevioProviderDLLHandle dllopen([MarshalAs(UnmanagedType.LPStr)][In] string filename, [MarshalAs(UnmanagedType.Bool)] bool read_only, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllread, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllwrite, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLCloseMethod dllclose, out long size);
 
+#if NET7_0_OR_GREATER
     [LibraryImport("libaff4_devio")]
     [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     public static partial uint getsectorsize(SafeDevioProviderDLLHandle handle);
@@ -44,10 +46,6 @@ public partial class DevioProviderLibAFF4 : DevioProviderDLLWrapperBase
     [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     public static partial uint getimagecount([MarshalAs(UnmanagedType.LPStr)] string containerfile);
 #else
-    [DllImport("libaff4_devio", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most likely analyzer bug")]
-    public static extern SafeDevioProviderDLLHandle dllopen([MarshalAs(UnmanagedType.LPStr)][In] string filename, [MarshalAs(UnmanagedType.Bool)] bool read_only, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllread, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllwrite, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLCloseMethod dllclose, out long size);
-
     [DllImport("libaff4_devio", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     public static extern uint getsectorsize(SafeDevioProviderDLLHandle handle);
 

@@ -87,7 +87,7 @@ Public Class FormMountOptions
 
     Private Sub btnOK_Click(sender As Object, e As EventArgs) Handles btnOK.Click
 
-        DialogResult = Windows.Forms.DialogResult.OK
+        DialogResult = System.Windows.Forms.DialogResult.OK
         Close()
 
     End Sub
