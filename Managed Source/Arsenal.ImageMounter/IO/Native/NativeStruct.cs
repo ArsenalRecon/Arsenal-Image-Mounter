@@ -234,6 +234,40 @@ public static class NativeStruct
         return $"{size} byte";
     }
 
+    private static readonly long maxFileTime = DateTime.MaxValue.ToFileTime() + 1;
+
+    private static readonly long minFileTime = 0;
+
+    public static DateTime? TryFileTimeToDateTime(long fileTime)
+    {
+        if (fileTime > minFileTime && fileTime < maxFileTime)
+        {
+            return DateTime.FromFileTime(fileTime);
+        }
+
+        return null;
+    }
+
+    public static DateTime? TryFileTimeToDateTimeUtc(long fileTime)
+    {
+        if (fileTime > minFileTime && fileTime < maxFileTime)
+        {
+            return DateTime.FromFileTimeUtc(fileTime);
+        }
+
+        return null;
+    }
+
+    public static DateTimeOffset? TryFileTimeToDateTimeOffset(long fileTime)
+    {
+        if (fileTime > minFileTime && fileTime < maxFileTime)
+        {
+            return DateTimeOffset.FromFileTime(fileTime);
+        }
+
+        return null;
+    }
+
     public static long? ParseSuffixedSize(string Str)
         => TryParseSuffixedSize(Str, out var result) ? result : null;
 
