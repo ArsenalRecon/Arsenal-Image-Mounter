@@ -18,9 +18,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Win32.Registry" Version="*" />
-    <PackageReference Include="System.IO.FileSystem.AccessControl" Version="*" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="*" />
   </ItemGroup>
 
   <ItemGroup>
