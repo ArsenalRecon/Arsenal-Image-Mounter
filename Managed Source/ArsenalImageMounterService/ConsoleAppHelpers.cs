@@ -190,30 +190,31 @@ Please see EULA.txt for license information.");
 
     public static int UnsafeMain(IDictionary<string, string[]> commands)
     {
-        string? image_path = null;
-        string? write_overlay_image_file = null;
-        string? ObjectName = null;
-        var listen_address = IPAddress.Any;
-        var listen_port = 0;
-        var buffer_size = DevioShmService.DefaultBufferSize;
-        long? disk_size = null;
-        var disk_access = FileAccess.Read;
+        string? fileName = null;
+        string? writeOverlayImageFile = null;
+        string? objectName = null;
+        var listenAddress = IPAddress.Any;
+        var listenPort = 0;
+        var bufferSize = DevioShmService.DefaultBufferSize;
+        long? diskSize = null;
+        var diskAccess = FileAccess.Read;
         var mount = false;
-        string? provider_name = null;
-        var show_help = false;
+        string? providerName = null;
+        var showHelp = false;
         var verbose = false;
-        DeviceFlags device_flags = 0;
-        string? debug_compare = null;
+        DeviceFlags deviceFlags = 0;
+        string? debugCompare = null;
         var libewf_debug_output = Console.IsErrorRedirected ? null : ConsoleSupport.GetConsoleOutputDeviceName();
-        string? output_image = null;
+        string? outputImage = null;
         string[]? checksum = null;
-        var output_image_variant = "dynamic";
+        var outputImageVariant = "dynamic";
         string? dismount = null;
-        var force_dismount = false;
-        SafeWaitHandle? detach_event = null;
-        var fake_mbr = false;
-        var auto_delete = false;
-        var list_devices = false;
+        var forceDismount = false;
+        SafeWaitHandle? detachEvent = null;
+        var fakeMbr = false;
+        var ramDisk = false;
+        var autoDelete = false;
+        var listDevices = false;
 
         foreach (var cmd in commands)
         {
@@ -245,59 +246,66 @@ Please see EULA.txt for license information.");
             }
             else if (arg.Equals("name", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                ObjectName = cmd.Value[0];
+                objectName = cmd.Value[0];
             }
             else if (arg.Equals("ipaddress", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                listen_address = IPAddress.Parse(cmd.Value[0]);
+                listenAddress = IPAddress.Parse(cmd.Value[0]);
             }
             else if (arg.Equals("port", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                listen_port = int.Parse(cmd.Value[0]);
+                listenPort = int.Parse(cmd.Value[0]);
             }
             else if (arg.Equals("disksize", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                disk_size = long.Parse(cmd.Value[0]);
+                diskSize = NativeStruct.ParseSuffixedSize(cmd.Value[0])
+                    ?? throw new InvalidOperationException($"Invalid disk size '{cmd.Value[0]}'");
             }
             else if (arg.Equals("buffersize", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                buffer_size = long.Parse(cmd.Value[0]);
+                bufferSize = NativeStruct.ParseSuffixedSize(cmd.Value[0])
+                    ?? throw new InvalidOperationException($"Invalid buffer size '{cmd.Value[0]}'");
             }
             else if (arg.Equals("filename", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
                 || arg.Equals("device", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                image_path = cmd.Value[0];
+                fileName = cmd.Value[0];
             }
             else if (arg.Equals("provider", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                provider_name = cmd.Value[0];
+                providerName = cmd.Value[0];
             }
             else if (arg.Equals("readonly", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
-                disk_access = FileAccess.Read;
+                diskAccess = FileAccess.Read;
             }
             else if (arg.Equals("writable", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
-                disk_access = FileAccess.ReadWrite;
+                diskAccess = FileAccess.ReadWrite;
             }
             else if (arg.Equals("fakesig", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
-                device_flags |= DeviceFlags.FakeDiskSignatureIfZero;
+                deviceFlags |= DeviceFlags.FakeDiskSignatureIfZero;
             }
             else if (arg.Equals("fakembr", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
-                fake_mbr = true;
+                fakeMbr = true;
             }
             else if (arg.Equals("writeoverlay", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                write_overlay_image_file = cmd.Value[0];
-                disk_access = FileAccess.Read;
-                device_flags = device_flags | DeviceFlags.ReadOnly | DeviceFlags.WriteOverlay;
+                writeOverlayImageFile = cmd.Value[0];
+                diskAccess = FileAccess.Read;
+                deviceFlags = deviceFlags | DeviceFlags.ReadOnly | DeviceFlags.WriteOverlay;
             }
             else if (arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
                 && commands.ContainsKey("writeoverlay"))
             {
-                auto_delete = true;
+                autoDelete = true;
+            }
+            else if (arg.Equals("ramdisk", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
+                && (commands.ContainsKey("filename") || commands.ContainsKey("disksize")))
+            {
+                ramDisk = true;
             }
             else if (arg.Equals("mount", StringComparison.OrdinalIgnoreCase))
             {
@@ -306,11 +314,11 @@ Please see EULA.txt for license information.");
                 {
                     if (opt.Equals("removable", StringComparison.OrdinalIgnoreCase))
                     {
-                        device_flags |= DeviceFlags.Removable;
+                        deviceFlags |= DeviceFlags.Removable;
                     }
                     else if (opt.Equals("cdrom", StringComparison.OrdinalIgnoreCase))
                     {
-                        device_flags |= DeviceFlags.DeviceTypeCD;
+                        deviceFlags |= DeviceFlags.DeviceTypeCD;
                     }
                     else
                     {
@@ -327,12 +335,12 @@ Please see EULA.txt for license information.");
 
                 if (targetcount != 1)
                 {
-                    show_help = true;
+                    showHelp = true;
                     break;
                 }
 
-                output_image = cmd.Value[0];
-                disk_access = FileAccess.Read;
+                outputImage = cmd.Value[0];
+                diskAccess = FileAccess.Read;
             }
             else if (arg.Equals("checksum", StringComparison.OrdinalIgnoreCase))
             {
@@ -343,12 +351,12 @@ Please see EULA.txt for license information.");
                     checksum = DefaultChecksumAlgorithms;
                 }
 
-                disk_access = FileAccess.Read;
+                diskAccess = FileAccess.Read;
             }
             else if (arg.Equals("variant", StringComparison.OrdinalIgnoreCase)
                 && cmd.Value.Length == 1)
             {
-                output_image_variant = cmd.Value[0];
+                outputImageVariant = cmd.Value[0];
             }
             else if (arg.Equals("libewfoutput", StringComparison.OrdinalIgnoreCase)
                 && cmd.Value.Length == 1)
@@ -358,7 +366,7 @@ Please see EULA.txt for license information.");
             else if (arg.Equals("debugcompare", StringComparison.OrdinalIgnoreCase)
                 && cmd.Value.Length == 1)
             {
-                debug_compare = cmd.Value[0];
+                debugCompare = cmd.Value[0];
             }
             else if (arg.Equals("dismount", StringComparison.OrdinalIgnoreCase))
             {
@@ -372,25 +380,25 @@ Please see EULA.txt for license information.");
                 }
                 else
                 {
-                    show_help = true;
+                    showHelp = true;
                     break;
                 }
             }
             else if (arg.Equals("force", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
-                force_dismount = true;
+                forceDismount = true;
             }
             else if (arg.Equals("detach", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
 #if NETCOREAPP
-                detach_event = new SafeWaitHandle(nint.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
+                detachEvent = new SafeWaitHandle(nint.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
 #else
-                detach_event = new SafeWaitHandle((nint)long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
+                detachEvent = new SafeWaitHandle((nint)long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
 #endif
             }
             else if (arg.Length == 0 || arg == "?" || arg.Equals("help", StringComparison.OrdinalIgnoreCase))
             {
-                show_help = true;
+                showHelp = true;
                 break;
             }
             else if (arg.Equals("version", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
@@ -400,23 +408,29 @@ Please see EULA.txt for license information.");
             }
             else if (arg.Equals("list", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
-                list_devices = true;
+                listDevices = true;
             }
             else if (arg.Length == 0)
             {
-                Console.WriteLine($"Unsupported command line argument: {cmd.Value.FirstOrDefault()}");
-                show_help = true;
+                Console.WriteLine($"Unsupported command line argument: {string.Join(" ", cmd.Value)}");
+                showHelp = true;
+                break;
+            }
+            else if (cmd.Value.Length == 0)
+            {
+                Console.WriteLine($"Unsupported command line switch or arguments: --{arg}");
+                showHelp = true;
                 break;
             }
             else
             {
-                Console.WriteLine($"Unsupported command line switch: --{arg}");
-                show_help = true;
+                Console.WriteLine($"Unsupported command line switch or arguments: --{arg}={string.Join(",", cmd.Value)}");
+                showHelp = true;
                 break;
             }
         }
 
-        if (list_devices)
+        if (listDevices)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -431,7 +445,7 @@ Please see EULA.txt for license information.");
             return 0;
         }
 
-        if (show_help || string.IsNullOrWhiteSpace(image_path) && string.IsNullOrWhiteSpace(dismount))
+        if (showHelp || (string.IsNullOrWhiteSpace(fileName) && string.IsNullOrWhiteSpace(dismount) && !ramDisk))
         {
             var asmname = Assembly.GetExecutingAssembly().GetName().Name;
 
@@ -518,7 +532,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                         return 2;
                     }
 
-                    if (force_dismount)
+                    if (forceDismount)
                     {
                         adapter.RemoveAllDevices();
                     }
@@ -540,7 +554,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                         return 2;
                     }
 
-                    if (force_dismount)
+                    if (forceDismount)
                     {
                         adapter.RemoveDevice(devicenumber);
                     }
@@ -563,93 +577,121 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
         }
 
-        if (image_path is null
-            || string.IsNullOrWhiteSpace(image_path))
-        {
-            return 0;
-        }
-
-        if (provider_name is null || string.IsNullOrWhiteSpace(provider_name))
-        {
-            provider_name = DevioServiceFactory.GetProviderTypeFromFileName(image_path).ToString();
-        }
-
-        Console.WriteLine($"Opening image file '{image_path}' with format provider '{provider_name}'...");
-
-        if (StringComparer.OrdinalIgnoreCase.Equals(provider_name, "libewf"))
-        {
-            DevioProviderLibEwf.SetNotificationFile(libewf_debug_output);
-
-            ConsoleApp.RanToEnd += (sender, e) => DevioProviderLibEwf.SetNotificationFile(null);
-
-            if (verbose)
-            {
-                DevioProviderLibEwf.NotificationVerbose = true;
-            }
-        }
-
-        var provider = DevioServiceFactory.GetProvider(image_path, disk_access, provider_name)
-            ?? throw new NotSupportedException("Unknown image file format. Try with another format provider!");
-        
-        if (provider.Length <= 0)
-        {
-            throw new NotSupportedException("Unknown size of source device");
-        }
-
-        if (!string.IsNullOrWhiteSpace(debug_compare))
-        {
-            var DebugCompareStream = new FileStream(debug_compare, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: true);
-
-            provider = new DebugProvider(provider, DebugCompareStream);
-        }
-
-        if (fake_mbr)
-        {
-            provider = new DevioProviderWithFakeMBR(provider);
-        }
-
-        Console.WriteLine($"Image virtual size is {NativeStruct.FormatBytes(provider.Length)}");
-
+        IDevioProvider provider;
         DevioServiceBase service;
 
-        if (ObjectName is not null && !string.IsNullOrWhiteSpace(ObjectName)) // Listen on shared memory object
+        if (ramDisk)
         {
-            service = new DevioShmService(ObjectName, provider, OwnsProvider: true, BufferSize: buffer_size);
-        }
-        else if (listen_port != 0) // Listen on TCP/IP socket
-        {
-            service = new DevioTcpService(listen_address, listen_port, provider, OwnsProvider: true);
-        }
-        else if (mount) // Request to mount in-process
-        {
-            service = new DevioShmService(provider, OwnsProvider: true, BufferSize: buffer_size);
-        }
-        else if (output_image is not null) // Convert to new image file format
-        {
-            provider.ConvertToImage(image_path, output_image, output_image_variant, detach_event);
+            if ((fileName is null
+                || string.IsNullOrWhiteSpace(fileName))
+                && diskSize.HasValue)
+            {
+                service = new RAMDiskService(diskSize.Value, InitializeFileSystem.NTFS);
+            }
+            else if (fileName is not null
+                && !string.IsNullOrWhiteSpace(fileName))
+            {
+                if (!".vhd".Equals(Path.GetExtension(fileName), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("Only vhd format image files are supported as RAM disk templates");
+                }
 
-            return 0;
-        }
-        else if (checksum is not null) // Calculate checksum over image
-        {
-            provider.Checksum(checksum);
+                service = new RAMDiskService(fileName);
+            }
+            else
+            {
+                return 0;
+            }
 
-            return 0;
+            provider = service.DevioProvider;
         }
         else
         {
-            provider.Dispose();
+            if (fileName is null)
+            {
+                return 0;
+            }
 
-            Console.WriteLine("None of --name, --port, --mount, --checksum or --convert switches specified, nothing to do.");
+            if (providerName is null || string.IsNullOrWhiteSpace(providerName))
+            {
+                providerName = DevioServiceFactory.GetProviderTypeFromFileName(fileName).ToString();
+            }
 
-            return 1;
+            Console.WriteLine($"Opening image file '{fileName}' with format provider '{providerName}'...");
+
+            if (StringComparer.OrdinalIgnoreCase.Equals(providerName, "libewf"))
+            {
+                DevioProviderLibEwf.SetNotificationFile(libewf_debug_output);
+
+                ConsoleApp.RanToEnd += (sender, e) => DevioProviderLibEwf.SetNotificationFile(null);
+
+                if (verbose)
+                {
+                    DevioProviderLibEwf.NotificationVerbose = true;
+                }
+            }
+
+            provider = DevioServiceFactory.GetProvider(fileName, diskAccess, providerName)
+                ?? throw new NotSupportedException("Unknown image file format. Try with another format provider!");
+
+            if (provider.Length <= 0)
+            {
+                throw new NotSupportedException("Unknown size of source device");
+            }
+
+            if (!string.IsNullOrWhiteSpace(debugCompare))
+            {
+                var DebugCompareStream = new FileStream(debugCompare, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: true);
+
+                provider = new DebugProvider(provider, DebugCompareStream);
+            }
+
+            if (fakeMbr)
+            {
+                provider = new DevioProviderWithFakeMBR(provider);
+            }
+
+            Console.WriteLine($"Image virtual size is {NativeStruct.FormatBytes(provider.Length)}");
+
+            if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
+            {
+                service = new DevioShmService(objectName, provider, OwnsProvider: true, BufferSize: bufferSize);
+            }
+            else if (listenPort != 0) // Listen on TCP/IP socket
+            {
+                service = new DevioTcpService(listenAddress, listenPort, provider, ownsProvider: true);
+            }
+            else if (mount) // Request to mount in-process
+            {
+                service = new DevioShmService(provider, OwnsProvider: true, BufferSize: bufferSize);
+            }
+            else if (outputImage is not null && fileName is not null) // Convert to new image file format
+            {
+                provider.ConvertToImage(fileName, outputImage, outputImageVariant, detachEvent);
+
+                return 0;
+            }
+            else if (checksum is not null) // Calculate checksum over image
+            {
+                provider.Checksum(checksum);
+
+                return 0;
+            }
+            else
+            {
+                provider.Dispose();
+
+                Console.WriteLine("None of --name, --port, --mount, --checksum or --convert switches specified, nothing to do.");
+
+                return 1;
+            }
         }
 
-        if (mount)
+        if (mount || ramDisk)
         {
             Console.WriteLine("Mounting as virtual disk...");
 
-            service.WriteOverlayImageName = write_overlay_image_file;
+            service.WriteOverlayImageName = writeOverlayImageFile;
 
             ScsiAdapter adapter;
 
@@ -663,14 +705,14 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 throw new IOException("Cannot access Arsenal Image Mounter driver. Check that the driver is installed and that you are running this application with administrative privileges.", ex);
             }
 
-            if (disk_size.HasValue)
+            if (diskSize.HasValue)
             {
-                service.DiskSize = disk_size.Value;
+                service.DiskSize = diskSize.Value;
             }
 
-            service.StartServiceThreadAndMount(adapter, device_flags);
+            service.StartServiceThreadAndMount(adapter, deviceFlags);
 
-            if (auto_delete)
+            if (autoDelete)
             {
                 var rc = service.SetWriteOverlayDeleteOnClose();
                 if (rc != NativeConstants.NO_ERROR)
@@ -707,7 +749,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             service.StartServiceThread();
         }
 
-        if (detach_event is not null)
+        if (detachEvent is not null)
         {
             if (mount)
             {
@@ -718,9 +760,9 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 Console.WriteLine("Image file opened, ready for incoming connections.");
             }
 
-            CloseConsole(detach_event);
+            CloseConsole(detachEvent);
         }
-        else
+        else if (!ramDisk)
         {
             if (mount)
             {
@@ -749,9 +791,12 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             };
         }
 
-        service.WaitForServiceThreadExit();
+        if (service is not DevioNoneService)
+        {
+            service.WaitForServiceThreadExit();
 
-        Console.WriteLine("Service stopped.");
+            Console.WriteLine("Service stopped.");
+        }
 
         return service.Exception is not null
             ? throw new Exception("Service failed.", service.Exception)

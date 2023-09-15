@@ -412,14 +412,12 @@ public class ScsiAdapter : DeviceObject
             
             for(; ;)
             {
-
                 Thread.Sleep(waittime);
 
                 try
                 {
                     DiskDevice = OpenDevice(DeviceNumber, FileAccess.Read);
                 }
-
                 catch (DriveNotFoundException ex)
                 {
                     Trace.WriteLine($"Error opening device: {ex.JoinMessages()}");
@@ -430,7 +428,6 @@ public class ScsiAdapter : DeviceObject
                     RescanBus();
 
                     continue;
-
                 }
 
                 using (DiskDevice)

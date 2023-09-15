@@ -45,10 +45,10 @@ public class DevioTcpService : DevioServiceBase
     /// <param name="ListenAddress">IP address where service should listen for client connection.</param>
     /// <param name="ListenPort">IP port where service should listen for client connection.</param>
     /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="OwnsProvider">Indicates whether DevioProvider object will be automatically closed when this
+    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    public DevioTcpService(IPAddress ListenAddress, int ListenPort, IDevioProvider DevioProvider, bool OwnsProvider)
-        : base(DevioProvider, OwnsProvider)
+    public DevioTcpService(IPAddress ListenAddress, int ListenPort, IDevioProvider DevioProvider, bool ownsProvider)
+        : base(DevioProvider, ownsProvider)
     {
 
         ListenEndPoint = new IPEndPoint(ListenAddress, ListenPort);

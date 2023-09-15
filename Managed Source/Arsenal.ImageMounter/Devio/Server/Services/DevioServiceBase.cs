@@ -159,11 +159,11 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// communication.
     /// </summary>
     /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="OwnsProvider">Indicates whether DevioProvider object will be automatically closed when this
+    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    protected DevioServiceBase(IDevioProvider DevioProvider, bool OwnsProvider)
+    protected DevioServiceBase(IDevioProvider DevioProvider, bool ownsProvider)
     {
-        this.OwnsProvider = OwnsProvider;
+        this.OwnsProvider = ownsProvider;
 
         this.DevioProvider = DevioProvider.NullCheck(nameof(DevioProvider));
 

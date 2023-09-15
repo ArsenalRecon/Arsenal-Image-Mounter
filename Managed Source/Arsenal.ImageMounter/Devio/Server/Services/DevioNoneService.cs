@@ -50,7 +50,6 @@ public class DevioNoneService : DevioServiceBase
     public DevioNoneService(string Imagefile, FileAccess DiskAccess)
         : this(Imagefile, NativeStruct.GetFileOrDiskSize(Imagefile), DiskAccess)
     {
-
     }
 
     /// <summary>
@@ -58,20 +57,19 @@ public class DevioNoneService : DevioServiceBase
     /// Instead, it just passes a disk image file name for direct mounting internally in
     /// SCSI Adapter.
     /// </summary>
-    /// <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+    /// <param name="imageFile">Name and path of image file mounted by Arsenal Image Mounter.</param>
     /// <param name="length">Disk size to initialize dummy provider instance</param>
-    /// <param name="DiskAccess"></param>
-    protected DevioNoneService(string Imagefile, long length, FileAccess DiskAccess)
-        : base(new DummyProvider(length), OwnsProvider: true)
+    /// <param name="diskAccess"></param>
+    protected DevioNoneService(string imageFile, long length, FileAccess diskAccess)
+        : base(new DummyProvider(length), ownsProvider: true)
     {
+        Offset = NativeStruct.GetOffsetByFileExt(imageFile);
 
-        Offset = NativeStruct.GetOffsetByFileExt(Imagefile);
+        DiskAccess = diskAccess;
 
-        this.DiskAccess = DiskAccess;
+        Imagefile = imageFile;
 
-        this.Imagefile = Imagefile;
-
-        if (!DiskAccess.HasFlag(FileAccess.Write))
+        if (!diskAccess.HasFlag(FileAccess.Write))
         {
             ProxyModeFlags = DeviceFlags.TypeFile | DeviceFlags.ReadOnly;
         }
@@ -80,8 +78,7 @@ public class DevioNoneService : DevioServiceBase
             ProxyModeFlags = DeviceFlags.TypeFile;
         }
 
-        ProxyObjectName = Imagefile;
-
+        ProxyObjectName = imageFile;
     }
 
     /// <summary>
@@ -89,12 +86,11 @@ public class DevioNoneService : DevioServiceBase
     /// Instead, it just passes a disk image file name for direct mounting internally in
     /// SCSI Adapter.
     /// </summary>
-    /// <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
-    /// <param name="DiskAccess"></param>
-    public DevioNoneService(string Imagefile, DevioServiceFactory.VirtualDiskAccess DiskAccess)
-        : this(Imagefile, DevioServiceFactory.GetDirectFileAccessFlags(DiskAccess))
+    /// <param name="imageFile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+    /// <param name="diskAccess"></param>
+    public DevioNoneService(string imageFile, DevioServiceFactory.VirtualDiskAccess diskAccess)
+        : this(imageFile, DevioServiceFactory.GetDirectFileAccessFlags(diskAccess))
     {
-
     }
 
     /// <summary>
@@ -102,13 +98,12 @@ public class DevioNoneService : DevioServiceBase
     /// Instead, it just passes a disk image file name for direct mounting internally in
     /// SCSI Adapter.
     /// </summary>
-    /// <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+    /// <param name="imageFile">Name and path of image file mounted by Arsenal Image Mounter.</param>
     /// <param name="length">Disk size to initialize dummy provider instance</param>
-    /// <param name="DiskAccess"></param>
-    protected DevioNoneService(string Imagefile, long length, DevioServiceFactory.VirtualDiskAccess DiskAccess)
-        : this(Imagefile, length, DevioServiceFactory.GetDirectFileAccessFlags(DiskAccess))
+    /// <param name="diskAccess"></param>
+    protected DevioNoneService(string imageFile, long length, DevioServiceFactory.VirtualDiskAccess diskAccess)
+        : this(imageFile, length, DevioServiceFactory.GetDirectFileAccessFlags(diskAccess))
     {
-
     }
 
     /// <summary>
@@ -116,11 +111,10 @@ public class DevioNoneService : DevioServiceBase
     /// Instead, it just passes a disk size for directly mounting a RAM disk internally in
     /// SCSI Adapter.
     /// </summary>
-    /// <param name="DiskSize">Size in bytes of RAM disk to create.</param>
-    public DevioNoneService(long DiskSize)
-        : base(new DummyProvider(DiskSize), OwnsProvider: true)
+    /// <param name="diskSize">Size in bytes of RAM disk to create.</param>
+    public DevioNoneService(long diskSize)
+        : base(new DummyProvider(diskSize), ownsProvider: true)
     {
-
         DiskAccess = FileAccess.ReadWrite;
 
         if (NativeFileIO.TestFileOpen(@"\\?\awealloc"))
@@ -133,13 +127,11 @@ public class DevioNoneService : DevioServiceBase
         }
     }
 
-    private static long GetVhdSize(string Imagefile)
+    private static long GetVhdSize(string imageFile)
     {
-
-        using var disk = VirtualDisk.OpenDisk(Imagefile, FileAccess.Read);
+        using var disk = new DiscUtils.Vhd.Disk(imageFile, FileAccess.Read);
 
         return disk.Capacity;
-
     }
 
     /// <summary>
@@ -147,17 +139,15 @@ public class DevioNoneService : DevioServiceBase
     /// Instead, it just requests the SCSI adapter, awealloc and vhdaccess drivers to create
     /// a dynamically expanding RAM disk based on the contents of the supplied VHD image.
     /// </summary>
-    /// <param name="Imagefile">Path to VHD image file to use as template for the RAM disk.</param>
-    public DevioNoneService(string Imagefile)
-        : base(new DummyProvider(GetVhdSize(Imagefile)), OwnsProvider: true)
+    /// <param name="imageFile">Path to VHD image file to use as template for the RAM disk.</param>
+    public DevioNoneService(string imageFile)
+        : base(new DummyProvider(GetVhdSize(imageFile)), ownsProvider: true)
     {
-
         DiskAccess = FileAccess.ReadWrite;
 
-        this.Imagefile = Imagefile;
+        Imagefile = imageFile;
 
-        ProxyObjectName = $@"\\?\vhdaccess\??\awealloc{NativeFileIO.GetNtPath(Imagefile)}";
-
+        ProxyObjectName = $@"\\?\vhdaccess\??\awealloc{NativeFileIO.GetNtPath(imageFile)}";
     }
 
     protected override string? ProxyObjectName { get; }
@@ -194,6 +184,5 @@ public class DevioNoneService : DevioServiceBase
 
     protected override void EmergencyStopServiceThread()
     {
-
     }
 }

@@ -323,9 +323,9 @@ public static class DevioServiceFactory
         return GetProvider(Imagefile, DiskAccess, provider);
     }
 
-    public static IDevioProvider? GetProvider(string Imagefile, FileAccess DiskAccess, string ProviderName)
+    public static IDevioProvider? GetProvider(string imageFile, FileAccess DiskAccess, string ProviderName)
         => InstalledProvidersByNameAndFileAccess.TryGetValue(ProviderName, out var GetProviderFunc)
-            ? GetProviderFunc(Imagefile, DiskAccess)
+            ? GetProviderFunc(imageFile, DiskAccess)
             : throw new NotSupportedException($"Provider '{ProviderName}' not supported. Valid values are: {string.Join(", ", InstalledProvidersByNameAndFileAccess.Keys)}.");
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
@@ -1080,11 +1080,11 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
         }
     }
 
-    public static ProviderType GetProviderTypeFromFileName(string arg)
-        => Path.GetExtension(arg).ToLowerInvariant() switch
+    public static ProviderType GetProviderTypeFromFileName(string imageFile)
+        => Path.GetExtension(imageFile).ToLowerInvariant() switch
         {
             ".vhd" or ".vdi" or ".vmdk" or ".vhdx" or ".dmg" or ".ova" => ProviderType.DiscUtils,
-            ".001" => File.Exists(Path.ChangeExtension(arg, ".002")) ? ProviderType.MultiPartRaw : ProviderType.None,
+            ".001" => File.Exists(Path.ChangeExtension(imageFile, ".002")) ? ProviderType.MultiPartRaw : ProviderType.None,
             ".raw" or ".dd" or ".img" or ".ima" or ".iso" or ".bin" or ".nrg" => ProviderType.None,
             ".e01" or ".aff" or ".ex01" or ".lx01" => ProviderType.LibEwf,
             ".qcow" or ".qcow2" or ".qcow2c" => ProviderType.LibQcow,

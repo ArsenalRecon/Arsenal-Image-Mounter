@@ -115,7 +115,7 @@ public static partial class AsyncExtensions
     }
 }
 
-public readonly struct ProcessAwaiter : INotifyCompletion
+public readonly struct ProcessAwaiter : ICriticalNotifyCompletion
 {
     public Process? Process { get; }
 
@@ -149,7 +149,9 @@ public readonly struct ProcessAwaiter : INotifyCompletion
     public int GetResult() => Process?.ExitCode
         ?? throw new NotSupportedException("This instance is not associated with a Process instance");
 
-    public void OnCompleted(Action continuation)
+    public void OnCompleted(Action continuation) => throw new NotSupportedException();
+
+    public void UnsafeOnCompleted(Action continuation)
     {
         var completion_counter = 0;
 
@@ -173,7 +175,7 @@ public readonly struct ProcessAwaiter : INotifyCompletion
     }
 }
 
-public sealed class WaitHandleAwaiter : INotifyCompletion
+public sealed class WaitHandleAwaiter : ICriticalNotifyCompletion
 {
     private readonly WaitHandle handle;
     private readonly TimeSpan timeout;
@@ -193,7 +195,9 @@ public sealed class WaitHandleAwaiter : INotifyCompletion
 
     public bool GetResult() => result;
 
-    public void OnCompleted(Action continuation)
+    public void OnCompleted(Action continuation) => throw new NotSupportedException();
+
+    public void UnsafeOnCompleted(Action continuation)
     {
         this.continuation = continuation;
 
