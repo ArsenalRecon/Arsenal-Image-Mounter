@@ -596,6 +596,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     throw new InvalidOperationException("Only vhd format image files are supported as RAM disk templates");
                 }
 
+                Console.WriteLine($"Using image file '{fileName}' as RAM disk template");
+
                 service = new RAMDiskService(fileName);
             }
             else
@@ -604,6 +606,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
 
             provider = service.DevioProvider;
+
+            Console.WriteLine($"Creating {NativeStruct.FormatBytes(provider.Length)} RAM disk.");
         }
         else
         {
