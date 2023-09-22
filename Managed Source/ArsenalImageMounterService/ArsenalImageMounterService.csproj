@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>Arsenal.ImageMounter.Cli</PackageId>
+    <PackageId>ArsenalRecon.ImageMounter.Cli</PackageId>
   </PropertyGroup>
   
   <ItemGroup>

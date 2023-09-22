@@ -7,6 +7,10 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>ArsenalRecon.ImageMounter.Forms</PackageId>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="System.Memory" Version="*" />
   </ItemGroup>
