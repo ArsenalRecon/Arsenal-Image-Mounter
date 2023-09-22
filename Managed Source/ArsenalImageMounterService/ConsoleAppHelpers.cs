@@ -16,6 +16,9 @@ using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Native;
+using DiscUtils;
+using DiscUtils.Raw;
+using DiscUtils.Streams;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -202,6 +205,7 @@ Please see EULA.txt for license information.");
         string? providerName = null;
         var showHelp = false;
         var verbose = false;
+        var createImage = false;
         DeviceFlags deviceFlags = 0;
         string? debugCompare = null;
         var libewf_debug_output = Console.IsErrorRedirected ? null : ConsoleSupport.GetConsoleOutputDeviceName();
@@ -270,6 +274,11 @@ Please see EULA.txt for license information.");
                 || arg.Equals("device", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
                 fileName = cmd.Value[0];
+            }
+            else if (arg.Equals("create", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
+                && commands.ContainsKey("disksize") && commands.ContainsKey("filename"))
+            {
+                createImage = true;
             }
             else if (arg.Equals("provider", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
@@ -462,8 +471,20 @@ Please note: AIM CLI should be run with administrative privileges. If you would 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
 {asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly|--writable] [--fakesig] [--fakembr] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile [--autodelete]] [--background]
 
+Syntax to mount a RAM disk:
+{asmname} --ramdisk --disksize=size
+Size in bytes, can be suffixed with for example M or G for MB or GB.
+
+Syntax to mount a RAM disk from a VHD template image file:
+{asmname} --ramdisk --filename=imagefilename
+
+Syntax to create a new disk image file:
+{asmname} --create --filename=imagefilename --disksize=size [--variant=fixed|dynamic] [--mount]
+Size in bytes, can be suffixed with for example M or G for MB or GB.
+
 Syntax to start shared memory service mode, for mounting from other applications:
-{asmname} --name=objectname [--buffersize=bytes] [--readonly|--writable] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
+{asmname} --name=objectname [--buffersize=size] [--readonly|--writable] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
+Size in bytes, can be suffixed with for example K or M for KB or MB.
 
 Syntax to start TCP/IP service mode, for mounting from other computers:
 {asmname} [--ipaddress=listenaddress] --port=tcpport [--readonly|--writable] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
@@ -584,12 +605,12 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
         {
             if ((fileName is null
                 || string.IsNullOrWhiteSpace(fileName))
-                && diskSize.HasValue)
+                && diskSize.HasValue)  // RAM disk without template image
             {
                 service = new RAMDiskService(diskSize.Value, InitializeFileSystem.NTFS);
             }
             else if (fileName is not null
-                && !string.IsNullOrWhiteSpace(fileName))
+                && !string.IsNullOrWhiteSpace(fileName))  // RAM disk with template image
             {
                 if (!".vhd".Equals(Path.GetExtension(fileName), StringComparison.OrdinalIgnoreCase))
                 {
@@ -621,8 +642,6 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 providerName = DevioServiceFactory.GetProviderTypeFromFileName(fileName).ToString();
             }
 
-            Console.WriteLine($"Opening image file '{fileName}' with format provider '{providerName}'...");
-
             if (StringComparer.OrdinalIgnoreCase.Equals(providerName, "libewf"))
             {
                 DevioProviderLibEwf.SetNotificationFile(libewf_debug_output);
@@ -635,6 +654,103 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 }
             }
 
+            if (createImage)
+            {
+                if (!diskSize.HasValue || string.IsNullOrWhiteSpace(fileName))
+                {
+                    throw new InvalidOperationException("--create requires --disksize and --filename");
+                }
+
+                if (File.Exists(fileName))
+                {
+                    throw new IOException($"File '{fileName}' already exists");
+                }
+
+                Console.WriteLine($"Creating image file '{fileName}', type {outputImageVariant}, size {NativeStruct.FormatBytes(diskSize.Value)}...");
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+                var image_type = Path.GetExtension(fileName.AsSpan()).TrimStart('.').ToString().ToUpperInvariant();
+#else
+                var image_type = Path.GetExtension(fileName).TrimStart('.').ToUpperInvariant();
+#endif
+
+                var geometry = Geometry.FromCapacity(diskSize.Value);
+
+                VirtualDisk disk;
+
+                switch (image_type)
+                {
+                    case "DD":
+                    case "RAW":
+                    case "IMG":
+                    case "IMA":
+                    case "ISO":
+                    case "BIN":
+                    case "001":
+                        {
+                            var target = new FileStream(fileName,
+                                                        FileMode.CreateNew,
+                                                        FileAccess.ReadWrite,
+                                                        FileShare.Delete);
+
+                            if ("fixed".Equals(outputImageVariant, StringComparison.OrdinalIgnoreCase))
+                            {
+                            }
+                            else if ("dynamic".Equals(outputImageVariant, StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                                {
+                                    try
+                                    {
+                                        NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, true);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Trace.WriteLine($"Sparse files not supported on target platform or file system: {ex.JoinMessages()}");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                throw new ArgumentException($"Value {outputImageVariant} not supported as output image variant. Valid values are fixed or dynamic.");
+                            }
+
+                            target.SetLength(diskSize.Value);
+
+                            disk = new Disk(target, ownsStream: Ownership.Dispose);
+
+                            break;
+                        }
+
+                    default:
+                        {
+                            if (!DiscUtilsInteraction.DiscUtilsInitialized)
+                            {
+                                throw new NotSupportedException();
+                            }
+
+                            disk = VirtualDisk.CreateDisk(image_type,
+                                                          outputImageVariant,
+                                                          fileName,
+                                                          diskSize.Value,
+                                                          geometry,
+                                                          null);
+
+                            break;
+                        }
+                }
+
+                using (disk)
+                {
+                    var partition_style = diskSize.Value < (2L << 40) ? PARTITION_STYLE.MBR : PARTITION_STYLE.GPT;
+                    DiscUtilsInteraction.InitializeVirtualDisk(disk, geometry, partition_style, InitializeFileSystem.NTFS, label: null);
+                }
+
+                diskAccess = FileAccess.ReadWrite;
+            }
+
+            Console.WriteLine($"Opening image file '{fileName}' with format provider '{providerName}'...");
+
             provider = DevioServiceFactory.GetProvider(fileName, diskAccess, providerName)
                 ?? throw new NotSupportedException("Unknown image file format. Try with another format provider!");
 
@@ -645,7 +761,12 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             if (!string.IsNullOrWhiteSpace(debugCompare))
             {
-                var DebugCompareStream = new FileStream(debugCompare, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: true);
+                var DebugCompareStream = new FileStream(debugCompare,
+                                                        FileMode.Open,
+                                                        FileAccess.Read,
+                                                        FileShare.Read | FileShare.Delete,
+                                                        bufferSize: 1,
+                                                        useAsync: true);
 
                 provider = new DebugProvider(provider, DebugCompareStream);
             }
@@ -672,12 +793,22 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             else if (outputImage is not null && fileName is not null) // Convert to new image file format
             {
                 provider.ConvertToImage(fileName, outputImage, outputImageVariant, detachEvent);
+                provider.Dispose();
 
                 return 0;
             }
             else if (checksum is not null) // Calculate checksum over image
             {
                 provider.Checksum(checksum);
+                provider.Dispose();
+
+                return 0;
+            }
+            else if (createImage)
+            {
+                provider.Dispose();
+
+                Console.WriteLine("Done.");
 
                 return 0;
             }
@@ -685,7 +816,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             {
                 provider.Dispose();
 
-                Console.WriteLine("None of --name, --port, --mount, --checksum or --convert switches specified, nothing to do.");
+                Console.WriteLine("None of --name, --port, --mount, --checksum, --create or --convert switches specified, nothing to do.");
 
                 return 1;
             }
