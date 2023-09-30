@@ -26,7 +26,7 @@ public class Waitable
 
         process.Start();
 
-        var result = await process;
+        var result = await process.WaitForResultAsync();
 
         Assert.Equal(20, result);
     }
@@ -42,7 +42,7 @@ public class Waitable
 
         evt.Set();
 
-        result = await evt;
+        result = await evt.WaitAsync();
 
         Assert.True(result);
 
@@ -50,7 +50,7 @@ public class Waitable
 
         ThreadPool.QueueUserWorkItem(_ => { evt.Set(); });
 
-        result = await evt;
+        result = await evt.WaitAsync();
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class Waitable
 
         evt.Set();
 
-        result = await evt.WaitHandle;
+        result = await evt.WaitHandle.WaitAsync();
 
         Assert.True(result);
 
@@ -72,6 +72,6 @@ public class Waitable
 
         ThreadPool.QueueUserWorkItem(_ => { evt.Set(); });
 
-        result = await evt.WaitHandle;
+        result = await evt.WaitHandle.WaitAsync();
     }
 }

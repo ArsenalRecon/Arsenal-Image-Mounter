@@ -57,8 +57,12 @@ public static partial class AsyncExtensions
         new(handle, TimeSpan.FromMilliseconds(mSecTimeout));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static WaitHandleAwaiter GetAwaiter(this WaitHandle handle) =>
-        new(handle, Timeout.InfiniteTimeSpan);
+    public static async Task<bool> WaitAsync(this WaitHandle handle) =>
+        await new WaitHandleAwaiter(handle, Timeout.InfiniteTimeSpan);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static async Task<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout) =>
+        await new WaitHandleAwaiter(handle, timeout);
 
     public static async Task<int> RunProcessAsync(string exe, string args)
     {
@@ -75,12 +79,22 @@ public static partial class AsyncExtensions
 
         ps.Start();
 
-        return await ps;
+        return await new ProcessAwaiter(ps);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ProcessAwaiter GetAwaiter(this Process process) =>
-        new(process);
+    public static async Task WaitForExitAsync(this Process process, CancellationToken _ = default)
+    {
+        process.EnableRaisingEvents = true;
+        await new ProcessAwaiter(process);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static async Task<int> WaitForResultAsync(this Process process, CancellationToken cancellationToken = default)
+    {
+        await process.WaitForExitAsync(cancellationToken);
+        return process.ExitCode;
+    }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static WaitHandle CreateWaitHandle(this Process process, bool inheritable) =>
