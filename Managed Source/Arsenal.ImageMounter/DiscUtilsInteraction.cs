@@ -11,10 +11,12 @@
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Core.WindowsSecurity.AccessControl;
 using DiscUtils.Partitions;
+using DiscUtils.Streams;
 using DiscUtils.Streams.Compatibility;
 using System;
 using System.Buffers;
@@ -261,5 +263,35 @@ public static class DiscUtilsInteraction
 
         await volume.WriteAsync(vbr, cancellationToken).ConfigureAwait(false);
     }
+
+    public static DiscUtils.Raw.Disk OpenPhysicalDiskAsDiscUtilsDisk(this DiskDevice disk, Ownership ownsStream)
+    {
+        try
+        {
+            var native_geometry = disk.Geometry
+                ?? throw new InvalidOperationException("Unknown geometry");
+
+            var native_disk_size = disk.DiskSize
+                ?? throw new InvalidOperationException("Unknown size");
+
+            var geometry = new Geometry(native_disk_size, native_geometry.TracksPerCylinder, native_geometry.SectorsPerTrack, native_geometry.BytesPerSector);
+
+            var align_stream = disk.GetRawDiskStream();
+
+            return new DiscUtils.Raw.Disk(align_stream, ownsStream, geometry);
+        }
+        catch (Exception ex)
+        {
+            if (ownsStream == Ownership.Dispose)
+            {
+                disk.Dispose();
+            }
+
+            throw new IOException($"Failed to open device '{disk.DevicePath}'", ex);
+        }
+    }
+
+    public static DiscUtils.Raw.Disk OpenPhysicalDiskAsDiscUtilsDisk(string devicePath, FileAccess access)
+        => OpenPhysicalDiskAsDiscUtilsDisk(new DiskDevice(devicePath, access), Ownership.Dispose);
 }
 
