@@ -49,16 +49,12 @@ public static partial class AsyncExtensions
         SynchronizationContext.Current;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static WaitHandleAwaiter WithTimeout(this WaitHandle handle, TimeSpan timeout) =>
-        new(handle, timeout);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static WaitHandleAwaiter WithTimeout(this WaitHandle handle, int mSecTimeout) =>
-        new(handle, TimeSpan.FromMilliseconds(mSecTimeout));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static async Task<bool> WaitAsync(this WaitHandle handle) =>
         await new WaitHandleAwaiter(handle, Timeout.InfiniteTimeSpan);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static async Task<bool> WaitAsync(this WaitHandle handle, int millisecondsTimeout) =>
+        await new WaitHandleAwaiter(handle, TimeSpan.FromMilliseconds(millisecondsTimeout));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static async Task<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout) =>

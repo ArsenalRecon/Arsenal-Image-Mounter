@@ -36,7 +36,7 @@ public class Waitable
     {
         using var evt = new ManualResetEvent(initialState: false);
 
-        var result = await evt.WithTimeout(1000);
+        var result = await evt.WaitAsync(1000);
 
         Assert.False(result);
 
@@ -58,7 +58,7 @@ public class Waitable
     {
         using var evt = new ManualResetEventSlim();
 
-        var result = await evt.WaitHandle.WithTimeout(1000);
+        var result = await evt.WaitHandle.WaitAsync(1000);
 
         Assert.False(result);
 
