@@ -21,6 +21,7 @@
 
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.IO;

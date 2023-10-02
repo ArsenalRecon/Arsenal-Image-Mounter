@@ -19,6 +19,7 @@ using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Raw;
 using DiscUtils.Streams;
+using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;

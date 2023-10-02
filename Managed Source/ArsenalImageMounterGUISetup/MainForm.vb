@@ -16,6 +16,7 @@ Imports System.IO
 Imports System.Windows.Forms
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO.Native
+Imports LTRData.Extensions.Formatting
 Imports Microsoft.Win32
 
 #Disable Warning IDE1006 ' Naming Styles

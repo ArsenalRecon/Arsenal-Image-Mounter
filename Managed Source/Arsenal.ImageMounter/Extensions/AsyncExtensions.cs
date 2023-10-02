@@ -14,6 +14,7 @@ using System;
 using System.Buffers;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -28,7 +29,9 @@ namespace Arsenal.ImageMounter.Extensions;
 
 public static partial class AsyncExtensions
 {
-    public static readonly Task<int> ZeroCompletedTask = Task.FromResult(0);
+    public static Task<int> ZeroCompletedTask { get; } = Task.FromResult(0);
+    public static Task<bool> FalseResult { get; } = Task.FromResult(false);
+    public static Task<bool> TrueResult { get; } = Task.FromResult(true);
 
 #if !NET7_0_OR_GREATER
     public static Task<string?> ReadLineAsync(this TextReader reader, CancellationToken _)
@@ -43,22 +46,47 @@ public static partial class AsyncExtensions
 #endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static SynchronizationContext? GetSynchronizationContext(this ISynchronizeInvoke owner) =>
-        owner.InvokeRequired ?
+    public static SynchronizationContext? GetSynchronizationContext(this ISynchronizeInvoke owner)
+        => owner.InvokeRequired ?
         (SynchronizationContext?)owner.Invoke(() => SynchronizationContext.Current, null) :
         SynchronizationContext.Current;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static async Task<bool> WaitAsync(this WaitHandle handle) =>
-        await new WaitHandleAwaiter(handle, Timeout.InfiniteTimeSpan);
+    public static async Task<bool> WaitAsync(this WaitHandle handle)
+        => await new WaitHandleAwaiter(handle, Timeout.InfiniteTimeSpan);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static async Task<bool> WaitAsync(this WaitHandle handle, int millisecondsTimeout) =>
-        await new WaitHandleAwaiter(handle, TimeSpan.FromMilliseconds(millisecondsTimeout));
+    public static async Task<bool> WaitAsync(this WaitHandle handle, int millisecondsTimeout)
+        => await new WaitHandleAwaiter(handle, TimeSpan.FromMilliseconds(millisecondsTimeout));
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static async Task<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout) =>
-        await new WaitHandleAwaiter(handle, timeout);
+    public static async Task<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout)
+        => await new WaitHandleAwaiter(handle, timeout);
+
+    public static Task<bool> WaitAsync(this WaitHandle handle, CancellationToken cancellationToken)
+        => handle.WaitAsync(Timeout.InfiniteTimeSpan, cancellationToken);
+
+    public static Task<bool> WaitAsync(this WaitHandle handle, int millisecondsTimeout, CancellationToken cancellationToken)
+        => handle.WaitAsync(TimeSpan.FromMilliseconds(millisecondsTimeout), cancellationToken);
+
+    [SuppressMessage("Reliability", "CA2016:Forward the 'CancellationToken' parameter to methods", Justification = "Implementation of cancellation")]
+    public static async Task<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.CanBeCanceled)
+        {
+            return await new WaitHandleAwaiter(handle, timeout);
+        }
+
+        var handleTask = handle.WaitAsync(timeout);
+
+#if NET6_0_OR_GREATER
+        return await handleTask.WaitAsync(cancellationToken);
+#else
+        await Task.WhenAny(handleTask, cancellationToken.WaitHandle.WaitAsync())
+            .ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return handleTask.Result;
+#endif
+    }
 
     public static async Task<int> RunProcessAsync(string exe, string args)
     {
@@ -78,14 +106,36 @@ public static partial class AsyncExtensions
         return await new ProcessAwaiter(ps);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static async Task WaitForExitAsync(this Process process, CancellationToken _ = default)
+    public static async Task WaitForExitAsync(this Process process)
     {
         process.EnableRaisingEvents = true;
         await new ProcessAwaiter(process);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressMessage("Reliability", "CA2016:Forward the 'CancellationToken' parameter to methods", Justification = "Implementation of cancellation")]
+    public static async Task WaitForExitAsync(this Process process, CancellationToken cancellationToken)
+    {
+        process.EnableRaisingEvents = true;
+
+        if (!cancellationToken.CanBeCanceled)
+        {
+            await new ProcessAwaiter(process);
+            return;
+        }
+
+#if NET5_0_OR_GREATER
+        await process.WaitForExitAsync(cancellationToken);
+#else
+        await Task.WhenAny(process.WaitForExitAsync(), cancellationToken.WaitHandle.WaitAsync())
+            .ConfigureAwait(false);
+
+        if (!process.HasExited)
+        {
+            throw new OperationCanceledException();
+        }
+#endif
+    }
+
     public static async Task<int> WaitForResultAsync(this Process process, CancellationToken cancellationToken = default)
     {
         await process.WaitForExitAsync(cancellationToken);

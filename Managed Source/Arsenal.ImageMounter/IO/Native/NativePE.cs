@@ -11,6 +11,7 @@
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Internal;
 using DiscUtils.Streams.Compatibility;
+using LTRData.Extensions.Buffers;
 using System;
 using System.Buffers;
 using System.IO;
@@ -21,6 +22,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.Native;
 

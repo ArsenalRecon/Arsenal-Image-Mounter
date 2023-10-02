@@ -11,6 +11,9 @@
 using Arsenal.ImageMounter.Data;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Buffers;
+using LTRData.Extensions.Formatting;
+using LTRData.Extensions.Split;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;

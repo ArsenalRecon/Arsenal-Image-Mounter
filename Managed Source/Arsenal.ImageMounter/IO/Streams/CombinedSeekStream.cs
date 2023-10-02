@@ -10,6 +10,7 @@
 
 using Arsenal.ImageMounter.Extensions;
 using DiscUtils.Streams.Compatibility;
+using LTRData.Extensions.Async;
 using System;
 using System.Collections.Generic;
 using System.IO;

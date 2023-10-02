@@ -9,6 +9,7 @@
 // 
 
 using Arsenal.ImageMounter.Extensions;
+using LTRData.Extensions.Buffers;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.ComponentModel;
@@ -23,18 +24,6 @@ namespace Arsenal.ImageMounter.IO.Native;
 
 public static partial class NativeCalls
 {
-#if NETCOREAPP
-    public static nint CrtDllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath) => !OperatingSystem.IsWindows() &&
-            (libraryName.StartsWith("msvcr", StringComparison.OrdinalIgnoreCase) ||
-            libraryName.StartsWith("msvcp", StringComparison.OrdinalIgnoreCase) ||
-            libraryName.Equals("ntdll", StringComparison.OrdinalIgnoreCase) ||
-            libraryName.Equals("advapi32", StringComparison.OrdinalIgnoreCase) ||
-            libraryName.Equals("kernel32", StringComparison.OrdinalIgnoreCase) ||
-            libraryName.Equals("crtdll", StringComparison.OrdinalIgnoreCase))
-            ? NativeLibrary.Load("c", assembly, searchPath)
-            : 0;
-#endif
-
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     private static partial class WindowsAPI
     {
@@ -81,7 +70,7 @@ public static partial class NativeCalls
     public static T GenRandom<T>() where T : unmanaged
     {
         T value = default;
-        GenRandom(BufferExtensions.AsBytes(ref value));
+        GenRandom(MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref value, 1)));
         return value;
     }
 

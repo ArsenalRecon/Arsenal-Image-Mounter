@@ -11,6 +11,8 @@
 
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
+using LTRData.Extensions.Buffers;
+using LTRData.Extensions.Native;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -81,7 +83,7 @@ public class DebugProvider : DevioProviderUnmanagedBase
             Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X)} bytes, returned 0x{rc1:X)} bytes from image provider and 0x{rc2:X} bytes from debug compare stream.");
         }
 
-        if (!BufferExtensions.BinaryEqual((buf1 + bufferoffset).AsSpan(rc1), read_buf2.AsSpan(0, rc2)))
+        if (!NativeCompareExtensions.BinaryEqual((buf1 + bufferoffset).AsSpan(rc1), read_buf2.AsSpan(0, rc2)))
         {
             Trace.WriteLine($"Read request at position 0x{fileoffset:X}, 0x{count:X} bytes, returned different data from image provider than from debug compare stream.");
         }

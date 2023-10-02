@@ -13,6 +13,7 @@ using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Formatting;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;

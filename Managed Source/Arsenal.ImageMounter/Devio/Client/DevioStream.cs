@@ -9,6 +9,7 @@
 // 
 
 using Arsenal.ImageMounter.Extensions;
+using LTRData.Extensions.Async;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;

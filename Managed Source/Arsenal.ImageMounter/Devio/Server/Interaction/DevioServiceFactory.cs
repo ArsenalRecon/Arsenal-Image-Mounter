@@ -21,6 +21,7 @@ using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Streams;
+using LTRData.Extensions.Formatting;
 using System;
 using System.Collections.Generic;
 #if NET6_0_OR_GREATER

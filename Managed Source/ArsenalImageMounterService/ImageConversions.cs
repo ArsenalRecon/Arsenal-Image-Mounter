@@ -11,6 +11,7 @@
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Streams;
+using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;

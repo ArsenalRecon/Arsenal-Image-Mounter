@@ -10,6 +10,7 @@
 
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Buffers;
 using System;
 using System.Collections;
 using System.Collections.Generic;

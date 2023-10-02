@@ -17,6 +17,8 @@ using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
 using Arsenal.ImageMounter.IO.Streams;
 using DiscUtils;
+using LTRData.Extensions.Formatting;
+using LTRData.Extensions.Native;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

@@ -98,7 +98,7 @@ public class DevioProviderFromStream : IDevioProvider
 
         }
 
-        var mem = Extensions.BufferExtensions.AsSpan(buffer + bufferoffset, count);
+        var mem = Extensions.CollectionExtensions.AsSpan(buffer + bufferoffset, count);
         return BaseStream.Read(mem);
 
     }
@@ -108,7 +108,7 @@ public class DevioProviderFromStream : IDevioProvider
 
         BaseStream.Position = fileoffset;
 
-        var mem = Extensions.BufferExtensions.AsReadOnlySpan(buffer + bufferoffset, count);
+        var mem = Extensions.CollectionExtensions.AsReadOnlySpan(buffer + bufferoffset, count);
         BaseStream.Write(mem);
         return count;
 

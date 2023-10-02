@@ -6,6 +6,7 @@ Imports System.Threading
 Imports System.Windows.Forms
 Imports Arsenal.ImageMounter.Extensions
 Imports Arsenal.ImageMounter.IO.Native
+Imports LTRData.Extensions.Formatting
 Imports Microsoft.Win32
 
 Public Module MainModule

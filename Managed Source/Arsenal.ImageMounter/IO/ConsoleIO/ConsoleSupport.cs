@@ -12,6 +12,10 @@ using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.Reflection;
 using DiscUtils.Streams;
+using DiscUtils.Streams.Compatibility;
+using LTRData.Extensions.Buffers;
+using LTRData.Extensions.Native;
+using LTRData.Extensions.Split;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,6 +24,7 @@ using System.Linq;
 using System.Text;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.ConsoleIO;

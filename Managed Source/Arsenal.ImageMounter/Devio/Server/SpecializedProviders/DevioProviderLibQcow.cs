@@ -12,6 +12,9 @@
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.Reflection;
+using LTRData.Extensions.Buffers;
+using LTRData.Extensions.Native;
+using LTRData.Extensions.Split;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;

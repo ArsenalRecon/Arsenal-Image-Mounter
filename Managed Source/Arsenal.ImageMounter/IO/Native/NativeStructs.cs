@@ -9,6 +9,8 @@
 // 
 
 using Arsenal.ImageMounter.Extensions;
+using LTRData.Extensions.Buffers;
+using LTRData.Extensions.Split;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;

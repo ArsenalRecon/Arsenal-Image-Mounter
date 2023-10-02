@@ -9,6 +9,8 @@
 // 
 
 using Arsenal.ImageMounter.Extensions;
+using LTRData.Extensions.Buffers;
+using LTRData.Extensions.Native;
 using System;
 using System.Collections.Generic;
 #if NET6_0_OR_GREATER

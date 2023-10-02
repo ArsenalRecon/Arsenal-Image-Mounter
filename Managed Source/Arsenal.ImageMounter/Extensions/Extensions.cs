@@ -62,8 +62,6 @@ public static class ExtensionMethods
 
     public static string Join(this string[] strings, char separator) => string.Join(separator.ToString(), strings);
 
-    public static string[] Split(this string str, char delimiter, StringSplitOptions options) => str.Split(new[] { delimiter }, options);
-
 #endif
 
     public static string Concat(this IEnumerable<string> strings) => string.Concat(strings);

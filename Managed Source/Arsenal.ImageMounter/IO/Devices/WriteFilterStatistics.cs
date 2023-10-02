@@ -36,19 +36,19 @@ public struct WriteFilterStatistics
     //
     // TRUE if volume is protected by filter driver, FALSE otherwise.
     //
-    public bool IsProtected => (Flags & 0x1U) == 0x1U;
+    public readonly bool IsProtected => (Flags & 0x1U) == 0x1U;
 
     //
     // TRUE if all initialization is complete for protection of this
     // device
     //
-    public bool Initialized => (Flags & 0x100U) == 0x100U;
+    public readonly bool Initialized => (Flags & 0x100U) == 0x100U;
 
     //
     // TRUE if a delayed write operation has failed and further write
     // requests will be blocked (STATUS_DEVICE_REMOVED)
     //
-    public bool DelayWriteFailed => (Flags & 0x200U) == 0x200U;
+    public readonly bool DelayWriteFailed => (Flags & 0x200U) == 0x200U;
 
     //
     // TRUE if all IRP_MJ_FLUSH_BUFFERS requests are silently ignored
@@ -57,14 +57,14 @@ public struct WriteFilterStatistics
     // temporary And contents of it does Not need to be reliably
     // maintained for another session.
     //
-    public bool IgnoreFlushBuffers => (Flags & 0x10000U) == 0x10000U;
+    public readonly bool IgnoreFlushBuffers => (Flags & 0x10000U) == 0x10000U;
 
     //
     // TRUE if filter driver reports non-removable storage device
     // properties even if underlying physical disk reports removable
     // media.
     //
-    public bool FakeNonRemovable => (Flags & 0x1000000U) == 0x1000000U;
+    public readonly bool FakeNonRemovable => (Flags & 0x1000000U) == 0x1000000U;
 
     //
     // Last NTSTATUS error code if failed to attach a diff device.
@@ -75,19 +75,19 @@ public struct WriteFilterStatistics
     // Value of AllocationTableBlocks converted to bytes instead
     // of number of allocation blocks.
     //
-    public long AllocationTableSize => (long)AllocationTableBlocks << DiffBlockBits;
+    public readonly long AllocationTableSize => (long)AllocationTableBlocks << DiffBlockBits;
 
     //
     // Value of LastAllocatedBlock converted to bytes instead of
     // number of allocation block. This gives the total number of
     // bytes currently in use at diff device.
     //
-    public long UsedDiffSize => (long)LastAllocatedBlock << DiffBlockBits;
+    public readonly long UsedDiffSize => (long)LastAllocatedBlock << DiffBlockBits;
 
     //
     // Calculates allocation block size.
     //
-    public int DiffBlockSize => 1 << DiffBlockBits;
+    public readonly int DiffBlockSize => 1 << DiffBlockBits;
 
     //
     // Number of next allocation block at diff device that will
