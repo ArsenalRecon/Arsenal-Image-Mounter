@@ -263,12 +263,12 @@ Please see EULA.txt for license information.");
             }
             else if (arg.Equals("disksize", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                diskSize = NativeStruct.ParseSuffixedSize(cmd.Value[0])
+                diskSize = SizeFormatting.ParseSuffixedSize(cmd.Value[0])
                     ?? throw new InvalidOperationException($"Invalid disk size '{cmd.Value[0]}'");
             }
             else if (arg.Equals("buffersize", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                bufferSize = NativeStruct.ParseSuffixedSize(cmd.Value[0])
+                bufferSize = SizeFormatting.ParseSuffixedSize(cmd.Value[0])
                     ?? throw new InvalidOperationException($"Invalid buffer size '{cmd.Value[0]}'");
             }
             else if (arg.Equals("filename", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
@@ -629,7 +629,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             provider = service.DevioProvider;
 
-            Console.WriteLine($"Creating {NativeStruct.FormatBytes(provider.Length)} RAM disk.");
+            Console.WriteLine($"Creating {SizeFormatting.FormatBytes(provider.Length)} RAM disk.");
         }
         else
         {
@@ -667,7 +667,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     throw new IOException($"File '{fileName}' already exists");
                 }
 
-                Console.WriteLine($"Creating image file '{fileName}', type {outputImageVariant}, size {NativeStruct.FormatBytes(diskSize.Value)}...");
+                Console.WriteLine($"Creating image file '{fileName}', type {outputImageVariant}, size {SizeFormatting.FormatBytes(diskSize.Value)}...");
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
                 var image_type = Path.GetExtension(fileName.AsSpan()).TrimStart('.').ToString().ToUpperInvariant();
@@ -777,7 +777,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 provider = new DevioProviderWithFakeMBR(provider);
             }
 
-            Console.WriteLine($"Image virtual size is {NativeStruct.FormatBytes(provider.Length)}");
+            Console.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}");
 
             if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
             {

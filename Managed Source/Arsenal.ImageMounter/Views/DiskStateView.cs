@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using LTRData.Extensions.Formatting;
 using System;
 using System.ComponentModel;
 
@@ -128,13 +129,9 @@ public class DiskStateView : INotifyPropertyChanged
     }
 
     public string? DiskSize
-    {
-        get
-        {
-            var size = DiskSizeNumeric;
-            return !size.HasValue ? null : IO.Native.NativeStruct.FormatBytes(size.Value);
-        }
-    }
+        => DiskSizeNumeric is { } size
+        ? SizeFormatting.FormatBytes(size)
+        : null;
 
     public bool? NativePropertyDiskReadOnly { get; set; }
 
@@ -145,7 +142,9 @@ public class DiskStateView : INotifyPropertyChanged
     public string[]? Volumes { get; set; }
 
     public string? VolumesString
-        => Volumes is null ? null : string.Join(Environment.NewLine, Volumes);
+        => Volumes is not null
+        ? string.Join(Environment.NewLine, Volumes)
+        : null;
 
     public string[]? MountPoints { get; set; }
 
@@ -159,43 +158,21 @@ public class DiskStateView : INotifyPropertyChanged
         => NativePropertyDiskReadOnly ?? (DeviceProperties?.Flags.HasFlag(DeviceFlags.ReadOnly));
 
     public string? ReadOnlyString
-    {
-        get
-        {
-            var state = IsReadOnly;
-            if (!state.HasValue)
-            {
-                return null;
-            }
-            else
-            {
-                return state.Value ? "RO" : "RW";
-            }
-        }
-    }
+        => IsReadOnly is { } state
+        ? state ? "RO" : "RW"
+        : null;
 
     public string? ReadWriteString
-    {
-        get
-        {
-            var state = IsReadOnly;
-            if (!state.HasValue)
-            {
-                return null;
-            }
-            else
-            {
-                return state.Value ? "Read only" : "Read write";
-            }
-        }
-    }
+        => IsReadOnly is { } state
+        ? state ? "Read only" : "Read write"
+        : null;
 
     public bool DetailsVisible
     {
         get => detailsVisible;
         set
         {
-            if (!(detailsVisible == value))
+            if (detailsVisible != value)
             {
                 detailsVisible = value;
                 NotifyPropertyChanged("DetailsVisible");
