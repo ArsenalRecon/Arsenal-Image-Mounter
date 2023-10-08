@@ -27,8 +27,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\Third-party-dependencies.txt = ..\Third-party-dependencies.txt
 	EndProjectSection
 EndProject
-Project("{7CF6DF6D-3B04-46F8-A40B-537D21BCA0B4}") = "ArsenalImageMounterHelpBuilder", "ArsenalImageMounterHelpBuilder.shfbproj", "{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Third-Party-Licenses", "Third-Party-Licenses", "{4040A625-9F19-4E99-9293-A2E151852630}"
 	ProjectSection(SolutionItems) = preProject
 		..\Third-Party-Licenses\bzip2.txt = ..\Third-Party-Licenses\bzip2.txt
@@ -48,6 +46,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arsenal.ImageMounter.Forms", "Arsenal.ImageMounter.Forms\Arsenal.ImageMounter.Forms.csproj", "{C855FC87-A42B-48DE-B96C-4CE1A2F75801}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestProject", "TestProject\TestProject.csproj", "{4A9C5DEC-83FA-48F5-9D3F-40BEA6869D4A}"
+EndProject
+Project("{7CF6DF6D-3B04-46F8-A40B-537D21BCA0B4}") = "ArsenalImageMounterHelpBuilder", "ArsenalImageMounterHelpBuilder\ArsenalImageMounterHelpBuilder.shfbproj", "{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -119,12 +119,6 @@ Global
 		{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}.Release|x64.Build.0 = Release|Any CPU
 		{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}.Release|x86.ActiveCfg = Release|x86
 		{F7BA4C7F-EA85-428B-8BE1-A1EF81F89494}.Release|x86.Build.0 = Release|x86
-		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x64.ActiveCfg = Release|Any CPU
-		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x86.ActiveCfg = Release|Any CPU
 		{31602FCA-0C9A-4822-9898-2D5451DC2A21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{31602FCA-0C9A-4822-9898-2D5451DC2A21}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{31602FCA-0C9A-4822-9898-2D5451DC2A21}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -161,6 +155,16 @@ Global
 		{4A9C5DEC-83FA-48F5-9D3F-40BEA6869D4A}.Release|x64.Build.0 = Release|Any CPU
 		{4A9C5DEC-83FA-48F5-9D3F-40BEA6869D4A}.Release|x86.ActiveCfg = Release|Any CPU
 		{4A9C5DEC-83FA-48F5-9D3F-40BEA6869D4A}.Release|x86.Build.0 = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|x64.Build.0 = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Debug|x86.Build.0 = Debug|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x64.ActiveCfg = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x64.Build.0 = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x86.ActiveCfg = Release|Any CPU
+		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

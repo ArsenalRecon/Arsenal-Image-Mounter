@@ -23,10 +23,10 @@
     <MissingTags>AutoDocumentCtors, AutoDocumentDispose</MissingTags>
     <VisibleItems>Attributes, ExplicitInterfaceImplementations, InheritedMembers, InheritedFrameworkMembers, Protected, EditorBrowsableNever, NonBrowsable</VisibleItems>
     <DocumentationSources>
-      <DocumentationSource sourceFile="bin\Release\net48\Arsenal.ImageMounter.dll" />
-      <DocumentationSource sourceFile="bin\Release\net48\Arsenal.ImageMounter.xml" />
-      <DocumentationSource sourceFile="bin\Release\net48\Arsenal.ImageMounter.Forms.dll" />
-      <DocumentationSource sourceFile="bin\Release\net48\Arsenal.ImageMounter.Forms.xml" />
+      <DocumentationSource sourceFile="..\bin\Release\net48\Arsenal.ImageMounter.dll" />
+      <DocumentationSource sourceFile="..\bin\Release\net48\Arsenal.ImageMounter.xml" />
+      <DocumentationSource sourceFile="..\bin\Release\net48\Arsenal.ImageMounter.Forms.dll" />
+      <DocumentationSource sourceFile="..\bin\Release\net48\Arsenal.ImageMounter.Forms.xml" />
     </DocumentationSources>
     <ApiFilter>
     </ApiFilter>

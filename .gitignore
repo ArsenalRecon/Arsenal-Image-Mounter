@@ -217,7 +217,7 @@ FakesAssemblies/
 **/*.Server/ModelManifest.xml
 _Pvt_Extensions
 
-Managed Source/Help/
+Managed Source/ArsenalImageMounterHelpBuilder/Help/
 Managed Source/Arsenal.ImageMounter.Devio/Server/Services/DevioDrvService.vb
 
 **/launchSettings.json
