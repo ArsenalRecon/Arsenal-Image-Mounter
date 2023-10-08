@@ -27,7 +27,11 @@ public class CompletionPosition
         LengthTotal = totalLength;
     }
 
-    public virtual long LengthComplete { get => lengthComplete; set => lengthComplete = value; }
+    public virtual long LengthComplete
+    {
+        get => lengthComplete;
+        set => lengthComplete = value;
+    }
 
     public virtual long LengthTotal { get; set; }
 
@@ -57,6 +61,14 @@ public class CompletionPosition
 
             return TimeSpan.FromMilliseconds(ticksLeft);
         }
+    }
+
+    public virtual void Reset()
+    {
+        LengthComplete = 0;
+
+        stopwatch.Reset();
+        stopwatch.Start();
     }
 
     public void InterlockedIncrement()
