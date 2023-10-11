@@ -27,24 +27,8 @@ using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.Extensions;
 
-public static partial class AsyncExtensions
+public static partial class WaitAsyncExtensions
 {
-    public static Task<int> ZeroCompletedTask { get; } = Task.FromResult(0);
-    public static Task<bool> FalseResult { get; } = Task.FromResult(false);
-    public static Task<bool> TrueResult { get; } = Task.FromResult(true);
-
-#if !NET7_0_OR_GREATER
-    public static Task<string?> ReadLineAsync(this TextReader reader, CancellationToken _)
-        => reader.ReadLineAsync();
-
-    public static Task WriteLineAsync(this TextWriter writer, ReadOnlyMemory<char> str, CancellationToken _)
-        => MemoryMarshal.TryGetString(str, out var text, out int start, out int length) && start == 0 && length == text.Length
-        ? writer.WriteLineAsync(text)
-        : MemoryMarshal.TryGetArray(str, out var segment)
-        ? writer.WriteLineAsync(segment.Array!, segment.Offset, segment.Count)
-        : writer.WriteLineAsync(str.ToString());
-#endif
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static SynchronizationContext? GetSynchronizationContext(this ISynchronizeInvoke owner)
         => owner.InvokeRequired ?
