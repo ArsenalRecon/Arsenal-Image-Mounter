@@ -12,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 
@@ -22,52 +21,6 @@ namespace Arsenal.ImageMounter.Extensions;
 
 public static class ExtensionMethods
 {
-    public static IEnumerable<string> EnumerateLines(this TextReader reader)
-    {
-        for (
-            var line = reader.ReadLine();
-            line is not null;
-            line = reader.ReadLine())
-        {
-            yield return line;
-        }
-    }
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public static async IAsyncEnumerable<string> AsyncEnumerateLines(this TextReader reader)
-    {
-        for (
-            var line = await reader.ReadLineAsync().ConfigureAwait(false);
-            line is not null;
-            line = await reader.ReadLineAsync().ConfigureAwait(false))
-        {
-            yield return line;
-        }
-    }
-#endif
-
-    public static string Join(this IEnumerable<string> strings, string separator) => string.Join(separator, strings);
-
-    public static string Join(this string[] strings, string separator) => string.Join(separator, strings);
-
-#if NETSTANDARD || NETCOREAPP
-
-    public static string Join(this IEnumerable<string> strings, char separator) => string.Join(separator, strings);
-
-    public static string Join(this string[] strings, char separator) => string.Join(separator, strings);
-
-#else
-
-    public static string Join(this IEnumerable<string> strings, char separator) => string.Join(separator.ToString(), strings);
-
-    public static string Join(this string[] strings, char separator) => string.Join(separator.ToString(), strings);
-
-#endif
-
-    public static string Concat(this IEnumerable<string> strings) => string.Concat(strings);
-
-    public static string Concat(this string[] strings) => string.Concat(strings);
-
     public static void QueueDispose(this IDisposable instance) => ThreadPool.QueueUserWorkItem(o => instance.Dispose());
 
     public static string ToMembersString(this object? o) => o is null
@@ -78,9 +31,4 @@ public static class ExtensionMethods
                 .Invoke(null, new[] { o }) as string ?? "(null)";
 
     public static string ToMembersString<T>(this T o) where T : struct => Reflection.MembersStringParser<T>.ToString(o);
-
-#if NETFRAMEWORK
-    public static ReadOnlyDictionary<TKey, TValue> AsReadOnly<TKey, TValue>(this IDictionary<TKey, TValue> dictionary) where TKey : notnull
-        => new(dictionary);
-#endif
 }
