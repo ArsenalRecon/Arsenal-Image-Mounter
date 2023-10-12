@@ -21,13 +21,14 @@ using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Streams;
+using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
+using LTRData.Extensions.IO;
 using System;
 using System.Collections.Generic;
 #if NET6_0_OR_GREATER
 using System.Collections.Immutable;
 #endif
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;

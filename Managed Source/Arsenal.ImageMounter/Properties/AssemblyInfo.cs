@@ -8,7 +8,6 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 

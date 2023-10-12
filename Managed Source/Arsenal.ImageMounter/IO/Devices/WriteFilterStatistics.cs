@@ -11,7 +11,6 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.IO.Native;
 using System.Runtime.InteropServices;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member

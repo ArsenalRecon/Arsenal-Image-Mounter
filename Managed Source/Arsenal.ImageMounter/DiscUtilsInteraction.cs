@@ -8,7 +8,6 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;

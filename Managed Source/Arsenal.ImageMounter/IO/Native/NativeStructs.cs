@@ -8,19 +8,13 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.Extensions;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Split;
 using Microsoft.Win32.SafeHandles;
 using System;
-using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
-using System.Security.AccessControl;
 using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression

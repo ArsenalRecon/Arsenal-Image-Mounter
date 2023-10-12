@@ -8,8 +8,8 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
+using LTRData.Extensions.Buffers;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

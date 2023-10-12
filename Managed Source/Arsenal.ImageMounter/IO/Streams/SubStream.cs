@@ -20,7 +20,6 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
-using Arsenal.ImageMounter.Extensions;
 using LTRData.Extensions.Async;
 using System;
 using System.IO;

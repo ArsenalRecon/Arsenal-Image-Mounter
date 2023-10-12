@@ -8,7 +8,6 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using System;
 using System.Windows.Forms;
 
 namespace Arsenal.ImageMounter.Dialogs;

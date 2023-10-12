@@ -1,13 +1,8 @@
-﻿using Arsenal.ImageMounter.Collections;
-using Arsenal.ImageMounter.Extensions;
-using DiscUtils.Streams;
-using LTRData.Extensions.Buffers;
+﻿using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Arsenal.ImageMounter.Tests;

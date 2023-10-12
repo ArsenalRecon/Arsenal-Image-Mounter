@@ -12,7 +12,6 @@
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.IO.Native;
-using DiscUtils;
 using System;
 using System.IO;
 using System.Runtime.Versioning;

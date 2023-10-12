@@ -12,9 +12,7 @@
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.Reflection;
 using DiscUtils.Streams;
-using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using LTRData.Extensions.Native;

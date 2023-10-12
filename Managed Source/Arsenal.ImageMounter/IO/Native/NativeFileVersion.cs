@@ -10,13 +10,11 @@
 
 using Arsenal.ImageMounter.Extensions;
 using LTRData.Extensions.Buffers;
-using LTRData.Extensions.Native;
 using System;
 using System.Collections.Generic;
 #if NET6_0_OR_GREATER
 using System.Collections.Immutable;
 #endif
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using BYTE = System.Byte;

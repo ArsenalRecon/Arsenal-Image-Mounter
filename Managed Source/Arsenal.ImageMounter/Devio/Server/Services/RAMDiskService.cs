@@ -8,14 +8,11 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.Devio.Server.Services;
-using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Raw;
 using DiscUtils.Streams;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Versioning;

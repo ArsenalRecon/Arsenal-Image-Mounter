@@ -2,7 +2,6 @@ using Arsenal.ImageMounter.Extensions;
 using LTRData.Extensions.Split;
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using Xunit;
 

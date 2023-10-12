@@ -8,11 +8,6 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.Collections;
-using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.Reflection;
-using DiscUtils.Streams;
-using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Native;
 using LTRData.Extensions.Split;
