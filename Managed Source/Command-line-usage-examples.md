@@ -59,7 +59,7 @@ $service = [Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory]::
 ### Set write-overlay path 
 $service.WriteOverlayImageName = 'D:\test.E01.diff'
 
-### Start servicing image and call drive to create a virtual disk for it
+### Start servicing image and call driver to create a virtual disk for it
 $service.StartServiceThreadAndMount($adapter, [Arsenal.ImageMounter.DeviceFlags]::WriteOverlay -bor [Arsenal.ImageMounter.DeviceFlags]::ReadOnly)
 
 ### Enumerate mount points for virtual disk
