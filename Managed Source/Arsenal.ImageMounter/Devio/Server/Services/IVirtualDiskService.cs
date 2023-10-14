@@ -18,7 +18,6 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 
 public interface IVirtualDiskService : IDisposable
 {
-
     event EventHandler? ServiceShutdown;
 
     event EventHandler? ServiceStopping;
@@ -44,5 +43,4 @@ public interface IVirtualDiskService : IDisposable
     void RemoveDeviceSafe();
 
     void WaitForServiceThreadExit();
-
 }

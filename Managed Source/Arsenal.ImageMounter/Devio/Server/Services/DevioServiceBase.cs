@@ -159,18 +159,18 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
     /// communication.
     /// </summary>
-    /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
     /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    protected DevioServiceBase(IDevioProvider DevioProvider, bool ownsProvider)
+    protected DevioServiceBase(IDevioProvider devioProvider, bool ownsProvider)
     {
         this.OwnsProvider = ownsProvider;
 
-        this.DevioProvider = DevioProvider.NullCheck(nameof(DevioProvider));
+        this.DevioProvider = devioProvider.NullCheck(nameof(devioProvider));
 
-        DiskSize = DevioProvider.Length;
+        DiskSize = devioProvider.Length;
 
-        SectorSize = DevioProvider.SectorSize;
+        SectorSize = devioProvider.SectorSize;
     }
 
     /// <summary>
@@ -265,16 +265,16 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// Combines a call to StartServiceThread() with a call to API to create a proxy type
     /// Arsenal Image Mounter Disk Device that uses the started service as storage backend.
     /// </summary>
-    /// <param name="ScsiAdapter"></param>
-    /// <param name="Flags">Flags to pass to API.CreateDevice() combined with fixed flag
+    /// <param name="scsiAdapter"></param>
+    /// <param name="flags">Flags to pass to API.CreateDevice() combined with fixed flag
     /// values specific to this instance. Example of such fixed flag values are flags specifying
     /// proxy operation and which proxy communication protocol to use, which therefore do not
     /// need to be specified in this parameter. A common value to pass however, is DeviceFlags.ReadOnly
     /// to create a read-only virtual disk device.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public virtual void StartServiceThreadAndMount(ScsiAdapter ScsiAdapter, DeviceFlags Flags)
+    public virtual void StartServiceThreadAndMount(ScsiAdapter scsiAdapter, DeviceFlags flags)
     {
-        this.ScsiAdapter = ScsiAdapter.NullCheck(nameof(ScsiAdapter));
+        ScsiAdapter = scsiAdapter.NullCheck(nameof(scsiAdapter));
 
         if (!StartServiceThread())
         {
@@ -290,10 +290,10 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
         try
         {
-            ScsiAdapter.CreateDevice(DiskSize,
+            scsiAdapter.CreateDevice(DiskSize,
                                      SectorSize,
                                      Offset,
-                                     Flags | AdditionalFlags | ProxyModeFlags,
+                                     flags | AdditionalFlags | ProxyModeFlags,
                                      ProxyObjectName,
                                      false,
                                      WriteOverlayImageName,

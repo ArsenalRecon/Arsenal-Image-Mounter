@@ -31,7 +31,6 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// </summary>
 public class DevioShmService : DevioServiceBase
 {
-
     /// <summary>
     /// Object name of shared memory file mapping object created by this instance.
     /// </summary>
@@ -67,30 +66,28 @@ public class DevioShmService : DevioServiceBase
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
     /// shared memory based communication.
     /// </summary>
-    /// <param name="ObjectName">Object name of shared memory file mapping object created by this instance.</param>
-    /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="OwnsProvider">Indicates whether DevioProvider object will be automatically closed when this
+    /// <param name="objectName">Object name of shared memory file mapping object created by this instance.</param>
+    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    /// <param name="BufferSize">Buffer size to use for shared memory I/O communication between driver and this service.</param>
-    public DevioShmService(string ObjectName, IDevioProvider DevioProvider, bool OwnsProvider, long BufferSize)
-        : base(DevioProvider, OwnsProvider)
+    /// <param name="bufferSize">Buffer size to use for shared memory I/O communication between driver and this service.</param>
+    public DevioShmService(string objectName, IDevioProvider devioProvider, bool ownsProvider, long bufferSize)
+        : base(devioProvider, ownsProvider)
     {
-
-        this.ObjectName = ObjectName;
-        this.BufferSize = BufferSize;
-
+        ObjectName = objectName;
+        BufferSize = bufferSize;
     }
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
     /// shared memory based communication. A default buffer size will be used.
     /// </summary>
-    /// <param name="ObjectName">Object name of shared memory file mapping object created by this instance.</param>
-    /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="OwnsProvider">Indicates whether DevioProvider object will be automatically closed when this
+    /// <param name="objectName">Object name of shared memory file mapping object created by this instance.</param>
+    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    public DevioShmService(string ObjectName, IDevioProvider DevioProvider, bool OwnsProvider)
-        : this(ObjectName, DevioProvider, OwnsProvider, DefaultBufferSize)
+    public DevioShmService(string objectName, IDevioProvider devioProvider, bool ownsProvider)
+        : this(objectName, devioProvider, ownsProvider, DefaultBufferSize)
     {
     }
 
@@ -98,11 +95,11 @@ public class DevioShmService : DevioServiceBase
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
     /// shared memory based communication. A default buffer size and a random object name will be used.
     /// </summary>
-    /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="OwnsProvider">Indicates whether DevioProvider object will be automatically closed when this
+    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    public DevioShmService(IDevioProvider DevioProvider, bool OwnsProvider)
-        : this(DevioProvider, OwnsProvider, DefaultBufferSize)
+    public DevioShmService(IDevioProvider devioProvider, bool ownsProvider)
+        : this(devioProvider, ownsProvider, DefaultBufferSize)
     {
     }
 
@@ -110,12 +107,12 @@ public class DevioShmService : DevioServiceBase
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
     /// shared memory based communication. A random object name will be used.
     /// </summary>
-    /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="OwnsProvider">Indicates whether DevioProvider object will be automatically closed when this
+    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
     /// <param name="BufferSize">Buffer size to use for shared memory I/O communication.</param>
-    public DevioShmService(IDevioProvider DevioProvider, bool OwnsProvider, long BufferSize)
-        : this($"devio-{GetNextRandomValue()}", DevioProvider, OwnsProvider, BufferSize)
+    public DevioShmService(IDevioProvider devioProvider, bool ownsProvider, long BufferSize)
+        : this($"devio-{GetNextRandomValue()}", devioProvider, ownsProvider, BufferSize)
     {
     }
 
@@ -127,44 +124,41 @@ public class DevioShmService : DevioServiceBase
     /// </summary>
     public override void RunService()
     {
+        using var disposableObjects = new DisposableList();
 
-        using var DisposableObjects = new DisposableList();
+        EventWaitHandle requestEvent;
 
-        EventWaitHandle RequestEvent;
+        EventWaitHandle responseEvent;
 
-        EventWaitHandle ResponseEvent;
+        MemoryMappedFile? mapping;
 
-        MemoryMappedFile? Mapping;
+        MemoryMappedViewAccessor mapView;
 
-        MemoryMappedViewAccessor MapView;
-
-        Mutex ServerMutex;
+        Mutex serverMutex;
 
         Trace.WriteLine($"Creating objects for shared memory communication '{ObjectName}'.");
 
         try
         {
+            requestEvent = new(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Request");
+            disposableObjects.Add(requestEvent);
+            responseEvent = new(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Response");
+            disposableObjects.Add(responseEvent);
+            serverMutex = new(initiallyOwned: false, name: $@"Global\{ObjectName}_Server");
+            disposableObjects.Add(serverMutex);
 
-            RequestEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Request");
-            DisposableObjects.Add(RequestEvent);
-            ResponseEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Response");
-            DisposableObjects.Add(ResponseEvent);
-            ServerMutex = new Mutex(initiallyOwned: false, name: $@"Global\{ObjectName}_Server");
-            DisposableObjects.Add(ServerMutex);
-
-            if (ServerMutex.WaitOne(0) == false)
+            if (serverMutex.WaitOne(0) == false)
             {
                 var message = $"Service name '{ObjectName}' busy.";
                 Trace.WriteLine(message);
-                throw new Exception(message);
+                throw new InvalidOperationException(message);
             }
         }
-
         catch (Exception ex)
         {
             if (ex is UnauthorizedAccessException)
             {
-                Exception = new Exception($"Service name '{ObjectName}' already in use or not accessible.", ex);
+                Exception = new InvalidOperationException($"Service name '{ObjectName}' already in use or not accessible.", ex);
             }
             else
             {
@@ -174,28 +168,32 @@ public class DevioShmService : DevioServiceBase
             var message = $"Service thread initialization failed: {Exception}.";
             Trace.WriteLine(message);
             OnServiceInitFailed(EventArgs.Empty);
-            return;
 
+            return;
         }
 
         try
         {
-            Mapping = MemoryMappedFile.CreateNew($@"Global\{ObjectName}", BufferSize, MemoryMappedFileAccess.ReadWrite, MemoryMappedFileOptions.None, HandleInheritability.None);
+            mapping = MemoryMappedFile.CreateNew($@"Global\{ObjectName}",
+                                                 BufferSize,
+                                                 MemoryMappedFileAccess.ReadWrite,
+                                                 MemoryMappedFileOptions.None,
+                                                 HandleInheritability.None);
 
-            DisposableObjects.Add(Mapping);
+            disposableObjects.Add(mapping);
 
-            MapView = Mapping.CreateViewAccessor();
+            mapView = mapping.CreateViewAccessor();
 
-            DisposableObjects.Add(MapView);
+            disposableObjects.Add(mapView);
 
-            MaxTransferSize = (int)(MapView.Capacity - IMDPROXY_HEADER_SIZE);
+            MaxTransferSize = (int)(mapView.Capacity - IMDPROXY_HEADER_SIZE);
 
             Trace.WriteLine($"Created shared memory object, {MaxTransferSize} bytes.");
 
             Trace.WriteLine("Raising service ready event.");
+         
             OnServiceReady(EventArgs.Empty);
         }
-
         catch (Exception ex)
         {
             if (ex is UnauthorizedAccessException)
@@ -210,28 +208,28 @@ public class DevioShmService : DevioServiceBase
             var message = $"Service thread initialization failed: {Exception}.";
             Trace.WriteLine(message);
             OnServiceInitFailed(EventArgs.Empty);
-            return;
 
+            return;
         }
 
         try
         {
             Trace.WriteLine("Waiting for client to connect.");
 
-            using (var StopServiceThreadEvent = new ManualResetEvent(initialState: false))
+            using (var stopServiceThreadEvent = new ManualResetEvent(initialState: false))
             {
-                var StopServiceThreadHandler = new EventHandler((sender, e) => StopServiceThreadEvent.Set());
-                StopServiceThread += StopServiceThreadHandler;
-                var WaitEvents = new[] { RequestEvent, StopServiceThreadEvent };
-                var EventIndex = WaitHandle.WaitAny(WaitEvents);
-                StopServiceThread -= StopServiceThreadHandler;
+                var stopServiceThreadHandler = new EventHandler((sender, e) => stopServiceThreadEvent.Set());
+                StopServiceThread += stopServiceThreadHandler;
+                var waitEvents = new[] { requestEvent, stopServiceThreadEvent };
+                var eventIndex = WaitHandle.WaitAny(waitEvents);
+                StopServiceThread -= stopServiceThreadHandler;
 
                 Trace.WriteLine("Wait finished. Disposing file mapping object.");
 
-                Mapping.Dispose();
-                Mapping = null;
+                mapping.Dispose();
+                mapping = null;
 
-                if (ReferenceEquals(WaitEvents[EventIndex], StopServiceThreadEvent))
+                if (ReferenceEquals(waitEvents[eventIndex], stopServiceThreadEvent))
                 {
                     Trace.WriteLine("Service thread exit request.");
                     return;
@@ -240,74 +238,61 @@ public class DevioShmService : DevioServiceBase
 
             Trace.WriteLine("Client connected, waiting for request.");
 
-            var request_shutdown = false;
+            var requestShutdown = false;
 
             internalShutdownRequestAction = () =>
             {
                 try
                 {
                     Trace.WriteLine("Emergency service thread shutdown requested, injecting close request...");
-                    request_shutdown = true;
-                    RequestEvent.Set();
+                    requestShutdown = true;
+                    requestEvent.Set();
                 }
                 catch { }
             };
 
             for (; ; )
             {
-                if (request_shutdown)
+                if (requestShutdown)
                 {
                     Trace.WriteLine("Emergency shutdown. Closing connection.");
                     break;
                 }
 
-                var RequestCode = MapView.SafeMemoryMappedViewHandle.Read<IMDPROXY_REQ>(0x0UL);
+                var RequestCode = mapView.SafeMemoryMappedViewHandle.Read<IMDPROXY_REQ>(0x0UL);
 
                 // Trace.WriteLine("Got client request: " & RequestCode.ToString())
 
                 switch (RequestCode)
                 {
-
                     case IMDPROXY_REQ.IMDPROXY_REQ_INFO:
-                        {
-                            SendInfo(MapView.SafeMemoryMappedViewHandle);
-                            break;
-                        }
+                        SendInfo(mapView.SafeMemoryMappedViewHandle);
+                        break;
 
                     case IMDPROXY_REQ.IMDPROXY_REQ_READ:
-                        {
-                            ReadData(MapView.SafeMemoryMappedViewHandle);
-                            break;
-                        }
+                        ReadData(mapView.SafeMemoryMappedViewHandle);
+                        break;
 
                     case IMDPROXY_REQ.IMDPROXY_REQ_WRITE:
-                        {
-                            WriteData(MapView.SafeMemoryMappedViewHandle);
-                            break;
-                        }
+                        WriteData(mapView.SafeMemoryMappedViewHandle);
+                        break;
 
                     case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
-                        {
-                            Trace.WriteLine("Closing connection.");
-                            return;
-                        }
+                        Trace.WriteLine("Closing connection.");
+                        return;
 
                     case IMDPROXY_REQ.IMDPROXY_REQ_SHARED:
-                        {
-                            SharedKeys(MapView.SafeMemoryMappedViewHandle);
-                            break;
-                        }
+                        SharedKeys(mapView.SafeMemoryMappedViewHandle);
+                        break;
 
                     default:
-                        {
-                            Trace.WriteLine($"Unsupported request code: {RequestCode}");
-                            return;
-                        }
+                        Trace.WriteLine($"Unsupported request code: {RequestCode}");
+                        return;
                 }
 
                 // Trace.WriteLine("Sending response and waiting for next request.")
 
-                if (WaitHandle.SignalAndWait(ResponseEvent, RequestEvent) == false)
+                if (!WaitHandle.SignalAndWait(responseEvent, requestEvent))
                 {
                     Trace.WriteLine("Synchronization failed.");
                 }
@@ -325,7 +310,7 @@ public class DevioShmService : DevioServiceBase
         }
     }
 
-    private void SendInfo(SafeBuffer MapView)
+    private void SendInfo(SafeBuffer mapView)
     {
         var Info = new IMDPROXY_INFO_RESP
         {
@@ -335,129 +320,134 @@ public class DevioShmService : DevioServiceBase
                 | (DevioProvider.SupportsShared ? IMDPROXY_FLAGS.IMDPROXY_FLAG_SUPPORTS_SHARED : IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE)
         };
 
-        MapView.Write(0x0UL, Info);
+        mapView.Write(0x0UL, Info);
     }
 
     private int readData_largest_request = default;
 
-    private void ReadData(SafeBuffer MapView)
+    private void ReadData(SafeBuffer mapView)
     {
-        var Request = MapView.Read<IMDPROXY_READ_REQ>(0x0UL);
+        var request = mapView.Read<IMDPROXY_READ_REQ>(0x0UL);
 
-        var Offset = (long)Request.offset;
-        var ReadLength = (int)Request.length;
-        if (ReadLength > readData_largest_request)
+        var offset = (long)request.offset;
+        var readLength = (int)request.length;
+
+        if (readLength > readData_largest_request)
         {
-            readData_largest_request = ReadLength;
+            readData_largest_request = readLength;
             Trace.WriteLine($"Largest requested read size is now: {readData_largest_request} bytes");
         }
 
-        var Response = default(IMDPROXY_READ_RESP);
+        var response = default(IMDPROXY_READ_RESP);
 
         try
         {
-            if (ReadLength > MaxTransferSize)
+            if (readLength > MaxTransferSize)
             {
 #if DEBUG
-                Trace.WriteLine($"Requested read length {ReadLength}, lowered to {MaxTransferSize} bytes.");
+                Trace.WriteLine($"Requested read length {readLength}, lowered to {MaxTransferSize} bytes.");
 #endif
 
-                ReadLength = MaxTransferSize;
+                readLength = MaxTransferSize;
             }
 
-            Response.length = (ulong)DevioProvider.Read(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, ReadLength, Offset);
-            Response.errorno = 0UL;
+            response.length = (ulong)DevioProvider.Read(mapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, readLength, offset);
+            response.errorno = 0UL;
         }
         catch (Exception ex)
         {
             Trace.WriteLine(ex.ToString());
-            Trace.WriteLine($"Read request at 0x{Offset:X8} for {ReadLength} bytes.");
-            Response.errorno = 1UL;
-            Response.length = 0UL;
+            Trace.WriteLine($"Read request at 0x{offset:X8} for {readLength} bytes.");
+            response.errorno = 1UL;
+            response.length = 0UL;
         }
 
-        MapView.Write(0x0UL, Response);
+        mapView.Write(0x0UL, response);
     }
 
     private int writeData_largest_request = default;
 
-    private void WriteData(SafeBuffer MapView)
+    private void WriteData(SafeBuffer mapView)
     {
-        var Request = MapView.Read<IMDPROXY_WRITE_REQ>(0x0UL);
+        var request = mapView.Read<IMDPROXY_WRITE_REQ>(0x0UL);
 
-        var Offset = (long)Request.offset;
-        var WriteLength = (int)Request.length;
-        if (WriteLength > writeData_largest_request)
+        var offset = (long)request.offset;
+        var writeLength = (int)request.length;
+        if (writeLength > writeData_largest_request)
         {
-            writeData_largest_request = WriteLength;
+            writeData_largest_request = writeLength;
             Trace.WriteLine($"Largest requested write size is now: {writeData_largest_request} bytes");
         }
 
-        var Response = default(IMDPROXY_WRITE_RESP);
+        var response = default(IMDPROXY_WRITE_RESP);
 
         try
         {
-            if (WriteLength > MaxTransferSize)
+            if (writeLength > MaxTransferSize)
             {
-                throw new Exception($"Requested write length {WriteLength}. Buffer size is {MaxTransferSize} bytes.");
+                throw new Exception($"Requested write length {writeLength}. Buffer size is {MaxTransferSize} bytes.");
             }
 
-            var WrittenLength = DevioProvider.Write(MapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, WriteLength, Offset);
-            if (WrittenLength < 0)
+            var writtenLength = DevioProvider.Write(mapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, writeLength, offset);
+
+            if (writtenLength < 0)
             {
-                Trace.WriteLine($"Write request at 0x{Offset:X8} for {WriteLength} bytes, returned {WrittenLength}.");
-                Response.errorno = 1UL;
-                Response.length = 0UL;
+                Trace.WriteLine($"Write request at 0x{offset:X8} for {writeLength} bytes, returned {writtenLength}.");
+                response.errorno = 1UL;
+                response.length = 0UL;
             }
             else
             {
-                Response.length = (ulong)WrittenLength;
-                Response.errorno = 0UL;
+                response.length = (ulong)writtenLength;
+                response.errorno = 0UL;
             }
         }
         catch (Exception ex)
         {
             Trace.WriteLine(ex.ToString());
-            Trace.WriteLine($"Write request at 0x{Offset:X8} for {WriteLength} bytes.");
-            Response.errorno = 1UL;
-            Response.length = 0UL;
+            Trace.WriteLine($"Write request at 0x{offset:X8} for {writeLength} bytes.");
+            response.errorno = 1UL;
+            response.length = 0UL;
         }
 
-        MapView.Write(0x0UL, Response);
+        mapView.Write(0x0UL, response);
     }
 
-    private void SharedKeys(SafeBuffer MapView)
+    private void SharedKeys(SafeBuffer mapView)
     {
-        var Request = MapView.Read<IMDPROXY_SHARED_REQ>(0x0UL);
+        var request = mapView.Read<IMDPROXY_SHARED_REQ>(0x0UL);
 
-        var Response = default(IMDPROXY_SHARED_RESP);
+        var response = default(IMDPROXY_SHARED_RESP);
 
         try
         {
-            DevioProvider.SharedKeys(Request, out Response, out var Keys);
-            if (Keys is null)
+            DevioProvider.SharedKeys(request, out response, out var keys);
+            if (keys is null)
             {
-                Response.length = 0UL;
+                response.length = 0UL;
             }
             else
             {
-                Response.length = (ulong)(Keys.Length * sizeof(ulong));
-                MapView.WriteArray(IMDPROXY_HEADER_SIZE, Keys, 0, Keys.Length);
+                response.length = (ulong)(keys.Length * sizeof(ulong));
+                mapView.WriteArray(IMDPROXY_HEADER_SIZE, keys, 0, keys.Length);
             }
         }
         catch (Exception ex)
         {
             Trace.WriteLine(ex.ToString());
-            Response.errorno = IMDPROXY_SHARED_RESP_CODE.IOError;
-            Response.length = 0UL;
+            response.errorno = IMDPROXY_SHARED_RESP_CODE.IOError;
+            response.length = 0UL;
         }
 
-        MapView.Write(0x0UL, Response);
+        mapView.Write(0x0UL, response);
     }
 
-    protected override string ProxyObjectName => ObjectName;
+    protected override string ProxyObjectName
+        => ObjectName;
 
-    protected override DeviceFlags ProxyModeFlags => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeSharedMemory;
+    protected override DeviceFlags ProxyModeFlags
+        => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeSharedMemory;
 
-    protected override void EmergencyStopServiceThread() => internalShutdownRequestAction?.Invoke();
+    protected override void EmergencyStopServiceThread()
+        => internalShutdownRequestAction?.Invoke();
 }

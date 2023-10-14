@@ -783,7 +783,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
             {
-                service = new DevioShmService(objectName, provider, OwnsProvider: true, BufferSize: bufferSize);
+                service = new DevioShmService(objectName, provider, ownsProvider: true, bufferSize: bufferSize);
             }
             else if (listenPort != 0) // Listen on TCP/IP socket
             {
@@ -791,7 +791,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
             else if (mount) // Request to mount in-process
             {
-                service = new DevioShmService(provider, OwnsProvider: true, BufferSize: bufferSize);
+                service = new DevioShmService(provider, ownsProvider: true, BufferSize: bufferSize);
             }
             else if (outputImage is not null && fileName is not null) // Convert to new image file format
             {

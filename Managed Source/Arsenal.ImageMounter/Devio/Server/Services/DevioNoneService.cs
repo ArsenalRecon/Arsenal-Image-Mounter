@@ -44,10 +44,10 @@ public class DevioNoneService : DevioServiceBase
     /// Instead, it just passes a disk image file name for direct mounting internally in
     /// SCSI Adapter.
     /// </summary>
-    /// <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
-    /// <param name="DiskAccess"></param>
-    public DevioNoneService(string Imagefile, FileAccess DiskAccess)
-        : this(Imagefile, NativeStruct.GetFileOrDiskSize(Imagefile), DiskAccess)
+    /// <param name="imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+    /// <param name="diskAccess"></param>
+    public DevioNoneService(string imagefile, FileAccess diskAccess)
+        : this(imagefile, NativeStruct.GetFileOrDiskSize(imagefile), diskAccess)
     {
     }
 
@@ -166,7 +166,8 @@ public class DevioNoneService : DevioServiceBase
     /// <summary>
     /// Dummy implementation that just raises ServiceReady event.
     /// </summary>
-    public override void RunService() => OnServiceReady(EventArgs.Empty);
+    public override void RunService()
+        => OnServiceReady(EventArgs.Empty);
 
     public override void DismountAndStopServiceThread()
     {

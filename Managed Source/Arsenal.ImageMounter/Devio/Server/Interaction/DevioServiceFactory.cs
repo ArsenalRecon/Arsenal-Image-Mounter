@@ -508,7 +508,7 @@ public static class DevioServiceFactory
             Provider = new DevioProviderWithFakeMBR(Provider);
         }
 
-        var Service = new DevioShmService(Provider, OwnsProvider: true) { Description = $"Image file {Imagefile}" };
+        var Service = new DevioShmService(Provider, ownsProvider: true) { Description = $"Image file {Imagefile}" };
 
         return Service;
     }
@@ -543,7 +543,7 @@ public static class DevioServiceFactory
                 var provider = GetProvider(Imagefile, DiskAccess, ProviderType)
                     ?? throw new NotSupportedException($"Cannot open '{Imagefile}' with provider {ProviderType}");
 
-                Service = new DevioShmService(provider, OwnsProvider: true);
+                Service = new DevioShmService(provider, ownsProvider: true);
 
                 break;
         }
