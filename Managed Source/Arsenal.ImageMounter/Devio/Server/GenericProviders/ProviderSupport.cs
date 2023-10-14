@@ -98,7 +98,7 @@ public static class ProviderSupport
 
         var found = false;
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+#if NET6_0_OR_GREATER
 
         var pathpart = Path.GetDirectoryName(FirstFile.AsSpan());
         var filepart = Path.GetFileNameWithoutExtension(FirstFile.AsSpan());

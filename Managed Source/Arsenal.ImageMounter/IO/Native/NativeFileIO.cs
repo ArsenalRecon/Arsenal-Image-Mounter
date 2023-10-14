@@ -1982,7 +1982,7 @@ Currently, the following application has files open on this volume:
     /// System uptime
     /// </summary>
     /// <returns>Time elapsed since system startup</returns>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+#if NETCOREAPP
     public static TimeSpan SystemUptime => TimeSpan.FromMilliseconds(Environment.TickCount64);
 #else
     public static TimeSpan SystemUptime => TimeSpan.FromMilliseconds(SafeNativeMethods.GetTickCount64());
@@ -2894,7 +2894,7 @@ Currently, the following application has files open on this volume:
         Environment.SetEnvironmentVariable("PATH", paths.Join(';'));
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+#if NET6_0_OR_GREATER
     public static unsafe ReadOnlySpan<char> ProcessCommandLine
         => MemoryMarshal.CreateReadOnlySpanFromNullTerminated(UnsafeNativeMethods.GetCommandLineW());
 #endif

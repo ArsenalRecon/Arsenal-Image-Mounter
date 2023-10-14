@@ -140,7 +140,7 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         return Length;
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+#if NET6_0_OR_GREATER
     public override int Read(Span<byte> buffer)
     {
         var Request = default(IMDPROXY_READ_REQ);
@@ -197,7 +197,7 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         }
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+#if NET6_0_OR_GREATER
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         var Request = default(IMDPROXY_WRITE_REQ);

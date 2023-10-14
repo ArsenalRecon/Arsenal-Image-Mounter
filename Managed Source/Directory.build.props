@@ -2,7 +2,7 @@
 
   <PropertyGroup>
 
-    <TargetFrameworks>net48;net6.0;net7.0</TargetFrameworks>
+    <TargetFrameworks>net48;netstandard2.1;net6.0;net7.0</TargetFrameworks>
     <RootNamespace>Arsenal.ImageMounter</RootNamespace>
     <OutputPath Condition="'$(MSBuildProjectExtension)' != '.shfbproj'">..\bin\$(Configuration)\</OutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

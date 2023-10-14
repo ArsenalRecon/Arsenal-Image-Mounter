@@ -236,7 +236,9 @@ Please see EULA.txt for license information.");
                         return -1;
                     }
 
+#if NETFRAMEWORK || NETCOREAPP
                     Trace.Listeners.Add(new ConsoleTraceListener(true));
+#endif
                 }
                 else
                 {
