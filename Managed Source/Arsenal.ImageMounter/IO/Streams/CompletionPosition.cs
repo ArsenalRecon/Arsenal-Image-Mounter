@@ -33,6 +33,8 @@ public class CompletionPosition
         set => lengthComplete = value;
     }
 
+    public bool UnreliablePosition { get; set; }
+
     public virtual long LengthTotal { get; set; }
 
     public virtual double PercentComplete => 100d * LengthComplete / LengthTotal;
@@ -43,6 +45,11 @@ public class CompletionPosition
     {
         get
         {
+            if (UnreliablePosition)
+            {
+                return null;
+            }
+
             if (LengthComplete >= LengthTotal)
             {
                 return TimeSpan.Zero;
