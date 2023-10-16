@@ -12,11 +12,13 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.Extensions;
 using DiscUtils.Streams.Compatibility;
 using System;
 using System.IO;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
@@ -38,6 +40,13 @@ public class DevioProviderFromStream : IDevioProvider
     /// instance is disposed.
     /// </summary>
     public bool OwnsBaseStream { get; }
+
+    /// <summary>
+    /// Indicates whether provider supports dispatching multiple simultaneous I/O requests.
+    /// Seekable streams do not support parallel I/O, so this implementation always returns
+    /// false.
+    /// </summary>
+    public bool SupportsParallel => false;
 
     /// <summary>
     /// Creates an object implementing IDevioProvider interface with I/O redirected
@@ -87,89 +96,74 @@ public class DevioProviderFromStream : IDevioProvider
 
     public int Read(nint buffer, int bufferoffset, int count, long fileoffset)
     {
-
         BaseStream.Position = fileoffset;
 
         if (BaseStream.Position <= BaseStream.Length
             && count > BaseStream.Length - BaseStream.Position)
         {
-
             count = (int)(BaseStream.Length - BaseStream.Position);
-
         }
 
-        var mem = Extensions.CollectionExtensions.AsSpan(buffer + bufferoffset, count);
-        return BaseStream.Read(mem);
+        var mem = CollectionExtensions.AsSpan(buffer + bufferoffset, count);
 
+        return BaseStream.Read(mem);
     }
 
     public int Write(nint buffer, int bufferoffset, int count, long fileoffset)
     {
-
         BaseStream.Position = fileoffset;
 
-        var mem = Extensions.CollectionExtensions.AsReadOnlySpan(buffer + bufferoffset, count);
+        var mem = CollectionExtensions.AsReadOnlySpan(buffer + bufferoffset, count);
         BaseStream.Write(mem);
+        
         return count;
-
     }
 
     public int Read(Span<byte> buffer, long fileoffset)
     {
-
         BaseStream.Position = fileoffset;
 
         if (BaseStream.Position <= BaseStream.Length
             && buffer.Length > BaseStream.Length - BaseStream.Position)
         {
-
             buffer = buffer.Slice(0, (int)(BaseStream.Length - BaseStream.Position));
-
         }
 
         return BaseStream.Read(buffer);
-
     }
 
     public int Write(ReadOnlySpan<byte> buffer, long fileoffset)
     {
-
         BaseStream.Position = fileoffset;
 
         BaseStream.Write(buffer);
+        
         return buffer.Length;
-
     }
 
     public int Read(byte[] buffer, int bufferoffset, int count, long fileoffset)
     {
-
         BaseStream.Position = fileoffset;
 
         if (BaseStream.Position <= BaseStream.Length
             && count > BaseStream.Length - BaseStream.Position)
         {
-
             count = (int)(BaseStream.Length - BaseStream.Position);
-
         }
 
         return BaseStream.Read(buffer, bufferoffset, count);
-
     }
 
     public int Write(byte[] buffer, int bufferoffset, int count, long fileoffset)
     {
-
         BaseStream.Position = fileoffset;
         BaseStream.Write(buffer, bufferoffset, count);
+        
         return count;
-
     }
 
     protected virtual void Dispose(bool disposing)
     {
-
         OnDisposing(EventArgs.Empty);
 
         if (!disposedValue &&

@@ -40,6 +40,8 @@ public sealed class DummyProvider : IDevioProvider
 
     public bool CanWrite => true;
 
+    public bool SupportsParallel => true;
+
     bool IDevioProvider.SupportsShared => false;
 
     void IDevioProvider.SharedKeys(IMDPROXY_SHARED_REQ Request, out IMDPROXY_SHARED_RESP Response, out ulong[] Keys) => throw new NotImplementedException();

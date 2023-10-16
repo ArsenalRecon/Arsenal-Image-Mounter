@@ -1614,15 +1614,6 @@ public readonly struct DISK_GROW_PARTITION
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public class OVERLAPPED
-{
-    public UIntPtr Status { get; }
-    public UIntPtr BytesTransferred { get; }
-    public long StartOffset { get; set; }
-    public SafeWaitHandle? EventHandle { get; set; }
-}
-
-[StructLayout(LayoutKind.Sequential)]
 public readonly struct COMMTIMEOUTS
 {
     public COMMTIMEOUTS(uint readIntervalTimeout, uint readTotalTimeoutMultiplier, uint readTotalTimeoutConstant, uint writeTotalTimeoutMultiplier, uint writeTotalTimeoutConstant)

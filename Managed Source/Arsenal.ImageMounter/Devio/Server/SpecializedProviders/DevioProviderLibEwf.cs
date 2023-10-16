@@ -643,6 +643,8 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public override bool CanWrite => (Flags & AccessFlagsWrite) == AccessFlagsWrite;
 
+    public override bool SupportsParallel => true;
+
     public override long Length
     {
         get

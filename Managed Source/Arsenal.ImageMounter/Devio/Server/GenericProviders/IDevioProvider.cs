@@ -58,6 +58,11 @@ public partial interface IDevioProvider : IDisposable
     bool CanWrite { get; }
 
     /// <summary>
+    /// Indicates whether provider supports dispatching multiple simultaneous I/O requests.
+    /// </summary>
+    bool SupportsParallel { get; }
+
+    /// <summary>
     /// Indicates whether provider supports shared image operations with registrations
     /// and reservations.
     /// </summary>

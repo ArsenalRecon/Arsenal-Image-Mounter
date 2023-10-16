@@ -164,9 +164,9 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// instance is disposed.</param>
     protected DevioServiceBase(IDevioProvider devioProvider, bool ownsProvider)
     {
-        this.OwnsProvider = ownsProvider;
+        OwnsProvider = ownsProvider;
 
-        this.DevioProvider = devioProvider.NullCheck(nameof(devioProvider));
+        DevioProvider = devioProvider.NullCheck(nameof(devioProvider));
 
         DiskSize = devioProvider.Length;
 

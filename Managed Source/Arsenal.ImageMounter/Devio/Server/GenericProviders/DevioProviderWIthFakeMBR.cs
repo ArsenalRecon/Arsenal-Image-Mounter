@@ -91,6 +91,8 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
     public bool CanWrite => BaseProvider.CanWrite;
 
+    public bool SupportsParallel => BaseProvider.SupportsParallel;
+
     bool IDevioProvider.SupportsShared => false;
 
     void IDevioProvider.SharedKeys(IMDPROXY_SHARED_REQ Request, out IMDPROXY_SHARED_RESP Response, out ulong[] Keys)

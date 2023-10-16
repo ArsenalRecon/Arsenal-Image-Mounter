@@ -62,10 +62,11 @@ public partial class DevioProviderLibAFF4 : DevioProviderDLLWrapperBase
     public static extern uint getimagecount([MarshalAs(UnmanagedType.LPStr)][In] string containerfile);
 #endif
 
+    public override bool SupportsParallel => true;
+
     public DevioProviderLibAFF4(string filename)
         : base(dllopen, filename, readOnly: true, () => new IOException(geterrormessage(getlasterrorcode())))
     {
-
     }
 
     public override uint SectorSize

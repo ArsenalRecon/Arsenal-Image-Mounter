@@ -126,6 +126,8 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     }
     #endregion
 
+    public override bool SupportsParallel => true;
+
     public byte Flags { get; }
 
     public SafeLibQcowFileHandle SafeHandle { get; }

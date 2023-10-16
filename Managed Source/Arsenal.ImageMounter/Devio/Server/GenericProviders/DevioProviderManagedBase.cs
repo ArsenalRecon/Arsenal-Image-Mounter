@@ -24,7 +24,6 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 /// </summary>
 public abstract class DevioProviderManagedBase : IDevioProvider
 {
-
     /// <summary>
     /// Event when object is about to be disposed
     /// </summary>
@@ -43,6 +42,13 @@ public abstract class DevioProviderManagedBase : IDevioProvider
     /// <returns>True if virtual disk can be written to through this instance, or False
     /// if it is opened for reading only.</returns>
     public abstract bool CanWrite { get; }
+
+    /// <summary>
+    /// Indicates whether provider supports dispatching multiple simultaneous I/O requests.
+    /// Most implementations do not support this, so by default this implementation returns
+    /// false but it can be overridden in derived classes.
+    /// </summary>
+    public virtual bool SupportsParallel => false;
 
     /// <summary>
     /// Indicates whether provider supports shared image operations with registrations

@@ -81,7 +81,12 @@ public partial struct IMDPROXY_INFO_RESP
 {
     public ulong file_size { get; set; }
     public ulong req_alignment { get; set; }
-    public IMDPROXY_FLAGS flags { get; set; }
+    private ulong ulflags;
+    public IMDPROXY_FLAGS flags
+    {
+        readonly get => (IMDPROXY_FLAGS)ulflags;
+        set => ulflags = (ulong)value;
+    }
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -203,3 +208,13 @@ public enum IMDPROXY_SHARED_RESP_CODE : ulong
     InvalidParameter,
     IOError
 }
+
+public struct IMDPROXY_DEVIODRV_BUFFER_HEADER
+{
+    public ulong request_code { get; set; }     // Request code to forward to response header.
+    public ulong io_tag { get; set; }           // Tag to forward to response header.
+    public ulong flags { get; set; }            // Reserved. Currently not used.
+
+    public static unsafe int SizeOf { get; } = sizeof(IMDPROXY_DEVIODRV_BUFFER_HEADER);
+}
+

@@ -8,6 +8,8 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+#define USE_DEVIODRV
+
 using Arsenal.ImageMounter;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
@@ -36,7 +38,6 @@ using System.Text.Json;
 
 internal static class ConsoleAppHelpers
 {
-
     private static readonly string[] DefaultChecksumAlgorithms = { "MD5", "SHA1", "SHA256" };
 
     public static void CloseConsole(SafeWaitHandle DetachEvent)
@@ -56,7 +57,6 @@ internal static class ConsoleAppHelpers
         Console.SetError(TextWriter.Null);
 
         NativeFileIO.SafeNativeMethods.FreeConsole();
-
     }
 
     /// <summary>
@@ -199,7 +199,7 @@ Please see EULA.txt for license information.");
         string? objectName = null;
         var listenAddress = IPAddress.Any;
         var listenPort = 0;
-        var bufferSize = DevioShmService.DefaultBufferSize;
+        long? bufferSize = null;
         long? diskSize = null;
         var diskAccess = FileAccess.Read;
         var mount = false;
@@ -781,18 +781,29 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             Console.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}");
 
-            if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
-            {
-                service = new DevioShmService(objectName, provider, ownsProvider: true, bufferSize: bufferSize);
-            }
-            else if (listenPort != 0) // Listen on TCP/IP socket
+            if (listenPort != 0) // Listen on TCP/IP socket
             {
                 service = new DevioTcpService(listenAddress, listenPort, provider, ownsProvider: true);
             }
+#if USE_DEVIODRV  // Use deviodrv for driver to user process requests
+            else if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
+            {
+                service = new DevioDrvService(objectName, provider, ownsProvider: true, bufferSize: bufferSize ?? DevioDrvService.DefaultBufferSize);
+            }
             else if (mount) // Request to mount in-process
             {
-                service = new DevioShmService(provider, ownsProvider: true, BufferSize: bufferSize);
+                service = new DevioDrvService(provider, ownsProvider: true, BufferSize: bufferSize ?? DevioDrvService.DefaultBufferSize);
             }
+#else  // Use shared memory for driver to user process requests
+            else if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
+            {
+                service = new DevioShmService(objectName, provider, ownsProvider: true, bufferSize: bufferSize ?? DevioShmService.DefaultBufferSize);
+            }
+            else if (mount) // Request to mount in-process
+            {
+                service = new DevioShmService(provider, ownsProvider: true, BufferSize: bufferSize ?? DevioShmService.DefaultBufferSize);
+            }
+#endif
             else if (outputImage is not null && fileName is not null) // Convert to new image file format
             {
                 provider.ConvertToImage(fileName, outputImage, outputImageVariant, detachEvent);

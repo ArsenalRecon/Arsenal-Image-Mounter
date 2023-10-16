@@ -281,7 +281,7 @@ public static partial class NativeFileIO
         internal static partial bool GetVolumePathNameW(in char lpszFileName, out char lpszVolumePathName, int cchBufferLength);
 
         [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-        internal static partial SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, int dwFlagsAndAttributes, nint hTemplateFile);
+        internal static partial SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, FileOptions dwFlagsAndAttributes, nint hTemplateFile);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -767,7 +767,7 @@ public static partial class NativeFileIO
         internal static extern bool GetVolumePathNameW(in char lpszFileName, out char lpszVolumePathName, int cchBufferLength);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, int dwFlagsAndAttributes, nint hTemplateFile);
+        internal static extern SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, FileOptions dwFlagsAndAttributes, nint hTemplateFile);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool FlushFileBuffers(SafeFileHandle handle);
@@ -2357,7 +2357,7 @@ Currently, the following application has files open on this volume:
     /// <param name="SecurityAttributes"></param>
     /// <param name="FlagsAndAttributes"></param>
     /// <param name="TemplateFile"></param>
-    public static SafeFileHandle CreateFile(string FileName, FileSystemRights DesiredAccess, FileShare ShareMode, nint SecurityAttributes, uint CreationDisposition, int FlagsAndAttributes, nint TemplateFile)
+    public static SafeFileHandle CreateFile(string FileName, FileSystemRights DesiredAccess, FileShare ShareMode, nint SecurityAttributes, uint CreationDisposition, FileOptions FlagsAndAttributes, nint TemplateFile)
     {
         var handle = UnsafeNativeMethods.CreateFileW(FileName.AsRef(),
                                                      DesiredAccess,
@@ -2400,11 +2400,11 @@ Currently, the following application has files open on this volume:
             _ => throw new NotImplementedException(),
         };
         
-        var NativeFlagsAndAttributes = FileAttributes.Normal;
+        var NativeFlagsAndAttributes = (FileOptions)FileAttributes.Normal;
         
         if (Overlapped)
         {
-            NativeFlagsAndAttributes |= (FileAttributes)NativeConstants.FILE_FLAG_OVERLAPPED;
+            NativeFlagsAndAttributes |= FileOptions.Asynchronous;
         }
 
         var Handle = UnsafeNativeMethods.CreateFileW(FileName.AsRef(),
@@ -2412,7 +2412,7 @@ Currently, the following application has files open on this volume:
                                                      ShareMode,
                                                      0,
                                                      NativeCreationDisposition,
-                                                     (int)NativeFlagsAndAttributes,
+                                                     NativeFlagsAndAttributes,
                                                      0);
 
         return Handle.IsInvalid
@@ -2429,8 +2429,8 @@ Currently, the following application has files open on this volume:
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Options">Specifies whether to request overlapped I/O.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, FileOptions Options)
-        => OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, (uint)Options);
+    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, uint Options)
+        => OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, (FileOptions)Options);
 
     /// <summary>
     /// Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
@@ -2441,7 +2441,7 @@ Currently, the following application has files open on this volume:
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Options">Specifies whether to request overlapped I/O.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, uint Options)
+    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, FileOptions Options)
     {
         if (string.IsNullOrWhiteSpace(FileName))
         {
@@ -2475,16 +2475,16 @@ Currently, the following application has files open on this volume:
                 }
         }
 
-        var NativeFlagsAndAttributes = FileAttributes.Normal;
+        var NativeFlagsAndAttributes = (FileOptions)FileAttributes.Normal;
 
-        NativeFlagsAndAttributes |= (FileAttributes)Options;
+        NativeFlagsAndAttributes |= Options;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FileName.AsRef(),
                                                      NativeDesiredAccess,
                                                      ShareMode,
                                                      0,
                                                      NativeCreationDisposition,
-                                                     (int)NativeFlagsAndAttributes,
+                                                     NativeFlagsAndAttributes,
                                                      0);
 
         return Handle.IsInvalid
@@ -2612,14 +2612,14 @@ Currently, the following application has files open on this volume:
             _ => throw new NotImplementedException(),
         };
 
-        var NativeFlagsAndAttributes = (FileAttributes)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
+        var NativeFlagsAndAttributes = NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FilePath.AsRef(),
                                                      NativeDesiredAccess,
                                                      ShareMode,
                                                      0,
                                                      NativeCreationDisposition,
-                                                     (int)NativeFlagsAndAttributes,
+                                                     NativeFlagsAndAttributes,
                                                      0);
 
         return Handle.IsInvalid
@@ -2665,14 +2665,14 @@ Currently, the following application has files open on this volume:
             _ => throw new NotImplementedException(),
         };
 
-        var NativeFlagsAndAttributes = (FileAttributes)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
+        var NativeFlagsAndAttributes = NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FilePath.AsRef(),
                                                      NativeDesiredAccess,
                                                      ShareMode,
                                                      0,
                                                      NativeCreationDisposition,
-                                                     (int)NativeFlagsAndAttributes,
+                                                     NativeFlagsAndAttributes,
                                                      0);
 
         if (Handle.IsInvalid)

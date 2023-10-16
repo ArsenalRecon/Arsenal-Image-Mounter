@@ -35,7 +35,6 @@ public static class NativeConstants
 
     public const FileAttributes FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = (FileAttributes)0x400000;
 
-    public const FileOptions FILE_FLAG_OVERLAPPED = (FileOptions)0x40000000;
     public const FileOptions FILE_FLAG_BACKUP_SEMANTICS = (FileOptions)0x2000000;
     public const FileOptions FILE_FLAG_OPEN_REPARSE_POINT = (FileOptions)0x200000;
 
@@ -72,7 +71,9 @@ public static class NativeConstants
     public const int ERROR_NOT_SUPPORTED = 50;
     public const int ERROR_DEV_NOT_EXIST = 55;
     public const int ERROR_INVALID_PARAMETER = 87;
+    public const int ERROR_ALREADY_EXISTS = 183;
     public const int ERROR_MORE_DATA = 0x234;
+    public const int ERROR_IO_PENDING = 997;
     public const int ERROR_NOT_ALL_ASSIGNED = 1300;
     public const int ERROR_INSUFFICIENT_BUFFER = 122;
     public const int ERROR_IN_WOW64 = unchecked((int)0xE0000235);

@@ -109,7 +109,6 @@ public class DiskStream : AligningStream
     /// </summary>
     public long? GetVBRPartitionLength()
     {
-
         var bytesPerSector = NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector ?? 512;
 
         var vbr = bytesPerSector <= 512

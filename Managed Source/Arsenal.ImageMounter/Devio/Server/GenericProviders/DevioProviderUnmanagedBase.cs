@@ -42,6 +42,13 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
     public abstract bool CanWrite { get; }
 
     /// <summary>
+    /// Indicates whether provider supports dispatching multiple simultaneous I/O requests.
+    /// Most implementations do not support this, so by default this implementation returns
+    /// false but it can be overridden in derived classes.
+    /// </summary>
+    public virtual bool SupportsParallel => false;
+
+    /// <summary>
     /// Indicates whether provider supports shared image operations with registrations
     /// and reservations.
     /// </summary>

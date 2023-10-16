@@ -40,14 +40,14 @@ public partial class DevioShmStream : DevioStream
     private readonly SafeBuffer mapView;
     private readonly WaitHandle[] waitHandles;
 
-/// <summary>
-/// Creates a new instance by opening an existing Devio shared memory object and starts
-/// communication with a Devio service using this shared memory object.
-/// </summary>
-/// <param name="name">Name of shared memory object to use for communication.</param>
-/// <param name="read_only">Specifies if communication should be read-only.</param>
-/// <returns>Returns new instance of DevioShmStream.</returns>
-public static DevioShmStream Open(string name, bool read_only) => new(name, read_only);
+    /// <summary>
+    /// Creates a new instance by opening an existing Devio shared memory object and starts
+    /// communication with a Devio service using this shared memory object.
+    /// </summary>
+    /// <param name="name">Name of shared memory object to use for communication.</param>
+    /// <param name="read_only">Specifies if communication should be read-only.</param>
+    /// <returns>Returns new instance of DevioShmStream.</returns>
+    public static DevioShmStream Open(string name, bool read_only) => new(name, read_only);
 
     /// <summary>
     /// Creates a new instance by opening an existing Devio shared memory object and starts
