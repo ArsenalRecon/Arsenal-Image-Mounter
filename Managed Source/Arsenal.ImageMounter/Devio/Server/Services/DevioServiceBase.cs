@@ -235,7 +235,9 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// created, or False if timeout occurred.</returns>
     public virtual bool WaitForServiceThreadExit(TimeSpan timeout)
     {
-        if (ServiceThread is not null && ServiceThread.ManagedThreadId != Environment.CurrentManagedThreadId && ServiceThread.IsAlive)
+        if (ServiceThread is not null
+            && ServiceThread.ManagedThreadId != Environment.CurrentManagedThreadId
+            && ServiceThread.IsAlive)
         {
             Trace.WriteLine($"Waiting for service thread to terminate.");
 
@@ -253,7 +255,9 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// </summary>
     public virtual void WaitForServiceThreadExit()
     {
-        if (ServiceThread is not null && ServiceThread.ManagedThreadId != Environment.CurrentManagedThreadId && ServiceThread.IsAlive)
+        if (ServiceThread is not null
+            && ServiceThread.ManagedThreadId != Environment.CurrentManagedThreadId
+            && ServiceThread.IsAlive)
         {
             Trace.WriteLine($"Waiting for service thread to terminate.");
 
