@@ -8,8 +8,6 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-#define USE_DEVIODRV
-
 using Arsenal.ImageMounter;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
@@ -192,6 +190,14 @@ http://www.ArsenalRecon.com
 Please see EULA.txt for license information.");
     }
 
+    public enum IOCommunication
+    {
+        Auto,
+        Tcp,
+        Shm,
+        Drv
+    }
+
     public static int UnsafeMain(IDictionary<string, string[]> commands)
     {
         string? fileName = null;
@@ -199,6 +205,7 @@ Please see EULA.txt for license information.");
         string? objectName = null;
         var listenAddress = IPAddress.Any;
         var listenPort = 0;
+        var ioCommunication = IOCommunication.Auto;
         long? bufferSize = null;
         long? diskSize = null;
         var diskAccess = FileAccess.Read;
@@ -422,6 +429,10 @@ Please see EULA.txt for license information.");
             {
                 listDevices = true;
             }
+            else if (arg.Equals("io", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
+                && Enum.TryParse(cmd.Value[0], ignoreCase: true, out ioCommunication))
+            {
+            }
             else if (arg.Length == 0)
             {
                 Console.WriteLine($"Unsupported command line argument: {string.Join(" ", cmd.Value)}");
@@ -455,6 +466,18 @@ Please see EULA.txt for license information.");
             ListDevices(verbose);
 
             return 0;
+        }
+
+        if (ioCommunication == IOCommunication.Auto)
+        {
+            if (listenPort != 0)
+            {
+                ioCommunication = IOCommunication.Tcp;
+            }
+            else
+            {
+                ioCommunication = IOCommunication.Drv;
+            }
         }
 
         if (showHelp || (string.IsNullOrWhiteSpace(fileName) && string.IsNullOrWhiteSpace(dismount) && !ramDisk))
@@ -781,29 +804,33 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             Console.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}");
 
-            if (listenPort != 0) // Listen on TCP/IP socket
+            if (ioCommunication == IOCommunication.Tcp
+                && listenPort != 0) // Listen on TCP/IP socket
             {
                 service = new DevioTcpService(listenAddress, listenPort, provider, ownsProvider: true);
             }
-#if USE_DEVIODRV  // Use deviodrv for driver to user process requests
-            else if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
-            {
-                service = new DevioDrvService(objectName, provider, ownsProvider: true, bufferSize: bufferSize ?? DevioDrvService.DefaultBufferSize);
-            }
-            else if (mount) // Request to mount in-process
-            {
-                service = new DevioDrvService(provider, ownsProvider: true, BufferSize: bufferSize ?? DevioDrvService.DefaultBufferSize);
-            }
-#else  // Use shared memory for driver to user process requests
-            else if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
+            else if (ioCommunication == IOCommunication.Shm
+                && objectName is not null
+                && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
             {
                 service = new DevioShmService(objectName, provider, ownsProvider: true, bufferSize: bufferSize ?? DevioShmService.DefaultBufferSize);
             }
-            else if (mount) // Request to mount in-process
+            else if (ioCommunication == IOCommunication.Shm
+                && mount) // Request to mount in-process
             {
                 service = new DevioShmService(provider, ownsProvider: true, BufferSize: bufferSize ?? DevioShmService.DefaultBufferSize);
             }
-#endif
+            else if (ioCommunication == IOCommunication.Drv
+                && objectName is not null
+                && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
+            {
+                service = new DevioDrvService(objectName, provider, ownsProvider: true, initialBufferSize: bufferSize ?? DevioDrvService.DefaultInitialBufferSize);
+            }
+            else if (ioCommunication == IOCommunication.Drv
+                && mount) // Request to mount in-process
+            {
+                service = new DevioDrvService(provider, ownsProvider: true, initialBufferSize: bufferSize ?? DevioDrvService.DefaultInitialBufferSize);
+            }
             else if (outputImage is not null && fileName is not null) // Convert to new image file format
             {
                 provider.ConvertToImage(fileName, outputImage, outputImageVariant, detachEvent);
