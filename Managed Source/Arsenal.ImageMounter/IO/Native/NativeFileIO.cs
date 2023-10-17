@@ -2096,7 +2096,8 @@ Currently, the following application has files open on this volume:
                     return string.Intern(buffer.Read<UNICODE_STRING>(0UL).ToString());
                 });
 
-                if (object_type is null || (filterObjectType is not null && filterObjectType != object_type))
+                if (object_type is null
+                    || (filterObjectType is not null && filterObjectType != object_type))
                 {
                     continue;
                 }
@@ -2108,6 +2109,7 @@ Currently, the following application has files open on this volume:
                     is not DeviceType.NamedPipe
                     and not DeviceType.Console
                     and not DeviceType.Network
+                    and not DeviceType.NetworkBrowser
                     and not DeviceType.Unknown)
                 {
                     for (; ; )
