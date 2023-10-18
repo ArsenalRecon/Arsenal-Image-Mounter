@@ -460,6 +460,13 @@ public partial class DevioDrvService : DevioServiceBase
                         }
                     }
 
+                    if (device.IsClosed)
+                    {
+                        Trace.WriteLine($"Service number {serviceNumber}: Device closed by client, shutting down.");
+                        CleanupIoExchange();
+                        return;
+                    }
+
                     if (initializationDone is null
                         && concurrentCount >= ioExchangeBufferCounter
                         && DevioProvider.SupportsParallel
@@ -467,6 +474,8 @@ public partial class DevioDrvService : DevioServiceBase
                     {
                         try
                         {
+                            Trace.WriteLine($"Service number {serviceNumber}: Launching an additional I/O exchange buffer...");
+
                             StartNewIoExchange();
                         }
                         catch (Exception ex)
