@@ -67,10 +67,10 @@ public class DiskDevice : DeviceObject
         }
     }
 
-    protected internal DiskDevice(KeyValuePair<string, SafeFileHandle> DeviceNameAndHandle, FileAccess AccessMode)
-        : base(DeviceNameAndHandle.Value, AccessMode)
+    protected internal DiskDevice(KeyValuePair<string, SafeFileHandle> deviceNameAndHandle, FileAccess accessMode)
+        : base(deviceNameAndHandle.Value, accessMode)
     {
-        DevicePath = DeviceNameAndHandle.Key;
+        DevicePath = deviceNameAndHandle.Key;
 
         AllowExtendedDasdIo();
     }
@@ -80,11 +80,11 @@ public class DiskDevice : DeviceObject
     /// resulting object can only be used to query properties like SCSI address, disk
     /// size and similar, but not for reading or writing raw disk data.
     /// </summary>
-    /// <param name="DevicePath"></param>
-    public DiskDevice(string DevicePath)
-        : base(DevicePath)
+    /// <param name="devicePath"></param>
+    public DiskDevice(string devicePath)
+        : base(devicePath)
     {
-        this.DevicePath = DevicePath;
+        this.DevicePath = devicePath;
 
         AllowExtendedDasdIo();
     }
@@ -105,11 +105,11 @@ public class DiskDevice : DeviceObject
     /// <summary>
     /// Opens an disk device object.
     /// </summary>
-    /// <param name="ScsiAddress"></param>
-    /// <param name="AccessMode"></param>
+    /// <param name="scsiAddress"></param>
+    /// <param name="accessMode"></param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public DiskDevice(SCSI_ADDRESS ScsiAddress, FileAccess AccessMode)
-        : this(NativeFileIO.OpenDiskByScsiAddress(ScsiAddress, AccessMode), AccessMode)
+    public DiskDevice(SCSI_ADDRESS scsiAddress, FileAccess accessMode)
+        : this(NativeFileIO.OpenDiskByScsiAddress(scsiAddress, accessMode), accessMode)
     {
     }
 
@@ -221,9 +221,7 @@ public class DiskDevice : DeviceObject
             
             try
             {
-                var stream = GetRawDiskStream();
-                stream.Position = 0;
-                stream.Read(rawsig);
+                Read(rawsig, 0);
 
                 return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
                     && rawsig[0x1C2] != 0xEE
@@ -259,13 +257,10 @@ public class DiskDevice : DeviceObject
 
             try
             {
-                var stream = GetRawDiskStream();
-                stream.Position = 0;
-                stream.Read(rawsig);
+                Read(rawsig, 0);
                 var argvalue = value.Value;
                 MemoryMarshal.Write(rawsig.Slice(0x1B8), ref argvalue);
-                stream.Position = 0;
-                stream.Write(rawsig);
+                Write(rawsig, 0);
             }
             finally
             {
@@ -294,9 +289,7 @@ public class DiskDevice : DeviceObject
 
             try
             {
-                var stream = GetRawDiskStream();
-                stream.Position = 0;
-                stream.Read(rawsig);
+                Read(rawsig, 0);
 
                 return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
                     ? MemoryMarshal.Read<uint>(rawsig.Slice(0x1C))
@@ -327,13 +320,10 @@ public class DiskDevice : DeviceObject
 
             try
             {
-                var stream = GetRawDiskStream();
-                stream.Position = 0;
-                stream.Read(rawsig);
+                Read(rawsig, 0);
                 var argvalue = value.Value;
                 MemoryMarshal.Write(rawsig.Slice(0x1C), ref argvalue);
-                stream.Position = 0;
-                stream.Write(rawsig);
+                Write(rawsig, 0);
             }
             finally
             {
@@ -368,13 +358,54 @@ public class DiskDevice : DeviceObject
         return bootsect;
     }
 
-    private int ReadBootSector(Span<byte> bootsect)
+    public int Read(Span<byte> buffer, long offset)
     {
+#if NET6_0_OR_GREATER
+        return RandomAccess.Read(SafeFileHandle, buffer, 0);
+#else
         var stream = GetRawDiskStream();
         stream.Position = 0;
-        var bytesread = stream.Read(bootsect);
+        var bytesread = stream.Read(buffer);
         return bytesread;
+#endif
     }
+
+    public ValueTask<int> ReadAsync(Memory<byte> buffer, long offset, CancellationToken cancellationToken)
+    {
+#if NET6_0_OR_GREATER
+        return RandomAccess.ReadAsync(SafeFileHandle, buffer, 0, cancellationToken);
+#else
+        var stream = GetRawDiskStream();
+        stream.Position = 0;
+        var bytesread = stream.ReadAsync(buffer, cancellationToken);
+        return bytesread;
+#endif
+    }
+
+    public void Write(ReadOnlySpan<byte> buffer, long offset)
+    {
+#if NET6_0_OR_GREATER
+        RandomAccess.Write(SafeFileHandle, buffer, 0);
+#else
+        var stream = GetRawDiskStream();
+        stream.Position = 0;
+        stream.Write(buffer);
+#endif
+    }
+
+    public ValueTask WriteAsync(Memory<byte> buffer, long offset, CancellationToken cancellationToken)
+    {
+#if NET6_0_OR_GREATER
+        return RandomAccess.WriteAsync(SafeFileHandle, buffer, 0, cancellationToken);
+#else
+        var stream = GetRawDiskStream();
+        stream.Position = 0;
+        return stream.WriteAsync(buffer, cancellationToken);
+#endif
+    }
+
+    private int ReadBootSector(Span<byte> bootsect)
+        => Read(bootsect, 0);
 
     /// <summary>
     /// Return a value indicating whether present sector 0 data indicates a valid MBR
@@ -558,73 +589,69 @@ public class DiskDevice : DeviceObject
     /// <summary>
     /// Retrieves properties for an existing virtual disk.
     /// </summary>
-    /// <param name="DeviceNumber">Device number of virtual disk.</param>
-    /// <param name="DiskSize">Size of virtual disk.</param>
-    /// <param name="BytesPerSector">Number of bytes per sector for virtual disk geometry.</param>
-    /// <param name="ImageOffset">A skip offset if virtual disk data does not begin immediately at start of disk image file.
+    /// <param name="deviceNumber">Device number of virtual disk.</param>
+    /// <param name="diskSize">Size of virtual disk.</param>
+    /// <param name="bytesPerSector">Number of bytes per sector for virtual disk geometry.</param>
+    /// <param name="imageOffset">A skip offset if virtual disk data does not begin immediately at start of disk image file.
     /// Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter or Windows
     /// filesystem drivers.</param>
-    /// <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
-    /// <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
+    /// <param name="flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
+    /// <param name="filename">Name of disk image file holding storage for file type virtual disk or used to create a
     /// virtual memory type virtual disk.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public void QueryDevice(out uint DeviceNumber,
-                            out long DiskSize,
-                            out uint BytesPerSector,
-                            out long ImageOffset,
-                            out DeviceFlags Flags,
-                            out string? Filename)
+    public void QueryDevice(out uint deviceNumber,
+                            out long diskSize,
+                            out uint bytesPerSector,
+                            out long imageOffset,
+                            out DeviceFlags flags,
+                            out string? filename)
     {
-
         var scsi_address = ScsiAddress
             ?? throw new KeyNotFoundException("Cannot find SCSI address for this instance");
 
         using var adapter = new ScsiAdapter(scsi_address.PortNumber);
 
-        DeviceNumber = scsi_address.DWordDeviceNumber;
+        deviceNumber = scsi_address.DWordDeviceNumber;
 
-        adapter.QueryDevice(DeviceNumber, out DiskSize, out BytesPerSector, out ImageOffset, out Flags, out Filename);
-
+        adapter.QueryDevice(deviceNumber, out diskSize, out bytesPerSector, out imageOffset, out flags, out filename);
     }
 
     /// <summary>
     /// Retrieves properties for an existing virtual disk.
     /// </summary>
-    /// <param name="DeviceNumber">Device number of virtual disk.</param>
-    /// <param name="DiskSize">Size of virtual disk.</param>
-    /// <param name="BytesPerSector">Number of bytes per sector for virtual disk geometry.</param>
-    /// <param name="ImageOffset">A skip offset if virtual disk data does not begin immediately at start of disk image file.
+    /// <param name="deviceNumber">Device number of virtual disk.</param>
+    /// <param name="diskSize">Size of virtual disk.</param>
+    /// <param name="bytesPerSector">Number of bytes per sector for virtual disk geometry.</param>
+    /// <param name="imageOffset">A skip offset if virtual disk data does not begin immediately at start of disk image file.
     /// Frequently used with image formats like Nero NRG which start with a file header not used by Arsenal Image Mounter or Windows
     /// filesystem drivers.</param>
-    /// <param name="Flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
-    /// <param name="Filename">Name of disk image file holding storage for file type virtual disk or used to create a
+    /// <param name="flags">Flags specifying properties for virtual disk. See comments for each flag value.</param>
+    /// <param name="filename">Name of disk image file holding storage for file type virtual disk or used to create a
     /// virtual memory type virtual disk.</param>
-    /// <param name="WriteOverlayImagefile">Path to differencing file used in write-temporary mode.</param>
+    /// <param name="writeOverlayImagefile">Path to differencing file used in write-temporary mode.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public void QueryDevice(out uint DeviceNumber,
-                            out long DiskSize,
-                            out uint BytesPerSector,
-                            out long ImageOffset,
-                            out DeviceFlags Flags,
-                            out string? Filename,
-                            out string? WriteOverlayImagefile)
+    public void QueryDevice(out uint deviceNumber,
+                            out long diskSize,
+                            out uint bytesPerSector,
+                            out long imageOffset,
+                            out DeviceFlags flags,
+                            out string? filename,
+                            out string? writeOverlayImagefile)
     {
-
         var scsi_address = ScsiAddress
             ?? throw new KeyNotFoundException("Cannot find SCSI address for this instance");
 
         using var adapter = new ScsiAdapter(scsi_address.PortNumber);
 
-        DeviceNumber = scsi_address.DWordDeviceNumber;
+        deviceNumber = scsi_address.DWordDeviceNumber;
 
-        adapter.QueryDevice(DeviceNumber,
-                            out DiskSize,
-                            out BytesPerSector,
-                            out ImageOffset,
-                            out Flags,
-                            out Filename,
-                            out WriteOverlayImagefile);
-
+        adapter.QueryDevice(deviceNumber,
+                            out diskSize,
+                            out bytesPerSector,
+                            out imageOffset,
+                            out flags,
+                            out filename,
+                            out writeOverlayImagefile);
     }
 
     /// <summary>
@@ -633,14 +660,12 @@ public class DiskDevice : DeviceObject
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public DeviceProperties QueryDevice()
     {
-
         var scsi_address = ScsiAddress
             ?? throw new KeyNotFoundException("Cannot find SCSI address for this instance");
 
         using var adapter = new ScsiAdapter(scsi_address.PortNumber);
 
         return adapter.QueryDevice(scsi_address.DWordDeviceNumber);
-
     }
 
     /// <summary>
@@ -649,14 +674,12 @@ public class DiskDevice : DeviceObject
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public void RemoveDevice()
     {
-
         var scsi_address = ScsiAddress
             ?? throw new KeyNotFoundException("Cannot find SCSI address for this instance");
 
         using var adapter = new ScsiAdapter(scsi_address.PortNumber);
 
         adapter.RemoveDevice(scsi_address.DWordDeviceNumber);
-
     }
 
     /// <summary>
@@ -688,25 +711,25 @@ public class DiskDevice : DeviceObject
     /// can only be done through this device object instance until it is either closed (disposed) or lock is
     /// released on the underlying handle.
     /// </summary>
-    /// <param name="Force">Indicates if True that volume should be immediately dismounted even if it
+    /// <param name="force">Indicates if True that volume should be immediately dismounted even if it
     /// cannot be locked. This causes all open handles to files on the volume to become invalid. If False,
     /// successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public void DismountVolumeFilesystem(bool Force)
-        => NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(SafeFileHandle, Force));
+    public void DismountVolumeFilesystem(bool force)
+        => NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(SafeFileHandle, force));
 
     /// <summary>
     /// Locks and dismounts filesystem on a volume. Upon successful return, further access to the device
     /// can only be done through this device object instance until it is either closed (disposed) or lock is
     /// released on the underlying handle.
     /// </summary>
-    /// <param name="Force">Indicates if True that volume should be immediately dismounted even if it
+    /// <param name="force">Indicates if True that volume should be immediately dismounted even if it
     /// cannot be locked. This causes all open handles to files on the volume to become invalid. If False,
     /// successful lock (no other open handles) is required before attempting to dismount filesystem.</param>
     /// <param name="cancellationToken"></param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public async Task DismountVolumeFilesystemAsync(bool Force, CancellationToken cancellationToken)
-        => NativeFileIO.Win32Try(await NativeFileIO.DismountVolumeFilesystemAsync(SafeFileHandle, Force, cancellationToken).ConfigureAwait(false));
+    public async Task DismountVolumeFilesystemAsync(bool force, CancellationToken cancellationToken)
+        => NativeFileIO.Win32Try(await NativeFileIO.DismountVolumeFilesystemAsync(SafeFileHandle, force, cancellationToken).ConfigureAwait(false));
 
     /// <summary>
     /// Get live statistics from write filter driver.
@@ -738,26 +761,20 @@ public class DiskDevice : DeviceObject
     /// </summary>
     public DiskStream GetRawDiskStream()
     {
-
         rawDiskStream ??= new DiskStream(SafeFileHandle, AccessMode == 0 ? FileAccess.Read : AccessMode);
 
         return rawDiskStream;
-
     }
 
     protected override void Dispose(bool disposing)
     {
-
         if (disposing)
         {
-
             rawDiskStream?.Dispose();
-
         }
 
         rawDiskStream = null;
 
         base.Dispose(disposing);
-
     }
 }

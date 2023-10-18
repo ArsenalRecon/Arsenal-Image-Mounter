@@ -206,6 +206,7 @@ Please see EULA.txt for license information.");
         var listenAddress = IPAddress.Any;
         var listenPort = 0;
         var ioCommunication = IOCommunication.Auto;
+        var forceSingleThread = false;
         long? bufferSize = null;
         long? diskSize = null;
         var diskAccess = FileAccess.Read;
@@ -432,6 +433,10 @@ Please see EULA.txt for license information.");
             else if (arg.Equals("io", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
                 && Enum.TryParse(cmd.Value[0], ignoreCase: true, out ioCommunication))
             {
+            }
+            else if (arg.Equals("single", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
+            {
+                forceSingleThread = true;
             }
             else if (arg.Length == 0)
             {
@@ -783,6 +788,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             if (provider.Length <= 0)
             {
                 throw new NotSupportedException("Unknown size of source device");
+            }
+
+            if (forceSingleThread)
+            {
+                provider.ForceSingleThread = true;
             }
 
             if (!string.IsNullOrWhiteSpace(debugCompare))

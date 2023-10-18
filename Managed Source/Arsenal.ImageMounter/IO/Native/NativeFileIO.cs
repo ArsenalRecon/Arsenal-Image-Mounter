@@ -1564,17 +1564,17 @@ public static partial class NativeFileIO
                     try
                     {
                         device.FlushBuffers();
-                        device.DismountVolumeFilesystem(Force: false);
+                        device.DismountVolumeFilesystem(force: false);
                     }
                     catch (Win32Exception ex)
                     when (ex.NativeErrorCode is NativeConstants.ERROR_WRITE_PROTECT or NativeConstants.ERROR_NOT_READY or NativeConstants.ERROR_DEV_NOT_EXIST)
                     {
-                        device.DismountVolumeFilesystem(Force: true);
+                        device.DismountVolumeFilesystem(force: true);
                     }
                 }
                 else
                 {
-                    device.DismountVolumeFilesystem(Force: true);
+                    device.DismountVolumeFilesystem(force: true);
                 }
 
                 device.SetVolumeOffline(true);
@@ -1657,12 +1657,12 @@ Currently, the following application has files open on this volume:
                     try
                     {
                         device.FlushBuffers();
-                        await device.DismountVolumeFilesystemAsync(Force: false, cancellationToken).ConfigureAwait(false);
+                        await device.DismountVolumeFilesystemAsync(force: false, cancellationToken).ConfigureAwait(false);
                     }
                     catch (Win32Exception ex)
                     when (ex.NativeErrorCode is NativeConstants.ERROR_WRITE_PROTECT or NativeConstants.ERROR_NOT_READY or NativeConstants.ERROR_DEV_NOT_EXIST)
                     {
-                        t = device.DismountVolumeFilesystemAsync(Force: true, cancellationToken);
+                        t = device.DismountVolumeFilesystemAsync(force: true, cancellationToken);
                     }
 
                     if (t is not null)
@@ -1672,7 +1672,7 @@ Currently, the following application has files open on this volume:
                 }
                 else
                 {
-                    await device.DismountVolumeFilesystemAsync(Force: true, cancellationToken).ConfigureAwait(false);
+                    await device.DismountVolumeFilesystemAsync(force: true, cancellationToken).ConfigureAwait(false);
                 }
 
                 device.SetVolumeOffline(true);

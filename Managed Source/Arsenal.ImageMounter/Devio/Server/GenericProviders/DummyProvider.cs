@@ -44,6 +44,8 @@ public sealed class DummyProvider : IDevioProvider
 
     bool IDevioProvider.SupportsShared => false;
 
+    bool IDevioProvider.ForceSingleThread { get; set; }
+
     void IDevioProvider.SharedKeys(IMDPROXY_SHARED_REQ Request, out IMDPROXY_SHARED_RESP Response, out ulong[] Keys) => throw new NotImplementedException();
 
     int IDevioProvider.Read(nint buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();

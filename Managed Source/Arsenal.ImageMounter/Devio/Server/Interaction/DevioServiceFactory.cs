@@ -358,7 +358,8 @@ public static class DevioServiceFactory
 
     private static DevioProviderFromStream GetProviderRaw(string Imagefile, FileAccess DiskAccess)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && uint.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out var device_number))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            && uint.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out var device_number))
         {
             return GetProviderPhysical(device_number, DiskAccess);
         }
@@ -375,7 +376,10 @@ public static class DevioServiceFactory
 
         var stream = new FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: true);
 
-        return new DevioProviderFromStream(stream, ownsStream: true) { CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile) };
+        return new DevioProviderFromStream(stream, ownsStream: true)
+        {
+            CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile)
+        };
     }
 
     public static IReadOnlyDictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndVirtualDiskAccess { get; } =

@@ -49,6 +49,11 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
     public virtual bool SupportsParallel => false;
 
     /// <summary>
+    /// Set to true to force single thread operation even if provider supports multithread
+    /// </summary>
+    public virtual bool ForceSingleThread { get; set; }
+
+    /// <summary>
     /// Indicates whether provider supports shared image operations with registrations
     /// and reservations.
     /// </summary>

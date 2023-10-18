@@ -39,7 +39,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
     public IDevioProvider BaseProvider { get; }
 
-    internal byte[] PrefixBuffer { get; } = new byte[65536];
+    internal byte[] PrefixBuffer { get; } = new byte[PrefixLength];
 
     internal byte[] SuffixBuffer { get; }
 
@@ -93,6 +93,8 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
     public bool SupportsParallel => BaseProvider.SupportsParallel;
 
+    public bool ForceSingleThread { get; set; }
+
     bool IDevioProvider.SupportsShared => false;
 
     void IDevioProvider.SharedKeys(IMDPROXY_SHARED_REQ Request, out IMDPROXY_SHARED_RESP Response, out ulong[] Keys)
@@ -100,12 +102,10 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
     public int Read(nint data, int bufferoffset, int count, long fileoffset)
     {
-
         var prefix_count = 0;
 
         if (count > 0 && fileoffset < PrefixLength)
         {
-
             prefix_count = Math.Min((int)(PrefixLength - fileoffset), count);
 
             Marshal.Copy(PrefixBuffer, (int)fileoffset, data + bufferoffset, prefix_count);
@@ -113,54 +113,44 @@ public class DevioProviderWithFakeMBR : IDevioProvider
             fileoffset += prefix_count;
             bufferoffset += prefix_count;
             count -= prefix_count;
-
         }
 
         var base_count = 0;
 
         if (count > 0 && fileoffset < PrefixLength + BaseProvider.Length)
         {
-
             base_count = (int)Math.Min(PrefixLength + BaseProvider.Length - fileoffset, count);
 
             base_count = BaseProvider.Read(data, bufferoffset, base_count, fileoffset - PrefixLength);
 
             if (base_count < 0)
             {
-
                 return base_count;
-
             }
 
             fileoffset += base_count;
             bufferoffset += base_count;
             count -= base_count;
-
         }
 
         var suffix_count = 0;
 
         if (count > 0 && fileoffset < Length)
         {
-
             suffix_count = (int)Math.Min(PrefixLength + BaseProvider.Length + SuffixBuffer.Length - fileoffset, count);
 
             Marshal.Copy(SuffixBuffer, (int)(fileoffset - BaseProvider.Length - PrefixLength), data + bufferoffset, suffix_count);
-
         }
 
         return prefix_count + base_count + suffix_count;
-
     }
 
     public int Read(byte[] data, int bufferoffset, int count, long fileoffset)
     {
-
         var prefix_count = 0;
 
         if (count > 0 && fileoffset < PrefixLength)
         {
-
             prefix_count = Math.Min((int)(PrefixLength - fileoffset), count);
 
             Buffer.BlockCopy(PrefixBuffer, (int)fileoffset, data, bufferoffset, prefix_count);
@@ -168,44 +158,36 @@ public class DevioProviderWithFakeMBR : IDevioProvider
             fileoffset += prefix_count;
             bufferoffset += prefix_count;
             count -= prefix_count;
-
         }
 
         var base_count = 0;
 
         if (count > 0 && fileoffset < PrefixLength + BaseProvider.Length)
         {
-
             base_count = (int)Math.Min(PrefixLength + BaseProvider.Length - fileoffset, count);
 
             base_count = BaseProvider.Read(data, bufferoffset, base_count, fileoffset - PrefixLength);
 
             if (base_count < 0)
             {
-
                 return base_count;
-
             }
 
             fileoffset += base_count;
             bufferoffset += base_count;
             count -= base_count;
-
         }
 
         var suffix_count = 0;
 
         if (count > 0 && fileoffset < Length)
         {
-
             suffix_count = (int)Math.Min(PrefixLength + BaseProvider.Length + SuffixBuffer.Length - fileoffset, count);
 
             Buffer.BlockCopy(SuffixBuffer, (int)(fileoffset - BaseProvider.Length - PrefixLength), data, bufferoffset, suffix_count);
-
         }
 
         return prefix_count + base_count + suffix_count;
-
     }
 
     public int Read(Span<byte> data, long fileoffset)
@@ -280,9 +262,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
             if (base_count < 0)
             {
-
                 return base_count;
-
             }
 
             fileoffset += base_count;
@@ -448,5 +428,4 @@ public class DevioProviderWithFakeMBR : IDevioProvider
     private const int DiskSignatureOffset = 0x1B8;
 
     private const int PartitionTableOffset = 512 - 2 - 4 * 16;
-
 }

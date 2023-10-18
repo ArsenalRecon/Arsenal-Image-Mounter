@@ -13,11 +13,14 @@
 // 
 
 using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Streams;
 using DiscUtils.Streams.Compatibility;
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.IO;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
@@ -35,6 +38,15 @@ public class DevioProviderFromStream : IDevioProvider
     /// </summary>
     public Stream BaseStream { get; }
 
+#if NET6_0_OR_GREATER
+    /// <summary>
+    /// File handle if target is capable of random access I/O.
+    /// </summary>
+    private readonly SafeFileHandle? randomAccessFileHandle;
+
+    private readonly int randomAccessAlignment;
+#endif
+
     /// <summary>
     /// Indicates whether base stream will be automatically closed when this
     /// instance is disposed.
@@ -46,19 +58,38 @@ public class DevioProviderFromStream : IDevioProvider
     /// Seekable streams do not support parallel I/O, so this implementation always returns
     /// false.
     /// </summary>
-    public bool SupportsParallel => false;
+    public bool SupportsParallel { get; }
+
+    /// <summary>
+    /// Set to true to force single thread operation even if provider supports multithread
+    /// </summary>
+    public bool ForceSingleThread { get; set; }
 
     /// <summary>
     /// Creates an object implementing IDevioProvider interface with I/O redirected
     /// to an object of a class derived from System.IO.Stream.
     /// </summary>
-    /// <param name="Stream">Object of a class derived from System.IO.Stream.</param>
+    /// <param name="stream">Object of a class derived from System.IO.Stream.</param>
     /// <param name="ownsStream">Indicates whether Stream object will be automatically closed when this
     /// instance is disposed.</param>
-    public DevioProviderFromStream(Stream Stream, bool ownsStream)
+    public DevioProviderFromStream(Stream stream, bool ownsStream)
     {
-        BaseStream = Stream;
+        BaseStream = stream;
         OwnsBaseStream = ownsStream;
+
+#if NET6_0_OR_GREATER
+        if (stream is FileStream fileStream)
+        {
+            randomAccessFileHandle = fileStream.SafeFileHandle;
+            SupportsParallel = true;
+        }
+        else if (stream is DiskStream diskStream)
+        {
+            randomAccessAlignment = diskStream.Alignment - 1;
+            randomAccessFileHandle = diskStream.SafeFileHandle;
+            SupportsParallel = true;
+        }
+#endif
     }
 
     /// <summary>
@@ -94,69 +125,90 @@ public class DevioProviderFromStream : IDevioProvider
     public event EventHandler? Disposing;
     public event EventHandler? Disposed;
 
-    public int Read(nint buffer, int bufferoffset, int count, long fileoffset)
-    {
-        BaseStream.Position = fileoffset;
+    public unsafe int Read(nint buffer, int bufferoffset, int count, long fileOffset)
+        => Read(new Span<byte>((byte*)buffer + bufferoffset, count), fileOffset);
+    
+    public unsafe int Write(nint buffer, int bufferoffset, int count, long fileOffset)
+        => Write(new ReadOnlySpan<byte>((byte*)buffer + bufferoffset, count), fileOffset);
 
-        if (BaseStream.Position <= BaseStream.Length
-            && count > BaseStream.Length - BaseStream.Position)
+    public int Read(Span<byte> buffer, long fileOffset)
+    {
+        if (fileOffset <= BaseStream.Length
+            && buffer.Length > BaseStream.Length - fileOffset)
         {
-            count = (int)(BaseStream.Length - BaseStream.Position);
+            buffer = buffer.Slice(0, (int)(BaseStream.Length - fileOffset));
         }
 
-        var mem = CollectionExtensions.AsSpan(buffer + bufferoffset, count);
-
-        return BaseStream.Read(mem);
-    }
-
-    public int Write(nint buffer, int bufferoffset, int count, long fileoffset)
-    {
-        BaseStream.Position = fileoffset;
-
-        var mem = CollectionExtensions.AsReadOnlySpan(buffer + bufferoffset, count);
-        BaseStream.Write(mem);
-        
-        return count;
-    }
-
-    public int Read(Span<byte> buffer, long fileoffset)
-    {
-        BaseStream.Position = fileoffset;
-
-        if (BaseStream.Position <= BaseStream.Length
-            && buffer.Length > BaseStream.Length - BaseStream.Position)
+#if NET6_0_OR_GREATER
+        if (randomAccessFileHandle is not null
+            && (buffer.Length & randomAccessAlignment) == 0
+            && (fileOffset & randomAccessAlignment) == 0)
         {
-            buffer = buffer.Slice(0, (int)(BaseStream.Length - BaseStream.Position));
+            return RandomAccess.Read(randomAccessFileHandle, buffer, fileOffset);
         }
+#endif
+
+        BaseStream.Position = fileOffset;
 
         return BaseStream.Read(buffer);
     }
 
-    public int Write(ReadOnlySpan<byte> buffer, long fileoffset)
+    public int Write(ReadOnlySpan<byte> buffer, long fileOffset)
     {
-        BaseStream.Position = fileoffset;
+#if NET6_0_OR_GREATER
+        if (randomAccessFileHandle is not null
+            && (buffer.Length & randomAccessAlignment) == 0
+            && (fileOffset & randomAccessAlignment) == 0)
+        {
+            RandomAccess.Write(randomAccessFileHandle, buffer, fileOffset);
+
+            return buffer.Length;
+        }
+#endif
+
+        BaseStream.Position = fileOffset;
 
         BaseStream.Write(buffer);
         
         return buffer.Length;
     }
 
-    public int Read(byte[] buffer, int bufferoffset, int count, long fileoffset)
+    public int Read(byte[] buffer, int bufferoffset, int count, long fileOffset)
     {
-        BaseStream.Position = fileoffset;
-
-        if (BaseStream.Position <= BaseStream.Length
-            && count > BaseStream.Length - BaseStream.Position)
+        if (fileOffset <= BaseStream.Length
+            && count > BaseStream.Length - fileOffset)
         {
-            count = (int)(BaseStream.Length - BaseStream.Position);
+            count = (int)(BaseStream.Length - fileOffset);
         }
+
+#if NET6_0_OR_GREATER
+        if (randomAccessFileHandle is not null
+            && (count & randomAccessAlignment) == 0
+            && (fileOffset & randomAccessAlignment) == 0)
+        {
+            return RandomAccess.Read(randomAccessFileHandle, buffer.AsSpan(bufferoffset, count), fileOffset);
+        }
+#endif
+
+        BaseStream.Position = fileOffset;
 
         return BaseStream.Read(buffer, bufferoffset, count);
     }
 
-    public int Write(byte[] buffer, int bufferoffset, int count, long fileoffset)
+    public int Write(byte[] buffer, int bufferoffset, int count, long fileOffset)
     {
-        BaseStream.Position = fileoffset;
+#if NET6_0_OR_GREATER
+        if (randomAccessFileHandle is not null
+            && (count & randomAccessAlignment) == 0
+            && (fileOffset & randomAccessAlignment) == 0)
+        {
+            RandomAccess.Write(randomAccessFileHandle, buffer.AsSpan(bufferoffset, count), fileOffset);
+
+            return buffer.Length;
+        }
+#endif
+
+        BaseStream.Position = fileOffset;
         BaseStream.Write(buffer, bufferoffset, count);
         
         return count;
