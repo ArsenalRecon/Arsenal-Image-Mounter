@@ -10,6 +10,8 @@
 // 
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -90,6 +92,16 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
         }
     }
 
+    unsafe ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        fixed (void* pinptr = buffer.Span)
+        {
+            return new(Read((nint)pinptr, 0, buffer.Length, fileoffset));
+        }
+    }
+
     unsafe int IDevioProvider.Read(Span<byte> buffer, long fileoffset)
     {
         fixed (void* pinptr = buffer)
@@ -122,6 +134,16 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
         fixed (byte* pinptr = buffer)
         {
             return Write((nint)pinptr, bufferoffset, count, fileoffset);
+        }
+    }
+
+    unsafe ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        fixed (void* pinptr = buffer.Span)
+        {
+            return new(Write((nint)pinptr, 0, buffer.Length, fileoffset));
         }
     }
 

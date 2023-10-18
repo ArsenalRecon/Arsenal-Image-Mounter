@@ -9,6 +9,8 @@
 // 
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -128,6 +130,10 @@ public partial interface IDevioProvider : IDisposable
     /// <param name="fileoffset">Offset at virtual disk device where write starts.</param>
     /// <returns>Returns number of bytes written to device.</returns>
     int Write(byte[] buffer, int bufferoffset, int count, long fileoffset);
+
+    ValueTask<int> ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken);
+
+    ValueTask<int> WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken);
 
     /// <summary>
     /// Manage registrations and reservation keys for shared images.

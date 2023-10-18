@@ -192,6 +192,10 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     private static partial nint libqcow_file_read_buffer(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, out SafeLibQcowErrorObjectHandle errobj);
 
+    [LibraryImport("libqcow")]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    private static partial nint libqcow_file_read_buffer_at_offset(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibQcowErrorObjectHandle errobj);
+
     [Obsolete]
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -271,6 +275,9 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern nint libqcow_file_read_buffer(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, out SafeLibQcowErrorObjectHandle errobj);
+
+    [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
+    private static extern nint libqcow_file_read_buffer_at_offset(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibQcowErrorObjectHandle errobj);
 
     [Obsolete]
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
@@ -418,28 +425,15 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     public override int Read(nint buffer, int bufferoffset, int count, long fileoffset)
     {
-
         var done_count = 0;
 
         while (done_count < count)
         {
-
-            var offset = libqcow_file_seek_offset(SafeHandle, fileoffset, Whence.Set, out var errobj);
-
-            if (offset != fileoffset || Failed(errobj))
-            {
-
-                ThrowError(errobj, $"Error seeking to position {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-
-            }
-
             var iteration_count = count - done_count;
 
             if (iteration_count > MaxIoSize)
             {
-
                 iteration_count = MaxIoSize;
-
             }
 
             // Dim chunk_offset = CInt(fileoffset And (_ChunkSize - 1))
@@ -450,32 +444,25 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
             // End If
 
-            var result = (int)libqcow_file_read_buffer(SafeHandle, buffer + bufferoffset, iteration_count, out errobj);
+            var result = (int)libqcow_file_read_buffer_at_offset(SafeHandle, buffer + bufferoffset, iteration_count, fileoffset, out var errobj);
 
             if (result < 0 || Failed(errobj))
             {
-
                 ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-
             }
 
             if (result > 0)
             {
-
                 done_count += result;
                 fileoffset += result;
                 bufferoffset += result;
             }
-
             else if (result == 0)
             {
-
                 break;
             }
-
             else if (iteration_count >= SectorSize << 1)
             {
-
                 errobj?.Dispose();
 
                 MaxIoSize = iteration_count >> 1 & ~(int)(SectorSize - 1L);
@@ -484,22 +471,17 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
                 continue;
             }
-
             else
             {
-
                 ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-
             }
         }
 
         return done_count;
-
     }
 
     protected override void Dispose(bool disposing)
     {
-
         Finishing?.Invoke(this, EventArgs.Empty);
 
         if (disposing && SafeHandle is not null)
@@ -508,7 +490,6 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
         }
 
         base.Dispose(disposing);
-
     }
 
     public override int Write(nint buffer, int bufferoffset, int count, long fileoffset)

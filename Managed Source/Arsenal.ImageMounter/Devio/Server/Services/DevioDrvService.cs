@@ -18,6 +18,7 @@ using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -28,9 +29,12 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Threading;
+using System.Threading.Tasks;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
 
@@ -62,6 +66,8 @@ public partial class DevioDrvService : DevioServiceBase
     public const long DefaultInitialBufferSize = (64 << 10) + IMDPROXY_HEADER_SIZE;
 
     private static Guid GetNextRandomValue() => NativeCalls.GenRandomGuid();
+
+    private readonly CancellationTokenSource cancellation = new();
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
@@ -121,22 +127,24 @@ public partial class DevioDrvService : DevioServiceBase
 
     internal static unsafe partial class DevioDrvServiceInterop
     {
+        public static readonly int SizeOfNativeOverlapped = sizeof(NativeOverlapped);
+
 #if NET7_0_OR_GREATER
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool DeviceIoControl(SafeFileHandle hDevice,
                                                    uint dwIoControlCode,
-                                                   void* lpBufferId,
+                                                   in nint lpBufferId,
                                                    int nBufferIdSize,
-                                                   void* lpDataBuffer,
-                                                   uint nDataBufferSize,
-                                                   uint* lpBytesReturned,
-                                                   NativeOverlapped* lpOverlapped);
+                                                   nint lpDataBuffer,
+                                                   int nDataBufferSize,
+                                                   nint lpBytesReturned,
+                                                   nint lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool GetOverlappedResult(SafeFileHandle hDevice,
-                                                       NativeOverlapped* lpOverlapped,
+                                                       nint lpOverlapped,
                                                        out uint lpNumberOfBytesTransferred,
                                                        [MarshalAs(UnmanagedType.Bool)] bool bWait);
 
@@ -148,20 +156,20 @@ public partial class DevioDrvService : DevioServiceBase
         [DllImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool DeviceIoControl(SafeFileHandle hDevice,
-                                                    uint dwIoControlCode,
-                                                    void* lpBufferId,
-                                                    int nBufferIdSize,
-                                                    void* lpDataBuffer,
-                                                    uint nDataBufferSize,
-                                                    uint* lpBytesReturned,
-                                                    NativeOverlapped* lpOverlapped);
+                                                  uint dwIoControlCode,
+                                                  in nint lpBufferId,
+                                                  int nBufferIdSize,
+                                                  nint lpDataBuffer,
+                                                  int nDataBufferSize,
+                                                  nint lpBytesReturned,
+                                                  nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetOverlappedResult(SafeFileHandle hDevice,
-                                                        NativeOverlapped* lpOverlapped,
-                                                        out uint lpNumberOfBytesTransferred,
-                                                        [MarshalAs(UnmanagedType.Bool)] bool bWait);
+                                                      nint lpOverlapped,
+                                                      out uint lpNumberOfBytesTransferred,
+                                                      [MarshalAs(UnmanagedType.Bool)] bool bWait);
 
         [DllImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -169,24 +177,34 @@ public partial class DevioDrvService : DevioServiceBase
 #endif
     }
 
-    private unsafe void StartNewIoExchange()
+    private void StartNewIoExchange()
     {
         const uint IOCTL_DEVIODRV_LOCK_MEMORY = unchecked((uint)(((0x8372) << 16) | (((0x0001) | (0x0002)) << 14) | ((0x8D1) << 2) | (2)));
         const uint IOCTL_DEVIODRV_EXCHANGE_IO = unchecked((uint)(((0x8372) << 16) | (((0x0001) | (0x0002)) << 14) | ((0x8D0) << 2) | (2)));
 
         device = device ?? throw new InvalidOperationException();
 
+        var cancellationToken = cancellation.Token;
+
         MemoryMappedViewAccessor mapView = null!;
 
-        long bufferSize;
+        MemoryManager<byte> mapMemoryManager = null!;
 
-        EventWaitHandle requestEvent = null!;
+        Memory<byte> mapMemory;
+
+        long bufferSize;
 
         EventWaitHandle memoryEvent = null!;
 
         HGlobalBuffer memoryOverlappedMem = null!;
 
+        nint memoryOverlapped;
+
+        EventWaitHandle requestEvent = null!;
+
         HGlobalBuffer requestOverlappedMem = null!;
+
+        nint requestOverlapped;
 
         RegisteredWaitHandle registeredHandle = null!;
 
@@ -216,34 +234,40 @@ public partial class DevioDrvService : DevioServiceBase
 
             bufferId = mapView.SafeMemoryMappedViewHandle.DangerousGetHandle();
 
+            mapMemoryManager = mapView.SafeMemoryMappedViewHandle.GetMemoryManager();
+
+            mapMemory = mapMemoryManager.Memory;
+
             var maxTransferSize = (int)(mapView.Capacity - IMDPROXY_HEADER_SIZE);
 
             Trace.WriteLine($"Service number {serviceNumber}: Created shared memory object, {maxTransferSize} bytes.");
 
             memoryEvent = new ManualResetEvent(initialState: false);
 
-            memoryOverlappedMem = new HGlobalBuffer(sizeof(NativeOverlapped));
+            memoryOverlappedMem = new HGlobalBuffer(DevioDrvServiceInterop.SizeOfNativeOverlapped);
+
+            memoryOverlapped = memoryOverlappedMem.DangerousGetHandle();
 
             requestEvent = new AutoResetEvent(initialState: false);
 
-            requestOverlappedMem = new HGlobalBuffer(sizeof(NativeOverlapped));
+            requestOverlappedMem = new HGlobalBuffer(DevioDrvServiceInterop.SizeOfNativeOverlapped);
 
-            var memoryOverlapped = (NativeOverlapped*)memoryOverlappedMem.DangerousGetHandle();
+            requestOverlapped = requestOverlappedMem.DangerousGetHandle();
 
-            memoryOverlapped->EventHandle = memoryEvent.SafeWaitHandle.DangerousGetHandle();
+            unsafe
+            {
+                ((NativeOverlapped*)memoryOverlapped)->EventHandle = memoryEvent.SafeWaitHandle.DangerousGetHandle();
+                ((NativeOverlapped*)requestOverlapped)->EventHandle = requestEvent.SafeWaitHandle.DangerousGetHandle();
+            }
 
-            var requestOverlapped = (NativeOverlapped*)requestOverlappedMem.DangerousGetHandle();
-
-            requestOverlapped->EventHandle = requestEvent.SafeWaitHandle.DangerousGetHandle();
-
-            if (!DevioDrvServiceInterop.DeviceIoControl(device,
-                                                        IOCTL_DEVIODRV_LOCK_MEMORY,
-                                                        &bufferId,
-                                                        sizeof(void*),
-                                                        (void*)bufferId,
-                                                        (uint)mapView.Capacity,
-                                                        null,
-                                                        memoryOverlapped)
+            if (!DevioDrvServiceInterop.DeviceIoControl(hDevice: device,
+                                                        dwIoControlCode: IOCTL_DEVIODRV_LOCK_MEMORY,
+                                                        lpBufferId: bufferId,
+                                                        nBufferIdSize: IntPtr.Size,
+                                                        lpDataBuffer: bufferId,
+                                                        nDataBufferSize: mapMemory.Length,
+                                                        lpBytesReturned: 0,
+                                                        lpOverlapped: memoryOverlapped)
                 && Marshal.GetLastWin32Error() != NativeConstants.ERROR_IO_PENDING)
             {
                 throw new IOException($"Service number {serviceNumber}: Lock memory request failed", new Win32Exception());
@@ -253,7 +277,7 @@ public partial class DevioDrvService : DevioServiceBase
             {
                 mapView.SafeMemoryMappedViewHandle.Write(0, IMDPROXY_REQ.IMDPROXY_REQ_INFO);
 
-                SendInfo(mapView.SafeMemoryMappedViewHandle);
+                SendInfo(mapMemory.Span);
             }
             else
             {
@@ -268,14 +292,14 @@ public partial class DevioDrvService : DevioServiceBase
                                                                       Timeout.Infinite,
                                                                       executeOnlyOnce: false);
 
-            if (!DevioDrvServiceInterop.DeviceIoControl(device,
-                                                        IOCTL_DEVIODRV_EXCHANGE_IO,
-                                                        &bufferId,
-                                                        sizeof(void*),
-                                                        null,
-                                                        0,
-                                                        null,
-                                                        requestOverlapped)
+            if (!DevioDrvServiceInterop.DeviceIoControl(hDevice: device,
+                                                        dwIoControlCode: IOCTL_DEVIODRV_EXCHANGE_IO,
+                                                        lpBufferId: bufferId,
+                                                        nBufferIdSize: IntPtr.Size,
+                                                        lpDataBuffer: 0,
+                                                        nDataBufferSize: 0,
+                                                        lpBytesReturned: 0,
+                                                        lpOverlapped: requestOverlapped)
                 && Marshal.GetLastWin32Error() != NativeConstants.ERROR_IO_PENDING)
             {
                 if (initializedWaitEvent is not null)
@@ -298,7 +322,7 @@ public partial class DevioDrvService : DevioServiceBase
             throw;
         }
         
-        void IoComplete(object? state, bool timeout)
+        async void IoComplete(object? state, bool timeout)
         {
             var concurrentCount = Interlocked.Increment(ref concurrentRequestsCounter);
 
@@ -312,12 +336,6 @@ public partial class DevioDrvService : DevioServiceBase
 
                     return;
                 }
-
-                var memoryOverlapped = (NativeOverlapped*)memoryOverlappedMem.DangerousGetHandle();
-
-                var requestOverlapped = (NativeOverlapped*)requestOverlappedMem.DangerousGetHandle();
-
-                var bufferId = mapView.SafeMemoryMappedViewHandle.DangerousGetHandle();
 
                 var err = NativeConstants.NO_ERROR;
 
@@ -353,6 +371,10 @@ public partial class DevioDrvService : DevioServiceBase
 
                         bufferId = default;
 
+                        mapMemory = default;
+
+                        mapMemoryManager = null!;
+
                         mapView.Dispose();
 
                         mapView = null!;
@@ -369,46 +391,56 @@ public partial class DevioDrvService : DevioServiceBase
 
                         bufferId = mapView.SafeMemoryMappedViewHandle.DangerousGetHandle();
 
+                        mapMemoryManager = mapView.SafeMemoryMappedViewHandle.GetMemoryManager();
+
+                        mapMemory = mapMemoryManager.Memory;
+
                         var maxTransferSize = (int)(mapView.Capacity - IMDPROXY_HEADER_SIZE);
 
                         memoryEvent.Reset();
 
-                        if (!DevioDrvServiceInterop.DeviceIoControl(device,
-                                                                    IOCTL_DEVIODRV_LOCK_MEMORY,
-                                                                    &bufferId,
-                                                                    sizeof(void*),
-                                                                    (void*)bufferId,
-                                                                    (uint)mapView.Capacity,
-                                                                    null,
-                                                                    memoryOverlapped)
-                            && Marshal.GetLastWin32Error() != NativeConstants.ERROR_IO_PENDING)
+                        if (DevioDrvServiceInterop.DeviceIoControl(hDevice: device,
+                                                                   dwIoControlCode: IOCTL_DEVIODRV_LOCK_MEMORY,
+                                                                   lpBufferId: bufferId,
+                                                                   nBufferIdSize: IntPtr.Size,
+                                                                   lpDataBuffer: bufferId,
+                                                                   nDataBufferSize: mapMemory.Length,
+                                                                   lpBytesReturned: 0,
+                                                                   lpOverlapped: memoryOverlapped)
+                            || Marshal.GetLastWin32Error() == NativeConstants.ERROR_IO_PENDING)
                         {
-                            Trace.Write($"Service number {serviceNumber}: Lock memory request failed ({Marshal.GetLastWin32Error()})");
+                            Trace.WriteLine($"Service number {serviceNumber}: Created shared memory object, {maxTransferSize} bytes.");
+                        }
+                        else
+                        {
+                            err = Marshal.GetLastWin32Error();
+
+                            Trace.WriteLine($"Service number {serviceNumber}: Lock memory request failed ({err})");
+
                             CleanupIoExchange();
+
                             return;
                         }
-
-                        Trace.WriteLine($"Service number {serviceNumber}: Created shared memory object, {maxTransferSize} bytes.");
                     }
 
                     if (err == NativeConstants.NO_ERROR)
                     {
-                        var requestCode = mapView.SafeMemoryMappedViewHandle.Read<IMDPROXY_REQ>(headerOffset);
+                        var requestCode = MemoryMarshal.Read<IMDPROXY_REQ>(mapMemory.Span.Slice(headerOffset));
 
                         // Trace.WriteLine("Got client request: " & RequestCode.ToString())
 
                         switch (requestCode)
                         {
                             case IMDPROXY_REQ.IMDPROXY_REQ_INFO:
-                                SendInfo(mapView.SafeMemoryMappedViewHandle);
+                                SendInfo(mapMemory.Span);
                                 break;
 
                             case IMDPROXY_REQ.IMDPROXY_REQ_READ:
-                                ReadData(mapView.SafeMemoryMappedViewHandle);
+                                await ReadDataAsync(mapMemory, cancellationToken).ConfigureAwait(false);
                                 break;
 
                             case IMDPROXY_REQ.IMDPROXY_REQ_WRITE:
-                                WriteData(mapView.SafeMemoryMappedViewHandle);
+                                await WriteDataAsync(mapMemory, cancellationToken).ConfigureAwait(false);
                                 break;
 
                             case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
@@ -417,12 +449,13 @@ public partial class DevioDrvService : DevioServiceBase
                                 return;
 
                             case IMDPROXY_REQ.IMDPROXY_REQ_SHARED:
-                                SharedKeys(mapView.SafeMemoryMappedViewHandle);
+                                SharedKeys(mapMemory.Span);
                                 break;
 
                             default:
                                 Trace.WriteLine($"Service number {serviceNumber}: Unsupported request code: {requestCode}");
-                                mapView.SafeMemoryMappedViewHandle.Write(headerOffset, NativeConstants.ERROR_INVALID_FUNCTION);
+                                err = NativeConstants.ERROR_INVALID_FUNCTION;
+                                MemoryMarshal.Write(mapMemory.Span.Slice(headerOffset), ref err);
                                 break;
                         }
                     }
@@ -444,24 +477,24 @@ public partial class DevioDrvService : DevioServiceBase
 
                     // Trace.WriteLine("Sending response and waiting for next request.")
 
-                    if (!DevioDrvServiceInterop.DeviceIoControl(device,
-                                                                IOCTL_DEVIODRV_EXCHANGE_IO,
-                                                                &bufferId,
-                                                                sizeof(void*),
-                                                                null,
-                                                                0,
-                                                                null,
-                                                                requestOverlapped))
+                    if (DevioDrvServiceInterop.DeviceIoControl(hDevice: device,
+                                                               dwIoControlCode: IOCTL_DEVIODRV_EXCHANGE_IO,
+                                                               lpBufferId: bufferId,
+                                                               nBufferIdSize: IntPtr.Size,
+                                                               lpDataBuffer: 0,
+                                                               nDataBufferSize: 0,
+                                                               lpBytesReturned: 0,
+                                                               lpOverlapped: requestOverlapped))
                     {
-                        err = Marshal.GetLastWin32Error();
-
-                        if (err != NativeConstants.ERROR_IO_PENDING)
-                        {
-                            continue;
-                        }
+                        return;
                     }
 
-                    return;
+                    err = Marshal.GetLastWin32Error();
+
+                    if (err == NativeConstants.ERROR_IO_PENDING)
+                    {
+                        return;
+                    }
                 }
             }
             catch (Exception ex)
@@ -507,11 +540,11 @@ public partial class DevioDrvService : DevioServiceBase
         }
     }
 
-    private static readonly ulong headerOffset = (ulong)IMDPROXY_DEVIODRV_BUFFER_HEADER.SizeOf;
+    private static readonly int headerOffset = IMDPROXY_DEVIODRV_BUFFER_HEADER.SizeOf;
 
     private SafeFileHandle? device = null;
 
-    private ManualResetEventSlim closedEvent = new(initialState: true);
+    private readonly ManualResetEventSlim closedEvent = new(initialState: true);
 
     /// <summary>
     /// Runs service that acts as server end in Devio shared memory based communication. It will first wait for
@@ -585,7 +618,7 @@ public partial class DevioDrvService : DevioServiceBase
 
     private int concurrentRequestsCounter;
 
-    private void SendInfo(SafeBuffer mapView)
+    private void SendInfo(Span<byte> mapView)
     {
         var info = new IMDPROXY_INFO_RESP
         {
@@ -595,14 +628,14 @@ public partial class DevioDrvService : DevioServiceBase
                 | (DevioProvider.SupportsShared ? IMDPROXY_FLAGS.IMDPROXY_FLAG_SUPPORTS_SHARED : 0)
         };
 
-        mapView.Write(headerOffset, info);
+        MemoryMarshal.Write(mapView.Slice(headerOffset), ref info);
     }
 
     private int readData_largest_request = default;
 
-    private void ReadData(SafeBuffer mapView)
+    private async ValueTask ReadDataAsync(Memory<byte> mapView, CancellationToken cancellationToken)
     {
-        var request = mapView.Read<IMDPROXY_READ_REQ>(headerOffset);
+        var request = MemoryMarshal.Read<IMDPROXY_READ_REQ>(mapView.Span.Slice(headerOffset));
 
         var offset = (long)request.offset;
         var readLength = (int)request.length;
@@ -617,7 +650,7 @@ public partial class DevioDrvService : DevioServiceBase
 
         try
         {
-            var maxTransferSize = (int)(mapView.ByteLength - IMDPROXY_HEADER_SIZE);
+            var maxTransferSize = (int)(mapView.Length - IMDPROXY_HEADER_SIZE);
 
             if (readLength > maxTransferSize)
             {
@@ -628,7 +661,7 @@ public partial class DevioDrvService : DevioServiceBase
                 readLength = maxTransferSize;
             }
 
-            response.length = (ulong)DevioProvider.Read(mapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, readLength, offset);
+            response.length = (ulong)await DevioProvider.ReadAsync(mapView.Slice(IMDPROXY_HEADER_SIZE, readLength), offset, cancellationToken).ConfigureAwait(false);
             response.errorno = 0UL;
         }
         catch (Exception ex)
@@ -639,14 +672,14 @@ public partial class DevioDrvService : DevioServiceBase
             response.length = 0UL;
         }
 
-        mapView.Write(headerOffset, response);
+        MemoryMarshal.Write(mapView.Span.Slice(headerOffset), ref response);
     }
 
     private int writeData_largest_request = default;
 
-    private void WriteData(SafeBuffer mapView)
+    private async ValueTask WriteDataAsync(Memory<byte> mapView, CancellationToken cancellationToken)
     {
-        var request = mapView.Read<IMDPROXY_WRITE_REQ>(headerOffset);
+        var request = MemoryMarshal.Read<IMDPROXY_WRITE_REQ>(mapView.Span.Slice(headerOffset));
 
         var offset = (long)request.offset;
         var writeLength = (int)request.length;
@@ -660,14 +693,14 @@ public partial class DevioDrvService : DevioServiceBase
 
         try
         {
-            var maxTransferSize = (int)(mapView.ByteLength - IMDPROXY_HEADER_SIZE);
+            var maxTransferSize = (int)(mapView.Length - IMDPROXY_HEADER_SIZE);
 
             if (writeLength > maxTransferSize)
             {
                 throw new Exception($"Requested write length {writeLength}. Buffer size is {maxTransferSize} bytes.");
             }
 
-            var writtenLength = DevioProvider.Write(mapView.DangerousGetHandle(), IMDPROXY_HEADER_SIZE, writeLength, offset);
+            var writtenLength = await DevioProvider.WriteAsync(mapView.Slice(IMDPROXY_HEADER_SIZE, writeLength), offset, cancellationToken).ConfigureAwait(false);
 
             if (writtenLength < 0)
             {
@@ -689,18 +722,19 @@ public partial class DevioDrvService : DevioServiceBase
             response.length = 0UL;
         }
 
-        mapView.Write(headerOffset, response);
+        MemoryMarshal.Write(mapView.Span.Slice(headerOffset), ref response);
     }
 
-    private void SharedKeys(SafeBuffer mapView)
+    private void SharedKeys(Span<byte> mapView)
     {
-        var request = mapView.Read<IMDPROXY_SHARED_REQ>(headerOffset);
+        var request = MemoryMarshal.Read<IMDPROXY_SHARED_REQ>(mapView.Slice(headerOffset));
 
         var response = default(IMDPROXY_SHARED_RESP);
 
         try
         {
             DevioProvider.SharedKeys(request, out response, out var keys);
+
             if (keys is null)
             {
                 response.length = 0UL;
@@ -708,7 +742,7 @@ public partial class DevioDrvService : DevioServiceBase
             else
             {
                 response.length = (ulong)(keys.Length * sizeof(ulong));
-                mapView.WriteArray(IMDPROXY_HEADER_SIZE, keys, 0, keys.Length);
+                MemoryMarshal.AsBytes(keys.AsSpan()).CopyTo(mapView.Slice(IMDPROXY_HEADER_SIZE));
             }
         }
         catch (Exception ex)
@@ -718,7 +752,7 @@ public partial class DevioDrvService : DevioServiceBase
             response.length = 0UL;
         }
 
-        mapView.Write(headerOffset, response);
+        MemoryMarshal.Write(mapView.Slice(headerOffset), ref response);
     }
 
     protected override string ProxyObjectName
@@ -729,5 +763,8 @@ public partial class DevioDrvService : DevioServiceBase
         | (DevioProvider.CanWrite ? DeviceFlags.None : DeviceFlags.ReadOnly);
 
     protected override void EmergencyStopServiceThread()
-        => device?.Dispose();
+    {
+        cancellation.Cancel();
+        device?.Dispose();
+    }
 }

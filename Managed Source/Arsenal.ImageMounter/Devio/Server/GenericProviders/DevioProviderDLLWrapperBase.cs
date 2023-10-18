@@ -28,24 +28,20 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 /// </summary>
 public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
 {
-
     #region SafeHandle
     public class SafeDevioProviderDLLHandle : SafeHandleZeroOrMinusOneIsInvalid
     {
-
         protected internal DLLCloseMethod? DLLClose { get; set; }
 
         public SafeDevioProviderDLLHandle(nint handle, bool ownsHandle)
             : base(ownsHandle)
         {
-
             SetHandle(handle);
         }
 
         protected SafeDevioProviderDLLHandle()
             : base(true)
         {
-
         }
 
         protected override bool ReleaseHandle() => DLLClose is null || DLLClose(handle) != 0;
@@ -55,12 +51,10 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
     protected DevioProviderDLLWrapperBase(DLLOpenMethod open, string filename, bool readOnly)
         : this(open, filename, readOnly, null)
     {
-
     }
 
     protected DevioProviderDLLWrapperBase(DLLOpenMethod open, string filename, bool readOnly, Func<Exception>? get_last_error)
     {
-
         if (open is null)
         {
             throw new ArgumentNullException(nameof(open));
@@ -79,7 +73,6 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
         SafeHandle.DLLClose = dllClose;
 
         CanWrite = !readOnly;
-
     }
 
     public SafeDevioProviderDLLHandle SafeHandle { get; }
@@ -92,9 +85,17 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
 
     public virtual DLLReadWriteMethod DLLWrite { get; }
 
-    public delegate SafeDevioProviderDLLHandle DLLOpenMethod([MarshalAs(UnmanagedType.LPStr)][In] string filename, [MarshalAs(UnmanagedType.Bool)] bool read_only, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllread, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllwrite, [MarshalAs(UnmanagedType.FunctionPtr)] out DLLCloseMethod dllclose, out long size);
+    public delegate SafeDevioProviderDLLHandle DLLOpenMethod([MarshalAs(UnmanagedType.LPStr)][In] string filename,
+                                                             [MarshalAs(UnmanagedType.Bool)] bool read_only,
+                                                             [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllread,
+                                                             [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllwrite,
+                                                             [MarshalAs(UnmanagedType.FunctionPtr)] out DLLCloseMethod dllclose,
+                                                             out long size);
 
-    public delegate int DLLReadWriteMethod(SafeDevioProviderDLLHandle handle, nint buffer, int size, long offset);
+    public delegate int DLLReadWriteMethod(SafeDevioProviderDLLHandle handle,
+                                           nint buffer,
+                                           int size,
+                                           long offset);
 
     public delegate int DLLCloseMethod(nint handle);
 

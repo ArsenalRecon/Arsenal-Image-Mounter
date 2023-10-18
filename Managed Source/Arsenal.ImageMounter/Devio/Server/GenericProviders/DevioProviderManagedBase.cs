@@ -13,6 +13,8 @@
 using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -104,10 +106,34 @@ public abstract class DevioProviderManagedBase : IDevioProvider
         }
     }
 
-    int IDevioProvider.Read(Span<byte> buffer, long fileoffset)
+    ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (MemoryMarshal.TryGetArray<byte>(buffer, out var segment))
+        {
+            return new(Read(segment.Array!, segment.Offset, segment.Count, fileoffset));
+        }
 
         var _byte_buffer = ArrayPool<byte>.Shared.Rent(buffer.Length);
+        
+        try
+        {
+            var readlen = Read(_byte_buffer, 0, buffer.Length, fileoffset);
+            _byte_buffer.AsSpan(0, readlen).CopyTo(buffer.Span);
+
+            return new(readlen);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(_byte_buffer);
+        }
+    }
+
+    int IDevioProvider.Read(Span<byte> buffer, long fileoffset)
+    {
+        var _byte_buffer = ArrayPool<byte>.Shared.Rent(buffer.Length);
+
         try
         {
             var readlen = Read(_byte_buffer, 0, buffer.Length, fileoffset);
@@ -115,11 +141,9 @@ public abstract class DevioProviderManagedBase : IDevioProvider
 
             return readlen;
         }
-
         finally
         {
             ArrayPool<byte>.Shared.Return(_byte_buffer);
-
         }
     }
 
@@ -135,26 +159,47 @@ public abstract class DevioProviderManagedBase : IDevioProvider
 
     int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset)
     {
-
         var _byte_buffer = ArrayPool<byte>.Shared.Rent(count);
+
         try
         {
             Marshal.Copy(buffer + bufferoffset, _byte_buffer, 0, count);
 
             return Write(_byte_buffer, 0, count, fileoffset);
         }
-
         finally
         {
             ArrayPool<byte>.Shared.Return(_byte_buffer);
+        }
+    }
 
+    ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (MemoryMarshal.TryGetArray(buffer, out var segment))
+        {
+            return new(Write(segment.Array!, segment.Offset, segment.Count, fileoffset));
+        }
+
+        var _byte_buffer = ArrayPool<byte>.Shared.Rent(buffer.Length);
+
+        try
+        {
+            buffer.CopyTo(_byte_buffer);
+
+            return new(Write(_byte_buffer, 0, buffer.Length, fileoffset));
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(_byte_buffer);
         }
     }
 
     int IDevioProvider.Write(ReadOnlySpan<byte> buffer, long fileoffset)
     {
-
         var _byte_buffer = ArrayPool<byte>.Shared.Rent(buffer.Length);
+
         try
         {
             buffer.CopyTo(_byte_buffer);

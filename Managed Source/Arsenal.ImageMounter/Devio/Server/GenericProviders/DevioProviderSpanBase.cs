@@ -10,6 +10,8 @@
 // 
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -80,6 +82,13 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <returns>Returns number of bytes read from device that were stored in byte array.</returns>
     public abstract int Read(Span<byte> buffer, long fileoffset);
 
+    unsafe ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return new(Read(buffer.Span, fileoffset));
+    }
+
     unsafe int IDevioProvider.Read(nint buffer, int bufferoffset, int count, long fileoffset)
         => Read(new Span<byte>((byte*)buffer + bufferoffset, count), fileoffset);
 
@@ -93,6 +102,13 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <param name="fileoffset">Offset at virtual disk device where write starts.</param>
     /// <returns>Returns number of bytes written to device.</returns>
     public abstract int Write(ReadOnlySpan<byte> buffer, long fileoffset);
+
+    unsafe ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return new(Write(buffer.Span, fileoffset));
+    }
 
     unsafe int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset)
         => Write(new ReadOnlySpan<byte>((byte*)buffer + bufferoffset, count), fileoffset);

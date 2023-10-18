@@ -9,6 +9,8 @@
 // 
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -54,11 +56,15 @@ public sealed class DummyProvider : IDevioProvider
 
     int IDevioProvider.Read(Span<byte> buffer, long fileoffset) => throw new NotImplementedException();
 
+    ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken) => throw new NotImplementedException();
+
     int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
 
     int IDevioProvider.Write(byte[] buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
 
     int IDevioProvider.Write(ReadOnlySpan<byte> buffer, long fileoffset) => throw new NotImplementedException();
+
+    ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken) => throw new NotImplementedException();
 
     public void Dispose()
     {

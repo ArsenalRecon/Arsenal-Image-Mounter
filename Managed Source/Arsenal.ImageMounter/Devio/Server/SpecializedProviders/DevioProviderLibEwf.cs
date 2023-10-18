@@ -193,6 +193,10 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     private static partial nint libewf_handle_read_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out SafeLibEwfErrorObjectHandle errobj);
 
+    [LibraryImport("libewf")]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    private static partial nint libewf_handle_read_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibEwfErrorObjectHandle errobj);
+
     [Obsolete]
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -201,6 +205,10 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     private static partial nint libewf_handle_write_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out SafeLibEwfErrorObjectHandle errobj);
+
+    [LibraryImport("libewf")]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    private static partial nint libewf_handle_write_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibEwfErrorObjectHandle errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
@@ -383,12 +391,18 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern nint libewf_handle_read_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out SafeLibEwfErrorObjectHandle errobj);
 
+    [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
+    private static extern nint libewf_handle_read_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibEwfErrorObjectHandle errobj);
+
     [Obsolete]
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern nint libewf_write_random(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern nint libewf_handle_write_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out SafeLibEwfErrorObjectHandle errobj);
+
+    [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
+    private static extern nint libewf_handle_write_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibEwfErrorObjectHandle errobj);
 
     [Obsolete]
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
@@ -667,18 +681,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         while (done_count < count)
         {
-            var offset = libewf_handle_seek_offset(SafeHandle, fileoffset, Whence.Set, out var errobj);
+            var bytesThisIteration = count - done_count;
 
-            if (offset != fileoffset || Failed(errobj))
+            if (bytesThisIteration > MaxIoSize)
             {
-                ThrowError(errobj, $"Error seeking to position {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-            }
-
-            var iteration_count = count - done_count;
-
-            if (iteration_count > MaxIoSize)
-            {
-                iteration_count = MaxIoSize;
+                bytesThisIteration = MaxIoSize;
             }
 
             // Dim chunk_offset = CInt(fileoffset And (_ChunkSize - 1))
@@ -689,11 +696,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
             // End If
 
-            var result = (int)libewf_handle_read_buffer(SafeHandle, buffer + bufferoffset, iteration_count, out errobj);
+            var result = (int)libewf_handle_read_buffer_at_offset(SafeHandle, buffer + bufferoffset, bytesThisIteration, fileoffset, out var errobj);
 
             if (result < 0 || Failed(errobj))
             {
-                ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
+                ThrowError(errobj, $"Error reading {bytesThisIteration} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
             }
 
             if (result > 0)
@@ -706,11 +713,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
             {
                 break;
             }
-            else if (iteration_count >= SectorSize << 1)
+            else if (bytesThisIteration >= SectorSize << 1)
             {
                 errobj?.Dispose();
 
-                MaxIoSize = iteration_count >> 1 & ~(int)(SectorSize - 1L);
+                MaxIoSize = bytesThisIteration >> 1 & ~(int)(SectorSize - 1L);
 
                 Trace.WriteLine($"Lowering MaxTransferSize to {MaxIoSize} bytes.");
 
@@ -718,7 +725,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
             }
             else
             {
-                ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
+                ThrowError(errobj, $"Error reading {bytesThisIteration} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
             }
         }
 
@@ -736,12 +743,6 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         var size = (nint)count;
 
-        var offset = libewf_handle_seek_offset(SafeHandle, fileoffset, Whence.Set, out var errobj);
-        if (offset != fileoffset || Failed(errobj))
-        {
-            ThrowError(errobj, $"Error seeking to position {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-        }
-
         while (sizedone < count)
         {
             var sizenow = size - sizedone;
@@ -750,7 +751,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                 sizenow = 16384;
             }
 
-            var retval = libewf_handle_write_buffer(SafeHandle, buffer + bufferoffset + sizedone, sizenow, out errobj);
+            var retval = libewf_handle_write_buffer_at_offset(SafeHandle, buffer + bufferoffset + sizedone, sizenow, fileoffset, out var errobj);
 
             if (retval <= 0 || Failed(errobj))
             {

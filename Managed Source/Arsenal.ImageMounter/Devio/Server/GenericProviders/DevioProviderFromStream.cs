@@ -18,6 +18,8 @@ using DiscUtils.Streams.Compatibility;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable IDE0079 // Remove unnecessary suppression
@@ -128,9 +130,6 @@ public class DevioProviderFromStream : IDevioProvider
     public unsafe int Read(nint buffer, int bufferoffset, int count, long fileOffset)
         => Read(new Span<byte>((byte*)buffer + bufferoffset, count), fileOffset);
     
-    public unsafe int Write(nint buffer, int bufferoffset, int count, long fileOffset)
-        => Write(new ReadOnlySpan<byte>((byte*)buffer + bufferoffset, count), fileOffset);
-
     public int Read(Span<byte> buffer, long fileOffset)
     {
         if (fileOffset <= BaseStream.Length
@@ -153,24 +152,28 @@ public class DevioProviderFromStream : IDevioProvider
         return BaseStream.Read(buffer);
     }
 
-    public int Write(ReadOnlySpan<byte> buffer, long fileOffset)
+    public ValueTask<int> ReadAsync(Memory<byte> buffer, long fileOffset, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (fileOffset <= BaseStream.Length
+            && buffer.Length > BaseStream.Length - fileOffset)
+        {
+            buffer = buffer.Slice(0, (int)(BaseStream.Length - fileOffset));
+        }
+
 #if NET6_0_OR_GREATER
         if (randomAccessFileHandle is not null
             && (buffer.Length & randomAccessAlignment) == 0
             && (fileOffset & randomAccessAlignment) == 0)
         {
-            RandomAccess.Write(randomAccessFileHandle, buffer, fileOffset);
-
-            return buffer.Length;
+            return RandomAccess.ReadAsync(randomAccessFileHandle, buffer, fileOffset, cancellationToken);
         }
 #endif
 
         BaseStream.Position = fileOffset;
 
-        BaseStream.Write(buffer);
-        
-        return buffer.Length;
+        return BaseStream.ReadAsync(buffer, cancellationToken);
     }
 
     public int Read(byte[] buffer, int bufferoffset, int count, long fileOffset)
@@ -193,6 +196,49 @@ public class DevioProviderFromStream : IDevioProvider
         BaseStream.Position = fileOffset;
 
         return BaseStream.Read(buffer, bufferoffset, count);
+    }
+
+    public unsafe int Write(nint buffer, int bufferoffset, int count, long fileOffset)
+        => Write(new ReadOnlySpan<byte>((byte*)buffer + bufferoffset, count), fileOffset);
+
+    public int Write(ReadOnlySpan<byte> buffer, long fileOffset)
+    {
+#if NET6_0_OR_GREATER
+        if (randomAccessFileHandle is not null
+            && (buffer.Length & randomAccessAlignment) == 0
+            && (fileOffset & randomAccessAlignment) == 0)
+        {
+            RandomAccess.Write(randomAccessFileHandle, buffer, fileOffset);
+
+            return buffer.Length;
+        }
+#endif
+
+        BaseStream.Position = fileOffset;
+
+        BaseStream.Write(buffer);
+
+        return buffer.Length;
+    }
+
+    public async ValueTask<int> WriteAsync(ReadOnlyMemory<byte> buffer, long fileOffset, CancellationToken cancellationToken)
+    {
+#if NET6_0_OR_GREATER
+        if (randomAccessFileHandle is not null
+            && (buffer.Length & randomAccessAlignment) == 0
+            && (fileOffset & randomAccessAlignment) == 0)
+        {
+            await RandomAccess.WriteAsync(randomAccessFileHandle, buffer, fileOffset, cancellationToken).ConfigureAwait(false);
+
+            return buffer.Length;
+        }
+#endif
+
+        BaseStream.Position = fileOffset;
+
+        await BaseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+
+        return buffer.Length;
     }
 
     public int Write(byte[] buffer, int bufferoffset, int count, long fileOffset)

@@ -17,6 +17,8 @@ using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -44,6 +46,19 @@ public partial class DevioDirectStream : DevioStream
     public override int Read(byte[] buffer, int offset, int count)
     {
         var bytesread = Provider.Read(buffer, offset, count, Position);
+
+        if (bytesread > 0)
+        {
+            Position += bytesread;
+        }
+
+        return bytesread;
+    }
+
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        var bytesread = await Provider.ReadAsync(buffer.AsMemory(offset, count), Position, cancellationToken).ConfigureAwait(false);
+
         if (bytesread > 0)
         {
             Position += bytesread;
@@ -53,25 +68,57 @@ public partial class DevioDirectStream : DevioStream
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public override unsafe int Read(Span<byte> buffer)
+    public override int Read(Span<byte> buffer)
     {
-        fixed (void* ptr = buffer)
+        var bytesread = Provider.Read(buffer, Position);
+
+        if (bytesread > 0)
         {
-            var bytesread = Provider.Read((nint)ptr, 0, buffer.Length, Position);
-
-            if (bytesread > 0)
-            {
-                Position += bytesread;
-            }
-
-            return bytesread;
+            Position += bytesread;
         }
+
+        return bytesread;
+    }
+
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        var bytesread = await Provider.ReadAsync(buffer, Position, cancellationToken).ConfigureAwait(false);
+
+        if (bytesread > 0)
+        {
+            Position += bytesread;
+        }
+
+        return bytesread;
     }
 #endif
 
     public override void Write(byte[] buffer, int offset, int count)
     {
         var byteswritten = Provider.Write(buffer, offset, count, Position);
+
+        if (byteswritten > 0)
+        {
+            Position += byteswritten;
+        }
+
+        if (byteswritten != count)
+        {
+            if (byteswritten > 0)
+            {
+                throw new IOException("Not all data were written");
+            }
+            else
+            {
+                throw new IOException("Write error");
+            }
+        }
+    }
+
+    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        var byteswritten = await Provider.WriteAsync(buffer.AsMemory(offset, count), Position, cancellationToken).ConfigureAwait(false);
+
         if (byteswritten > 0)
         {
             Position += byteswritten;
@@ -93,24 +140,44 @@ public partial class DevioDirectStream : DevioStream
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override unsafe void Write(ReadOnlySpan<byte> buffer)
     {
-        fixed (void* ptr = buffer)
+        var byteswritten = Provider.Write(buffer, Position);
+
+        if (byteswritten > 0)
         {
-            var byteswritten = Provider.Write((nint)ptr, 0, buffer.Length, Position);
+            Position += byteswritten;
+        }
+
+        if (byteswritten != buffer.Length)
+        {
             if (byteswritten > 0)
             {
-                Position += byteswritten;
+                throw new IOException("Not all data were written");
             }
-
-            if (byteswritten != buffer.Length)
+            else
             {
-                if (byteswritten > 0)
-                {
-                    throw new IOException("Not all data were written");
-                }
-                else
-                {
-                    throw new IOException("Write error");
-                }
+                throw new IOException("Write error");
+            }
+        }
+    }
+
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        var byteswritten = await Provider.WriteAsync(buffer, Position, cancellationToken).ConfigureAwait(false);
+
+        if (byteswritten > 0)
+        {
+            Position += byteswritten;
+        }
+
+        if (byteswritten != buffer.Length)
+        {
+            if (byteswritten > 0)
+            {
+                throw new IOException("Not all data were written");
+            }
+            else
+            {
+                throw new IOException("Write error");
             }
         }
     }
