@@ -31,7 +31,7 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
     #region SafeHandle
     public class SafeDevioProviderDLLHandle : SafeHandleZeroOrMinusOneIsInvalid
     {
-        protected internal DLLCloseMethod? DLLClose { get; set; }
+        protected internal unsafe delegate* unmanaged[Cdecl]<nint, int> DLLClose { get; set; }
 
         public SafeDevioProviderDLLHandle(nint handle, bool ownsHandle)
             : base(ownsHandle)
@@ -44,7 +44,7 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
         {
         }
 
-        protected override bool ReleaseHandle() => DLLClose is null || DLLClose(handle) != 0;
+        protected override unsafe bool ReleaseHandle() => DLLClose is null || DLLClose(handle) != 0;
     }
     #endregion
 
@@ -53,7 +53,7 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
     {
     }
 
-    protected DevioProviderDLLWrapperBase(DLLOpenMethod open, string filename, bool readOnly, Func<Exception>? get_last_error)
+    protected unsafe DevioProviderDLLWrapperBase(DLLOpenMethod open, string filename, bool readOnly, Func<Exception>? get_last_error)
     {
         if (open is null)
         {
@@ -81,29 +81,52 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
 
     public override bool CanWrite { get; }
 
-    public virtual DLLReadWriteMethod DLLRead { get; }
+    protected internal unsafe delegate* unmanaged[Cdecl]<nint, nint, int, long, int> DLLRead { get; }
 
-    public virtual DLLReadWriteMethod DLLWrite { get; }
+    protected internal unsafe delegate* unmanaged[Cdecl]<nint, nint, int, long, int> DLLWrite { get; }
 
-    public delegate SafeDevioProviderDLLHandle DLLOpenMethod([MarshalAs(UnmanagedType.LPStr)][In] string filename,
-                                                             [MarshalAs(UnmanagedType.Bool)] bool read_only,
-                                                             [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllread,
-                                                             [MarshalAs(UnmanagedType.FunctionPtr)] out DLLReadWriteMethod dllwrite,
-                                                             [MarshalAs(UnmanagedType.FunctionPtr)] out DLLCloseMethod dllclose,
-                                                             out long size);
+    public unsafe delegate SafeDevioProviderDLLHandle DLLOpenMethod([MarshalAs(UnmanagedType.LPStr)] string filename,
+                                                                    [MarshalAs(UnmanagedType.Bool)] bool read_only,
+                                                                    out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllread,
+                                                                    out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllwrite,
+                                                                    out delegate* unmanaged[Cdecl]<nint, int> dllclose,
+                                                                    out long size);
 
-    public delegate int DLLReadWriteMethod(SafeDevioProviderDLLHandle handle,
-                                           nint buffer,
-                                           int size,
-                                           long offset);
+    public override unsafe int Read(nint buffer, int bufferoffset, int count, long fileoffset)
+    {
+        var ptrSuccess = false;
 
-    public delegate int DLLCloseMethod(nint handle);
+        try
+        {
+            SafeHandle.DangerousAddRef(ref ptrSuccess);
+            return DLLRead(SafeHandle.DangerousGetHandle(), buffer + bufferoffset, count, fileoffset);
+        }
+        finally
+        {
+            if (ptrSuccess)
+            {
+                SafeHandle.DangerousRelease();
+            }
+        }
+    }
 
-    public override int Read(nint buffer, int bufferoffset, int count, long fileoffset)
-        => DLLRead(SafeHandle, buffer + bufferoffset, count, fileoffset);
+    public override unsafe int Write(nint buffer, int bufferoffset, int count, long fileoffset)
+    {
+        var ptrSuccess = false;
 
-    public override int Write(nint buffer, int bufferoffset, int count, long fileoffset)
-        => DLLWrite(SafeHandle, buffer + bufferoffset, count, fileoffset);
+        try
+        {
+            SafeHandle.DangerousAddRef(ref ptrSuccess);
+            return DLLWrite(SafeHandle.DangerousGetHandle(), buffer + bufferoffset, count, fileoffset);
+        }
+        finally
+        {
+            if (ptrSuccess)
+            {
+                SafeHandle.DangerousRelease();
+            }
+        }
+    }
 
     protected override void Dispose(bool disposing)
     {

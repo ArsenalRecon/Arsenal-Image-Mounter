@@ -944,7 +944,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     /// <param name="containerfile">Container file containing image to mount.</param>
     /// <param name="index">Index of image to mount within container file.</param>
     public static IDevioProvider GetProviderLibAFF4(string containerfile, int index)
-        => new DevioProviderLibAFF4(string.Concat(containerfile, ContainerIndexSeparator, index.ToString()));
+        => new DevioProviderLibAFF4(string.Concat(Path.GetFullPath(containerfile), ContainerIndexSeparator, index.ToString()));
 
     private const string ContainerIndexSeparator = ":::";
 
