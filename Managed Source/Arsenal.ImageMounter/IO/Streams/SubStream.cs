@@ -112,7 +112,7 @@ public class SubStream : Stream
         }
 
         return Position >= length
-            ? AsyncExtensions.ZeroCompletedTask
+            ? AsyncCompatExtensions.ZeroCompletedTask
             : Parent.ReadAsync(buffer, offset, (int)Math.Min(count, checked(length - Position)), cancellationToken);
     }
 
@@ -123,9 +123,10 @@ public class SubStream : Stream
         ? 0
         : Parent.Read(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))]);
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => Position >= length
-            ? new ValueTask<int>(0)
-            : Parent.ReadAsync(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))], cancellationToken);
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        => Position >= length
+        ? new ValueTask<int>(0)
+        : Parent.ReadAsync(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))], cancellationToken);
 
 #endif
 
