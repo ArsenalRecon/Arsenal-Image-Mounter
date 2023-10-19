@@ -659,7 +659,7 @@ public partial class DevioDrvService : DevioServiceBase
 
         try
         {
-            var maxTransferSize = (int)(mapView.Length - IMDPROXY_HEADER_SIZE);
+            var maxTransferSize = mapView.Length - IMDPROXY_HEADER_SIZE;
 
             if (readLength > maxTransferSize)
             {
@@ -702,7 +702,7 @@ public partial class DevioDrvService : DevioServiceBase
 
         try
         {
-            var maxTransferSize = (int)(mapView.Length - IMDPROXY_HEADER_SIZE);
+            var maxTransferSize = mapView.Length - IMDPROXY_HEADER_SIZE;
 
             if (writeLength > maxTransferSize)
             {
