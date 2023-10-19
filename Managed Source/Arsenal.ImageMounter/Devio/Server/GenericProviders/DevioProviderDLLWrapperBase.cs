@@ -99,6 +99,7 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
         try
         {
             SafeHandle.DangerousAddRef(ref ptrSuccess);
+
             return DLLRead(SafeHandle.DangerousGetHandle(), buffer + bufferoffset, count, fileoffset);
         }
         finally
@@ -117,6 +118,7 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
         try
         {
             SafeHandle.DangerousAddRef(ref ptrSuccess);
+
             return DLLWrite(SafeHandle.DangerousGetHandle(), buffer + bufferoffset, count, fileoffset);
         }
         finally

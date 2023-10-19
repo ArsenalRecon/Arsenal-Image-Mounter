@@ -361,10 +361,10 @@ public class DiskDevice : DeviceObject
     public int Read(Span<byte> buffer, long offset)
     {
 #if NET6_0_OR_GREATER
-        return RandomAccess.Read(SafeFileHandle, buffer, 0);
+        return RandomAccess.Read(SafeFileHandle, buffer, offset);
 #else
         var stream = GetRawDiskStream();
-        stream.Position = 0;
+        stream.Position = offset;
         var bytesread = stream.Read(buffer);
         return bytesread;
 #endif
@@ -373,10 +373,10 @@ public class DiskDevice : DeviceObject
     public ValueTask<int> ReadAsync(Memory<byte> buffer, long offset, CancellationToken cancellationToken)
     {
 #if NET6_0_OR_GREATER
-        return RandomAccess.ReadAsync(SafeFileHandle, buffer, 0, cancellationToken);
+        return RandomAccess.ReadAsync(SafeFileHandle, buffer, offset, cancellationToken);
 #else
         var stream = GetRawDiskStream();
-        stream.Position = 0;
+        stream.Position = offset;
         var bytesread = stream.ReadAsync(buffer, cancellationToken);
         return bytesread;
 #endif
@@ -385,10 +385,10 @@ public class DiskDevice : DeviceObject
     public void Write(ReadOnlySpan<byte> buffer, long offset)
     {
 #if NET6_0_OR_GREATER
-        RandomAccess.Write(SafeFileHandle, buffer, 0);
+        RandomAccess.Write(SafeFileHandle, buffer, offset);
 #else
         var stream = GetRawDiskStream();
-        stream.Position = 0;
+        stream.Position = offset;
         stream.Write(buffer);
 #endif
     }
@@ -396,10 +396,10 @@ public class DiskDevice : DeviceObject
     public ValueTask WriteAsync(Memory<byte> buffer, long offset, CancellationToken cancellationToken)
     {
 #if NET6_0_OR_GREATER
-        return RandomAccess.WriteAsync(SafeFileHandle, buffer, 0, cancellationToken);
+        return RandomAccess.WriteAsync(SafeFileHandle, buffer, offset, cancellationToken);
 #else
         var stream = GetRawDiskStream();
-        stream.Position = 0;
+        stream.Position = offset;
         return stream.WriteAsync(buffer, cancellationToken);
 #endif
     }
@@ -682,17 +682,22 @@ public class DiskDevice : DeviceObject
         adapter.RemoveDevice(scsi_address.DWordDeviceNumber);
     }
 
+    private long? diskSize;
+
     /// <summary>
     /// Retrieves volume size of disk device.
     /// </summary>
-    public long? DiskSize => NativeStruct.GetDiskSize(SafeFileHandle);
+    public long? DiskSize => diskSize ??= NativeStruct.GetDiskSize(SafeFileHandle);
+
+    private FILE_FS_FULL_SIZE_INFORMATION? volumeSizeInformation;
 
     /// <summary>
     /// Retrieves partition information.
     /// </summary>
     /// <returns></returns>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public FILE_FS_FULL_SIZE_INFORMATION? VolumeSizeInformation => NativeCalls.GetVolumeSizeInformation(SafeFileHandle);
+    public FILE_FS_FULL_SIZE_INFORMATION? VolumeSizeInformation
+        => volumeSizeInformation ??= NativeCalls.GetVolumeSizeInformation(SafeFileHandle);
 
     /// <summary>
     /// Determines whether disk is writable or read-only.
@@ -700,11 +705,14 @@ public class DiskDevice : DeviceObject
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public bool IsDiskWritable => NativeFileIO.IsDiskWritable(SafeFileHandle);
 
+    private DISK_GEOMETRY? geometry;
+
     /// <summary>
     /// Returns logical disk geometry. Normally, only the BytesPerSector member
     /// contains data of interest.
     /// </summary>
-    public DISK_GEOMETRY? Geometry => NativeStruct.GetDiskGeometry(SafeFileHandle);
+    public DISK_GEOMETRY? Geometry
+        => geometry ??= NativeStruct.GetDiskGeometry(SafeFileHandle);
 
     /// <summary>
     /// Locks and dismounts filesystem on a volume. Upon successful return, further access to the device
