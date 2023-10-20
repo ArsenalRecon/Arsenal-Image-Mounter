@@ -657,7 +657,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public override bool CanWrite => (Flags & AccessFlagsWrite) == AccessFlagsWrite;
 
-    public override bool SupportsParallel => true;
+    /// <summary>
+    /// Parallel operation is only supported with newer libewf with random access
+    /// read/write exports.
+    /// </summary>
+    public override bool SupportsParallel => ImportedReadAtOffset != 0;
 
     public override long Length
     {
@@ -674,6 +678,34 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     }
 
     public int MaxIoSize { get; private set; } = int.MaxValue;
+
+    private delegate nint FuncReadWriteAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out SafeLibEwfErrorObjectHandle errobj);
+
+    private static readonly nint ImportedReadAtOffset
+#if NETFRAMEWORK || NETCOREAPP
+        = NativeLib.GetProcAddressNoThrow("libewf", "libewf_handle_read_buffer_at_offset");
+#else
+        = 0;
+#endif
+
+    private static readonly FuncReadWriteAtOffset ReadAtOffset =
+        ImportedReadAtOffset != 0
+        ? libewf_handle_read_buffer_at_offset
+        : InternalReadAtOffset;
+
+    private static nint InternalReadAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out SafeLibEwfErrorObjectHandle errobj)
+    {
+        var offset = libewf_handle_seek_offset(handle, fileoffset, Whence.Set, out errobj);
+
+        if (offset != fileoffset || Failed(errobj))
+        {
+            return -1;
+        }
+
+        var result = libewf_handle_read_buffer(handle, buffer, buffer_size, out errobj);
+
+        return result;
+    }
 
     public override int Read(nint buffer, int bufferoffset, int count, long fileoffset)
     {
@@ -696,7 +728,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
             // End If
 
-            var result = (int)libewf_handle_read_buffer_at_offset(SafeHandle, buffer + bufferoffset, bytesThisIteration, fileoffset, out var errobj);
+            var result = (int)ReadAtOffset(SafeHandle, buffer + bufferoffset, bytesThisIteration, fileoffset, out var errobj);
 
             if (result < 0 || Failed(errobj))
             {
@@ -732,6 +764,32 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         return done_count;
     }
 
+    private static readonly nint ImportedWriteAtOffset
+#if NETFRAMEWORK || NETCOREAPP
+        = NativeLib.GetProcAddressNoThrow("libewf", "libewf_handle_write_buffer_at_offset");
+#else
+        = 0;
+#endif
+
+    private static readonly FuncReadWriteAtOffset WriteAtOffset =
+        ImportedWriteAtOffset != 0
+        ? libewf_handle_write_buffer_at_offset
+        : InternalWriteAtOffset;
+
+    private static nint InternalWriteAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out SafeLibEwfErrorObjectHandle errobj)
+    {
+        var offset = libewf_handle_seek_offset(handle, fileoffset, Whence.Set, out errobj);
+
+        if (offset != fileoffset || Failed(errobj))
+        {
+            return -1;
+        }
+
+        var result = libewf_handle_write_buffer(handle, buffer, buffer_size, out errobj);
+
+        return result;
+    }
+
     public override int Write(nint buffer, int bufferoffset, int count, long fileoffset)
     {
         if (!CanWrite)
@@ -751,7 +809,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                 sizenow = 16384;
             }
 
-            var retval = libewf_handle_write_buffer_at_offset(SafeHandle, buffer + bufferoffset + sizedone, sizenow, fileoffset, out var errobj);
+            var retval = WriteAtOffset(SafeHandle, buffer + bufferoffset + sizedone, sizenow, fileoffset, out var errobj);
 
             if (retval <= 0 || Failed(errobj))
             {
