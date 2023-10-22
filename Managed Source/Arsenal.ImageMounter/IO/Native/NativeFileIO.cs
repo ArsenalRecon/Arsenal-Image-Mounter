@@ -130,6 +130,10 @@ public static partial class NativeFileIO
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool CancelIo(SafeHandle handle);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool SetHandleInformation(SafeHandle h, uint mask, uint flags);
 
         [LibraryImport("kernel32", SetLastError = true)]
@@ -639,6 +643,9 @@ public static partial class NativeFileIO
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool SetEvent(SafeWaitHandle hEvent);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool CancelIo(SafeHandle handle);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool SetHandleInformation(SafeHandle h, uint mask, uint flags);

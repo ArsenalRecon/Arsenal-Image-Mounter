@@ -10,14 +10,13 @@ namespace Arsenal.ImageMounter.Extensions;
 public static class UnmanagedMemoryExtensions
 {
     /// <summary>
-    /// Gets a disposable <see cref="MemoryManager{T}"/> for an unmanaged memory block.
-    /// This can be used to get a <see cref="Memory{T}"/> that can be sent to asynchronous
+    /// Gets a disposable <see cref="MemoryManager{Byte}"/> for an unmanaged memory block.
+    /// This can be used to get a <see cref="Memory{Byte}"/> that can be sent to asynchronous
     /// API or delegates. Remember though, that the memory is invalid after <see cref="SafeBuffer"/>
     /// has been unallocated or disposed.
     /// </summary>
     public static MemoryManager<byte> GetMemoryManager(this SafeBuffer safeBuffer)
         => new UnmanagedMemoryManager<byte>(safeBuffer.DangerousGetHandle(), (int)safeBuffer.ByteLength);
-
 }
 
 internal sealed class UnmanagedMemoryManager<T> : MemoryManager<T> where T : unmanaged
