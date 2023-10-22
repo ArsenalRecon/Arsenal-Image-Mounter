@@ -311,9 +311,9 @@ Please see EULA.txt for license information.");
             {
                 fakeMbr = true;
             }
-            else if (arg.Equals("writeoverlay", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            else if (arg.Equals("writeoverlay", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length is 0 or 1)
             {
-                writeOverlayImageFile = cmd.Value[0];
+                writeOverlayImageFile = cmd.Value.ElementAtOrDefault(0) ?? @"\\?\awealloc";
                 diskAccess = FileAccess.Read;
                 deviceFlags = deviceFlags | DeviceFlags.ReadOnly | DeviceFlags.WriteOverlay;
             }
