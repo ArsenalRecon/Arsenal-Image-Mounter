@@ -147,7 +147,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [LibraryImport("libqcow", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller))]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_notify_stream_open([MarshalAs(UnmanagedType.LPStr)] string filename, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_notify_stream_open([MarshalAs(UnmanagedType.LPStr)] string filename, out nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -160,15 +160,15 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_file_initialize(out SafeLibQcowFileHandle handle, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_file_initialize(out SafeLibQcowFileHandle handle, out nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_file_open(SafeLibQcowFileHandle handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string filename, int AccessFlags, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_file_open(SafeLibQcowFileHandle handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string filename, int AccessFlags, out nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_file_open_wide(SafeLibQcowFileHandle handle, [MarshalAs(UnmanagedType.LPWStr)] string filename, int AccessFlags, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_file_open_wide(SafeLibQcowFileHandle handle, [MarshalAs(UnmanagedType.LPWStr)] string filename, int AccessFlags, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libqcow")]
@@ -177,11 +177,11 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_file_get_media_size(SafeLibQcowFileHandle handle, out long media_size, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_file_get_media_size(SafeLibQcowFileHandle handle, out long media_size, out nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial long libqcow_file_seek_offset(SafeLibQcowFileHandle handle, long offset, Whence whence, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial long libqcow_file_seek_offset(SafeLibQcowFileHandle handle, long offset, Whence whence, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libqcow")]
@@ -190,11 +190,11 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial nint libqcow_file_read_buffer(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial nint libqcow_file_read_buffer(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, out nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial nint libqcow_file_read_buffer_at_offset(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial nint libqcow_file_read_buffer_at_offset(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libqcow")]
@@ -203,15 +203,15 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_file_close(nint handle, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_file_close(nint handle, out nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_notify_stream_close(out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_notify_stream_close(out nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libqcow_notify_set_stream(nint FILE, out SafeLibQcowErrorObjectHandle errobj);
+    private static partial int libqcow_notify_set_stream(nint FILE, out nint errobj);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -240,7 +240,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, ThrowOnUnmappableChar = true)]
     [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most likely analyzer bug")]
-    private static extern int libqcow_notify_stream_open([In][MarshalAs(UnmanagedType.LPStr)] string filename, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_notify_stream_open([In][MarshalAs(UnmanagedType.LPStr)] string filename, out nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern void libqcow_notify_set_verbose(int Verbose);
@@ -250,47 +250,47 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     private static extern SafeLibQcowFileHandle libqcow_open_wide([In][MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, byte AccessFlags);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_file_initialize(out SafeLibQcowFileHandle handle, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_file_initialize(out SafeLibQcowFileHandle handle, out nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most likely analyzer bug")]
-    private static extern int libqcow_file_open(SafeLibQcowFileHandle handle, [In][MarshalAs(UnmanagedType.LPUTF8Str)] string filename, int AccessFlags, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_file_open(SafeLibQcowFileHandle handle, [In][MarshalAs(UnmanagedType.LPUTF8Str)] string filename, int AccessFlags, out nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_file_open_wide(SafeLibQcowFileHandle handle, [In][MarshalAs(UnmanagedType.LPWStr)] string filename, int AccessFlags, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_file_open_wide(SafeLibQcowFileHandle handle, [In][MarshalAs(UnmanagedType.LPWStr)] string filename, int AccessFlags, out nint errobj);
 
     [Obsolete]
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern int libqcow_get_media_size(SafeLibQcowFileHandle handle, out long media_size);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_file_get_media_size(SafeLibQcowFileHandle handle, out long media_size, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_file_get_media_size(SafeLibQcowFileHandle handle, out long media_size, out nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern long libqcow_file_seek_offset(SafeLibQcowFileHandle handle, long offset, Whence whence, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern long libqcow_file_seek_offset(SafeLibQcowFileHandle handle, long offset, Whence whence, out nint errobj);
 
     [Obsolete]
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern nint libqcow_read_random(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern nint libqcow_file_read_buffer(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern nint libqcow_file_read_buffer(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, out nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern nint libqcow_file_read_buffer_at_offset(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern nint libqcow_file_read_buffer_at_offset(SafeLibQcowFileHandle handle, nint buffer, nint buffer_size, long offset, out nint errobj);
 
     [Obsolete]
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern int libqcow_close(nint handle);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_file_close(nint handle, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_file_close(nint handle, out nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_notify_stream_close(out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_notify_stream_close(out nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libqcow_notify_set_stream(nint FILE, out SafeLibQcowErrorObjectHandle errobj);
+    private static extern int libqcow_notify_set_stream(nint FILE, out nint errobj);
 
     [DllImport("libqcow", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern int libqcow_error_fprint(SafeLibQcowErrorObjectHandle errobj, nint clibfile);
@@ -305,7 +305,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     private static extern int libqcow_error_backtrace_sprint(SafeLibQcowErrorObjectHandle errobj, out byte buffer, int length);
 #endif
 
-    private delegate int f_libqcow_file_open(SafeLibQcowFileHandle handle, string filename, int AccessFlags, out SafeLibQcowErrorObjectHandle errobj);
+    private delegate int f_libqcow_file_open(SafeLibQcowFileHandle handle, string filename, int AccessFlags, out nint errobj);
 
     private enum Whence : int
     {
@@ -355,7 +355,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     {
         this.Flags = Flags;
 
-        if (libqcow_file_initialize(out var safeHandle, out var errobj) != 1 || safeHandle.IsInvalid || Failed(errobj))
+        if (libqcow_file_initialize(out var safeHandle, out var errobj) != 1 || safeHandle.IsInvalid || errobj != 0)
         {
             ThrowError(errobj, "Error initializing libqcow handle.");
         }
@@ -373,7 +373,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
             func = libqcow_file_open;
         }
 
-        if (func(SafeHandle, filenames, Flags, out errobj) != 1 || Failed(errobj))
+        if (func(SafeHandle, filenames, Flags, out errobj) != 1 || errobj != 0)
         {
 
             ThrowError(errobj, "Error opening image file(s)");
@@ -381,25 +381,19 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
         }
     }
 
-    protected static bool Failed(SafeLibQcowErrorObjectHandle errobj)
-        => errobj is not null && !errobj.IsInvalid;
-
-    protected static void ThrowError(SafeLibQcowErrorObjectHandle errobj, string message)
+    protected static void ThrowError(nint errobj, string message)
     {
-
-        using (errobj)
+        if (errobj != 0)
         {
+            using var err = new SafeLibQcowErrorObjectHandle(errobj, ownsHandle: true);
 
-            var errmsg = errobj?.ToString();
+            var errmsg = err.ToString();
 
-            if (errmsg is not null)
-            {
-                throw new IOException($"{message}: {errmsg}");
-            }
-            else
-            {
-                throw new IOException(message);
-            }
+            throw new IOException($"{message}: {errmsg}");
+        }
+        else
+        {
+            throw new IOException(message);
         }
     }
 
@@ -410,7 +404,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
         get
         {
             var RC = libqcow_file_get_media_size(SafeHandle, out var LengthRet, out var errobj);
-            if (RC < 0 || Failed(errobj))
+            if (RC < 0 || errobj != 0)
             {
                 ThrowError(errobj, "libqcow_file_get_media_size() failed");
             }
@@ -446,35 +440,19 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
             var result = (int)libqcow_file_read_buffer_at_offset(SafeHandle, buffer + bufferoffset, iteration_count, fileoffset, out var errobj);
 
-            if (result < 0 || Failed(errobj))
+            if (result < 0 || errobj != 0)
             {
                 ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
             }
 
-            if (result > 0)
-            {
-                done_count += result;
-                fileoffset += result;
-                bufferoffset += result;
-            }
-            else if (result == 0)
+            if (result == 0)
             {
                 break;
             }
-            else if (iteration_count >= SectorSize << 1)
-            {
-                errobj?.Dispose();
 
-                MaxIoSize = iteration_count >> 1 & ~(int)(SectorSize - 1L);
-
-                Trace.WriteLine($"Lowering MaxTransferSize to {MaxIoSize} bytes.");
-
-                continue;
-            }
-            else
-            {
-                ThrowError(errobj, $"Error reading {iteration_count} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-            }
+            done_count += result;
+            fileoffset += result;
+            bufferoffset += result;
         }
 
         return done_count;

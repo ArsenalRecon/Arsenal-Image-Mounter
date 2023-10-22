@@ -148,7 +148,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller))]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_notify_stream_open([MarshalAs(UnmanagedType.LPStr)] string filename, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_notify_stream_open([MarshalAs(UnmanagedType.LPStr)] string filename, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -161,15 +161,15 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_initialize(out SafeLibEwfFileHandle handle, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_initialize(out SafeLibEwfFileHandle handle, out nint errobj);
 
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_open(SafeLibEwfFileHandle handle, [MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_open(SafeLibEwfFileHandle handle, [MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
 
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf16)]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_open_wide(SafeLibEwfFileHandle handle, [MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_open_wide(SafeLibEwfFileHandle handle, [MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
@@ -178,11 +178,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_get_media_size(SafeLibEwfFileHandle handle, out long media_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_get_media_size(SafeLibEwfFileHandle handle, out long media_size, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial long libewf_handle_seek_offset(SafeLibEwfFileHandle handle, long offset, Whence whence, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial long libewf_handle_seek_offset(SafeLibEwfFileHandle handle, long offset, Whence whence, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
@@ -191,11 +191,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial nint libewf_handle_read_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial nint libewf_handle_read_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial nint libewf_handle_read_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial nint libewf_handle_read_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
@@ -204,11 +204,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial nint libewf_handle_write_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial nint libewf_handle_write_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial nint libewf_handle_write_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial nint libewf_handle_write_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
@@ -217,7 +217,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial nint libewf_handle_write_finalize(SafeLibEwfFileHandle handle, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial nint libewf_handle_write_finalize(SafeLibEwfFileHandle handle, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
@@ -226,15 +226,15 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_close(nint handle, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_close(nint handle, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_notify_stream_close(out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_notify_stream_close(out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_notify_set_stream(nint FILE, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_notify_set_stream(nint FILE, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
@@ -243,59 +243,59 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_get_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorSize, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_get_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorSize, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_get_chunk_size(SafeLibEwfFileHandle safeLibEwfHandle, out uint ChunkSize, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_get_chunk_size(SafeLibEwfFileHandle safeLibEwfHandle, out uint ChunkSize, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_get_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorsPerChunk, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_get_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorsPerChunk, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_header_codepage(SafeLibEwfFileHandle safeLibEwfHandle, int codepage, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_header_codepage(SafeLibEwfFileHandle safeLibEwfHandle, int codepage, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, uint bytes_per_sector, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, uint bytes_per_sector, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_media_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong media_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_media_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong media_size, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_media_type(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_TYPE media_type, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_media_type(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_TYPE media_type, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_media_flags(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_FLAGS media_flags, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_media_flags(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_FLAGS media_flags, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_format(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_FORMAT ewf_format, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_format(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_FORMAT ewf_format, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_compression_method(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_METHOD compression_method, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_compression_method(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_METHOD compression_method, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_compression_values(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_LEVEL compression_level, LIBEWF_COMPRESSION_FLAGS compression_flags, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_compression_values(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_LEVEL compression_level, LIBEWF_COMPRESSION_FLAGS compression_flags, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_maximum_segment_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong maximum_segment_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_maximum_segment_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong maximum_segment_size, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial int libewf_handle_set_error_granularity(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out SafeLibEwfErrorObjectHandle errobj);
+    private static partial int libewf_handle_set_error_granularity(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -320,7 +320,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                                                                    nint identifier_length,
                                                                    [MarshalAs(UnmanagedType.LPWStr)] string utf16_string,
                                                                    nint utf16_string_length,
-                                                                   out SafeLibEwfErrorObjectHandle errobj);
+                                                                   out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -329,7 +329,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                                                                    nint identifier_length,
                                                                    [MarshalAs(UnmanagedType.LPWStr)] string utf16_string,
                                                                    nint utf16_string_length,
-                                                                   out SafeLibEwfErrorObjectHandle errobj);
+                                                                   out nint errobj);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -338,7 +338,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                                                                 nint hash_value_identifier_length,
                                                                 [MarshalAs(UnmanagedType.LPUTF8Str)] string utf8_string,
                                                                 nint utf8_string_length,
-                                                                out SafeLibEwfErrorObjectHandle errobj);
+                                                                out nint errobj);
 
 #else
 
@@ -356,7 +356,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, ThrowOnUnmappableChar = true)]
     [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most probably an analyzer bug")]
-    private static extern int libewf_notify_stream_open([In][MarshalAs(UnmanagedType.LPStr)] string filename, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_notify_stream_open([In][MarshalAs(UnmanagedType.LPStr)] string filename, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern void libewf_notify_set_verbose(int Verbose);
@@ -366,109 +366,109 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     private static extern SafeLibEwfFileHandle libewf_open_wide([In][MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, byte AccessFlags);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_initialize(out SafeLibEwfFileHandle handle, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_initialize(out SafeLibEwfFileHandle handle, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_open(SafeLibEwfFileHandle handle, [In][MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_open(SafeLibEwfFileHandle handle, [In][MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_open_wide(SafeLibEwfFileHandle handle, [In][MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_open_wide(SafeLibEwfFileHandle handle, [In][MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
 
     [Obsolete]
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern int libewf_get_media_size(SafeLibEwfFileHandle handle, out long media_size);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_get_media_size(SafeLibEwfFileHandle handle, out long media_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_get_media_size(SafeLibEwfFileHandle handle, out long media_size, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern long libewf_handle_seek_offset(SafeLibEwfFileHandle handle, long offset, Whence whence, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern long libewf_handle_seek_offset(SafeLibEwfFileHandle handle, long offset, Whence whence, out nint errobj);
 
     [Obsolete]
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern nint libewf_read_random(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern nint libewf_handle_read_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern nint libewf_handle_read_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern nint libewf_handle_read_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern nint libewf_handle_read_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out nint errobj);
 
     [Obsolete]
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern nint libewf_write_random(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern nint libewf_handle_write_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern nint libewf_handle_write_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern nint libewf_handle_write_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern nint libewf_handle_write_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out nint errobj);
 
     [Obsolete]
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern nint libewf_write_finalize(SafeLibEwfFileHandle handle);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern nint libewf_handle_write_finalize(SafeLibEwfFileHandle handle, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern nint libewf_handle_write_finalize(SafeLibEwfFileHandle handle, out nint errobj);
 
     [Obsolete]
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern int libewf_close(nint handle);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_close(nint handle, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_close(nint handle, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_notify_stream_close(out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_notify_stream_close(out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_notify_set_stream(nint FILE, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_notify_set_stream(nint FILE, out nint errobj);
 
     [Obsolete]
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern int libewf_get_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorSize);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_get_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorSize, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_get_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorSize, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_get_chunk_size(SafeLibEwfFileHandle safeLibEwfHandle, out uint ChunkSize, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_get_chunk_size(SafeLibEwfFileHandle safeLibEwfHandle, out uint ChunkSize, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_get_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorsPerChunk, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_get_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorsPerChunk, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_header_codepage(SafeLibEwfFileHandle safeLibEwfHandle, int codepage, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_header_codepage(SafeLibEwfFileHandle safeLibEwfHandle, int codepage, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, uint bytes_per_sector, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, uint bytes_per_sector, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_media_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong media_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_media_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong media_size, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_media_type(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_TYPE media_type, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_media_type(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_TYPE media_type, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_media_flags(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_FLAGS media_flags, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_media_flags(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_FLAGS media_flags, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_format(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_FORMAT ewf_format, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_format(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_FORMAT ewf_format, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_compression_method(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_METHOD compression_method, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_compression_method(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_METHOD compression_method, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_compression_values(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_LEVEL compression_level, LIBEWF_COMPRESSION_FLAGS compression_flags, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_compression_values(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_LEVEL compression_level, LIBEWF_COMPRESSION_FLAGS compression_flags, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_maximum_segment_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong maximum_segment_size, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_maximum_segment_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong maximum_segment_size, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
-    private static extern int libewf_handle_set_error_granularity(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out SafeLibEwfErrorObjectHandle errobj);
+    private static extern int libewf_handle_set_error_granularity(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     private static extern int libewf_error_fprint(SafeLibEwfErrorObjectHandle errobj, nint clibfile);
@@ -489,7 +489,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                                                                    nint identifier_length,
                                                                    [MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 4)] string utf16_string,
                                                                    nint utf16_string_length,
-                                                                   out SafeLibEwfErrorObjectHandle errobj);
+                                                                   out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most probably an analyzer bug")]
@@ -498,7 +498,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                                                                    nint identifier_length,
                                                                    [In][MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 4)] string utf16_string,
                                                                    nint utf16_string_length,
-                                                                   out SafeLibEwfErrorObjectHandle errobj);
+                                                                   out nint errobj);
 
     [DllImport("libewf", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most probably an analyzer bug")]
@@ -507,10 +507,10 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                                                                 nint hash_value_identifier_length,
                                                                 [In][MarshalAs(UnmanagedType.LPUTF8Str)] string utf8_string,
                                                                 nint utf8_string_length,
-                                                                out SafeLibEwfErrorObjectHandle errobj);
+                                                                out nint errobj);
 #endif
 
-    private delegate int f_libewf_handle_open(SafeLibEwfFileHandle handle, string[] filenames, int numberOfFiles, int AccessFlags, out SafeLibEwfErrorObjectHandle errobj);
+    private delegate int f_libewf_handle_open(SafeLibEwfFileHandle handle, string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
 
     private enum Whence : int
     {
@@ -521,12 +521,12 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     private delegate int libewf_handle_set_header_value_func<TValue>(SafeLibEwfFileHandle safeLibEwfHandle,
                                                                      TValue value,
-                                                                     out SafeLibEwfErrorObjectHandle errobj) where TValue : unmanaged;
+                                                                     out nint errobj) where TValue : unmanaged;
 
     private delegate int libewf_handle_set_header_value_func<TValue1, TValue2>(SafeLibEwfFileHandle safeLibEwfHandle,
                                                                                TValue1 value1,
                                                                                TValue2 value2,
-                                                                               out SafeLibEwfErrorObjectHandle errobj)
+                                                                               out nint errobj)
         where TValue1 : unmanaged
         where TValue2 : unmanaged;
 
@@ -585,7 +585,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         if (libewf_handle_initialize(out var safeHandle, out var errobj) != 1
             || safeHandle.IsInvalid 
-            || Failed(errobj))
+            || errobj != 0)
         {
             ThrowError(errobj, "Error initializing libewf handle.");
         }
@@ -603,26 +603,26 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
             func = libewf_handle_open;
         }
 
-        if (func(SafeHandle, filenames, filenames.Length, Flags, out errobj) != 1 || Failed(errobj))
+        if (func(SafeHandle, filenames, filenames.Length, Flags, out errobj) != 1 || errobj != 0)
         {
             ThrowError(errobj, "Error opening image file(s)");
         }
 
-        if (libewf_handle_get_bytes_per_sector(SafeHandle, out var sectorSize, out errobj) < 0 || Failed(errobj))
+        if (libewf_handle_get_bytes_per_sector(SafeHandle, out var sectorSize, out errobj) < 0 || errobj != 0)
         {
             ThrowError(errobj, "Unable to get number of bytes per sector");
         }
 
         SectorSize = sectorSize;
 
-        if (libewf_handle_get_chunk_size(SafeHandle, out var chunkSize, out errobj) < 0 || Failed(errobj))
+        if (libewf_handle_get_chunk_size(SafeHandle, out var chunkSize, out errobj) < 0 || errobj != 0)
         {
             ThrowError(errobj, "Unable to get chunk size");
         }
 
         ChunkSize = chunkSize;
 
-        if (libewf_handle_get_sectors_per_chunk(SafeHandle, out var sectorsPerChunk, out errobj) < 0 || Failed(errobj))
+        if (libewf_handle_get_sectors_per_chunk(SafeHandle, out var sectorsPerChunk, out errobj) < 0 || errobj != 0)
         {
             ThrowError(errobj, "Unable to get number of sectors per chunk");
         }
@@ -630,23 +630,19 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         SectorsPerChunk = sectorsPerChunk;
     }
 
-    protected static bool Failed(SafeLibEwfErrorObjectHandle errobj)
-        => errobj is not null && !errobj.IsInvalid;
-
-    protected static void ThrowError(SafeLibEwfErrorObjectHandle errobj, string message)
+    protected static void ThrowError(nint errobj, string message)
     {
-        using (errobj)
+        if (errobj != 0)
         {
-            var errmsg = errobj?.ToString();
+            using var err = new SafeLibEwfErrorObjectHandle(errobj, ownsHandle: true);
 
-            if (errmsg is not null)
-            {
-                throw new IOException($"{message}: {errmsg}");
-            }
-            else
-            {
-                throw new IOException(message);
-            }
+            var errmsg = err.ToString();
+
+            throw new IOException($"{message}: {errmsg}");
+        }
+        else
+        {
+            throw new IOException(message);
         }
     }
 
@@ -668,7 +664,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         get
         {
             var RC = libewf_handle_get_media_size(SafeHandle, out var LengthRet, out var errobj);
-            if (RC < 0 || Failed(errobj))
+            if (RC < 0 || errobj != 0)
             {
                 ThrowError(errobj, "libewf_handle_get_media_size() failed");
             }
@@ -679,7 +675,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     public int MaxIoSize { get; private set; } = int.MaxValue;
 
-    private delegate nint FuncReadWriteAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out SafeLibEwfErrorObjectHandle errobj);
+    private delegate nint FuncReadWriteAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out nint errobj);
 
     private static readonly nint ImportedReadAtOffset
 #if NETFRAMEWORK || NETCOREAPP
@@ -693,11 +689,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         ? libewf_handle_read_buffer_at_offset
         : InternalReadAtOffset;
 
-    private static nint InternalReadAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out SafeLibEwfErrorObjectHandle errobj)
+    private static nint InternalReadAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out nint errobj)
     {
         var offset = libewf_handle_seek_offset(handle, fileoffset, Whence.Set, out errobj);
 
-        if (offset != fileoffset || Failed(errobj))
+        if (offset != fileoffset || errobj != 0)
         {
             return -1;
         }
@@ -730,35 +726,19 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
             var result = (int)ReadAtOffset(SafeHandle, buffer + bufferoffset, bytesThisIteration, fileoffset, out var errobj);
 
-            if (result < 0 || Failed(errobj))
+            if (result < 0 || errobj != 0)
             {
                 ThrowError(errobj, $"Error reading {bytesThisIteration} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
             }
 
-            if (result > 0)
-            {
-                done_count += result;
-                fileoffset += result;
-                bufferoffset += result;
-            }
-            else if (result == 0)
+            if (result == 0)
             {
                 break;
             }
-            else if (bytesThisIteration >= SectorSize << 1)
-            {
-                errobj?.Dispose();
-
-                MaxIoSize = bytesThisIteration >> 1 & ~(int)(SectorSize - 1L);
-
-                Trace.WriteLine($"Lowering MaxTransferSize to {MaxIoSize} bytes.");
-
-                continue;
-            }
-            else
-            {
-                ThrowError(errobj, $"Error reading {bytesThisIteration} bytes from offset {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
-            }
+            
+            done_count += result;
+            fileoffset += result;
+            bufferoffset += result;
         }
 
         return done_count;
@@ -776,11 +756,11 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         ? libewf_handle_write_buffer_at_offset
         : InternalWriteAtOffset;
 
-    private static nint InternalWriteAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out SafeLibEwfErrorObjectHandle errobj)
+    private static nint InternalWriteAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out nint errobj)
     {
         var offset = libewf_handle_seek_offset(handle, fileoffset, Whence.Set, out errobj);
 
-        if (offset != fileoffset || Failed(errobj))
+        if (offset != fileoffset || errobj != 0)
         {
             return -1;
         }
@@ -811,7 +791,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
             var retval = WriteAtOffset(SafeHandle, buffer + bufferoffset + sizedone, sizenow, fileoffset, out var errobj);
 
-            if (retval <= 0 || Failed(errobj))
+            if (retval <= 0 || errobj != 0)
             {
                 ThrowError(errobj, "Write failed");
             }
@@ -849,7 +829,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         var retval = libewf_handle_set_utf16_header_value(SafeHandle, identifier, identifier.Length, value, value.Length, out var errobj);
 
-        if (retval != 1 || Failed(errobj))
+        if (retval != 1 || errobj != 0)
         {
             ThrowError(errobj, $"Parameter set '{identifier}'='{value}' failed");
         }
@@ -868,7 +848,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         var retval = libewf_handle_set_utf8_hash_value(SafeHandle, identifier, identifier.Length, valuestr, valuestr.Length, out var errobj);
 
-        if (retval != 1 || Failed(errobj))
+        if (retval != 1 || errobj != 0)
         {
             ThrowError(errobj, $"Hash result set '{identifier}'='{value}' failed");
         }
@@ -878,7 +858,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     {
         var retval = func(SafeHandle, value, out var errobj);
 
-        if (retval != 1 || Failed(errobj))
+        if (retval != 1 || errobj != 0)
         {
             ThrowError(errobj, $"Parameter set {func.Method.Name}({value}) failed");
         }
@@ -890,7 +870,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     {
         var retval = func(SafeHandle, value1, value2, out var errobj);
 
-        if (retval != 1 || Failed(errobj))
+        if (retval != 1 || errobj != 0)
         {
             ThrowError(errobj, $"Parameter set {func.Method.Name}({value1}, {value2}) failed");
         }
