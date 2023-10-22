@@ -177,12 +177,16 @@ public partial class DevioDrvService : DevioServiceBase
 #endif
     }
 
+    private long totalAllocatedBuffers;
+
     private void StartNewIoExchange()
     {
         const uint IOCTL_DEVIODRV_LOCK_MEMORY = unchecked((uint)(((0x8372) << 16) | (((0x0001) | (0x0002)) << 14) | ((0x8D1) << 2) | (2)));
         const uint IOCTL_DEVIODRV_EXCHANGE_IO = unchecked((uint)(((0x8372) << 16) | (((0x0001) | (0x0002)) << 14) | ((0x8D0) << 2) | (2)));
 
         device = device ?? throw new InvalidOperationException();
+
+        var cleanedUp = 0;
 
         var cancellationToken = cancellation.Token;
 
@@ -212,11 +216,15 @@ public partial class DevioDrvService : DevioServiceBase
 
         closedEvent.Reset();
 
+#if DEBUG
         Trace.WriteLine($"Starting I/O exchange number {serviceNumber}...");
+#endif
 
         bufferSize = initialBufferSize;
 
         nint bufferId;
+
+        cancellationToken.Register(CleanupIoExchange);
 
         var initializationDone = serviceNumber == 1
             ? new ManualResetEventSlim(initialState: false)
@@ -224,6 +232,7 @@ public partial class DevioDrvService : DevioServiceBase
 
         try
         {
+
             using var mapping = MemoryMappedFile.CreateNew(null,
                                                            bufferSize,
                                                            MemoryMappedFileAccess.ReadWrite,
@@ -231,6 +240,8 @@ public partial class DevioDrvService : DevioServiceBase
                                                            HandleInheritability.None);
 
             mapView = mapping.CreateViewAccessor();
+
+            var totalAllocated = Interlocked.Add(ref totalAllocatedBuffers, mapView.Capacity);
 
             bufferId = mapView.SafeMemoryMappedViewHandle.DangerousGetHandle();
 
@@ -240,7 +251,7 @@ public partial class DevioDrvService : DevioServiceBase
 
             var maxTransferSize = (int)(mapView.Capacity - IMDPROXY_HEADER_SIZE);
 
-            Trace.WriteLine($"Service number {serviceNumber}: Created shared memory object, {maxTransferSize} bytes.");
+            Trace.WriteLine($"Parallel count: {serviceNumber}, total allocated buffers {SizeFormatting.FormatBytes(totalAllocated)}.");
 
             memoryEvent = new ManualResetEvent(initialState: false);
 
@@ -271,6 +282,15 @@ public partial class DevioDrvService : DevioServiceBase
                 && Marshal.GetLastWin32Error() != NativeConstants.ERROR_IO_PENDING)
             {
                 throw new IOException($"Service number {serviceNumber}: Lock memory request failed", new Win32Exception());
+            }
+
+            if (memoryEvent.WaitOne(0))
+            {
+                Trace.WriteLine($"Service number {serviceNumber} exit by server.");
+
+                CleanupIoExchange();
+
+                return;
             }
 
             if (serviceNumber == 1)
@@ -313,7 +333,9 @@ public partial class DevioDrvService : DevioServiceBase
                 }
             }
 
+#if DEBUG
             Trace.WriteLine($"Service number {serviceNumber}: I/O exchange buffer initialized, waiting for request.");
+#endif
         }
         catch
         {
@@ -330,7 +352,7 @@ public partial class DevioDrvService : DevioServiceBase
             {
                 if (device.IsClosed)
                 {
-                    Trace.WriteLine($"Service number {serviceNumber}: Device closed by server, shutting down.");
+                    Trace.WriteLine($"Service number {serviceNumber}: Device closed by client, shutting down.");
 
                     CleanupIoExchange();
 
@@ -348,7 +370,9 @@ public partial class DevioDrvService : DevioServiceBase
                 {
                     if (err == NativeConstants.ERROR_DEV_NOT_EXIST)
                     {
-                        Trace.WriteLine($"Service number {serviceNumber}: Device closed by client, shutting down.");
+                        Trace.WriteLine($"Service number {serviceNumber}: Device closed by server, shutting down.");
+
+                        device.Dispose();
 
                         CleanupIoExchange();
 
@@ -367,13 +391,17 @@ public partial class DevioDrvService : DevioServiceBase
                             return;
                         }
 
+#if DEBUG
                         Trace.WriteLine($"Service number {serviceNumber}: Memory buffer too small, reallocating...");
+#endif
 
                         bufferId = default;
 
                         mapMemory = default;
 
                         mapMemoryManager = null!;
+
+                        Interlocked.Add(ref totalAllocatedBuffers, -mapView.Capacity);
 
                         mapView.Dispose();
 
@@ -388,6 +416,8 @@ public partial class DevioDrvService : DevioServiceBase
                                                                        HandleInheritability.None);
 
                         mapView = mapping.CreateViewAccessor();
+
+                        var totalAllocated = Interlocked.Add(ref totalAllocatedBuffers, mapView.Capacity);
 
                         bufferId = mapView.SafeMemoryMappedViewHandle.DangerousGetHandle();
 
@@ -409,7 +439,16 @@ public partial class DevioDrvService : DevioServiceBase
                                                                    lpOverlapped: memoryOverlapped)
                             || Marshal.GetLastWin32Error() == NativeConstants.ERROR_IO_PENDING)
                         {
-                            Trace.WriteLine($"Service number {serviceNumber}: Created shared memory object, {maxTransferSize} bytes.");
+                            if (memoryEvent.WaitOne(0))
+                            {
+                                Trace.WriteLine($"Service number {serviceNumber} exit by server.");
+
+                                CleanupIoExchange();
+
+                                return;
+                            }
+
+                            Trace.WriteLine($"Parallel count: {serviceNumber}, total allocated buffers {SizeFormatting.FormatBytes(totalAllocated)}.");
                         }
                         else
                         {
@@ -445,6 +484,7 @@ public partial class DevioDrvService : DevioServiceBase
 
                             case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
                                 Trace.WriteLine($"Service number {serviceNumber}: Closing connection.");
+                                device.Dispose();
                                 CleanupIoExchange();
                                 return;
 
@@ -467,23 +507,6 @@ public partial class DevioDrvService : DevioServiceBase
                         return;
                     }
 
-                    if (initializationDone is null
-                        && concurrentCount >= ioExchangeBufferCounter
-                        && DevioProvider.SupportsParallel
-                        && !DevioProvider.ForceSingleThread)
-                    {
-                        try
-                        {
-                            Trace.WriteLine($"Service number {serviceNumber}: Launching an additional I/O exchange buffer...");
-
-                            StartNewIoExchange();
-                        }
-                        catch (Exception ex)
-                        {
-                            Trace.WriteLine($"Service number {serviceNumber}: Exception while starting another I/O exchange buffer: {ex.JoinMessages()}");
-                        }
-                    }
-
                     // Trace.WriteLine("Sending response and waiting for next request.")
 
                     if (DevioDrvServiceInterop.DeviceIoControl(hDevice: device,
@@ -495,6 +518,28 @@ public partial class DevioDrvService : DevioServiceBase
                                                                lpBytesReturned: 0,
                                                                lpOverlapped: requestOverlapped))
                     {
+                        if (initializationDone is null
+                            && concurrentCount >= ioExchangeBufferCounter
+                            && DevioProvider.SupportsParallel
+                            && !DevioProvider.ForceSingleThread)
+                        {
+                            ThreadPool.QueueUserWorkItem(_ =>
+                            {
+                                try
+                                {
+#if DEBUG
+                                    Trace.WriteLine($"Service number {serviceNumber}: Launching an additional I/O exchange buffer...");
+#endif
+
+                                    StartNewIoExchange();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Trace.WriteLine($"Service number {serviceNumber}: Exception while starting another I/O exchange buffer: {ex.JoinMessages()}");
+                                }
+                            });
+                        }
+
                         return;
                     }
 
@@ -521,17 +566,33 @@ public partial class DevioDrvService : DevioServiceBase
                     initializationDone.Set();
                     initializationDone = null;
                 }
+
+                if (device.IsClosed)
+                {
+                    cancellation.Cancel();
+                }
             }
         }
 
         void CleanupIoExchange()
         {
+            if (Interlocked.Exchange(ref cleanedUp, 1) != 0)
+            {
+                return;
+            }
+
             Trace.WriteLine($"Dispoing I/O exchange number {serviceNumber}...");
 
             registeredHandle?.Unregister(null);
             memoryEvent?.Dispose();
             requestEvent?.Dispose();
-            mapView?.Dispose();
+
+            if (mapView is not null)
+            {
+                Interlocked.Add(ref totalAllocatedBuffers, -mapView.Capacity);
+                mapView.Dispose();
+            }
+
             memoryOverlappedMem?.Dispose();
             requestOverlappedMem?.Dispose();
 
@@ -773,7 +834,7 @@ public partial class DevioDrvService : DevioServiceBase
 
     protected override void EmergencyStopServiceThread()
     {
-        cancellation.Cancel();
         device?.Dispose();
+        cancellation.Cancel();
     }
 }
