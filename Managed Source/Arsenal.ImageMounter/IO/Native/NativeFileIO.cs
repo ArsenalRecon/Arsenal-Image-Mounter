@@ -86,6 +86,10 @@ public static partial class NativeFileIO
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool SetFileAttributesW(in char lpFileName, FileAttributes dwFileAttributes);
 
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetDllDirectoryW(in char lpPathName);
+
         [LibraryImport("kernel32", SetLastError = true), Obsolete]
         public static partial long GetTickCount64();
 #else
@@ -107,6 +111,9 @@ public static partial class NativeFileIO
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern bool SetFileAttributesW(in char lpFileName, FileAttributes dwFileAttributes);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool SetDllDirectoryW(in char lpPathName);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern long GetTickCount64();
@@ -1549,6 +1556,12 @@ public static partial class NativeFileIO
         ? throw new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(result))
         : result;
 
+    public static List<string> ExcludeProcessesFromHandleSearch { get; } = new()
+    {
+        "spoolsv",
+        "paragon_service"
+    };
+
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static bool OfflineDiskVolumes(string device_path, bool force)
         => OfflineDiskVolumes(device_path, force, CancellationToken.None);
@@ -1597,7 +1610,10 @@ public static partial class NativeFileIO
                 if (!force)
                 {
                     var dev_paths = QueryDosDevice(volume.Substring(4, 44)).ToArray();
-                    var in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths).Take(10).Select(FormatProcessName).ToArray();
+                    var in_use_apps = EnumerateProcessesHoldingFileHandle(includeProcessNames: null, ExcludeProcessesFromHandleSearch, dev_paths)
+                        .Take(10)
+                        .Select(FormatProcessName)
+                        .ToArray();
 
                     if (in_use_apps.Length > 1)
                     {
@@ -1695,7 +1711,10 @@ Currently, the following application has files open on this volume:
                 if (!force)
                 {
                     var dev_paths = QueryDosDevice(volume.Substring(4, 44)).ToArray();
-                    var in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths).Take(10).Select(FormatProcessName).ToArray();
+                    var in_use_apps = EnumerateProcessesHoldingFileHandle(includeProcessNames: null, ExcludeProcessesFromHandleSearch, dev_paths)
+                        .Take(10)
+                        .Select(FormatProcessName)
+                        .ToArray();
 
                     if (in_use_apps.Length > 1)
                     {
@@ -1760,7 +1779,7 @@ Currently, the following application has files open on this volume:
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths)
+            in_use_apps = EnumerateProcessesHoldingFileHandle(includeProcessNames: null, ExcludeProcessesFromHandleSearch, dev_paths)
                 .Take(10)
                 .ToArray();
             
@@ -2007,16 +2026,25 @@ Currently, the following application has files open on this volume:
     /// Enumerates open handles in the system.
     /// </summary>
     /// <param name="filterObjectType">Name of object types to return in the enumeration. Normally set to for example "File" to return file handles or "Key" to return registry key handles</param>
+    /// <param name="includeProcessNames"></param>
+    /// <param name="excludeProcessNames"></param>
     /// <returns>Enumeration with information about each handle table entry</returns>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static IEnumerable<HandleTableEntryInformation>? EnumerateHandleTableHandleInformation(string filterObjectType)
-        => EnumerateHandleTableHandleInformation(GetSystemHandleTable(), filterObjectType);
+    public static IEnumerable<HandleTableEntryInformation>? EnumerateHandleTableHandleInformation(string? filterObjectType,
+                                                                                                  IReadOnlyCollection<string>? includeProcessNames,
+                                                                                                  IReadOnlyCollection<string>? excludeProcessNames)
+        => EnumerateHandleTableHandleInformation(GetSystemHandleTable(),
+                                                 filterObjectType,
+                                                 includeProcessNames,
+                                                 excludeProcessNames);
 
     private static readonly ConcurrentDictionary<byte, string?> ObjectTypes = new();
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     private static IEnumerable<HandleTableEntryInformation>? EnumerateHandleTableHandleInformation(IEnumerable<SystemHandleTableEntryInformation> handleTable,
-                                                                                                   string filterObjectType)
+                                                                                                   string? filterObjectType,
+                                                                                                   IReadOnlyCollection<string>? includeProcessNames,
+                                                                                                   IReadOnlyCollection<string>? excludeProcessNames)
     {
         handleTable.NullCheck(nameof(handleTable));
 
@@ -2025,7 +2053,7 @@ Currently, the following application has files open on this volume:
             filterObjectType = string.Intern(filterObjectType);
         }
 
-        using var buffer = new HGlobalBuffer(65536);        
+        using var buffer = new HGlobalBuffer(65536);   
         using var processHandleList = new DisposableDictionary<int, SafeFileHandle?>();
         using var processInfoList = new DisposableDictionary<int, Process>();
 
@@ -2040,7 +2068,11 @@ Currently, the following application has files open on this volume:
                 || (filterObjectType is not null
                 && ObjectTypes.TryGetValue(handle.ObjectType, out object_type)
                 && !ReferenceEquals(object_type, filterObjectType))
-                || !processInfoList.TryGetValue(handle.ProcessId, out var processInfo))
+                || !processInfoList.TryGetValue(handle.ProcessId, out var processInfo)
+                || (includeProcessNames is not null
+                && !includeProcessNames.Contains(processInfo.ProcessName, StringComparer.OrdinalIgnoreCase))
+                || (excludeProcessNames is not null
+                && excludeProcessNames.Contains(processInfo.ProcessName, StringComparer.OrdinalIgnoreCase)))
             {
                 continue;
             }
@@ -2210,11 +2242,13 @@ Currently, the following application has files open on this volume:
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static IEnumerable<HandleTableEntryInformation> EnumerateProcessesHoldingFileHandle(params string[] nativeFullPaths)
+    public static IEnumerable<HandleTableEntryInformation> EnumerateProcessesHoldingFileHandle(IReadOnlyCollection<string>? includeProcessNames,
+                                                                                               IReadOnlyCollection<string>? excludeProcessNames,
+                                                                                               params string[] nativeFullPaths)
     {
         var paths = Array.ConvertAll(nativeFullPaths, path => (path, dir_path: string.Concat(path, @"\")));
 
-        return (from handle in EnumerateHandleTableHandleInformation("File")
+        return (from handle in EnumerateHandleTableHandleInformation("File", includeProcessNames, excludeProcessNames)
                 where handle.ObjectName is not null && !string.IsNullOrWhiteSpace(handle.ObjectName)
                     && paths.Any(path => handle.ObjectName.Equals(path.path, StringComparison.OrdinalIgnoreCase)
                         || handle.ObjectName.StartsWith(path.dir_path, StringComparison.OrdinalIgnoreCase))
@@ -3751,6 +3785,9 @@ Currently, the following application has files open on this volume:
 
     public static void SetVolumeOffline(SafeFileHandle disk, bool offline)
         => Win32Try(UnsafeNativeMethods.DeviceIoControl(disk, offline ? NativeConstants.IOCTL_VOLUME_OFFLINE : NativeConstants.IOCTL_VOLUME_ONLINE, 0, 0U, 0, 0U, out _, 0));
+
+    public static void SetUnmanagedDllDirectory(string path)
+        => Win32Try(SafeNativeMethods.SetDllDirectoryW(path.AsSpan()[0]));
 
     public static Exception GetExceptionForNtStatus(int NtStatus)
         => new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(NtStatus));

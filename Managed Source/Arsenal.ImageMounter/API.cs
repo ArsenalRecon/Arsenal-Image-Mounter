@@ -364,7 +364,13 @@ public static partial class API
             throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
         }
 
-        var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
+        var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames: null,
+                                                                           NativeFileIO.ExcludeProcessesFromHandleSearch,
+                                                                           pdo_path,
+                                                                           dev_path)
+            .Take(10)
+            .Select(NativeFileIO.FormatProcessName)
+            .ToArray();
 
         if (in_use_apps.Length == 0 && last_error != 0)
         {
@@ -449,7 +455,12 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
             }
 
-            var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
+            var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames: null,
+                                                                               NativeFileIO.ExcludeProcessesFromHandleSearch,
+                                                                               dev.path)
+                .Take(10)
+                .Select(NativeFileIO.FormatProcessName)
+                .ToArray();
 
             if (in_use_apps.Length == 0 && last_error > 0)
             {
@@ -576,7 +587,13 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
             throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
         }
 
-        var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
+        var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames: null,
+                                                                           NativeFileIO.ExcludeProcessesFromHandleSearch,
+                                                                           pdo_path,
+                                                                           dev_path)
+            .Take(10)
+            .Select(NativeFileIO.FormatProcessName)
+            .ToArray();
 
         if (in_use_apps.Length == 0 && last_error != 0)
         {
@@ -660,7 +677,12 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
             }
 
-            var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
+            var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames: null,
+                                                                               NativeFileIO.ExcludeProcessesFromHandleSearch,
+                                                                               dev.path)
+                .Take(10)
+                .Select(NativeFileIO.FormatProcessName)
+                .ToArray();
 
             if (in_use_apps.Length == 0 && last_error > 0)
             {
