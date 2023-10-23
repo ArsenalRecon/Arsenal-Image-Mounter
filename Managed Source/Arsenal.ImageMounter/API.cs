@@ -1,4 +1,4 @@
-﻿//  API.vb
+﻿//  API.cs
 //  API for manipulating flag values, issuing SCSI bus rescans and similar
 //  tasks.
 //  

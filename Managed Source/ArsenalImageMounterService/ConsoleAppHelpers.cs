@@ -33,6 +33,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.Json;
+using System.Threading;
 
 internal static class ConsoleAppHelpers
 {
@@ -209,6 +210,8 @@ Please see EULA.txt for license information.");
         var forceSingleThread = false;
         long? bufferSize = null;
         long? diskSize = null;
+        long? imageOffset = null;
+        var persistent = false;
         var diskAccess = FileAccess.Read;
         var mount = false;
         string? providerName = null;
@@ -280,6 +283,16 @@ Please see EULA.txt for license information.");
             {
                 bufferSize = SizeFormatting.ParseSuffixedSize(cmd.Value[0])
                     ?? throw new InvalidOperationException($"Invalid buffer size '{cmd.Value[0]}'");
+            }
+            else if (arg.Equals("offset", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            {
+                imageOffset = SizeFormatting.ParseSuffixedSize(cmd.Value[0])
+                    ?? throw new InvalidOperationException($"Invalid offset '{cmd.Value[0]}'");
+            }
+            else if (arg.Equals("persistent", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
+                && commands.ContainsKey("name") && !commands.ContainsKey("mount"))
+            {
+                persistent = true;
             }
             else if (arg.Equals("filename", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
                 || arg.Equals("device", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
@@ -807,6 +820,18 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 provider = new DebugProvider(provider, DebugCompareStream);
             }
 
+            if (!mount)
+            {
+                if (diskSize.HasValue)
+                {
+                    provider = new DevioProviderWithOffset(provider, imageOffset ?? 0, diskSize.Value);
+                }
+                else if (imageOffset.HasValue)
+                {
+                    provider = new DevioProviderWithOffset(provider, imageOffset.Value);
+                }
+            }
+
             if (fakeMbr)
             {
                 provider = new DevioProviderWithFakeMBR(provider);
@@ -873,6 +898,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
         }
 
+        service.Persistent = persistent;
+
         if (mount || ramDisk)
         {
             Console.WriteLine("Mounting as virtual disk...");
@@ -889,6 +916,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             {
                 Trace.WriteLine($"Failed to open SCSI adapter: {ex.JoinMessages()}");
                 throw new IOException("Cannot access Arsenal Image Mounter driver. Check that the driver is installed and that you are running this application with administrative privileges.", ex);
+            }
+
+            if (imageOffset.HasValue)
+            {
+                service.Offset = imageOffset.Value;
             }
 
             if (diskSize.HasValue)
@@ -979,7 +1011,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
         if (service is not DevioNoneService)
         {
-            service.WaitForServiceThreadExit();
+            service.WaitForExit(Timeout.InfiniteTimeSpan);
 
             Console.WriteLine("Service stopped.");
         }

@@ -1,4 +1,4 @@
-﻿//  NativeFileIO.vb
+﻿//  NativeFileIO.cs
 //  Routines for accessing some useful Win32 API functions to access features not
 //  directly accessible through .NET Framework.
 //  

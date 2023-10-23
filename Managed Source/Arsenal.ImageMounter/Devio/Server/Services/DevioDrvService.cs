@@ -1,4 +1,4 @@
-﻿//  DevioShmService.vb
+﻿//  DevioDrvService.cs
 //  
 //  Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 //  This source code and API are available under the terms of the Affero General Public
@@ -251,7 +251,7 @@ public partial class DevioDrvService : DevioServiceBase
 
             var maxTransferSize = (int)(mapView.Capacity - IMDPROXY_HEADER_SIZE);
 
-            Trace.WriteLine($"Parallel count: {serviceNumber}, total allocated buffers {SizeFormatting.FormatBytes(totalAllocated)}.");
+            Trace.WriteLine($"Parallel count: {serviceNumber}/{ioExchangeBufferCounter}, total allocated buffers {SizeFormatting.FormatBytes(totalAllocated)}.");
 
             memoryEvent = new ManualResetEvent(initialState: false);
 
@@ -448,7 +448,7 @@ public partial class DevioDrvService : DevioServiceBase
                                 return;
                             }
 
-                            Trace.WriteLine($"Parallel count: {serviceNumber}, total allocated buffers {SizeFormatting.FormatBytes(totalAllocated)}.");
+                            Trace.WriteLine($"Parallel count: {serviceNumber}/{ioExchangeBufferCounter}, total allocated buffers {SizeFormatting.FormatBytes(totalAllocated)}.");
                         }
                         else
                         {
@@ -614,7 +614,7 @@ public partial class DevioDrvService : DevioServiceBase
 
     private SafeFileHandle? device = null;
 
-    private readonly ManualResetEventSlim closedEvent = new(initialState: true);
+    private readonly ManualResetEvent closedEvent = new(initialState: true);
 
     /// <summary>
     /// Runs service that acts as server end in Devio shared memory based communication. It will first wait for
@@ -665,11 +665,11 @@ public partial class DevioDrvService : DevioServiceBase
         }
     }
 
-    public override void WaitForServiceThreadExit()
-        => WaitForServiceThreadExit(Timeout.InfiniteTimeSpan);
+    public override bool WaitForExit(TimeSpan timeout)
+        => closedEvent.WaitOne(timeout);
 
-    public override bool WaitForServiceThreadExit(TimeSpan timeout)
-        => closedEvent.Wait(timeout);
+    public override ValueTask<bool> WaitForExitAsync(TimeSpan timeout)
+        => closedEvent.WaitAsync(timeout);
 
     protected override void Dispose(bool disposing)
     {
@@ -696,6 +696,7 @@ public partial class DevioDrvService : DevioServiceBase
             req_alignment = REQUIRED_ALIGNMENT,
             flags = (DevioProvider.CanWrite ? 0 : IMDPROXY_FLAGS.IMDPROXY_FLAG_RO)
                 | (DevioProvider.SupportsShared ? IMDPROXY_FLAGS.IMDPROXY_FLAG_SUPPORTS_SHARED : 0)
+                | (Persistent ? IMDPROXY_FLAGS.IMDPROXY_FLAG_KEEP_OPEN : 0)
         };
 
         MemoryMarshal.Write(mapView.Slice(headerOffset), ref info);

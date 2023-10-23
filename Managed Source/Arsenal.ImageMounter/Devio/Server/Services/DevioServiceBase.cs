@@ -1,4 +1,4 @@
-﻿//  DevioServiceBase.vb
+﻿//  DevioServiceBase.cs
 //  
 //  Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 //  This source code and API are available under the terms of the Affero General Public
@@ -77,6 +77,13 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// <value>Sector size of virtual disk device.</value>
     /// <returns>Sector size of virtual disk device.</returns>
     public virtual uint SectorSize { get; set; }
+
+    /// <summary>
+    /// Create a persistent virtual file at client side that can be reopened again
+    /// after being closed, without dropping connection to the server side. Currently
+    /// only implemented for deviodrv services.
+    /// </summary>
+    public virtual bool Persistent { get; set; }
 
     /// <summary>
     /// Description of service.
@@ -233,7 +240,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// <param name="timeout">Timeout value, or Timeout.Infinite to wait infinitely.</param>
     /// <returns>Returns True if service thread has exit or no service thread has been
     /// created, or False if timeout occurred.</returns>
-    public virtual bool WaitForServiceThreadExit(TimeSpan timeout)
+    public virtual bool WaitForExit(TimeSpan timeout)
     {
         if (ServiceThread is not null
             && ServiceThread.ManagedThreadId != Environment.CurrentManagedThreadId
@@ -241,7 +248,15 @@ public abstract class DevioServiceBase : IVirtualDiskService
         {
             Trace.WriteLine($"Waiting for service thread to terminate.");
 
-            return ServiceThread.Join(timeout);
+            if (timeout == Timeout.InfiniteTimeSpan)
+            {
+                ServiceThread.Join();
+                return true;
+            }
+            else
+            {
+                return ServiceThread.Join(timeout);
+            }
         }
         else
         {
@@ -251,9 +266,13 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
     /// <summary>
     /// Waits for service thread created by StartServiceThread() to exit. If no service thread
-    /// has been created or if it has already exit, this method returns immediately.
+    /// has been created or if it has already exit, this method returns immediately with a
+    /// value of True.
     /// </summary>
-    public virtual void WaitForServiceThreadExit()
+    /// <param name="timeout">Timeout value, or Timeout.Infinite to wait infinitely.</param>
+    /// <returns>Returns True if service thread has exit or no service thread has been
+    /// created, or False if timeout occurred.</returns>
+    public virtual async ValueTask<bool> WaitForExitAsync(TimeSpan timeout)
     {
         if (ServiceThread is not null
             && ServiceThread.ManagedThreadId != Environment.CurrentManagedThreadId
@@ -261,7 +280,19 @@ public abstract class DevioServiceBase : IVirtualDiskService
         {
             Trace.WriteLine($"Waiting for service thread to terminate.");
 
-            ServiceThread.Join();
+            if (timeout == Timeout.InfiniteTimeSpan)
+            {
+                await Task.Run(ServiceThread.Join).ConfigureAwait(false);
+                return true;
+            }
+            else
+            {
+                return await Task.Run(() => ServiceThread.Join(timeout)).ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            return true;
         }
     }
 
@@ -367,7 +398,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     {
         RemoveDeviceAndStopServiceThread();
 
-        WaitForServiceThreadExit();
+        WaitForExit(Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>
@@ -380,7 +411,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     {
         RemoveDeviceAndStopServiceThread();
 
-        var rc = WaitForServiceThreadExit(timeout);
+        var rc = WaitForExit(timeout);
 
         if (rc)
         {

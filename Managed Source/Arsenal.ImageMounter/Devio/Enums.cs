@@ -41,7 +41,8 @@ public enum IMDPROXY_FLAGS : ulong
     IMDPROXY_FLAG_SUPPORTS_UNMAP = 0x2UL, // Unmap / TRIM ranges
     IMDPROXY_FLAG_SUPPORTS_ZERO = 0x4UL, // Zero - fill ranges
     IMDPROXY_FLAG_SUPPORTS_SCSI = 0x8UL, // SCSI SRB operations
-    IMDPROXY_FLAG_SUPPORTS_SHARED = 0x10UL // Shared image access With reservations
+    IMDPROXY_FLAG_SUPPORTS_SHARED = 0x10UL, // Shared image access With reservations
+    IMDPROXY_FLAG_KEEP_OPEN = 0x20UL, // DevIoDrv mode with persistent virtual file
 }
 
 /// <summary>

@@ -11,6 +11,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -42,5 +43,7 @@ public interface IVirtualDiskService : IDisposable
 
     void RemoveDeviceSafe();
 
-    void WaitForServiceThreadExit();
+    bool WaitForExit(TimeSpan millisecondsTimeout);
+
+    ValueTask<bool> WaitForExitAsync(TimeSpan millisecondsTimeout);
 }
