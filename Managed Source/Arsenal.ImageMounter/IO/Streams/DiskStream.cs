@@ -37,7 +37,7 @@ public class DiskStream : AligningStream
     /// <param name="AccessMode">Access to request for stream.</param>
     protected internal DiskStream(SafeFileHandle SafeFileHandle, FileAccess AccessMode)
         : base(new FileStream(SafeFileHandle, AccessMode, bufferSize: 1),
-               Alignment: (NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector) ?? 512,
+               alignment: (NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector) ?? 512,
                ownsBaseStream: true)
     {
     }
@@ -52,7 +52,7 @@ public class DiskStream : AligningStream
     /// <param name="DiskSize">Size that should be returned by Length property</param>
     protected internal DiskStream(SafeFileHandle SafeFileHandle, FileAccess AccessMode, long DiskSize)
         : base(new FileStream(SafeFileHandle, AccessMode, bufferSize: 1),
-               Alignment: (NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector) ?? 512,
+               alignment: (NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector) ?? 512,
                ownsBaseStream: true)
     {
         cachedLength = DiskSize;
