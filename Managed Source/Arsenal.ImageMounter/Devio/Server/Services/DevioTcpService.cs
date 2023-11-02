@@ -249,7 +249,7 @@ public class DevioTcpService : DevioServiceBase
         writer.Write(writeLength);
     }
 
-    protected override string ProxyObjectName
+    public override string ProxyObjectName
     {
         get
         {
@@ -264,7 +264,7 @@ public class DevioTcpService : DevioServiceBase
         }
     }
 
-    protected override DeviceFlags ProxyModeFlags => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeTCP;
+    public override DeviceFlags ProxyModeFlags => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeTCP;
 
     protected override void EmergencyStopServiceThread() => internalShutdownRequestAction?.Invoke();
 }

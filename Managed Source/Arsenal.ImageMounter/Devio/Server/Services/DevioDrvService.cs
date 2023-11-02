@@ -826,10 +826,10 @@ public partial class DevioDrvService : DevioServiceBase
         MemoryMarshal.Write(mapView.Slice(headerOffset), ref response);
     }
 
-    protected override string ProxyObjectName
+    public override string ProxyObjectName
         => $@"\\?\DevIoDrv\{ObjectName}";
 
-    protected override DeviceFlags ProxyModeFlags
+    public override DeviceFlags ProxyModeFlags
         => DeviceFlags.FileTypeParallel
         | (DevioProvider.CanWrite ? DeviceFlags.None : DeviceFlags.ReadOnly);
 

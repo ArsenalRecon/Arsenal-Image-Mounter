@@ -536,14 +536,14 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// needed for driver to start communication with this service.</value>
     /// <returns>Default value of this property depends on derived class and which parameters are normally
     /// needed for driver to start communication with this service.</returns>
-    protected abstract DeviceFlags ProxyModeFlags { get; }
+    public abstract DeviceFlags ProxyModeFlags { get; }
 
     /// <summary>
     /// Object name that Arsenal Image Mounter can use to connect to this service.
     /// </summary>
     /// <value>Object name string.</value>
     /// <returns>Object name that Arsenal Image Mounter can use to connect to this service.</returns>
-    protected abstract string? ProxyObjectName { get; }
+    public abstract string? ProxyObjectName { get; }
 
     /// <summary>
     /// Path to write overlay image to pass to driver when a virtual disk is created for this service.

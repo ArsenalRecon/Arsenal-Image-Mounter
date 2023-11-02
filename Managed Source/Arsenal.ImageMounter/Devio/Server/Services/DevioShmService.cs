@@ -442,10 +442,10 @@ public class DevioShmService : DevioServiceBase
         mapView.Write(0x0UL, response);
     }
 
-    protected override string ProxyObjectName
+    public override string ProxyObjectName
         => ObjectName;
 
-    protected override DeviceFlags ProxyModeFlags
+    public override DeviceFlags ProxyModeFlags
         => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeSharedMemory;
 
     protected override void EmergencyStopServiceThread()

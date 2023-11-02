@@ -149,9 +149,9 @@ public class DevioNoneService : DevioServiceBase
         ProxyObjectName = $@"\\?\vhdaccess\??\awealloc{NativeFileIO.GetNtPath(imageFile)}";
     }
 
-    protected override string? ProxyObjectName { get; }
+    public override string? ProxyObjectName { get; }
 
-    protected override DeviceFlags ProxyModeFlags { get; }
+    public override DeviceFlags ProxyModeFlags { get; }
 
     /// <summary>
     /// Dummy implementation that always returns True.
