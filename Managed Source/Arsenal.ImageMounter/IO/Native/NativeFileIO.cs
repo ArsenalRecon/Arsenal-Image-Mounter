@@ -90,6 +90,17 @@ public static partial class NativeFileIO
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool SetDllDirectoryW(in char lpPathName);
 
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        public static partial nint AddDllDirectory(in char lpPathName);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool RemoveDllDirectory(nint cookie);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetDefaultDllDirectories(DLLSearchDirs policy);
+
         [LibraryImport("kernel32", SetLastError = true), Obsolete]
         public static partial long GetTickCount64();
 #else
@@ -114,6 +125,17 @@ public static partial class NativeFileIO
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern bool SetDllDirectoryW(in char lpPathName);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern nint AddDllDirectory(in char lpPathName);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool RemoveDllDirectory(nint cookie);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetDefaultDllDirectories(DLLSearchDirs policy);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern long GetTickCount64();
@@ -3787,7 +3809,34 @@ Currently, the following application has files open on this volume:
         => Win32Try(UnsafeNativeMethods.DeviceIoControl(disk, offline ? NativeConstants.IOCTL_VOLUME_OFFLINE : NativeConstants.IOCTL_VOLUME_ONLINE, 0, 0U, 0, 0U, out _, 0));
 
     public static void SetUnmanagedDllDirectory(string path)
-        => Win32Try(SafeNativeMethods.SetDllDirectoryW(path.AsSpan()[0]));
+    {
+        Win32Try(SafeNativeMethods.SetDefaultDllDirectories(
+            DLLSearchDirs.LOAD_LIBRARY_SEARCH_USER_DIRS |
+            DLLSearchDirs.LOAD_LIBRARY_SEARCH_SYSTEM32 |
+            DLLSearchDirs.LOAD_LIBRARY_SEARCH_APPLICATION_DIR));
+
+        Win32Try(SafeNativeMethods.SetDllDirectoryW(path.AsSpan()[0]));
+    }
+
+    public static nint AddUnmanagedDllDirectory(string path)
+    {
+        Win32Try(SafeNativeMethods.SetDefaultDllDirectories(
+            DLLSearchDirs.LOAD_LIBRARY_SEARCH_USER_DIRS |
+            DLLSearchDirs.LOAD_LIBRARY_SEARCH_SYSTEM32 |
+            DLLSearchDirs.LOAD_LIBRARY_SEARCH_APPLICATION_DIR));
+
+        var cookie = SafeNativeMethods.AddDllDirectory(path.AsSpan()[0]);
+
+        if (cookie == 0)
+        {
+            throw new Win32Exception();
+        }
+
+        return cookie;
+    }
+
+    public static void RemoveUnmanagedDllDirectory(nint cookie)
+        => Win32Try(SafeNativeMethods.RemoveDllDirectory(cookie));
 
     public static Exception GetExceptionForNtStatus(int NtStatus)
         => new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(NtStatus));

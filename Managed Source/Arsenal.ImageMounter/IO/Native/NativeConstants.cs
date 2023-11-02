@@ -202,3 +202,13 @@ public static class NativeConstants
 
     public static ReadOnlyMemory<byte> DefaultBootCode { get; } = new byte[] { 0xF4, 0xEB, 0xFD };   // HLT ; JMP -3
 }
+
+[Flags]
+public enum DLLSearchDirs
+{
+    LOAD_LIBRARY_SEARCH_APPLICATION_DIR = 0x00000200,
+    LOAD_LIBRARY_SEARCH_USER_DIRS = 0x00000400,
+    LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800,
+    LOAD_LIBRARY_SEARCH_DEFAULT_DIRS = 0x00001000,
+}
+
