@@ -65,6 +65,13 @@ public partial class DevioDrvService : DevioServiceBase
     /// </summary>
     public const long DefaultInitialBufferSize = (64 << 10) + IMDPROXY_HEADER_SIZE;
 
+    /// <summary>
+    /// Limit for number of simultaneously dispatched I/O requests. Higher number consumes
+    /// more memory, but could I/O response performance. Default value is 3/4 of number of
+    /// CPU cores.
+    /// </summary>
+    public int ParallelIoLimit { get; set; } = Environment.ProcessorCount * 3 / 4;
+
     private static Guid GetNextRandomValue() => NativeCalls.GenRandomGuid();
 
     private readonly CancellationTokenSource cancellation = new();
@@ -520,6 +527,7 @@ public partial class DevioDrvService : DevioServiceBase
                     {
                         if (initializationDone is null
                             && concurrentCount >= ioExchangeBufferCounter
+                            && ioExchangeBufferCounter < ParallelIoLimit
                             && DevioProvider.SupportsParallel
                             && !DevioProvider.ForceSingleThread)
                         {
