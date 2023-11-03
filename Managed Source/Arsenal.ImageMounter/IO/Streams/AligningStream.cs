@@ -70,7 +70,12 @@ public class AligningStream : Stream
 
         if (Position == lastReadPos && count <= Alignment)
         {
+            count = Math.Min(count, Alignment);
+
             Array.Copy(lastReadBuffer, 0, buffer, offset, count);
+
+            Position += count;
+
             return count;
         }
 
@@ -97,6 +102,10 @@ public class AligningStream : Stream
             Array.Copy(buffer, offset - Alignment, lastReadBuffer, 0, Alignment);
             lastReadPos = Position - Alignment;
         }
+        else
+        {
+            lastReadPos = -1;
+        }
 
         return totalSize;
     }
@@ -116,8 +125,13 @@ public class AligningStream : Stream
 
         if (Position == lastReadPos && buffer.Length <= Alignment)
         {
-            lastReadBuffer.AsSpan(0, buffer.Length).CopyTo(buffer.Span);
-            return buffer.Length;
+            var count = Math.Min(buffer.Length, Alignment);
+
+            lastReadBuffer.AsSpan(0, count).CopyTo(buffer.Span);
+
+            Position += count;
+
+            return count;
         }
 
         var totalSize = 0;
@@ -146,6 +160,10 @@ public class AligningStream : Stream
             buffer.Span.Slice(totalSize - Alignment, Alignment).CopyTo(lastReadBuffer);
             lastReadPos = Position - Alignment;
         }
+        else
+        {
+            lastReadPos = -1;
+        }
 
         return totalSize;
     }
@@ -167,8 +185,13 @@ public class AligningStream : Stream
 
         if (Position == lastReadPos && buffer.Length <= Alignment)
         {
-            lastReadBuffer.AsSpan(0, buffer.Length).CopyTo(buffer);
-            return buffer.Length;
+            var count = Math.Min(buffer.Length, Alignment);
+
+            lastReadBuffer.AsSpan(0, count).CopyTo(buffer);
+
+            Position += count;
+
+            return count;
         }
 
         var totalSize = 0;
@@ -196,6 +219,10 @@ public class AligningStream : Stream
         {
             buffer.Slice(totalSize - Alignment, Alignment).CopyTo(lastReadBuffer);
             lastReadPos = Position - Alignment;
+        }
+        else
+        {
+            lastReadPos = -1;
         }
 
         return totalSize;
