@@ -161,7 +161,7 @@ internal static class ConsoleAppHelpers
             try
             {
                 using var adapter = new ScsiAdapter();
-                driver_ver = $"Driver version: {adapter.GetDriverSubVersion()}";
+                driver_ver = adapter.GetDriverSubVersion()?.ToString() ?? "Unknown";
             }
             catch (Exception ex)
             {
@@ -173,22 +173,25 @@ internal static class ConsoleAppHelpers
             driver_ver = "Driver is only available on Windows";
         }
 
-        Console.WriteLine($@"Integrated command line interface to Arsenal Image Mounter virtual
-SCSI miniport driver.
+        var msg = $@"Integrated command line interface to Arsenal Image Mounter virtual SCSI miniport driver.
 
-Operating system: {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}
-.NET runtime: {RuntimeInformation.FrameworkDescription}
-Process CPU architecture: {RuntimeInformation.ProcessArchitecture}
+Operating system:               {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}
+.NET runtime:                   {RuntimeInformation.FrameworkDescription}
+Process CPU architecture:       {RuntimeInformation.ProcessArchitecture}
 
-Arsenal Image Mounter version {ConsoleApp.AssemblyFileVersion}
+Arsenal Image Mounter version:  {ConsoleApp.AssemblyFileVersion}
 
-{driver_ver}
+Driver version:                 {driver_ver}
 
 Copyright (c) 2012-2023 Arsenal Recon.
 
 http://www.ArsenalRecon.com
 
-Please see EULA.txt for license information.");
+Please see EULA.txt for license information.";
+
+        msg = msg.LineFormat(IndentWidth: 4);
+
+        Console.WriteLine(msg);
     }
 
     public enum IOCommunication
@@ -423,7 +426,7 @@ Please see EULA.txt for license information.");
             }
             else if (arg.Equals("detach", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-#if NETCOREAPP
+#if NET5_0_OR_GREATER
                 detachEvent = new SafeWaitHandle(nint.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
 #else
                 detachEvent = new SafeWaitHandle((nint)long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
