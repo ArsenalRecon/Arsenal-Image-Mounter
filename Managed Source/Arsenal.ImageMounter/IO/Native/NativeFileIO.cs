@@ -15,6 +15,7 @@ using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Streams;
+using DiscUtils;
 using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
@@ -329,7 +330,7 @@ public static partial class NativeFileIO
 
         [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool GetDiskFreeSpaceW(in char lpRootPathName, out uint lpSectorsPerCluster, out uint lpBytesPerSector, out uint lpNumberOfFreeClusters, out uint lpTotalNumberOfClusters);
+        internal static partial bool GetDiskFreeSpaceW(in char lpRootPathName, out int lpSectorsPerCluster, out int lpBytesPerSector, out int lpNumberOfFreeClusters, out int lpTotalNumberOfClusters);
 
         [LibraryImport("kernel32", EntryPoint = "DeviceIoControl", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -338,6 +339,10 @@ public static partial class NativeFileIO
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in long lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -815,13 +820,16 @@ public static partial class NativeFileIO
         internal static extern FileAttributes GetFileAttributesW(in char path);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool GetDiskFreeSpaceW(in char lpRootPathName, out uint lpSectorsPerCluster, out uint lpBytesPerSector, out uint lpNumberOfFreeClusters, out uint lpTotalNumberOfClusters);
+        internal static extern bool GetDiskFreeSpaceW(in char lpRootPathName, out int lpSectorsPerCluster, out int lpBytesPerSector, out int lpNumberOfFreeClusters, out int lpTotalNumberOfClusters);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in bool lpInBuffer, uint nInBufferSize, nint lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+
+        [DllImport("kernel32", SetLastError = true)]
+        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in long lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, uint nInBufferSize, nint lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
@@ -2303,16 +2311,49 @@ Currently, the following application has files open on this volume:
         }
     }
 
-    public static bool GetDiskFreeSpace(string lpRootPathName,
-                                        out uint lpSectorsPerCluster,
-                                        out uint lpBytesPerSector,
-                                        out uint lpNumberOfFreeClusters,
-                                        out uint lpTotalNumberOfClusters)
-        => UnsafeNativeMethods.GetDiskFreeSpaceW(lpRootPathName.AsRef(),
-                                                 out lpSectorsPerCluster,
-                                                 out lpBytesPerSector,
-                                                 out lpNumberOfFreeClusters,
-                                                 out lpTotalNumberOfClusters);
+    public static bool GetDiskFreeSpace(string rootPathName,
+                                        out int sectorsPerCluster,
+                                        out int bytesPerSector,
+                                        out int numberOfFreeClusters,
+                                        out int totalNumberOfClusters)
+        => UnsafeNativeMethods.GetDiskFreeSpaceW(rootPathName.AsRef(),
+                                                 out sectorsPerCluster,
+                                                 out bytesPerSector,
+                                                 out numberOfFreeClusters,
+                                                 out totalNumberOfClusters);
+
+    public static unsafe bool GetAllocationBitmap(SafeFileHandle rootDirectory,
+                                                  ref long startingCluster,
+                                                  long totalNumberOfClusters,
+                                                  out Memory<byte> bitmap)
+    {
+        var buffer = new byte[(int)Math.Ceiling((double)totalNumberOfClusters / 8) + sizeof(VOLUME_BITMAP_BUFFER)];
+
+        if (!UnsafeNativeMethods.DeviceIoControl(rootDirectory,
+                                                 NativeConstants.FSCTL_GET_VOLUME_BITMAP,
+                                                 startingCluster,
+                                                 sizeof(long),
+                                                 out buffer[0],
+                                                 (uint)buffer.Length,
+                                                 out var bytesReturned,
+                                                 0))
+        {
+            bitmap = default;
+
+            return false;
+        }
+
+        var header = MemoryMarshal.Read<VOLUME_BITMAP_BUFFER>(buffer);
+
+        startingCluster = header.StartingLcn;
+
+        var length = Math.Min((int)bytesReturned - sizeof(VOLUME_BITMAP_BUFFER),
+            (int)Math.Ceiling((double)header.BitmapSize / 8));
+
+        bitmap = new(buffer, sizeof(VOLUME_BITMAP_BUFFER), length);
+
+        return true;
+    }
 
     public static bool DeviceIoControl(SafeFileHandle hDevice,
                                        uint dwIoControlCode,

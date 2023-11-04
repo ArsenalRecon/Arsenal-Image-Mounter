@@ -85,6 +85,7 @@ public static class NativeConstants
     public const uint FSCTL_SET_SPARSE = 0x900C4U;
     public const uint FSCTL_GET_RETRIEVAL_POINTERS = 0x90073U;
     public const uint FSCTL_ALLOW_EXTENDED_DASD_IO = 0x90083U;
+    public const uint FSCTL_GET_VOLUME_BITMAP = (((0x00000009) << 16) | ((0) << 14) | ((27) << 2) | (3));
 
     public const uint FSCTL_LOCK_VOLUME = 0x90018U;
     public const uint FSCTL_DISMOUNT_VOLUME = 0x90020U;

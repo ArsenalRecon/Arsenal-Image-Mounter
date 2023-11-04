@@ -12,7 +12,9 @@
 
 using Arsenal.ImageMounter.IO.Native;
 using Arsenal.ImageMounter.IO.Streams;
+using DiscUtils;
 using DiscUtils.Streams.Compatibility;
+using LTRData.Extensions.Buffers;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;
@@ -333,6 +335,54 @@ public class DiskDevice : DeviceObject
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Gets number of bytes per cluster for file system on a disk volume represented
+    /// by this object. If this object does not represent a disk volume with a file,
+    /// system, null is returned.
+    /// </summary>
+    /// <returns>Number of bytes per cluster for file system on a disk volume represented
+    /// by this object. If this object does not represent a disk volume with a file,
+    /// system, null is returned</returns>
+    public FileSystemClusterSizes? GetFileSystemClusterSizes()
+        => NativeFileIO.GetDiskFreeSpace($"{DevicePath}\\",
+                                         out var sectorsPerCluster,
+                                         out var bytesPerSector,
+                                         out var numberOfFreeClusters,
+                                         out var totalNumberOfClusters)
+        ? new(bytesPerSector,
+              sectorsPerCluster,
+              numberOfFreeClusters,
+              totalNumberOfClusters)
+        : null;
+
+    /// <summary>
+    /// Gets allocation bitmap for file system on disk volume represented by this object.
+    /// </summary>
+    public Memory<byte> GetFileSystemAllocationBitmap(out FileSystemClusterSizes clusterSizes)
+    {
+        var clusterSizesResult = GetFileSystemClusterSizes();
+
+        if (!clusterSizesResult.HasValue)
+        {
+            clusterSizes = default;
+            return default;
+        }
+
+        clusterSizes = clusterSizesResult.Value;
+
+        var startingCluster = 0L;
+
+        if (NativeFileIO.GetAllocationBitmap(SafeFileHandle,
+                                             ref startingCluster,
+                                             clusterSizes.TotalNumberOfClusters,
+                                             out var bitmap))
+        {
+            return bitmap;
+        }
+
+        return default;
     }
 
     /// <summary>

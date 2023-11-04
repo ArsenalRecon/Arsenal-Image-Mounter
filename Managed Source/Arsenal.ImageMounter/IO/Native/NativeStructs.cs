@@ -26,6 +26,30 @@ using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 
 namespace Arsenal.ImageMounter.IO.Native;
 
+public readonly struct FileSystemClusterSizes
+{
+    public FileSystemClusterSizes(int bytesPerSector, int sectorsPerCluster, long numberOfFreeClusters, long totalNumberOfClusters)
+    {
+        BytesPerSector = bytesPerSector;
+        SectorsPerCluster = sectorsPerCluster;
+        NumberOfFreeClusters = numberOfFreeClusters;
+        TotalNumberOfClusters = totalNumberOfClusters;
+    }
+
+    public int BytesPerSector { get; }
+    public int SectorsPerCluster { get; }
+    public int BytesPerCluster => BytesPerSector * SectorsPerCluster;
+    public long NumberOfFreeClusters { get; }
+    public long TotalNumberOfClusters { get; }
+    public long NumberOfUsedClusters => TotalNumberOfClusters - NumberOfFreeClusters;
+}
+
+public readonly struct VOLUME_BITMAP_BUFFER
+{
+    public long StartingLcn { get; }
+    public long BitmapSize { get; }
+}
+
 /// <summary>
 /// Structure for counted Unicode strings used in NT API calls
 /// </summary>
