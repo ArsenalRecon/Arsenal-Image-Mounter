@@ -499,7 +499,11 @@ public static class DevioServiceFactory
         {
             return new DevioNoneService(Imagefile, DiskAccess);
         }
-        else if (ProviderType == ProviderType.DiscUtils && !FakeMBR && ((int)DiskAccess & (int)~FileAccess.ReadWrite) == 0 && (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) || Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase)))
+        else if (ProviderType == ProviderType.DiscUtils
+            && !FakeMBR
+            && DiskAccess is VirtualDiskAccess.ReadOnly or VirtualDiskAccess.ReadWriteOriginal or VirtualDiskAccess.ReadWriteOverlay
+            && (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase)
+            || Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase)))
         {
             return new DevioNoneService($@"\\?\vhdaccess{NativeFileIO.GetNtPath(Imagefile)}", DiskAccess);
         }
@@ -512,7 +516,10 @@ public static class DevioServiceFactory
             Provider = new DevioProviderWithFakeMBR(Provider);
         }
 
-        var Service = new DevioShmService(Provider, ownsProvider: true) { Description = $"Image file {Imagefile}" };
+        var Service = new DevioDrvService(Provider, ownsProvider: true)
+        {
+            Description = $"Image file {Imagefile}"
+        };
 
         return Service;
     }
@@ -532,7 +539,8 @@ public static class DevioServiceFactory
         switch (ProviderType)
         {
             case ProviderType.None:
-                if (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) || Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase))
+                if (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase)
+                    || Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase))
                 {
                     return new DevioNoneService($@"\\?\vhdaccess{NativeFileIO.GetNtPath(Imagefile)}", DiskAccess);
                 }
@@ -547,7 +555,7 @@ public static class DevioServiceFactory
                 var provider = GetProvider(Imagefile, DiskAccess, ProviderType)
                     ?? throw new NotSupportedException($"Cannot open '{Imagefile}' with provider {ProviderType}");
 
-                Service = new DevioShmService(provider, ownsProvider: true);
+                Service = new DevioDrvService(provider, ownsProvider: true);
 
                 break;
         }
