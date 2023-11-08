@@ -744,31 +744,12 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         return done_count;
     }
 
-    private static readonly nint ImportedWriteAtOffset
+    private static readonly nint ImportedSetCompressionMethod
 #if NETFRAMEWORK || NETCOREAPP
-        = NativeLib.GetProcAddressNoThrow("libewf", "libewf_handle_write_buffer_at_offset");
+        = NativeLib.GetProcAddressNoThrow("libewf", "libewf_handle_set_compression_method");
 #else
         = 0;
 #endif
-
-    private static readonly FuncReadWriteAtOffset WriteAtOffset =
-        ImportedWriteAtOffset != 0
-        ? libewf_handle_write_buffer_at_offset
-        : InternalWriteAtOffset;
-
-    private static nint InternalWriteAtOffset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long fileoffset, out nint errobj)
-    {
-        var offset = libewf_handle_seek_offset(handle, fileoffset, Whence.Set, out errobj);
-
-        if (offset != fileoffset || errobj != 0)
-        {
-            return -1;
-        }
-
-        var result = libewf_handle_write_buffer(handle, buffer, buffer_size, out errobj);
-
-        return result;
-    }
 
     public override int Write(nint buffer, int bufferoffset, int count, long fileoffset)
     {
@@ -781,6 +762,12 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         var size = (nint)count;
 
+        var offset = libewf_handle_seek_offset(SafeHandle, fileoffset, Whence.Set, out var errobj);
+        if (offset != fileoffset || errobj != 0)
+        {
+            ThrowError(errobj, $"Error seeking to position {fileoffset} to offset {bufferoffset} in buffer 0x{buffer:X}");
+        }
+
         while (sizedone < count)
         {
             var sizenow = size - sizedone;
@@ -789,7 +776,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                 sizenow = 16384;
             }
 
-            var retval = WriteAtOffset(SafeHandle, buffer + bufferoffset + sizedone, sizenow, fileoffset, out var errobj);
+            var retval = libewf_handle_write_buffer(SafeHandle, buffer + bufferoffset + sizedone, sizenow, out errobj);
 
             if (retval <= 0 || errobj != 0)
             {
@@ -895,7 +882,12 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         SetOutputValueParameter(libewf_handle_set_media_type, ImagingParameters.MediaType);
         SetOutputValueParameter(libewf_handle_set_media_flags, ImagingParameters.MediaFlags);
         SetOutputValueParameter(libewf_handle_set_format, ImagingParameters.UseEWFFileFormat);
-        SetOutputValueParameter(libewf_handle_set_compression_method, ImagingParameters.CompressionMethod);
+
+        if (ImportedSetCompressionMethod != 0)
+        {
+            SetOutputValueParameter(libewf_handle_set_compression_method, ImagingParameters.CompressionMethod);
+        }
+
         SetOutputValueParameter(libewf_handle_set_compression_values, ImagingParameters.CompressionLevel, ImagingParameters.CompressionFlags);
         SetOutputValueParameter(libewf_handle_set_maximum_segment_size, ImagingParameters.SegmentFileSize);
         SetOutputValueParameter(libewf_handle_set_sectors_per_chunk, ImagingParameters.SectorsPerChunk);
