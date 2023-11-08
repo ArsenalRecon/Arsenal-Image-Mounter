@@ -630,7 +630,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
         Trace.WriteLine($"Image type class: {Disk.DiskTypeInfo?.Name} ({Disk.DiskTypeInfo?.Variant})");
 
-        var DisposableObjects = new List<IDisposable>() { Disk };
+        var DisposableObjects = new List<IDisposable> { Disk };
 
         try
         {
@@ -708,7 +708,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                 Trace.WriteLine("Read-only mode.");
             }
 
-            var provider = new DevioProviderFromStream(DiskStream, ownsStream: true) { CustomSectorSize = SectorSize };
+            var provider = new DevioProviderFromStream(DiskStream, ownsStream: true)
+            {
+                CustomSectorSize = SectorSize
+            };
 
             provider.Disposed += (sender, e)
                 => DisposableObjects.ForEach(obj => obj.Dispose());
@@ -760,7 +763,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
     private static bool UseExistingDifferencingDisk(ref string differencingPath)
     {
-        var e = new PathRequestEventArgs() { Path = differencingPath };
+        var e = new PathRequestEventArgs
+        {
+            Path = differencingPath
+        };
 
         UseExistingDifferencingDiskUserRequest?.Invoke(null, e);
 
@@ -788,7 +794,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     {
         var DiskStream = new MultiPartFileStream(Imagefile, DiskAccess);
 
-        return new DevioProviderFromStream(DiskStream, ownsStream: true) { CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile) };
+        return new DevioProviderFromStream(DiskStream, ownsStream: true)
+        {
+            CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile)
+        };
     }
 
     /// <summary>
@@ -802,7 +811,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     {
         var DiskStream = new MultiPartFileStream(Imagefile, DiskAccess, ShareMode);
 
-        return new DevioProviderFromStream(DiskStream, ownsStream: true) { CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile) };
+        return new DevioProviderFromStream(DiskStream, ownsStream: true)
+        {
+            CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile)
+        };
     }
 
     /// <summary>
