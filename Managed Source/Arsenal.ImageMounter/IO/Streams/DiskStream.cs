@@ -29,7 +29,6 @@ namespace Arsenal.ImageMounter.IO.Streams;
 /// </summary>
 public class DiskStream : AligningStream
 {
-
     /// <summary>
     /// Initializes an DiskStream object for an open disk device.
     /// </summary>

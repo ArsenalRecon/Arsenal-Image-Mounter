@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using LTRData.Extensions.IO;
 using System;
 using System.Text;
 using System.Threading;

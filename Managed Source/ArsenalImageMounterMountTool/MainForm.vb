@@ -26,6 +26,7 @@ Imports Arsenal.ImageMounter.IO.Devices
 Imports Arsenal.ImageMounter.IO.Native
 Imports Arsenal.ImageMounter.Views
 Imports LTRData.Extensions.Formatting
+Imports LTRData.Extensions.IO
 
 #Disable Warning IDE1006 ' Naming Styles
 

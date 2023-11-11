@@ -1,4 +1,6 @@
 ﻿using Arsenal.ImageMounter.IO.ConsoleIO;
+using LTRData.Extensions.CommandLine;
+using LTRData.Extensions.IO;
 using System;
 using Xunit;
 
@@ -21,7 +23,7 @@ public class CommandLine
             "parameter2"
         };
 
-        var cmd = ConsoleSupport.ParseCommandLine(args, StringComparer.Ordinal);
+        var cmd = CommandLineParser.ParseCommandLine(args, StringComparer.Ordinal);
 
         Assert.Equal(6, cmd.Count);
         Assert.Equal(3, cmd[""].Length);
@@ -45,7 +47,7 @@ public class CommandLine
             "parameter2"
         };
 
-        var cmd = ConsoleSupport.ParseCommandLine(args, StringComparer.Ordinal);
+        var cmd = CommandLineParser.ParseCommandLine(args, StringComparer.Ordinal);
 
         Assert.Equal(6, cmd.Count);
         Assert.Equal(3, cmd[""].Length);
@@ -61,7 +63,7 @@ public class CommandLine
             "/mnt/New folder/New Bitmap Image.bmp"
         };
 
-        var cmd = ConsoleSupport.ParseCommandLine(args, StringComparer.Ordinal);
+        var cmd = CommandLineParser.ParseCommandLine(args, StringComparer.Ordinal);
 
         Assert.Equal(args[0], cmd[""][0]);
     }

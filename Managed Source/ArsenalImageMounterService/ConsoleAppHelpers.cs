@@ -14,7 +14,6 @@ using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Raw;
@@ -38,6 +37,8 @@ using System.Threading;
 
 internal static class ConsoleAppHelpers
 {
+    private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
+
     private static readonly string[] DefaultChecksumAlgorithms = { "MD5", "SHA1", "SHA256" };
 
     public static void CloseConsole(SafeWaitHandle DetachEvent)
@@ -118,7 +119,7 @@ internal static class ConsoleAppHelpers
 
                         var prop = NativeFileIO.GetStorageStandardProperties(h);
 
-                        Console.WriteLine($"Storage device properties: {JsonSerializer.Serialize(prop, new JsonSerializerOptions { WriteIndented = true })}");
+                        Console.WriteLine($"Storage device properties: {JsonSerializer.Serialize(prop, jsonOptions)}");
                     }
 
                     var device_name = $@"\\?\{dev.PhysicalDrive}";
@@ -553,7 +554,7 @@ Syntax to display a list of mounted devices:
 
 ";
 
-            msg = msg.LineFormat(IndentWidth: 4);
+            msg = StringFormatting.LineFormat(msg.AsSpan(), indentWidth: 4);
 
             Console.WriteLine(msg);
 

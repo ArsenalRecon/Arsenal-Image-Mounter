@@ -10,7 +10,9 @@
 
 using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.CommandLine;
 using LTRData.Extensions.Formatting;
+using LTRData.Extensions.IO;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -76,7 +78,7 @@ public static class ConsoleApp
     {
         try
         {
-            var commands = ConsoleSupport.ParseCommandLine(args, StringComparer.OrdinalIgnoreCase);
+            var commands = CommandLineParser.ParseCommandLine(args, StringComparer.OrdinalIgnoreCase);
 
             if (commands.ContainsKey("background"))
             {
