@@ -18,6 +18,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CA1510 // Use ArgumentNullException throw helper
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
@@ -51,6 +52,32 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
     protected DevioProviderDLLWrapperBase(DLLOpenMethod open, string filename, bool readOnly)
         : this(open, filename, readOnly, null)
     {
+    }
+
+    protected DevioProviderDLLWrapperBase(DLLOpenMethodNIntRet open, string filename, bool readOnly)
+        : this(open, filename, readOnly, null)
+    {
+    }
+
+    protected unsafe DevioProviderDLLWrapperBase(DLLOpenMethodNIntRet open, string filename, bool readOnly, Func<Exception>? get_last_error)
+        : this(GetDLLOpenWrapper(open), filename, readOnly, get_last_error)
+    {
+    }
+
+    private static unsafe DLLOpenMethod GetDLLOpenWrapper(DLLOpenMethodNIntRet open)
+    {
+        SafeDevioProviderDLLHandle DLLOpenWrapper(string filename,
+                                                  bool read_only,
+                                                  out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllread,
+                                                  out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllwrite,
+                                                  out delegate* unmanaged[Cdecl]<nint, int> dllclose,
+                                                  out long size)
+        {
+            var handle = open(filename, read_only, out dllread, out dllwrite, out dllclose, out size);
+            return new(handle, ownsHandle: true);
+        }
+
+        return DLLOpenWrapper;
     }
 
     protected unsafe DevioProviderDLLWrapperBase(DLLOpenMethod open, string filename, bool readOnly, Func<Exception>? get_last_error)
@@ -91,6 +118,13 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
                                                                     out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllwrite,
                                                                     out delegate* unmanaged[Cdecl]<nint, int> dllclose,
                                                                     out long size);
+
+    public unsafe delegate nint DLLOpenMethodNIntRet([MarshalAs(UnmanagedType.LPStr)] string filename,
+                                                     [MarshalAs(UnmanagedType.Bool)] bool read_only,
+                                                     out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllread,
+                                                     out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllwrite,
+                                                     out delegate* unmanaged[Cdecl]<nint, int> dllclose,
+                                                     out long size);
 
     public override unsafe int Read(nint buffer, int bufferoffset, int count, long fileoffset)
     {

@@ -25,7 +25,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+#if NET7_0_OR_GREATER
+using System.Runtime.InteropServices.Marshalling;
+#endif
 using System.Text;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -131,190 +135,190 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
 #if NET7_0_OR_GREATER
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial byte libewf_get_access_flags_read();
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial byte libewf_get_access_flags_read_write();
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial byte libewf_get_access_flags_write();
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial byte libewf_get_access_flags_write_resume();
 
-    [LibraryImport("libewf", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller))]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport("libewf", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(AnsiStringMarshaller))]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_notify_stream_open([MarshalAs(UnmanagedType.LPStr)] string filename, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial void libewf_notify_set_verbose(int Verbose);
 
     [Obsolete("Use libewf_handle_open_wide instead")]
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf16)]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial SafeLibEwfFileHandle libewf_open_wide([MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, byte AccessFlags);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_initialize(out SafeLibEwfFileHandle handle, out nint errobj);
 
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf8)]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_open(SafeLibEwfFileHandle handle, [MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
 
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf16)]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_open_wide(SafeLibEwfFileHandle handle, [MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_get_media_size(SafeLibEwfFileHandle handle, out long media_size);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_get_media_size(SafeLibEwfFileHandle handle, out long media_size, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial long libewf_handle_seek_offset(SafeLibEwfFileHandle handle, long offset, Whence whence, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial nint libewf_read_random(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial nint libewf_handle_read_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial nint libewf_handle_read_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial nint libewf_write_random(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial nint libewf_handle_write_buffer(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial nint libewf_handle_write_buffer_at_offset(SafeLibEwfFileHandle handle, nint buffer, nint buffer_size, long offset, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial nint libewf_write_finalize(SafeLibEwfFileHandle handle);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial nint libewf_handle_write_finalize(SafeLibEwfFileHandle handle, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_close(nint handle);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_close(nint handle, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_notify_stream_close(out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_notify_set_stream(nint FILE, out nint errobj);
 
     [Obsolete]
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_get_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorSize);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_get_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorSize, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_get_chunk_size(SafeLibEwfFileHandle safeLibEwfHandle, out uint ChunkSize, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_get_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, out uint SectorsPerChunk, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_header_codepage(SafeLibEwfFileHandle safeLibEwfHandle, int codepage, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_bytes_per_sector(SafeLibEwfFileHandle safeLibEwfHandle, uint bytes_per_sector, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_media_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong media_size, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_media_type(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_TYPE media_type, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_media_flags(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_MEDIA_FLAGS media_flags, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_format(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_FORMAT ewf_format, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_compression_method(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_METHOD compression_method, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_compression_values(SafeLibEwfFileHandle safeLibEwfHandle, LIBEWF_COMPRESSION_LEVEL compression_level, LIBEWF_COMPRESSION_FLAGS compression_flags, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_maximum_segment_size(SafeLibEwfFileHandle safeLibEwfHandle, ulong maximum_segment_size, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_sectors_per_chunk(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_error_granularity(SafeLibEwfFileHandle safeLibEwfHandle, uint sectors_per_chunk, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_error_fprint(SafeLibEwfErrorObjectHandle errobj, nint clibfile);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_error_free(ref nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_error_sprint(SafeLibEwfErrorObjectHandle errobj, out byte buffer, int length);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_error_backtrace_sprint(SafeLibEwfErrorObjectHandle errobj, out byte buffer, int length);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_get_utf16_header_value(SafeLibEwfFileHandle safeLibEwfHandle,
                                                                    [MarshalAs(UnmanagedType.LPStr)] string identifier,
                                                                    nint identifier_length,
@@ -323,7 +327,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                                                                    out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_utf16_header_value(SafeLibEwfFileHandle safeLibEwfHandle,
                                                                    [MarshalAs(UnmanagedType.LPStr)] string identifier,
                                                                    nint identifier_length,
@@ -332,7 +336,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
                                                                    out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_set_utf8_hash_value(SafeLibEwfFileHandle safeLibEwfHandle,
                                                                 [MarshalAs(UnmanagedType.LPStr)] string hash_value_identifier,
                                                                 nint hash_value_identifier_length,

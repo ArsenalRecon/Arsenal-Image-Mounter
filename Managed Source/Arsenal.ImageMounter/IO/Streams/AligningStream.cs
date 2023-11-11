@@ -35,19 +35,33 @@ public class AligningStream : Stream
 
     public int Alignment { get; }
 
+    public event EventHandler? Disposing;
+
+    public event EventHandler? Disposed;
+
     public AligningStream(Stream baseStream, int alignment, bool ownsBaseStream)
     {
         BaseStream = baseStream;
         Alignment = alignment;
         this.ownsBaseStream = ownsBaseStream;
         lastReadBuffer = new byte[alignment];
+        CanWrite = baseStream.CanWrite;
+    }
+
+    public AligningStream(Stream baseStream, int alignment, bool forceReadOnly, bool ownsBaseStream)
+    {
+        BaseStream = baseStream;
+        Alignment = alignment;
+        this.ownsBaseStream = ownsBaseStream;
+        lastReadBuffer = new byte[alignment];
+        CanWrite = !forceReadOnly && baseStream.CanWrite;
     }
 
     public override bool CanRead => BaseStream.CanRead;
 
     public override bool CanSeek => BaseStream.CanSeek;
 
-    public override bool CanWrite => BaseStream.CanWrite;
+    public override bool CanWrite { get; }
 
     public override long Length => BaseStream.Length;
 
@@ -362,6 +376,11 @@ public class AligningStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
+        if (!CanWrite)
+        {
+            throw new UnauthorizedAccessException("Attempt to write to read-only stream");
+        }
+
         var original_position = Position;
 
         if (count == 0)
@@ -464,6 +483,11 @@ public class AligningStream : Stream
 
     public async ValueTask InternalWriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        if (!CanWrite)
+        {
+            throw new UnauthorizedAccessException("Attempt to write to read-only stream");
+        }
+
         var count = buffer.Length;
 
         if (count == 0)
@@ -548,6 +572,11 @@ public class AligningStream : Stream
 
     public override void Write(ReadOnlySpan<byte> buffer)
     {
+        if (!CanWrite)
+        {
+            throw new UnauthorizedAccessException("Attempt to write to read-only stream");
+        }
+
         var count = buffer.Length;
         var offset = 0;
 
@@ -635,11 +664,19 @@ public class AligningStream : Stream
     {
         if (disposing && ownsBaseStream)
         {
+            OnDisposing(EventArgs.Empty);
+
             BaseStream.Dispose();
+
+            OnDisposed(EventArgs.Empty);
         }
 
         base.Dispose(disposing);
     }
+
+    protected virtual void OnDisposing(EventArgs e) => Disposing?.Invoke(this, e);
+
+    protected virtual void OnDisposed(EventArgs e) => Disposed?.Invoke(this, e);
 
     public override int ReadTimeout
     {

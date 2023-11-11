@@ -263,30 +263,37 @@ public static class DiscUtilsInteraction
         await volume.WriteAsync(vbr, cancellationToken).ConfigureAwait(false);
     }
 
-    public static DiscUtils.Raw.Disk OpenPhysicalDiskAsDiscUtilsDisk(this DiskDevice disk, Ownership ownsStream)
+    public static DiscUtils.Raw.Disk OpenPhysicalDiskAsDiscUtilsDisk(this DiskDevice diskDevice, Ownership ownsStream)
     {
         try
         {
-            var native_geometry = disk.Geometry
+            var native_geometry = diskDevice.Geometry
                 ?? throw new InvalidOperationException("Unknown geometry");
 
-            var native_disk_size = disk.DiskSize
+            var native_disk_size = diskDevice.DiskSize
                 ?? throw new InvalidOperationException("Unknown size");
 
             var geometry = new Geometry(native_disk_size, native_geometry.TracksPerCylinder, native_geometry.SectorsPerTrack, native_geometry.BytesPerSector);
 
-            var align_stream = disk.GetRawDiskStream();
+            var align_stream = diskDevice.GetRawDiskStream();
 
-            return new DiscUtils.Raw.Disk(align_stream, ownsStream, geometry);
+            var disk = new DiscUtils.Raw.Disk(align_stream, ownsStream, geometry);
+
+            if (ownsStream == Ownership.Dispose)
+            {
+                disk.Disposed += (sender, e) => diskDevice.Dispose();
+            }
+
+            return disk;
         }
         catch (Exception ex)
         {
             if (ownsStream == Ownership.Dispose)
             {
-                disk.Dispose();
+                diskDevice.Dispose();
             }
 
-            throw new IOException($"Failed to open device '{disk.DevicePath}'", ex);
+            throw new IOException($"Failed to open device '{diskDevice.DevicePath}'", ex);
         }
     }
 

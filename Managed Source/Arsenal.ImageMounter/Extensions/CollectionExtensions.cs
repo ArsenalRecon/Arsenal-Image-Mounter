@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
@@ -78,5 +79,4 @@ public static class CollectionExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe ReadOnlySpan<byte> AsReadOnlySpan(this nint ptr, int length) =>
         new((void*)ptr, length);
-
 }

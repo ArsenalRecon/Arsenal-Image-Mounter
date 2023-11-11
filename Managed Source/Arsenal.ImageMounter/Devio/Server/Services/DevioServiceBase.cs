@@ -589,6 +589,21 @@ public abstract class DevioServiceBase : IVirtualDiskService
         => ScsiAdapter?.OpenDevice(DiskDeviceNumber, access);
 
     /// <summary>
+    /// Opens a Stream object for direct access to a mounted device provided by
+    /// this service instance.
+    /// </summary>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public virtual Stream? OpenDiskStream(FileAccess access)
+        => OpenDiskDevice(access)?.GetRawDiskStream();
+
+    /// <summary>
+    /// Opens a Stream object for direct access to a disk volume.
+    /// </summary>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public virtual Stream? OpenVolumeStream(string volumeName, FileAccess access)
+        => new DiskDevice(volumeName, access).GetRawDiskStream();
+
+    /// <summary>
     /// Returns a PhysicalDrive or CdRom device name for a mounted device provided by
     /// this service instance.
     /// </summary>

@@ -26,12 +26,12 @@ public partial class DevioProviderLibAFF4 : DevioProviderDLLWrapperBase
 #if NET7_0_OR_GREATER
     [LibraryImport("libaff4_devio")]
     [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    public static unsafe partial SafeDevioProviderDLLHandle dllopen([MarshalAs(UnmanagedType.LPStr)] string filename,
-                                                                    [MarshalAs(UnmanagedType.Bool)] bool read_only,
-                                                                    out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllread,
-                                                                    out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllwrite,
-                                                                    out delegate* unmanaged[Cdecl]<nint, int> dllclose,
-                                                                    out long size);
+    public static unsafe partial nint dllopen([MarshalAs(UnmanagedType.LPStr)] string filename,
+                                              [MarshalAs(UnmanagedType.Bool)] bool read_only,
+                                              out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllread,
+                                              out delegate* unmanaged[Cdecl]<nint, nint, int, long, int> dllwrite,
+                                              out delegate* unmanaged[Cdecl]<nint, int> dllclose,
+                                              out long size);
 
     [LibraryImport("libaff4_devio")]
     [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]

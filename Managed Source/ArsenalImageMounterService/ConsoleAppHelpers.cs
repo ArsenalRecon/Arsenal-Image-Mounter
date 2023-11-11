@@ -20,6 +20,7 @@ using DiscUtils;
 using DiscUtils.Raw;
 using DiscUtils.Streams;
 using LTRData.Extensions.Formatting;
+using LTRData.Extensions.IO;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -178,9 +179,7 @@ internal static class ConsoleAppHelpers
 Operating system:               {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}
 .NET runtime:                   {RuntimeInformation.FrameworkDescription}
 Process CPU architecture:       {RuntimeInformation.ProcessArchitecture}
-
 Arsenal Image Mounter version:  {ConsoleApp.AssemblyFileVersion}
-
 Driver version:                 {driver_ver}
 
 Copyright (c) 2012-2023 Arsenal Recon.
@@ -189,7 +188,7 @@ http://www.ArsenalRecon.com
 
 Please see EULA.txt for license information.";
 
-        msg = msg.LineFormat(IndentWidth: 4);
+        msg = StringFormatting.LineFormat(msg.AsSpan(), indentWidth: 32);
 
         Console.WriteLine(msg);
     }

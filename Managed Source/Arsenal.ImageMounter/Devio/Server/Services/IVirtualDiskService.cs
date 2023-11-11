@@ -9,7 +9,9 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.IO.Devices;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,6 +38,12 @@ public interface IVirtualDiskService : IDisposable
     long DiskSize { get; }
 
     string? Description { get; }
+
+    DiskDevice? OpenDiskDevice(FileAccess access);
+
+    Stream? OpenDiskStream(FileAccess access);
+
+    Stream? OpenVolumeStream(string volumeName, FileAccess access);
 
     string? GetDiskDeviceName();
 

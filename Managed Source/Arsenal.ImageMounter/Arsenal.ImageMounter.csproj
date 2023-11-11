@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="*" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="*" />
     <PackageReference Include="System.Buffers" Version="*" />
