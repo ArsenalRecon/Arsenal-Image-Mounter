@@ -39,7 +39,7 @@ internal static class ConsoleAppHelpers
 {
     private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
 
-    private static readonly string[] DefaultChecksumAlgorithms = { "MD5", "SHA1", "SHA256" };
+    private static readonly string[] DefaultChecksumAlgorithms = ["MD5", "SHA1", "SHA256"];
 
     public static void CloseConsole(SafeWaitHandle DetachEvent)
     {

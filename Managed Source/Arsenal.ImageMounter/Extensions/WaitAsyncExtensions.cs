@@ -21,7 +21,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Extensions;
 
@@ -222,19 +222,11 @@ public readonly struct ProcessAwaiter : ICriticalNotifyCompletion
     }
 }
 
-public sealed class WaitHandleAwaiter : ICriticalNotifyCompletion
+public sealed class WaitHandleAwaiter(WaitHandle handle, TimeSpan timeout) : ICriticalNotifyCompletion
 {
-    private readonly WaitHandle handle;
-    private readonly TimeSpan timeout;
     private RegisteredWaitHandle? callbackHandle;
     private Action? continuation;
     private bool result = true;
-
-    public WaitHandleAwaiter(WaitHandle handle, TimeSpan timeout)
-    {
-        this.handle = handle;
-        this.timeout = timeout;
-    }
 
     public WaitHandleAwaiter GetAwaiter() => this;
 

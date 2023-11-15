@@ -17,7 +17,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable CA1510 // Use ArgumentNullException throw helper
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;

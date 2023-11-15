@@ -31,6 +31,7 @@
     <PackageReference Include="LTRData.DiscUtils.Vmdk" Version="*" />
     <PackageReference Include="LTRData.DiscUtils.Xva" Version="*" />
     <PackageReference Include="LTRData.Extensions" Version="*" />
+    <PackageReference Include="LTRData.Extensions.Native" Version="*" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.StartsWith(`net4`))'">

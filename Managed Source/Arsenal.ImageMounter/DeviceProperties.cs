@@ -13,7 +13,7 @@
 using Arsenal.ImageMounter.IO.Native;
 using System.Runtime.Versioning;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter;
 

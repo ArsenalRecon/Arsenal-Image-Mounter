@@ -16,12 +16,12 @@ using System.IO;
 using System.Runtime.InteropServices;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 
 [SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")]
-public partial class DevioProviderLibAFF4 : DevioProviderDLLWrapperBase
+public partial class DevioProviderLibAFF4(string filename) : DevioProviderDLLWrapperBase(dllopen, filename, readOnly: true, () => new IOException(geterrormessage(getlasterrorcode())))
 {
 #if NET7_0_OR_GREATER
     [LibraryImport("libaff4_devio")]
@@ -38,7 +38,7 @@ public partial class DevioProviderLibAFF4 : DevioProviderDLLWrapperBase
     public static partial uint getsectorsize(SafeDevioProviderDLLHandle handle);
 
     [LibraryImport("libaff4_devio")]
-    [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     public static partial int getlasterrorcode();
 
     [LibraryImport("libaff4_devio", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller))]
@@ -76,11 +76,6 @@ public partial class DevioProviderLibAFF4 : DevioProviderDLLWrapperBase
 #endif
 
     public override bool SupportsParallel => true;
-
-    public unsafe DevioProviderLibAFF4(string filename)
-        : base(dllopen, filename, readOnly: true, () => new IOException(geterrormessage(getlasterrorcode())))
-    {
-    }
 
     public override uint SectorSize
     {

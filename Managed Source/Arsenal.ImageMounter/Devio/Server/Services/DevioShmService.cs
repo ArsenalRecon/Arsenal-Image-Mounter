@@ -20,8 +20,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace Arsenal.ImageMounter.Devio.Server.Services;
 
 /// <summary>
@@ -29,17 +27,26 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// protocol. It uses an object implementing <see>IDevioProvider</see> interface as
 /// storage backend for I/O requests received from client.
 /// </summary>
-public class DevioShmService : DevioServiceBase
+/// <remarks>
+/// Creates a new service instance with enough data to later run a service that acts as server end in Devio
+/// shared memory based communication.
+/// </remarks>
+/// <param name="objectName">Object name of shared memory file mapping object created by this instance.</param>
+/// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+/// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
+/// instance is disposed.</param>
+/// <param name="bufferSize">Buffer size to use for shared memory I/O communication between driver and this service.</param>
+public class DevioShmService(string objectName, IDevioProvider devioProvider, bool ownsProvider, long bufferSize) : DevioServiceBase(devioProvider, ownsProvider)
 {
     /// <summary>
     /// Object name of shared memory file mapping object created by this instance.
     /// </summary>
-    public string ObjectName { get; }
+    public string ObjectName { get; } = objectName;
 
     /// <summary>
     /// Size of the memory block that is shared between driver and this service.
     /// </summary>
-    public long BufferSize { get; }
+    public long BufferSize { get; } = bufferSize;
 
     /// <summary>
     /// Largest size of an I/O transfer between driver and this service. This
@@ -61,22 +68,6 @@ public class DevioShmService : DevioServiceBase
     public const long DefaultBufferSize = (8 << 20) + IMDPROXY_HEADER_SIZE;
 
     private static Guid GetNextRandomValue() => NativeCalls.GenRandomGuid();
-
-    /// <summary>
-    /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
-    /// shared memory based communication.
-    /// </summary>
-    /// <param name="objectName">Object name of shared memory file mapping object created by this instance.</param>
-    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
-    /// instance is disposed.</param>
-    /// <param name="bufferSize">Buffer size to use for shared memory I/O communication between driver and this service.</param>
-    public DevioShmService(string objectName, IDevioProvider devioProvider, bool ownsProvider, long bufferSize)
-        : base(devioProvider, ownsProvider)
-    {
-        ObjectName = objectName;
-        BufferSize = bufferSize;
-    }
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio

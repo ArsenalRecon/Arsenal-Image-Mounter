@@ -20,6 +20,7 @@
 // 
 
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
 using System;
@@ -27,7 +28,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Versioning;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter;
 
@@ -39,7 +40,7 @@ public static class Module1
     {
 
         var devices = (from dev in NativeFileIO.QueryDosDevice()
-                       where dev.StartsWith("SCSI", StringComparison.OrdinalIgnoreCase) && dev.EndsWith(":")
+                       where dev.StartsWith("SCSI", StringComparison.OrdinalIgnoreCase) && dev.EndsWith(':')
                        orderby dev
                        select dev).ToList();
 

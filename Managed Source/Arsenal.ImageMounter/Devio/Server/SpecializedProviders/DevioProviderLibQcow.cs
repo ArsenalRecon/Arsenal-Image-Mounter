@@ -12,6 +12,7 @@
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using LTRData.Extensions.Buffers;
+using LTRData.Extensions.IO;
 using LTRData.Extensions.Native;
 using LTRData.Extensions.Split;
 using Microsoft.Win32.SafeHandles;
@@ -25,7 +26,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 
@@ -134,15 +135,15 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
 #if NET7_0_OR_GREATER
     [LibraryImport("libqcow")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     private static partial byte libqcow_get_access_flags_read();
 
     [LibraryImport("libqcow")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     private static partial byte libqcow_get_access_flags_read_write();
 
     [LibraryImport("libqcow")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     private static partial byte libqcow_get_access_flags_write();
 
     [LibraryImport("libqcow", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller))]
@@ -150,13 +151,8 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
     private static partial int libqcow_notify_stream_open([MarshalAs(UnmanagedType.LPStr)] string filename, out nint errobj);
 
     [LibraryImport("libqcow")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     private static partial void libqcow_notify_set_verbose(int Verbose);
-
-    [Obsolete]
-    [LibraryImport("libqcow", StringMarshalling = StringMarshalling.Utf16)]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    private static partial SafeLibQcowFileHandle libqcow_open_wide([MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, byte AccessFlags);
 
     [LibraryImport("libqcow")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -198,7 +194,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
     [Obsolete]
     [LibraryImport("libqcow")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     private static partial int libqcow_close(nint handle);
 
     [LibraryImport("libqcow")]
@@ -364,7 +360,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
         f_libqcow_file_open func;
 
-        if (NativeLib.IsWindows)
+        if (IOExtensions.IsWindows)
         {
             func = libqcow_file_open_wide;
         }

@@ -15,7 +15,7 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.IO;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.IO.Devices;
 

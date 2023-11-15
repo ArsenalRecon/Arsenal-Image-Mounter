@@ -8,7 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 using System;
 using System.Diagnostics;
@@ -16,16 +16,11 @@ using System.Threading;
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
-public class CompletionPosition
+public class CompletionPosition(long totalLength)
 {
     private readonly Stopwatch stopwatch = Stopwatch.StartNew();
     
     private long lengthComplete;
-
-    public CompletionPosition(long totalLength)
-    {
-        LengthTotal = totalLength;
-    }
 
     public virtual long LengthComplete
     {
@@ -35,7 +30,7 @@ public class CompletionPosition
 
     public bool UnreliablePosition { get; set; }
 
-    public virtual long LengthTotal { get; set; }
+    public virtual long LengthTotal { get; set; } = totalLength;
 
     public virtual double PercentComplete => 100d * LengthComplete / LengthTotal;
 

@@ -12,11 +12,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
-public sealed class DummyProvider : IDevioProvider
+public sealed class DummyProvider(long Length) : IDevioProvider
 {
 
     /// <summary>
@@ -29,14 +27,7 @@ public sealed class DummyProvider : IDevioProvider
     /// </summary>
     public event EventHandler? Disposed;
 
-    public DummyProvider(long Length)
-    {
-
-        this.Length = Length;
-
-    }
-
-    public long Length { get; }
+    public long Length { get; } = Length;
 
     public uint SectorSize => 512U;
 

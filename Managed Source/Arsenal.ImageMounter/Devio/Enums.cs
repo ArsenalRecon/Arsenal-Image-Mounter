@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 namespace Arsenal.ImageMounter.Devio;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable IDE1006 // Naming Styles
 #pragma warning disable CA1712 // Do not prefix enum values with type name
 

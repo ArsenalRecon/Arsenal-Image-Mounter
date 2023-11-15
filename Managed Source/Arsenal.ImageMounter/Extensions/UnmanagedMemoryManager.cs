@@ -19,17 +19,9 @@ public static class UnmanagedMemoryExtensions
         => new UnmanagedMemoryManager<byte>(safeBuffer.DangerousGetHandle(), (int)safeBuffer.ByteLength);
 }
 
-internal sealed class UnmanagedMemoryManager<T> : MemoryManager<T> where T : unmanaged
+internal sealed class UnmanagedMemoryManager<T>(nint address, int count) : MemoryManager<T> where T : unmanaged
 {
-    private nint _pointer;
-    private int _count;
     private bool _disposed;
-
-    public UnmanagedMemoryManager(nint ptr, int count)
-    {
-        _pointer = ptr;
-        _count = count;
-    }
 
     public override unsafe Span<T> GetSpan()
     {
@@ -38,7 +30,7 @@ internal sealed class UnmanagedMemoryManager<T> : MemoryManager<T> where T : unm
             throw new ObjectDisposedException(nameof(UnmanagedMemoryManager<T>));
         }
 
-        return new((T*)_pointer, _count);
+        return new((T*)address, count);
     }
 
     public override unsafe MemoryHandle Pin(int elementIndex = 0)
@@ -48,12 +40,12 @@ internal sealed class UnmanagedMemoryManager<T> : MemoryManager<T> where T : unm
             throw new ObjectDisposedException(nameof(UnmanagedMemoryManager<T>));
         }
 
-        if (elementIndex < 0 || elementIndex >= _count)
+        if (elementIndex < 0 || elementIndex >= count)
         {
             throw new ArgumentOutOfRangeException(nameof(elementIndex));
         }
 
-        var pointer = _pointer + elementIndex;
+        var pointer = address + elementIndex;
         return new MemoryHandle((T*)pointer, default, this);
     }
 
@@ -66,12 +58,12 @@ internal sealed class UnmanagedMemoryManager<T> : MemoryManager<T> where T : unm
     {
         if (!_disposed)
         {
-            _pointer = 0;
-            _count = 0;
+            address = 0;
+            count = 0;
             _disposed = true;
         }
     }
 
     public override unsafe string ToString()
-        => $"{typeof(T).Name} 0x{_pointer:x}[{_count}]";
+        => $"{typeof(T).Name} 0x{address:x}[{count}]";
 }

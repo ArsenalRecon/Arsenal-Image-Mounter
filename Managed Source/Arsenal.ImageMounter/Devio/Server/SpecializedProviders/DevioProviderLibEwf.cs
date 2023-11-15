@@ -15,6 +15,7 @@ using Arsenal.ImageMounter.IO.Native;
 using DiscUtils.Streams;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
+using LTRData.Extensions.IO;
 using LTRData.Extensions.Native;
 using LTRData.Extensions.Split;
 using Microsoft.Win32.SafeHandles;
@@ -32,7 +33,7 @@ using System.Runtime.InteropServices.Marshalling;
 #endif
 using System.Text;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 
@@ -135,19 +136,19 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
 #if NET7_0_OR_GREATER
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial byte libewf_get_access_flags_read();
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial byte libewf_get_access_flags_read_write();
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial byte libewf_get_access_flags_write();
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial byte libewf_get_access_flags_write_resume();
 
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(AnsiStringMarshaller))]
@@ -155,18 +156,22 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     private static partial int libewf_notify_stream_open([MarshalAs(UnmanagedType.LPStr)] string filename, out nint errobj);
 
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial void libewf_notify_set_verbose(int Verbose);
-
-    [Obsolete("Use libewf_handle_open_wide instead")]
-    [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf16)]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-    private static partial SafeLibEwfFileHandle libewf_open_wide([MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, byte AccessFlags);
 
     [LibraryImport("libewf")]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_initialize(out SafeLibEwfFileHandle handle, out nint errobj);
 
+#if NET8_0_OR_GREATER
+    [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    private static partial int libewf_handle_open(SafeLibEwfFileHandle handle, [In, MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
+
+    [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf16)]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    private static partial int libewf_handle_open_wide(SafeLibEwfFileHandle handle, [In, MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
+#else
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_open(SafeLibEwfFileHandle handle, [MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
@@ -174,6 +179,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     [LibraryImport("libewf", StringMarshalling = StringMarshalling.Utf16)]
     [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     private static partial int libewf_handle_open_wide(SafeLibEwfFileHandle handle, [MarshalAs(UnmanagedType.LPArray)] string[] filenames, int numberOfFiles, int AccessFlags, out nint errobj);
+#endif
 
     [Obsolete]
     [LibraryImport("libewf")]
@@ -225,7 +231,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
     [Obsolete]
     [LibraryImport("libewf")]
-    [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial int libewf_close(nint handle);
 
     [LibraryImport("libewf")]
@@ -598,7 +604,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
         f_libewf_handle_open func;
 
-        if (NativeLib.IsWindows)
+        if (IOExtensions.IsWindows)
         {
             func = libewf_handle_open_wide;
         }

@@ -16,7 +16,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("aim_cli")]
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 #if !NET5_0_OR_GREATER
 
@@ -62,20 +62,8 @@ namespace System.Runtime.Versioning
     //     Multiple attributes can be applied to indicate support on multiple operating
     //     systems.
     [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Module | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Enum | AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Event | AttributeTargets.Interface, AllowMultiple = true, Inherited = false)]
-    internal sealed class SupportedOSPlatformAttribute : OSPlatformAttribute
+    internal sealed class SupportedOSPlatformAttribute(string platformName) : OSPlatformAttribute(platformName)
     {
-        //
-        // Summary:
-        //     Initializes a new instance of the System.Runtime.Versioning.SupportedOSPlatformAttribute
-        //     attribute class for the specified supported OS platform.
-        //
-        // Parameters:
-        //   platformName:
-        //     The supported OS platform name, optionally including a version.
-        public SupportedOSPlatformAttribute(string platformName)
-            : base(platformName)
-        {
-        }
     }
 }
 

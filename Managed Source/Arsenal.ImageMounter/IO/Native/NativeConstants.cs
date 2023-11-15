@@ -15,7 +15,7 @@ using System.Security.AccessControl;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable CA1069 // Enums values should not be duplicated
 #pragma warning disable IDE0032 // Use auto property
 #pragma warning disable IDE1006 // Naming Styles

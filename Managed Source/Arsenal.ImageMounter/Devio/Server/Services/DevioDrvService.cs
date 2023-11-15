@@ -32,7 +32,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
 
@@ -43,19 +43,29 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// protocol. It uses an object implementing <see>IDevioProvider</see> interface as
 /// storage backend for I/O requests received from client.
 /// </summary>
+/// <remarks>
+/// Creates a new service instance with enough data to later run a service that acts as server end in Devio
+/// shared memory based communication.
+/// </remarks>
+/// <param name="objectName">Object name of shared memory file mapping object created by this instance.</param>
+/// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+/// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
+/// instance is disposed.</param>
+/// <param name="initialBufferSize">Initial buffer size to use for shared memory I/O communication between driver and this service.
+/// This will be automatically increased later if needed.</param>
 [SupportedOSPlatform("windows")]
-public partial class DevioDrvService : DevioServiceBase
+public partial class DevioDrvService(string objectName, IDevioProvider devioProvider, bool ownsProvider, long initialBufferSize) : DevioServiceBase(devioProvider, ownsProvider)
 {
     /// <summary>
     /// Object name of shared memory file mapping object created by this instance.
     /// </summary>
-    public string ObjectName { get; }
+    public string ObjectName { get; } = objectName;
 
     /// <summary>
     /// Size of the initial memory blocks that is shared between driver and this service.
     /// This will automatically be increased when needed.
     /// </summary>
-    private readonly long initialBufferSize;
+    private readonly long initialBufferSize = initialBufferSize;
 
     /// <summary>
     /// Initial buffer size that will be automatically selected on this platform when
@@ -75,23 +85,6 @@ public partial class DevioDrvService : DevioServiceBase
     private static Guid GetNextRandomValue() => NativeCalls.GenRandomGuid();
 
     private readonly CancellationTokenSource cancellation = new();
-
-    /// <summary>
-    /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
-    /// shared memory based communication.
-    /// </summary>
-    /// <param name="objectName">Object name of shared memory file mapping object created by this instance.</param>
-    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
-    /// instance is disposed.</param>
-    /// <param name="initialBufferSize">Initial buffer size to use for shared memory I/O communication between driver and this service.
-    /// This will be automatically increased later if needed.</param>
-    public DevioDrvService(string objectName, IDevioProvider devioProvider, bool ownsProvider, long initialBufferSize)
-        : base(devioProvider, ownsProvider)
-    {
-        ObjectName = objectName;
-        this.initialBufferSize = initialBufferSize;
-    }
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio

@@ -238,8 +238,13 @@ public class PinnedBuffer<T> : PinnedBuffer, IMemoryOwner<T> where T : unmanaged
 /// <summary>
 /// Pins a managed string for unmanaged use.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance with an existing managed string and pins memory
+/// position.
+/// </remarks>
+/// <param name="str">Managed string to pin in unmanaged memory.</param>
 [ComVisible(false)]
-public class PinnedString : PinnedBuffer
+public class PinnedString(string str) : PinnedBuffer(str, str.Length << 1)
 {
     /// <summary>
     /// Returns managed object pinned by this instance.
@@ -252,16 +257,6 @@ public class PinnedString : PinnedBuffer
     /// similar native operating system components.
     /// </summary>
     public UNICODE_STRING UnicodeString => new(handle, checked((ushort)ByteLength));
-
-    /// <summary>
-    /// Initializes a new instance with an existing managed string and pins memory
-    /// position.
-    /// </summary>
-    /// <param name="str">Managed string to pin in unmanaged memory.</param>
-    public PinnedString(string str)
-        : base(str, str.Length << 1)
-    {
-    }
 
     /// <summary>
     /// Initializes a new instance with a new managed string and pins memory

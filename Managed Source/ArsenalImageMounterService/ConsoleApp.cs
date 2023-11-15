@@ -46,11 +46,11 @@ public static class ConsoleApp
     private static string GetArchitectureLibPath()
         => RuntimeInformation.ProcessArchitecture.ToString();
 
-    private static readonly string[] AssemblyPaths = {
+    private static readonly string[] AssemblyPaths = [
         Path.Combine("lib", GetArchitectureLibPath()),
         "Lib",
         "DiskDriver"
-    };
+    ];
 
     static ConsoleApp()
     {
@@ -123,7 +123,7 @@ public static class ConsoleApp
 
                 using var process_wait = NativeFileIO.CreateWaitHandle(process.SafeHandle, inheritable: false);
 
-                WaitHandle.WaitAny(new[] { process_wait, ready_wait });
+                WaitHandle.WaitAny([process_wait, ready_wait]);
 
                 return process.HasExited ? 0 : process.Id;
             }

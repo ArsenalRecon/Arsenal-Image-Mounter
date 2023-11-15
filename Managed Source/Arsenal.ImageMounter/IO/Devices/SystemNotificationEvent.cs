@@ -17,7 +17,7 @@ using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Threading;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.IO.Devices;
 
@@ -86,18 +86,12 @@ public sealed class RegisteredEventHandler : IDisposable
     }
 }
 
-public class WaitEventHandler : IDisposable
+public class WaitEventHandler(WaitHandle WaitHandle, bool ownsHandle) : IDisposable
 {
-    public WaitHandle WaitHandle { get; }
+    public WaitHandle WaitHandle { get; } = WaitHandle;
 
-    private readonly bool ownsHandle;
+    private readonly bool ownsHandle = ownsHandle;
     private readonly List<RegisteredEventHandler> event_handlers = new();
-
-    public WaitEventHandler(WaitHandle WaitHandle, bool ownsHandle)
-    {
-        this.WaitHandle = WaitHandle;
-        this.ownsHandle = ownsHandle;
-    }
 
     public event EventHandler Signalled
     {

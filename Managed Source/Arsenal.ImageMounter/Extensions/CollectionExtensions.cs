@@ -17,7 +17,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Extensions;

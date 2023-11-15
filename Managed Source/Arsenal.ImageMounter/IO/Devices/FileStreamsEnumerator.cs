@@ -19,14 +19,14 @@ using System.Runtime.Versioning;
 using static Arsenal.ImageMounter.IO.Native.NativeConstants;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO.UnsafeNativeMethods;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.IO.Devices;
 
 [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
-public readonly struct FileStreamsEnumerator : IEnumerable<FindStreamData>
+public readonly struct FileStreamsEnumerator(string filePath) : IEnumerable<FindStreamData>
 {
-    public string FilePath { get; }
+    public string FilePath { get; } = filePath;
 
     public IEnumerator<FindStreamData> GetEnumerator() => new Enumerator(FilePath);
 
@@ -34,24 +34,13 @@ public readonly struct FileStreamsEnumerator : IEnumerable<FindStreamData>
 
     IEnumerator IEnumerable.GetEnumerator() => IEnumerable_GetEnumerator();
 
-    public FileStreamsEnumerator(string FilePath)
+    public sealed class Enumerator(string filePath) : IEnumerator<FindStreamData>
     {
-        this.FilePath = FilePath;
-    }
-
-    public sealed class Enumerator : IEnumerator<FindStreamData>
-    {
-
-        public string FilePath { get; }
+        public string FilePath { get; } = filePath;
 
         public SafeFindHandle? SafeHandle { get; private set; }
 
         private FindStreamData current;
-
-        public Enumerator(string FilePath)
-        {
-            this.FilePath = FilePath;
-        }
 
         public FindStreamData Current => disposedValue
             ? throw new ObjectDisposedException("FileStreamsEnumerator.Enumerator")
@@ -63,7 +52,6 @@ public readonly struct FileStreamsEnumerator : IEnumerable<FindStreamData>
 
         public bool MoveNext()
         {
-
             if (disposedValue)
             {
                 throw new ObjectDisposedException("FileStreamsEnumerator.Enumerator");

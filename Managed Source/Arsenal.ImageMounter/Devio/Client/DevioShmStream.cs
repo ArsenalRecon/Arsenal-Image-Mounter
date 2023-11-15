@@ -23,7 +23,7 @@ using System.Runtime.Versioning;
 using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Devio.Client;
 
@@ -68,7 +68,7 @@ public partial class DevioShmStream : DevioStream
             requestEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Request");
             responseEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Response");
             serverMutex = new Mutex(initiallyOwned: false, name: $@"Global\{ObjectName}_Server");
-            waitHandles = new WaitHandle[] { responseEvent, serverMutex };
+            waitHandles = [responseEvent, serverMutex];
             mapView.Write(0x0, IMDPROXY_REQ.IMDPROXY_REQ_INFO);
             requestEvent.Set();
             if (WaitHandle.WaitAny(waitHandles) != 0)

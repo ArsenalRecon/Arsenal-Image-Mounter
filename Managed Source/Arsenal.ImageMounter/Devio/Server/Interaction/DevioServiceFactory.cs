@@ -37,8 +37,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace Arsenal.ImageMounter.Devio.Server.Interaction;
 
 /// <summary>
@@ -120,7 +118,7 @@ public static class DevioServiceFactory
         .AsReadOnly();
 #endif
 
-    private static readonly string[] NotSupportedFormatsForWriteOverlay = { ".vdi", ".xva" };
+    private static readonly string[] NotSupportedFormatsForWriteOverlay = [".vdi", ".xva"];
 
     /// <summary>
     /// Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
@@ -446,7 +444,7 @@ public static class DevioServiceFactory
         .AsReadOnly();
 #endif
 
-    private static readonly Assembly[] DiscUtilsAssemblies = {
+    private static readonly Assembly[] DiscUtilsAssemblies = [
         typeof(DiscUtils.Vmdk.Disk).Assembly,
         typeof(DiscUtils.Vhdx.Disk).Assembly,
         typeof(DiscUtils.Vhd.Disk).Assembly,
@@ -455,7 +453,7 @@ public static class DevioServiceFactory
         typeof(DiscUtils.Xva.Disk).Assembly,
         typeof(DiscUtils.OpticalDisk.Disc).Assembly,
         typeof(DiscUtils.Raw.Disk).Assembly
-    };
+    ];
 
     public static bool DiscUtilsInitialized { get; } = InitializeDiscUtils();
 
