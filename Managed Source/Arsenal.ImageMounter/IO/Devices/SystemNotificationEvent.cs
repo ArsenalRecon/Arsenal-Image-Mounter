@@ -91,7 +91,7 @@ public class WaitEventHandler(WaitHandle WaitHandle, bool ownsHandle) : IDisposa
     public WaitHandle WaitHandle { get; } = WaitHandle;
 
     private readonly bool ownsHandle = ownsHandle;
-    private readonly List<RegisteredEventHandler> event_handlers = new();
+    private readonly List<RegisteredEventHandler> event_handlers = [];
 
     public event EventHandler Signalled
     {

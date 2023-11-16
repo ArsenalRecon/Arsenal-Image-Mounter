@@ -53,7 +53,7 @@ public class CombinedSeekStream : Stream
     {
         if (inputStreams is null || inputStreams.Length == 0)
         {
-            streams = new();
+            streams = [];
 
             Extendable = true;
         }
@@ -71,7 +71,7 @@ public class CombinedSeekStream : Stream
 
     public CombinedSeekStream(bool writable, IEnumerable<Stream> inputStreams)
     {
-        streams = new();
+        streams = [];
 
         foreach (var stream in inputStreams)
         {

@@ -21,7 +21,12 @@ using System.Runtime.InteropServices;
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 
 [SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")]
-public partial class DevioProviderLibAFF4(string filename) : DevioProviderDLLWrapperBase(dllopen, filename, readOnly: true, () => new IOException(geterrormessage(getlasterrorcode())))
+public unsafe partial class DevioProviderLibAFF4(string filename)
+    : DevioProviderDLLWrapperBase(
+        dllopen,
+        filename,
+        readOnly: true,
+        () => new IOException(geterrormessage(getlasterrorcode())))
 {
 #if NET7_0_OR_GREATER
     [LibraryImport("libaff4_devio")]

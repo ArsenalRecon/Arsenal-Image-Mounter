@@ -17,7 +17,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 
-
+#pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CA1510 // Use ArgumentNullException throw helper
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;

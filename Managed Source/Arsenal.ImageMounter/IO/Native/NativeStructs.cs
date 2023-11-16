@@ -23,6 +23,7 @@ using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 #pragma warning disable CA1069 // Enums values should not be duplicated
 #pragma warning disable IDE0032 // Use auto property
 #pragma warning disable IDE1006 // Naming Styles
+#pragma warning disable IDE0290 // Use primary constructor (cannot be used with unmanaged structs with explicit layout)
 
 namespace Arsenal.ImageMounter.IO.Native;
 

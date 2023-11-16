@@ -35,6 +35,7 @@ using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
+#pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
 

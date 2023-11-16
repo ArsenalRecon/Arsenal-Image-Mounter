@@ -235,9 +235,9 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
         Writer.Flush();
     }
 
-    public async Task WriteToAsync(TextWriter Writer, CancellationToken cancellationToken)
+    public async Task WriteToAsync(TextWriter writer, CancellationToken cancellationToken)
     {
-        await WriteSectionToAsync(string.Empty, Writer, cancellationToken).ConfigureAwait(false);
+        await WriteSectionToAsync(string.Empty, writer, cancellationToken).ConfigureAwait(false);
         foreach (var SectionKey in Keys)
         {
             if (string.IsNullOrWhiteSpace(SectionKey))
@@ -245,10 +245,10 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                 continue;
             }
 
-            await WriteSectionToAsync(SectionKey, Writer, cancellationToken).ConfigureAwait(false);
+            await WriteSectionToAsync(SectionKey, writer, cancellationToken).ConfigureAwait(false);
         }
 
-        await Writer.FlushAsync().ConfigureAwait(false);
+        await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public void WriteSectionTo(string SectionKey, TextWriter Writer)

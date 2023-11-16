@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 using Buffer = System.Buffer;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-
+#pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
 #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;

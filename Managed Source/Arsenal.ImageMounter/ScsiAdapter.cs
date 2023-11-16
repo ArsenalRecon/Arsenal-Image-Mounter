@@ -27,7 +27,8 @@ using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
-
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
 
 namespace Arsenal.ImageMounter;
 
@@ -200,7 +201,7 @@ public class ScsiAdapter : DeviceObject
 
             if (NumberOfDevices == 0)
             {
-                return Array.Empty<uint>();
+                return [];
             }
 
             var array = MemoryMarshal.Cast<byte, uint>(Response.Slice(sizeof(uint), NumberOfDevices * sizeof(uint)))

@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace Arsenal.ImageMounter.IO.Native;
@@ -27,6 +28,7 @@ namespace Arsenal.ImageMounter.IO.Native;
 /// <see cref="SafeBuffer"/>
 /// </summary>
 /// <typeparam name="T">Type of managed object</typeparam>
+[SuppressMessage("Interoperability", "CA1421:This method uses runtime marshalling even when the 'DisableRuntimeMarshallingAttribute' is applied", Justification = "Explicit runtime marshalling")]
 public class NativeStructWrapper<T> : SafeBuffer where T : class
 {
     /// <summary>

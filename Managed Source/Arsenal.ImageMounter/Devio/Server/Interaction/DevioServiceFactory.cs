@@ -28,6 +28,9 @@ using System;
 using System.Collections.Generic;
 #if NET6_0_OR_GREATER
 using System.Collections.Immutable;
+using ProviderVirtualDiskAccessDictionary = System.Collections.Immutable.ImmutableDictionary<Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType, System.Collections.Generic.IReadOnlyCollection<Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess>>;
+#else
+using ProviderVirtualDiskAccessDictionary = System.Collections.ObjectModel.ReadOnlyDictionary<Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType, System.Collections.Generic.IReadOnlyCollection<Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess>>;
 #endif
 using System.Diagnostics;
 using System.Globalization;
@@ -70,7 +73,7 @@ public static class DevioServiceFactory
         ReadWriteFileSystem = 11
     }
 
-    private static readonly IReadOnlyDictionary<ProviderType, IReadOnlyCollection<VirtualDiskAccess>> SupportedVirtualDiskAccess
+    private static readonly ProviderVirtualDiskAccessDictionary SupportedVirtualDiskAccess
         = new Dictionary<ProviderType, IReadOnlyCollection<VirtualDiskAccess>>()
         {
             { ProviderType.None, new[]
@@ -188,14 +191,14 @@ public static class DevioServiceFactory
         return Service;
     }
 
-    public static IReadOnlyCollection<VirtualDiskAccess> GetSupportedVirtualDiskAccess(ProviderType ProviderType, string imagePath)
+    public static IReadOnlyCollection<VirtualDiskAccess> GetSupportedVirtualDiskAccess(ProviderType providerType, string imagePath)
     {
-        if (!SupportedVirtualDiskAccess.TryGetValue(ProviderType, out var supportedVirtualDiskAccess))
+        if (!SupportedVirtualDiskAccess.TryGetValue(providerType, out var supportedVirtualDiskAccess))
         {
-            throw new ArgumentException($"Provider type not supported: {ProviderType}", nameof(ProviderType));
+            throw new ArgumentException($"Provider type not supported: {providerType}", nameof(providerType));
         }
 
-        if (ProviderType == ProviderType.DiscUtils
+        if (providerType == ProviderType.DiscUtils
             && NotSupportedFormatsForWriteOverlay.Contains(Path.GetExtension(imagePath), StringComparer.OrdinalIgnoreCase))
         {
             supportedVirtualDiskAccess = supportedVirtualDiskAccess
@@ -210,7 +213,7 @@ public static class DevioServiceFactory
                 .ToList();
         }
 
-        return supportedVirtualDiskAccess;
+        return supportedVirtualDiskAccess!;
     }
 
     /// <summary>
@@ -1094,7 +1097,9 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                     var disk = new DiskDevice(imageFile, FileAccess.Read);
                     var sector_size = (disk.Geometry?.BytesPerSector) ?? 512;
                     Console.WriteLine($"Physical disk '{imageFile}' sector size: {sector_size}");
-                    return disk.GetRawDiskStream();
+                    var diskStream = disk.GetRawDiskStream();
+                    diskStream.Disposed += (sender, e) => disk.Dispose();
+                    return diskStream;
                 }
                 else
                 {

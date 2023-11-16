@@ -471,7 +471,7 @@ public static class ProviderSupport
         {
             foreach (var hashProvider in hashProviders)
             {
-                hashProvider.Value.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+                hashProvider.Value.TransformFinalBlock([], 0, 0);
                 hashResults[hashProvider.Key] = hashProvider.Value.Hash;
             }
         }

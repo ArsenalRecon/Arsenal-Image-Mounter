@@ -37,7 +37,7 @@ public abstract class NullSafeDictionary<TKey, TValue> : IDictionary<TKey, TValu
     /// </summary>
     public NullSafeDictionary()
     {
-        dictionary = new();
+        dictionary = [];
     }
 
     /// <summary>
@@ -72,14 +72,7 @@ public abstract class NullSafeDictionary<TKey, TValue> : IDictionary<TKey, TValu
             SyncRoot.Wait();
             try
             {
-                if (dictionary.ContainsKey(key))
-                {
-                    dictionary[key] = value;
-                }
-                else
-                {
-                    dictionary.Add(key, value);
-                }
+                dictionary[key] = value;
             }
             finally
             {

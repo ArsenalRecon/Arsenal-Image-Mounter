@@ -15,9 +15,9 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace Arsenal.ImageMounter.IO.Native;
+
+#pragma warning disable IDE0290 // Use primary constructor
 
 public static partial class NativeCalls
 {

@@ -49,8 +49,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable IDE0057 // Use range operator
+#pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
+#pragma warning disable IDE0290 // Use primary constructor
 
 namespace Arsenal.ImageMounter.IO.Native;
 
@@ -1401,7 +1402,7 @@ public static partial class NativeFileIO
 
         foreach (var hashProvider in hashProviders)
         {
-            hashProvider.Value.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            hashProvider.Value.TransformFinalBlock([], 0, 0);
             hashResults![hashProvider.Key] = hashProvider.Value.Hash!;
             Trace.WriteLine($"{hashProvider.Key}: {hashProvider.Value.Hash?.ToHexString()}");
         }
@@ -1586,11 +1587,11 @@ public static partial class NativeFileIO
         ? throw new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(result))
         : result;
 
-    public static List<string> ExcludeProcessesFromHandleSearch { get; } = new()
-    {
+    public static List<string> ExcludeProcessesFromHandleSearch { get; } =
+    [
         "spoolsv",
         "paragon_service"
-    };
+    ];
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static bool OfflineDiskVolumes(string device_path, bool force)
@@ -1815,7 +1816,7 @@ Currently, the following application has files open on this volume:
             
             if (in_use_apps.Length == 0)
             {
-                return Array.Empty<HandleTableEntryInformation>();
+                return [];
             }
 
 #if DEBUG
@@ -1825,7 +1826,7 @@ Currently, the following application has files open on this volume:
             await Task.Delay(waitTime, cancellationToken).ConfigureAwait(false);
         }
 
-        return in_use_apps ?? Array.Empty<HandleTableEntryInformation>();
+        return in_use_apps ?? [];
     }
 
     public static void EnableFileSecurityBypassPrivileges()
@@ -4767,7 +4768,7 @@ Currently, the following application has files open on this volume:
 
         if (filters is null)
         {
-            filters = Array.Empty<string>();
+            filters = [];
         }
 
         else if (addfirst && driver.Equals(filters.FirstOrDefault(), StringComparison.OrdinalIgnoreCase))

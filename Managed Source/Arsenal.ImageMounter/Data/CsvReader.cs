@@ -155,7 +155,7 @@ public class CsvReader<T> : CsvReader, IEnumerable<T>, IEnumerator<T> where T : 
     {
         var line = BaseReader.ReadLine();
 
-        var field_names = line?.Split(base.delimiters, StringSplitOptions.None) ?? Array.Empty<string>();
+        var field_names = line?.Split(base.delimiters, StringSplitOptions.None) ?? [];
 
         properties = Array.ConvertAll(field_names, MembersStringSetter.GenerateReferenceTypeMemberSetter<T>);
     }

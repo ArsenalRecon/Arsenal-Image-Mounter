@@ -19,6 +19,9 @@ using System.IO;
 
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable CA1510 // Use ArgumentNullException throw helper
+
 /// <summary>
 /// A class to support test cases to verify that correct data is received through providers
 /// compared to raw image files.
