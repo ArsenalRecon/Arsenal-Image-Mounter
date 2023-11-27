@@ -16,7 +16,6 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
 public sealed class DummyProvider(long Length) : IDevioProvider
 {
-
     /// <summary>
     /// Event when object is about to be disposed
     /// </summary>

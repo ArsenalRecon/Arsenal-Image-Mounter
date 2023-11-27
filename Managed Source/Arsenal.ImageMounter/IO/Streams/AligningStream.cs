@@ -481,7 +481,7 @@ public class AligningStream : Stream
     public override Task FlushAsync(CancellationToken cancellationToken)
         => BaseStream.FlushAsync(cancellationToken);
 
-    public async ValueTask InternalWriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    private async ValueTask InternalWriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (!CanWrite)
         {

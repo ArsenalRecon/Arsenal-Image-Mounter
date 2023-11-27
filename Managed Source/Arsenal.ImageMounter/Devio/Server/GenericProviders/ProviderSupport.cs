@@ -434,7 +434,8 @@ public static class ProviderSupport
                 throw new IOException($"Read error, {length_to_read} bytes from {source_position}");
             }
 
-            Parallel.ForEach(hashProviders.Values, hashProvider => hashProvider.TransformBlock(buffer, 0, count, null, 0));
+            Parallel.ForEach(hashProviders.Values,
+                hashProvider => hashProvider.TransformBlock(buffer, 0, count, null, 0));
 
             source_position += count;
 
@@ -442,6 +443,8 @@ public static class ProviderSupport
             {
                 completionPosition.LengthComplete = source_position;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (target is null)
             {
