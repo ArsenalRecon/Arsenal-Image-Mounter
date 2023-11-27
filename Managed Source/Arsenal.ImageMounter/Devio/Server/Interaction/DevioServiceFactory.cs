@@ -248,9 +248,7 @@ public static class DevioServiceFactory
                     var provider = GetProvider(Imagefile, DiskAccess, ProviderType)
                         ?? throw new NotSupportedException($"Cannot open '{Imagefile}' with provider {ProviderType}");
 
-                    var geom = Geometry.FromCapacity(provider.Length, (int)provider.SectorSize);
-
-                    virtualdisk = new DiscUtils.Raw.Disk(new DevioDirectStream(provider, ownsProvider: true), Ownership.Dispose, geom);
+                    virtualdisk = GetDiscUtilsVirtualDisk(provider, ownsProvider: true);
 
                     break;
                 }
@@ -258,6 +256,11 @@ public static class DevioServiceFactory
 
         return virtualdisk;
     }
+
+    public static VirtualDisk GetDiscUtilsVirtualDisk(IDevioProvider provider, bool ownsProvider)
+        => new DiscUtils.Raw.Disk(new DevioDirectStream(provider, ownsProvider),
+                                  Ownership.Dispose,
+                                  Geometry.FromCapacity(provider.Length, (int)provider.SectorSize));
 
     /// <summary>
     /// Opens a VMDK image file embedded in an OVA archive.
@@ -669,7 +672,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
                 Trace.WriteLine($"Using temporary overlay file '{DifferencingPath}'");
 
-                for(; ;)
+                for (; ; )
                 {
                     try
                     {
@@ -969,54 +972,27 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
     private const string ContainerIndexSeparator = ":::";
 
-    public static VirtualDisk OpenImage(string imagepath)
+    public static VirtualDisk GetDiscUtilsVirtualDisk(string imagepath, FileAccess access)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             && (imagepath.StartsWith(@"\\?\", StringComparison.Ordinal)
             || imagepath.StartsWith(@"\\.\", StringComparison.Ordinal))
             && !NativeStruct.HasExtension(imagepath))
         {
-            var vdisk = new DiskDevice(imagepath, FileAccess.Read);
+            var vdisk = new DiskDevice(imagepath, access);
             var diskstream = vdisk.GetRawDiskStream();
             return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
         }
 
-        if (Path.GetExtension(imagepath) == ".001" && File.Exists(Path.ChangeExtension(imagepath, ".002")))
-        {
-            var diskstream = new DevioDirectStream(GetProviderMultiPartRaw(imagepath, FileAccess.Read), ownsProvider: true);
-            return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
-        }
+        var provider = GetProviderTypeFromFileName(imagepath);
 
-        if (imagepath.EndsWith(".e01", StringComparison.OrdinalIgnoreCase))
-        {
-            var diskstream = new DevioDirectStream(new DevioProviderLibEwf(imagepath, DevioProviderLibEwf.AccessFlagsRead), ownsProvider: true);
-            return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
-        }
-
-        if (imagepath.EndsWith(".qcow2", StringComparison.OrdinalIgnoreCase) || imagepath.EndsWith(".qcow", StringComparison.OrdinalIgnoreCase) || imagepath.EndsWith(".qcow2c", StringComparison.OrdinalIgnoreCase))
-        {
-            var diskstream = new DevioDirectStream(new DevioProviderLibQcow(imagepath, DevioProviderLibQcow.AccessFlagsRead), ownsProvider: true);
-            return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
-        }
-
-        if (imagepath.EndsWith(".aff4", StringComparison.OrdinalIgnoreCase))
-        {
-            var diskstream = new DevioDirectStream(new DevioProviderLibAFF4(imagepath), ownsProvider: true);
-            return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
-        }
-
-        if (imagepath.EndsWith(".ova", StringComparison.OrdinalIgnoreCase))
-        {
-            return OpenOVA(imagepath, FileAccess.Read);
-        }
-
-        var disk = VirtualDisk.OpenDisk(imagepath, FileAccess.Read);
-        disk ??= new DiscUtils.Raw.Disk(imagepath, FileAccess.Read);
-
-        return disk;
+        return GetDiscUtilsVirtualDisk(imagepath, access, provider);
     }
 
     public static Stream OpenImageAsStream(string imageFile)
+        => OpenImageAsStream(imageFile, FileAccess.Read);
+
+    public static Stream OpenImageAsStream(string imageFile, FileAccess access)
     {
         switch (Path.GetExtension(imageFile).ToLowerInvariant())
         {
@@ -1031,7 +1007,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         Trace.WriteLine("DiscUtils not available!");
                     }
 
-                    var provider = GetProviderDiscUtils(imageFile, FileAccess.Read)
+                    var provider = GetProviderDiscUtils(imageFile, access)
                         ?? throw new NotSupportedException($"Cannot open '{imageFile}' with provider DiscUtils");
 
                     Trace.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
@@ -1040,8 +1016,8 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
             case ".001":
                 return File.Exists(Path.ChangeExtension(imageFile, ".002"))
-                    ? new DevioDirectStream(GetProviderMultiPartRaw(imageFile, FileAccess.Read), ownsProvider: true)
-                    : new FileStream(imageFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    ? new DevioDirectStream(GetProviderMultiPartRaw(imageFile, access), ownsProvider: true)
+                    : new FileStream(imageFile, FileMode.Open, access, FileShare.Read | FileShare.Delete);
 
             case ".raw":
             case ".dd":
@@ -1050,7 +1026,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
             case ".iso":
             case ".bin":
             case ".nrg":
-                return new FileStream(imageFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+                return new FileStream(imageFile, FileMode.Open, access, FileShare.Read | FileShare.Delete);
 
             case ".e01":
             case ".aff":
@@ -1062,7 +1038,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         DevioProviderLibEwf.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName());
                     }
 
-                    var provider = GetProviderLibEwf(imageFile, FileAccess.Read);
+                    var provider = GetProviderLibEwf(imageFile, access);
                     Console.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
                     return new DevioDirectStream(provider, ownsProvider: true);
                 }
@@ -1076,14 +1052,14 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         DevioProviderLibQcow.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName());
                     }
 
-                    var provider = GetProviderLibEwf(imageFile, FileAccess.Read);
+                    var provider = GetProviderLibEwf(imageFile, access);
                     Console.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
                     return new DevioDirectStream(provider, ownsProvider: true);
                 }
 
             case ".aff4":
                 {
-                    var provider = GetProviderLibAFF4(imageFile, FileAccess.Read);
+                    var provider = GetProviderLibAFF4(imageFile, access);
                     Console.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
                     return new DevioDirectStream(provider, ownsProvider: true);
                 }
@@ -1093,8 +1069,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                     && (imageFile.StartsWith(@"\\?\", StringComparison.Ordinal)
                     || imageFile.StartsWith(@"\\.\", StringComparison.Ordinal)))
                 {
-
-                    var disk = new DiskDevice(imageFile, FileAccess.Read);
+                    var disk = new DiskDevice(imageFile, access);
                     var sector_size = (disk.Geometry?.BytesPerSector) ?? 512;
                     Console.WriteLine($"Physical disk '{imageFile}' sector size: {sector_size}");
                     var diskStream = disk.GetRawDiskStream();
@@ -1104,7 +1079,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                 else
                 {
                     Console.WriteLine($"Unknown image file extension '{imageFile}', using raw device data.");
-                    return new FileStream(imageFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    return new FileStream(imageFile, FileMode.Open, access, FileShare.Read | FileShare.Delete);
                 }
         }
     }

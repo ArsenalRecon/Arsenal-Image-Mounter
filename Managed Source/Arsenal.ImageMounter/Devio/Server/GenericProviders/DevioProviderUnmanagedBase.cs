@@ -21,7 +21,6 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 /// </summary>
 public abstract class DevioProviderUnmanagedBase : IDevioProvider
 {
-
     /// <summary>
     /// Event when object is about to be disposed
     /// </summary>
