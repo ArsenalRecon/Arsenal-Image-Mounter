@@ -95,23 +95,41 @@ public class WaitEventHandler(WaitHandle WaitHandle, bool ownsHandle) : IDisposa
 
     public event EventHandler Signalled
     {
-        add => event_handlers.Add(new RegisteredEventHandler(WaitHandle, value));
-        remove => event_handlers.RemoveAll(handler =>
+        add
         {
-            if (handler.EventHandler.Equals(value))
+            lock (event_handlers)
             {
-                handler.Dispose();
-                return true;
+                event_handlers.Add(new RegisteredEventHandler(WaitHandle, value));
             }
-            else
+        }
+
+        remove
+        {
+            lock (event_handlers)
             {
-                return false;
+                event_handlers.RemoveAll(handler =>
+                {
+                    if (handler.EventHandler.Equals(value))
+                    {
+                        handler.Dispose();
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                });
             }
-        });
+        }
     }
 
     private void OnSignalled(object sender, EventArgs e)
-        => event_handlers.ForEach(handler => handler.EventHandler?.Invoke(sender, e));
+    {
+        lock (event_handlers)
+        {
+            event_handlers.ForEach(handler => handler.EventHandler?.Invoke(sender, e));
+        }
+    }
 
     private bool disposedValue;
 
@@ -121,9 +139,12 @@ public class WaitEventHandler(WaitHandle WaitHandle, bool ownsHandle) : IDisposa
         {
             if (disposing)
             {
-                event_handlers.ForEach(handler => handler.Dispose());
-                event_handlers.Clear();
-                
+                lock (event_handlers)
+                {
+                    event_handlers.ForEach(handler => handler.Dispose());
+                    event_handlers.Clear();
+                }
+
                 if (ownsHandle)
                 {
                     WaitHandle.Dispose();
