@@ -13,6 +13,7 @@ using Arsenal.ImageMounter.IO.Native;
 using LTRData.Extensions.CommandLine;
 using LTRData.Extensions.Formatting;
 using LTRData.Extensions.IO;
+using LTRData.Extensions.Native;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -46,26 +47,11 @@ public static class ConsoleApp
     private static string GetArchitectureLibPath()
         => RuntimeInformation.ProcessArchitecture.ToString();
 
-    private static readonly string[] AssemblyPaths = [
-        Path.Combine("lib", GetArchitectureLibPath()),
-        "Lib",
-        "DiskDriver"
-    ];
-
     static ConsoleApp()
     {
-        if (NativeStruct.IsOsWindows)
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            var appPath = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
-
-            for (int i = 0, loopTo = AssemblyPaths.Length - 1; i <= loopTo; i++)
-            {
-                AssemblyPaths[i] = Path.Combine(appPath ?? "", AssemblyPaths[i]);
-            }
-
-            var native_dll_paths = AssemblyPaths.Append(Environment.GetEnvironmentVariable("PATH"));
-
-            Environment.SetEnvironmentVariable("PATH", string.Join(";", native_dll_paths));
+            API.AddNativeLibDirectory();
         }
     }
 

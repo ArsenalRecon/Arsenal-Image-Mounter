@@ -21,6 +21,8 @@ using System.Runtime.InteropServices;
 [assembly: DisableRuntimeMarshalling]
 #endif
 
+[assembly: DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+
 [assembly: InternalsVisibleTo("Arsenal.ImageMounter.Forms")]
 [assembly: InternalsVisibleTo("ArsenalImageMounterAnalyze")]
 

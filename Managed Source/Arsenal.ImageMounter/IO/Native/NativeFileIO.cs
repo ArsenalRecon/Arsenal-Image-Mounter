@@ -101,7 +101,7 @@ public static partial class NativeFileIO
 
         [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool SetDefaultDllDirectories(DLLSearchDirs policy);
+        public static partial bool SetDefaultDllDirectories(DllImportSearchPath policy);
 
         [LibraryImport("kernel32", SetLastError = true), Obsolete]
         public static partial long GetTickCount64();
@@ -137,7 +137,7 @@ public static partial class NativeFileIO
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool SetDefaultDllDirectories(DLLSearchDirs policy);
+        public static extern bool SetDefaultDllDirectories(DllImportSearchPath policy);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern long GetTickCount64();
@@ -3852,21 +3852,11 @@ Currently, the following application has files open on this volume:
 
     public static void SetUnmanagedDllDirectory(string path)
     {
-        Win32Try(SafeNativeMethods.SetDefaultDllDirectories(
-            DLLSearchDirs.LOAD_LIBRARY_SEARCH_USER_DIRS |
-            DLLSearchDirs.LOAD_LIBRARY_SEARCH_SYSTEM32 |
-            DLLSearchDirs.LOAD_LIBRARY_SEARCH_APPLICATION_DIR));
-
         Win32Try(SafeNativeMethods.SetDllDirectoryW(path.AsSpan()[0]));
     }
 
     public static nint AddUnmanagedDllDirectory(string path)
     {
-        Win32Try(SafeNativeMethods.SetDefaultDllDirectories(
-            DLLSearchDirs.LOAD_LIBRARY_SEARCH_USER_DIRS |
-            DLLSearchDirs.LOAD_LIBRARY_SEARCH_SYSTEM32 |
-            DLLSearchDirs.LOAD_LIBRARY_SEARCH_APPLICATION_DIR));
-
         var cookie = SafeNativeMethods.AddDllDirectory(path.AsSpan()[0]);
 
         if (cookie == 0)

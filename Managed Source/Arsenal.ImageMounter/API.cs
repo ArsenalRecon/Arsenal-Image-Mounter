@@ -27,8 +27,6 @@ using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
-
-
 namespace Arsenal.ImageMounter;
 
 /// <summary>
@@ -43,6 +41,21 @@ public static partial class API
     public static string Kernel { get; private set; } = GetKernelName();
 
     public static bool HasStorPort { get; private set; }
+
+    public static void AddNativeLibDirectory()
+    {
+        var dllPath =
+            Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(API).Assembly.Location) ?? ".", "lib", RuntimeInformation.ProcessArchitecture.ToString()));
+
+        if (Directory.Exists(dllPath))
+        {
+            NativeFileIO.AddUnmanagedDllDirectory(dllPath);
+        }
+        else
+        {
+            Trace.WriteLine($"Directory '{dllPath}' not found");
+        }
+    }
 
     private static string GetKernelName()
     {
