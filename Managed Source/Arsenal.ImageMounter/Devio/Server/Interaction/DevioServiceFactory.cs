@@ -929,7 +929,8 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     /// </summary>
     /// <param name="Imagefile">Image file.</param>
     /// <param name="DiskAccess">Only read access supported.</param>
-    public static IDevioProvider GetProviderLibAFF4(string Imagefile, FileAccess DiskAccess) => DiskAccess.HasFlag(FileAccess.Write)
+    public static IDevioProvider GetProviderLibAFF4(string Imagefile, FileAccess DiskAccess)
+        => DiskAccess.HasFlag(FileAccess.Write)
         ? throw new IOException("Only read-only mode supported with libaff4")
         : GetProviderLibAFF4(Imagefile, 0);
 

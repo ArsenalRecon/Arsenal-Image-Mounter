@@ -14,6 +14,7 @@ using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils.Streams;
+using LTRData.Extensions.Async;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
@@ -571,7 +572,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
                 if (device.IsClosed)
                 {
-                    cancellation.Cancel();
+                    _ = cancellation.CancelAsync();
                 }
             }
         }
@@ -838,6 +839,6 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
     protected override void EmergencyStopServiceThread()
     {
         device?.Dispose();
-        cancellation.Cancel();
+        cancellation.CancelAsync();
     }
 }
