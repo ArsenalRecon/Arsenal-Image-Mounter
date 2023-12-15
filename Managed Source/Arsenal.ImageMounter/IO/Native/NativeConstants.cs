@@ -37,6 +37,7 @@ public static class NativeConstants
 
     public const FileOptions FILE_FLAG_BACKUP_SEMANTICS = (FileOptions)0x2000000;
     public const FileOptions FILE_FLAG_OPEN_REPARSE_POINT = (FileOptions)0x200000;
+    public const FileOptions FILE_FLAG_NO_BUFFERING = (FileOptions)0x20000000;
 
     public const int VOLUME_NAME_DOS = 0x0;
     public const int VOLUME_NAME_GUID = 0x1;

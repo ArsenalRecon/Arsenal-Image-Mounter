@@ -75,7 +75,7 @@ public class DebugProvider : DevioProviderUnmanagedBase
         var compareTask = DebugCompareStream.ReadAsync(read_buf2, 0, count);
 
         var rc1 = BaseProvider.Read(buf1, bufferoffset, count, fileoffset);
-        var rc2 = compareTask.Result;
+        var rc2 = compareTask.GetAwaiter().GetResult();
 
         if (rc1 != rc2)
         {

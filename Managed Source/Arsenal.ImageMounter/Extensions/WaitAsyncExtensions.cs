@@ -71,7 +71,7 @@ public static partial class WaitAsyncExtensions
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        return handleTask.Result;
+        return handleTask.GetAwaiter().GetResult();
 #endif
     }
 

@@ -23,45 +23,30 @@ using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
-public class AligningStream : Stream
+public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly, bool ownsBaseStream) : Stream
 {
-    private readonly bool ownsBaseStream;
-
-    private readonly byte[] lastReadBuffer;
+    private readonly byte[] lastReadBuffer = new byte[alignment];
 
     private long lastReadPos = -1;
 
-    public Stream BaseStream { get; }
+    public Stream BaseStream { get; } = baseStream;
 
-    public int Alignment { get; }
+    public int Alignment { get; } = alignment;
 
     public event EventHandler? Disposing;
 
     public event EventHandler? Disposed;
 
     public AligningStream(Stream baseStream, int alignment, bool ownsBaseStream)
+        : this(baseStream, alignment, forceReadOnly: false, ownsBaseStream)
     {
-        BaseStream = baseStream;
-        Alignment = alignment;
-        this.ownsBaseStream = ownsBaseStream;
-        lastReadBuffer = new byte[alignment];
-        CanWrite = baseStream.CanWrite;
-    }
-
-    public AligningStream(Stream baseStream, int alignment, bool forceReadOnly, bool ownsBaseStream)
-    {
-        BaseStream = baseStream;
-        Alignment = alignment;
-        this.ownsBaseStream = ownsBaseStream;
-        lastReadBuffer = new byte[alignment];
-        CanWrite = !forceReadOnly && baseStream.CanWrite;
     }
 
     public override bool CanRead => BaseStream.CanRead;
 
     public override bool CanSeek => BaseStream.CanSeek;
 
-    public override bool CanWrite { get; }
+    public override bool CanWrite { get; } = !forceReadOnly && baseStream.CanWrite;
 
     public override long Length => BaseStream.Length;
 
@@ -361,7 +346,7 @@ public class AligningStream : Stream
     public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state) =>
         ReadAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
-    public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
+    public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).GetAwaiter().GetResult();
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         => InternalReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();

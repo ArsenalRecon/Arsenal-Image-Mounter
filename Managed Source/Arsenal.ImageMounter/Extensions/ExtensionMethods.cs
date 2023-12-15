@@ -9,6 +9,7 @@
 // 
 
 using LTRData.Extensions.Async;
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,8 +18,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-
-
 
 namespace Arsenal.ImageMounter.Extensions;
 
@@ -59,4 +58,5 @@ public static class ExtensionMethods
     /// <returns>Formatted string</returns>
     public static string ToMembersString<T>(this T o) where T : struct
         => Reflection.MembersStringParser<T>.ToString(o);
+
 }

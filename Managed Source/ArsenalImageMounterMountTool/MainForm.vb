@@ -386,7 +386,7 @@ Public Class MainForm
 
             Invoke(New Action(AddressOf SetLabelBusy))
 
-            Dim simpleview = simpleviewtask.Result
+            Dim simpleview = simpleviewtask.GetAwaiter().GetResult()
 
             If IsClosing OrElse Disposing OrElse IsDisposed Then
                 Return

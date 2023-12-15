@@ -77,7 +77,7 @@ internal static class ImageConversions
 
             if (completionPosition is null)
             {
-                t.Wait();
+                t.GetAwaiter().GetResult();
             }
             else
             {
@@ -223,7 +223,7 @@ internal static class ImageConversions
             {
                 if (completionPosition is null)
                 {
-                    t.Wait();
+                    t.GetAwaiter().GetResult();
                 }
                 else
                 {

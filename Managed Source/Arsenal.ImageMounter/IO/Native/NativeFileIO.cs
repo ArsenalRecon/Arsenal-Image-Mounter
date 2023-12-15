@@ -1157,7 +1157,7 @@ public static partial class NativeFileIO
 
             byte[]? allocated = null;
 
-            var indata = bufferSize <= 512
+            var indata = bufferSize <= 1024
                 ? stackalloc byte[bufferSize]
                 : (allocated = ArrayPool<byte>.Shared.Rent(bufferSize)).AsSpan(0, bufferSize);
 
@@ -2464,7 +2464,13 @@ Currently, the following application has files open on this volume:
     /// <param name="SecurityAttributes"></param>
     /// <param name="FlagsAndAttributes"></param>
     /// <param name="TemplateFile"></param>
-    public static SafeFileHandle CreateFile(string FileName, FileSystemRights DesiredAccess, FileShare ShareMode, nint SecurityAttributes, uint CreationDisposition, FileOptions FlagsAndAttributes, nint TemplateFile)
+    public static SafeFileHandle CreateFile(string FileName,
+                                            FileSystemRights DesiredAccess,
+                                            FileShare ShareMode,
+                                            nint SecurityAttributes,
+                                            uint CreationDisposition,
+                                            FileOptions FlagsAndAttributes,
+                                            nint TemplateFile)
     {
         var handle = UnsafeNativeMethods.CreateFileW(FileName.AsRef(),
                                                      DesiredAccess,
@@ -2488,7 +2494,11 @@ Currently, the following application has files open on this volume:
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, bool Overlapped)
+    public static SafeFileHandle OpenFileHandle(string FileName,
+                                                FileAccess DesiredAccess,
+                                                FileShare ShareMode,
+                                                FileMode CreationDisposition,
+                                                bool Overlapped)
     {
         if (string.IsNullOrWhiteSpace(FileName))
         {
@@ -2506,7 +2516,7 @@ Currently, the following application has files open on this volume:
             FileMode.Truncate => NativeConstants.TRUNCATE_EXISTING,
             _ => throw new NotImplementedException(),
         };
-        
+
         var NativeFlagsAndAttributes = (FileOptions)FileAttributes.Normal;
         
         if (Overlapped)
@@ -2831,7 +2841,12 @@ Currently, the following application has files open on this volume:
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Options">Specifies whether to request overlapped I/O.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static FileStream OpenFileStream(string FileName, FileMode CreationDisposition, FileAccess DesiredAccess, FileShare ShareMode, int bufferSize, FileOptions Options)
+    public static FileStream OpenFileStream(string FileName,
+                                            FileMode CreationDisposition,
+                                            FileAccess DesiredAccess,
+                                            FileShare ShareMode,
+                                            int bufferSize,
+                                            FileOptions Options)
         => new(OpenFileHandle(FileName,
                               DesiredAccess,
                               ShareMode,
@@ -3215,7 +3230,7 @@ Currently, the following application has files open on this volume:
 
         byte[]? allocated = null;
 
-        var buffer = StorageDescriptorHeader.Size <= 512
+        var buffer = StorageDescriptorHeader.Size <= 1024
             ? stackalloc byte[StorageDescriptorHeader.Size]
             : (allocated = ArrayPool<byte>.Shared.Rent(StorageDescriptorHeader.Size)).AsSpan(0, StorageDescriptorHeader.Size);
 

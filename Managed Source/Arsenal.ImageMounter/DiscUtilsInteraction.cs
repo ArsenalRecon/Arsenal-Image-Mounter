@@ -132,7 +132,7 @@ public static class DiscUtilsInteraction
 
         byte[]? allocated = null;
 
-        var vbr = sector_size <= 512
+        var vbr = sector_size <= 1024
             ? stackalloc byte[sector_size]
             : (allocated = ArrayPool<byte>.Shared.Rent(sector_size)).AsSpan(0, sector_size);
 

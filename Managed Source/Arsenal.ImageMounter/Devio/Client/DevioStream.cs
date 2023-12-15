@@ -159,7 +159,7 @@ public abstract partial class DevioStream : Stream
         ReadAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
     public override int EndRead(IAsyncResult asyncResult) =>
-        ((Task<int>)asyncResult).Result;
+        ((Task<int>)asyncResult).GetAwaiter().GetResult();
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
         Task.FromResult(Read(buffer, offset, count));

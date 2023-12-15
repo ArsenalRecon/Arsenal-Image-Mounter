@@ -218,7 +218,7 @@ public class DiskDevice : DeviceObject
             
             byte[]? allocated = null;
             
-            var rawsig = bytesPerSector <= 512
+            var rawsig = bytesPerSector <= 1024
                 ? stackalloc byte[bytesPerSector]
                 : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
             
@@ -254,7 +254,7 @@ public class DiskDevice : DeviceObject
 
             byte[]? allocated = null;
 
-            var rawsig = bytesPerSector <= 512
+            var rawsig = bytesPerSector <= 1024
                 ? stackalloc byte[bytesPerSector]
                 : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
@@ -286,7 +286,7 @@ public class DiskDevice : DeviceObject
 
             byte[]? allocated = null;
 
-            var rawsig = bytesPerSector <= 512
+            var rawsig = bytesPerSector <= 1024
                 ? stackalloc byte[bytesPerSector]
                 : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
@@ -317,7 +317,7 @@ public class DiskDevice : DeviceObject
 
             byte[]? allocated = null;
 
-            var rawsig = bytesPerSector <= 512
+            var rawsig = bytesPerSector <= 1024
                 ? stackalloc byte[bytesPerSector]
                 : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
@@ -470,7 +470,7 @@ public class DiskDevice : DeviceObject
 
             byte[]? allocated = null;
 
-            var bootsect = bytesPerSector <= 512
+            var bootsect = bytesPerSector <= 1024
                 ? stackalloc byte[bytesPerSector]
                 : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
@@ -505,7 +505,7 @@ public class DiskDevice : DeviceObject
 
             byte[]? allocated = null;
 
-            var bootsect = bytesPerSector <= 512
+            var bootsect = bytesPerSector <= 1024
                 ? stackalloc byte[bytesPerSector]
                 : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
