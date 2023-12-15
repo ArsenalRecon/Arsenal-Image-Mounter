@@ -14,8 +14,11 @@ using Arsenal.ImageMounter.IO.Native;
 using DiscUtils.Streams.Compatibility;
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
@@ -32,45 +35,32 @@ public class DiskStream : AligningStream
     /// <summary>
     /// Initializes an DiskStream object for an open disk device.
     /// </summary>
-    /// <param name="SafeFileHandle">Open file handle for disk device.</param>
+    /// <param name="safeFileHandle">Open file handle for disk device.</param>
     /// <param name="AccessMode">Access to request for stream.</param>
-    protected internal DiskStream(SafeFileHandle SafeFileHandle, FileAccess AccessMode)
-        : base(new FileStream(SafeFileHandle, AccessMode, bufferSize: 1),
-               alignment: (NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector) ?? 512,
+    protected internal DiskStream(SafeFileHandle safeFileHandle, FileAccess AccessMode)
+        : base(new DiskFileStream(safeFileHandle, AccessMode),
+               alignment: (NativeStruct.GetDiskGeometry(safeFileHandle)?.BytesPerSector) ?? 512,
                ownsBaseStream: true)
     {
+        SafeFileHandle = safeFileHandle;
     }
-
-    private long? cachedLength;
 
     /// <summary>
     /// Initializes an DiskStream object for an open disk device.
     /// </summary>
-    /// <param name="SafeFileHandle">Open file handle for disk device.</param>
+    /// <param name="safeFileHandle">Open file handle for disk device.</param>
     /// <param name="AccessMode">Access to request for stream.</param>
     /// <param name="DiskSize">Size that should be returned by Length property</param>
-    protected internal DiskStream(SafeFileHandle SafeFileHandle, FileAccess AccessMode, long DiskSize)
-        : base(new FileStream(SafeFileHandle, AccessMode, bufferSize: 1),
-               alignment: (NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector) ?? 512,
+    protected internal DiskStream(SafeFileHandle safeFileHandle, FileAccess AccessMode, long DiskSize)
+        : base(new DiskFileStream(safeFileHandle, AccessMode),
+               alignment: (NativeStruct.GetDiskGeometry(safeFileHandle)?.BytesPerSector) ?? 512,
                ownsBaseStream: true)
     {
-        cachedLength = DiskSize;
+        ((DiskFileStream)BaseStream).cachedLength = DiskSize;
+        SafeFileHandle = safeFileHandle;
     }
 
-    public SafeFileHandle SafeFileHandle => ((FileStream)BaseStream).SafeFileHandle;
-
-    /// <summary>
-    /// Retrieves raw disk size.
-    /// </summary>
-    public override long Length
-    {
-        get
-        {
-            cachedLength ??= NativeStruct.GetDiskSize(SafeFileHandle);
-
-            return cachedLength ?? throw new NotSupportedException("Disk size not available");
-        }
-    }
+    public SafeFileHandle SafeFileHandle { get; }
 
     private bool size_from_vbr;
 
@@ -81,29 +71,18 @@ public class DiskStream : AligningStream
         {
             if (value)
             {
-                cachedLength = GetVBRPartitionLength();
-                if (!cachedLength.HasValue)
-                {
-                    throw new NotSupportedException();
-                }
+                ((DiskFileStream)BaseStream).cachedLength = GetVBRPartitionLength()
+                    ?? throw new NotSupportedException();
             }
             else
             {
-                cachedLength = NativeStruct.GetDiskSize(SafeFileHandle);
-                if (!cachedLength.HasValue)
-                {
-                    throw new NotSupportedException();
-                }
+                ((DiskFileStream)BaseStream).cachedLength = NativeStruct.GetDiskSize(SafeFileHandle)
+                    ?? throw new NotSupportedException();
             }
 
             size_from_vbr = value;
         }
     }
-
-    /// <summary>
-    /// Not implemented.
-    /// </summary>
-    public override void SetLength(long value) => throw new NotImplementedException();
 
     /// <summary>
     /// Get partition length as indicated by VBR. Valid for volumes with formatted file system.
@@ -112,42 +91,298 @@ public class DiskStream : AligningStream
     {
         var bytesPerSector = NativeStruct.GetDiskGeometry(SafeFileHandle)?.BytesPerSector ?? 512;
 
-        var vbr = bytesPerSector <= 512
+        byte[]? allocated = null;
+
+        var vbr = bytesPerSector <= 1024
             ? stackalloc byte[bytesPerSector]
-            : new byte[bytesPerSector];
+            : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
-        Position = 0;
-
-        if (this.Read(vbr) < bytesPerSector)
+        try
         {
-            return default;
+            Position = 0;
+
+            if (this.Read(vbr) < bytesPerSector)
+            {
+                return default;
+            }
+
+            var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
+
+            if (vbr_sector_size <= 0)
+            {
+                return default;
+            }
+
+            long total_sectors;
+
+            total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
+
+            if (total_sectors == 0)
+            {
+                total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
+            }
+
+            if (total_sectors == 0)
+            {
+                total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
+            }
+
+            if (total_sectors < 0)
+            {
+                return default;
+            }
+
+            return total_sectors * vbr_sector_size;
         }
-
-        var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
-
-        if (vbr_sector_size <= 0)
+        finally
         {
-            return default;
+            if (allocated is not null)
+            {
+                ArrayPool<byte>.Shared.Return(allocated);
+            }
         }
-
-        long total_sectors;
-
-        total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
-
-        if (total_sectors == 0)
-        {
-
-            total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
-
-        }
-
-        if (total_sectors == 0)
-        {
-
-            total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
-
-        }
-
-        return total_sectors < 0 ? default : (long?)(total_sectors * vbr_sector_size);
     }
+
+#if true && NETCOREAPP
+    private sealed class DiskFileStream(SafeFileHandle handle, FileAccess access)
+        : Stream
+    {
+        internal long? cachedLength;
+
+        private readonly SafeFileHandle handle = handle;
+
+        public override bool CanRead { get; } = access.HasFlag(FileAccess.Read);
+
+        public override bool CanWrite { get; } = access.HasFlag(FileAccess.Write);
+
+        public override bool CanSeek => true;
+
+        /// <summary>
+        /// Retrieves raw disk size.
+        /// </summary>
+        public override long Length
+            => cachedLength ??= NativeStruct.GetDiskSize(handle)
+            ?? throw new NotSupportedException("Disk size not available");
+
+        /// <summary>
+        /// Not implemented.
+        /// </summary>
+        public override void SetLength(long value)
+            => throw new NotImplementedException();
+
+        public override long Position { get; set; }
+
+        public override long Seek(long offset, SeekOrigin origin)
+            => Position = origin switch
+            {
+                SeekOrigin.Begin => offset,
+                SeekOrigin.Current => Position + offset,
+                SeekOrigin.End => Length + offset,
+                _ => throw new ArgumentOutOfRangeException(nameof(origin))
+            };
+
+        private static unsafe bool IsBufferAligned(ReadOnlySpan<byte> buffer)
+        {
+            const int aligmentMask = sizeof(long) - 1;
+
+            if ((buffer.Length & aligmentMask) != 0)
+            {
+                return false;
+            }
+
+            fixed (byte* ptr = &MemoryMarshal.GetReference(buffer))
+            {
+                if (((nint)ptr & aligmentMask) != 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public override int Read(byte[] array, int offset, int count)
+            => Read(array.AsSpan(offset, count));
+
+        public unsafe override int Read(Span<byte> buffer)
+        {
+            if (!CanRead)
+            {
+                throw new InvalidOperationException("Stream does not support reading");
+            }
+
+            if (IsBufferAligned(buffer))
+            {
+                var count = RandomAccess.Read(handle, buffer, Position);
+                Position += count;
+                return count;
+            }
+            else
+            {
+                var array = ArrayPool<byte>.Shared.Rent(buffer.Length);
+                try
+                {
+                    var count = RandomAccess.Read(handle, array.AsSpan(0, buffer.Length), Position);
+                    array.AsSpan(0, count).CopyTo(buffer);
+                    Position += count;
+                    return count;
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(array);
+                }
+            }
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public async override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!CanRead)
+            {
+                throw new InvalidOperationException("Stream does not support reading");
+            }
+
+            if (IsBufferAligned(buffer.Span))
+            {
+                var count = await RandomAccess.ReadAsync(handle, buffer, Position, cancellationToken).ConfigureAwait(false);
+                Position += count;
+                return count;
+            }
+            else
+            {
+                var array = ArrayPool<byte>.Shared.Rent(buffer.Length);
+                try
+                {
+                    var count = await RandomAccess.ReadAsync(handle, array.AsMemory(0, buffer.Length), Position, cancellationToken).ConfigureAwait(false);
+                    array.AsSpan(0, count).CopyTo(buffer.Span);
+                    Position += count;
+                    return count;
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(array);
+                }
+            }
+        }
+
+        public override void Flush()
+        {
+            if (CanWrite)
+            {
+                NativeFileIO.FlushBuffers(handle);
+            }
+        }
+
+        public override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Flush();
+            return Task.CompletedTask;
+        }
+
+        public override int ReadByte()
+        {
+            byte data = 0;
+            var count = Read(MemoryMarshal.CreateSpan(ref data, 1));
+            if (count != 1)
+            {
+                return -1;
+            }
+
+            return data;
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+            => Write(buffer.AsSpan(offset, count));
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            if (!CanWrite)
+            {
+                throw new InvalidOperationException("Stream does not support writing");
+            }
+
+            byte[]? array = null;
+
+            if (!IsBufferAligned(buffer))
+            {
+                array = ArrayPool<byte>.Shared.Rent(buffer.Length);
+                buffer.CopyTo(array);
+                buffer = array.AsSpan(0, buffer.Length);
+            }
+
+            try
+            {
+                RandomAccess.Write(handle, buffer, Position);
+                Position += buffer.Length;
+            }
+            finally
+            {
+                if (array is not null)
+                {
+                    ArrayPool<byte>.Shared.Return(array);
+                }
+            }
+        }
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public async override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!CanWrite)
+            {
+                throw new InvalidOperationException("Stream does not support writing");
+            }
+
+            byte[]? array = null;
+
+            if (!IsBufferAligned(buffer.Span))
+            {
+                array = ArrayPool<byte>.Shared.Rent(buffer.Length);
+                buffer.Span.CopyTo(array);
+                buffer = array.AsMemory(0, buffer.Length);
+            }
+
+            try
+            {
+                await RandomAccess.WriteAsync(handle, buffer, Position, cancellationToken).ConfigureAwait(false);
+                Position += buffer.Length;
+            }
+            finally
+            {
+                if (array is not null)
+                {
+                    ArrayPool<byte>.Shared.Return(array);
+                }
+            }
+        }
+
+        public override void WriteByte(byte value)
+            => Write(MemoryMarshal.CreateReadOnlySpan(ref value, 1));
+    }
+#else
+    private sealed class DiskFileStream(SafeFileHandle handle, FileAccess access)
+        : FileStream(handle, access, bufferSize: 1)
+    {
+        internal long? cachedLength;
+
+        private readonly SafeFileHandle handle = handle;
+
+        /// <summary>
+        /// Retrieves raw disk size.
+        /// </summary>
+        public override long Length
+            => cachedLength ??= NativeStruct.GetDiskSize(handle)
+            ?? throw new NotSupportedException("Disk size not available");
+
+        /// <summary>
+        /// Not implemented.
+        /// </summary>
+        public override void SetLength(long value)
+            => throw new NotImplementedException();
+    }
+#endif
 }
