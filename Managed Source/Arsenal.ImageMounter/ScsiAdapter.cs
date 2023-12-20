@@ -756,39 +756,45 @@ public class ScsiAdapter : DeviceObject
             return;
         }
 
-        IEnumerable<string>? volumes = null;
-
-        using (var disk = OpenDevice(DeviceNumber, FileAccess.ReadWrite))
+        try
         {
-            if (disk.IsDiskWritable)
-            {
-                volumes = disk.EnumerateDiskVolumes();
-            }
-        }
+            IEnumerable<string>? volumes = null;
 
-        if (volumes is not null)
-        {
-            foreach (var volname in volumes.Select(v => v.TrimEnd('\\')))
+            using (var disk = OpenDevice(DeviceNumber, FileAccess.ReadWrite))
             {
-                Trace.WriteLine($"Dismounting volume: {volname}");
-
-                using var vol = NativeFileIO.OpenFileHandle(volname, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, FileOptions.None);
-                if (NativeFileIO.IsDiskWritable(vol))
+                if (disk.IsDiskWritable)
                 {
-                    try
-                    {
-                        NativeFileIO.FlushBuffers(vol);
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.WriteLine($"Failed flushing buffers for volume {volname}: {ex.JoinMessages()}");
-                    }
-
-                    // NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(vol, Force:=False))
-
-                    NativeFileIO.SetVolumeOffline(vol, offline: true);
+                    volumes = disk.EnumerateDiskVolumes();
                 }
             }
+
+            if (volumes is not null)
+            {
+                foreach (var volname in volumes.Select(v => v.TrimEnd('\\')))
+                {
+                    Trace.WriteLine($"Dismounting volume: {volname}");
+
+                    using var vol = NativeFileIO.OpenFileHandle(volname, FileAccess.ReadWrite, FileShare.ReadWrite, FileMode.Open, FileOptions.None);
+                    if (NativeFileIO.IsDiskWritable(vol))
+                    {
+                        try
+                        {
+                            NativeFileIO.FlushBuffers(vol);
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.WriteLine($"Failed flushing buffers for volume {volname}: {ex.JoinMessages()}");
+                        }
+
+                        // NativeFileIO.Win32Try(NativeFileIO.DismountVolumeFilesystem(vol, Force:=False))
+
+                        NativeFileIO.SetVolumeOffline(vol, offline: true);
+                    }
+                }
+            }
+        }
+        catch (DriveNotFoundException)
+        {
         }
 
         RemoveDevice(DeviceNumber);
