@@ -42,18 +42,19 @@ public static partial class API
 
     public static bool HasStorPort { get; private set; }
 
+    public static string DllPath { get; } =
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(API).Assembly.Location)
+            ?? ".", "lib", RuntimeInformation.ProcessArchitecture.ToString()));
+
     public static void AddNativeLibDirectory()
     {
-        var dllPath =
-            Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(API).Assembly.Location) ?? ".", "lib", RuntimeInformation.ProcessArchitecture.ToString()));
-
-        if (Directory.Exists(dllPath))
+        if (Directory.Exists(DllPath))
         {
-            NativeFileIO.AddUnmanagedDllDirectory(dllPath);
+            NativeFileIO.AddUnmanagedDllDirectory(DllPath);
         }
         else
         {
-            Trace.WriteLine($"Directory '{dllPath}' not found");
+            Trace.WriteLine($"Directory '{DllPath}' not found");
         }
     }
 
