@@ -3865,6 +3865,11 @@ Currently, the following application has files open on this volume:
     public static void SetVolumeOffline(SafeFileHandle disk, bool offline)
         => Win32Try(UnsafeNativeMethods.DeviceIoControl(disk, offline ? NativeConstants.IOCTL_VOLUME_OFFLINE : NativeConstants.IOCTL_VOLUME_ONLINE, 0, 0U, 0, 0U, out _, 0));
 
+    public static void SetDefaultDllDirectory(DllImportSearchPath policy)
+    {
+        Win32Try(SafeNativeMethods.SetDefaultDllDirectories(policy));
+    }
+
     public static void SetUnmanagedDllDirectory(string path)
     {
         Win32Try(SafeNativeMethods.SetDllDirectoryW(path.AsSpan()[0]));
