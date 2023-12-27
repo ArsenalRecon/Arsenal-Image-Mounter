@@ -275,7 +275,7 @@ public static class DevioServiceFactory
             throw new NotSupportedException("Cannot modify OVA files");
         }
 
-        var ova = File.Open(imagefile, FileMode.Open, FileAccess.Read);
+        var ova = File.Open(imagefile, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
 
         try
         {
