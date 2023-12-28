@@ -124,6 +124,7 @@ public static class NativeConstants
 
     public const int ERROR_WRITE_PROTECT = 19;
     public const int ERROR_NOT_READY = 21;
+    public const int ERROR_NO_SUCH_DEVICE = 433;
     public const int FVE_E_LOCKED_VOLUME = unchecked((int)0x80310000);
     public const int ERROR_NO_SUCH_DEVINST = unchecked((int)0xe000020b);
 

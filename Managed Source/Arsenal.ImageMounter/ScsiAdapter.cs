@@ -1116,6 +1116,7 @@ public class ScsiAdapter : DeviceObject
                 : new DiskDevice($@"\\?\{device_name}", AccessMode);
         }
         catch (Exception ex)
+        when (ex is not DriveNotFoundException)
         {
             throw new DriveNotFoundException($"Device {DeviceNumber:X6} is not ready", ex);
         }
@@ -1138,6 +1139,7 @@ public class ScsiAdapter : DeviceObject
                 : new DiskDevice($@"\\?\{device_name}");
         }
         catch (Exception ex)
+        when (ex is not DriveNotFoundException)
         {
             throw new DriveNotFoundException($"Device {DeviceNumber:X6} is not ready", ex);
         }

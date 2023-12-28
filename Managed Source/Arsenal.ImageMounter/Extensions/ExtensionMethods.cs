@@ -13,6 +13,7 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -28,14 +29,40 @@ public static class ExtensionMethods
     /// </summary>
     /// <param name="instance">Instance to dispose</param>
     public static void QueueDispose(this IDisposable instance)
-        => ThreadPool.QueueUserWorkItem(_ => instance.Dispose());
+        => ThreadPool.QueueUserWorkItem(_ =>
+        {
+            if (instance is IAsyncDisposable asyncDisposable)
+            {
+                asyncDisposable.QueueDispose();
+                return;
+            }
+
+            try
+            {
+                instance.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Exception in {instance.GetType().FullName}.QueueDispose: {ex}");
+            }
+        });
 
     /// <summary>
     /// Queues dispose on a worker thread to avoid blocking calling thread.
     /// </summary>
     /// <param name="instance">Instance to dispose</param>
     public static void QueueDispose(this IAsyncDisposable instance)
-        => ThreadPool.QueueUserWorkItem(async _ => await instance.DisposeAsync().ConfigureAwait(false));
+        => ThreadPool.QueueUserWorkItem(async _ =>
+        {
+            try
+            {
+                await instance.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Exception in {instance.GetType().FullName}.QueueDispose: {ex}");
+            }
+        });
 
     /// <summary>
     /// Creates a string with formatted values of all members of an object.
