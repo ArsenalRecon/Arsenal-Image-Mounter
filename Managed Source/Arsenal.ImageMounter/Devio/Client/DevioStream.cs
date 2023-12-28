@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Async;
 using System;
 using System.IO;
@@ -22,7 +23,7 @@ namespace Arsenal.ImageMounter.Devio.Client;
 /// <summary>
 /// Base class for classes that implement Stream for client side of Devio protocol.
 /// </summary>
-public abstract partial class DevioStream : Stream
+public abstract partial class DevioStream : CompatibilityStream
 {
     public event EventHandler? Disposing;
     public event EventHandler? Disposed;
@@ -175,7 +176,6 @@ public abstract partial class DevioStream : Stream
         return Task.CompletedTask;
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
         MemoryMarshal.TryGetArray((ReadOnlyMemory<byte>)buffer, out var segment)
         ? new(Read(segment.Array!, segment.Offset, segment.Count))
@@ -194,5 +194,4 @@ public abstract partial class DevioStream : Stream
 
         return default;
     }
-#endif
 }

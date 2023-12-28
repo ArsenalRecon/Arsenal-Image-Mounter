@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
-public class CombinedSeekStream : Stream
+public class CombinedSeekStream : CompatibilityStream
 {
     private readonly List<KeyValuePair<long, Stream>> streams;
 
@@ -161,7 +161,6 @@ public class CombinedSeekStream : Stream
     public override int EndRead(IAsyncResult asyncResult) =>
         ((Task<int>)asyncResult).GetAwaiter().GetResult();
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var count = buffer.Length;
@@ -209,8 +208,6 @@ public class CombinedSeekStream : Stream
 
         return num;
     }
-
-#endif
 
     public override void Write(byte[] buffer, int index, int count)
     {
@@ -286,7 +283,6 @@ public class CombinedSeekStream : Stream
     public override void EndWrite(IAsyncResult asyncResult) =>
         ((Task)asyncResult).GetAwaiter().GetResult();
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (!CanWrite)
@@ -360,7 +356,6 @@ public class CombinedSeekStream : Stream
             count -= current_count;
         }
     }
-#endif
 
     public override void Flush() => current.Value?.Flush();
 

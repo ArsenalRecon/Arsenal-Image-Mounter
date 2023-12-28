@@ -23,7 +23,7 @@ using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
-public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly, bool ownsBaseStream) : Stream
+public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly, bool ownsBaseStream) : CompatibilityStream
 {
     private readonly byte[] lastReadBuffer = new byte[alignment];
 
@@ -61,9 +61,12 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             Trace.WriteLine($"Attempt to read {count} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
             return 0;
         }
-        else if (checked(Position + count > Length))
+        
+        if (checked(Position + count > Length))
         {
+#if DEBUG
             Trace.WriteLine($"Attempt to read {count} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
+#endif
             count = (int)(Length - Position);
         }
 
@@ -116,9 +119,12 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
             return 0;
         }
-        else if (checked(Position + buffer.Length > Length))
+        
+        if (checked(Position + buffer.Length > Length))
         {
+#if DEBUG
             Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
+#endif
             buffer = buffer.Slice(0, (int)(Length - Position));
         }
 
@@ -167,8 +173,6 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
         return totalSize;
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-
     private int SafeBaseRead(Span<byte> buffer)
     {
         if (Position >= Length)
@@ -176,9 +180,12 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
             return 0;
         }
-        else if (checked(Position + buffer.Length > Length))
+        
+        if (checked(Position + buffer.Length > Length))
         {
+#if DEBUG
             Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
+#endif
             buffer = buffer.Slice(0, (int)(Length - Position));
         }
 
@@ -233,7 +240,6 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
     public override int Read(Span<byte> buffer)
     {
         var count = buffer.Length;
-        var offset = 0;
 
         var prefix = (int)(Position & Alignment - 1);
         var suffix = -checked(prefix + count) & Alignment - 1;
@@ -245,7 +251,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
         }
 
         using var newBufferHandle = MemoryPool<byte>.Shared.Rent(newsize);
-        var newBuffer = newBufferHandle.Memory.Span[..newsize];
+        var newBuffer = newBufferHandle.Memory.Span.Slice(0, newsize);
         Position -= prefix;
         var result = SafeBaseRead(newBuffer);
         if (result < prefix)
@@ -261,12 +267,10 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             result = count;
         }
 
-        newBuffer.Slice(prefix, result).CopyTo(buffer[offset..]);
+        newBuffer.Slice(prefix, result).CopyTo(buffer);
 
         return result;
     }
-
-#endif
 
     private async ValueTask<int> InternalReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
@@ -550,8 +554,6 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
         }
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         => InternalWriteAsync(buffer, cancellationToken);
 
@@ -594,23 +596,23 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
 #endif
             }
 
-            var new_buffer = memory_owner.Memory[..new_array_size].Span;
+            var new_buffer = memory_owner.Memory.Span.Slice(0, new_array_size);
 
             if (prefix != 0)
             {
                 Position = checked(original_position - prefix);
 
-                Read(new_buffer[..Alignment]);
+                Read(new_buffer.Slice(0, Alignment));
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                Read(new_buffer[^Alignment..]);
+                Read(new_buffer.Slice(new_buffer.Length - Alignment));
             }
 
-            buffer.CopyTo(new_buffer[prefix..]);
+            buffer.CopyTo(new_buffer.Slice(prefix));
 
             Position = original_position - prefix;
 
@@ -640,8 +642,6 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             Position -= suffix;
         }
     }
-
-#endif
 
     public override bool CanTimeout => BaseStream.CanTimeout;
 

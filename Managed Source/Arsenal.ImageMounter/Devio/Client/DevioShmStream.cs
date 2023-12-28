@@ -15,6 +15,7 @@
 // 
 
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Buffers;
 using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
@@ -23,7 +24,8 @@ using System.Runtime.Versioning;
 using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
-
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Client;
 
@@ -140,7 +142,6 @@ public partial class DevioShmStream : DevioStream
         return Length;
     }
 
-#if NET6_0_OR_GREATER
     public override int Read(Span<byte> buffer)
     {
         var Request = default(IMDPROXY_READ_REQ);
@@ -162,12 +163,11 @@ public partial class DevioShmStream : DevioStream
 
         var Length = (int)Response.length;
 
-        mapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer[..Length]);
+        mapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer.Slice(0, Length));
 
         Position += Length;
         return Length;
     }
-#endif
 
     public override void Write(byte[] buffer, int offset, int count)
     {
@@ -197,7 +197,6 @@ public partial class DevioShmStream : DevioStream
         }
     }
 
-#if NET6_0_OR_GREATER
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         var Request = default(IMDPROXY_WRITE_REQ);
@@ -226,5 +225,4 @@ public partial class DevioShmStream : DevioStream
             throw new EndOfStreamException($"Write length mismatch. Wrote {Length} of {buffer.Length} bytes.");
         }
     }
-#endif
 }

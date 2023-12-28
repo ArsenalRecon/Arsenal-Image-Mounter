@@ -67,7 +67,6 @@ public partial class DevioDirectStream : DevioStream
         return bytesread;
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override int Read(Span<byte> buffer)
     {
         var bytesread = Provider.Read(buffer, Position);
@@ -91,7 +90,6 @@ public partial class DevioDirectStream : DevioStream
 
         return bytesread;
     }
-#endif
 
     public override void Write(byte[] buffer, int offset, int count)
     {
@@ -137,7 +135,6 @@ public partial class DevioDirectStream : DevioStream
         }
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override unsafe void Write(ReadOnlySpan<byte> buffer)
     {
         var byteswritten = Provider.Write(buffer, Position);
@@ -181,7 +178,6 @@ public partial class DevioDirectStream : DevioStream
             }
         }
     }
-#endif
 
     protected override void Dispose(bool disposing)
     {

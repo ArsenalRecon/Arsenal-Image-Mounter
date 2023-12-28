@@ -2922,6 +2922,7 @@ Currently, the following application has files open on this volume:
             return err switch
             {
                 NativeConstants.ERROR_WRITE_PROTECT or NativeConstants.ERROR_NOT_READY or NativeConstants.FVE_E_LOCKED_VOLUME => false,
+                NativeConstants.ERROR_NO_SUCH_DEVINST or NativeConstants.ERROR_NO_SUCH_DEVICE => throw new DriveNotFoundException(),
                 _ => throw new Win32Exception(err),
             };
         }

@@ -20,6 +20,7 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
+using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Async;
 using System;
 using System.IO;
@@ -30,7 +31,7 @@ using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
-public class SubStream : Stream
+public class SubStream : CompatibilityStream
 {
     private readonly long length;
 
@@ -116,19 +117,15 @@ public class SubStream : Stream
             : Parent.ReadAsync(buffer, offset, (int)Math.Min(count, checked(length - Position)), cancellationToken);
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-
     public override int Read(Span<byte> buffer)
         => Position >= length
         ? 0
-        : Parent.Read(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))]);
+        : Parent.Read(buffer.Slice(0, (int)Math.Min(buffer.Length, checked(length - Position))));
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         => Position >= length
         ? new ValueTask<int>(0)
-        : Parent.ReadAsync(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))], cancellationToken);
-
-#endif
+        : Parent.ReadAsync(buffer.Slice(0, (int)Math.Min(buffer.Length, checked(length - Position))), cancellationToken);
 
     public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
     {
@@ -197,7 +194,6 @@ public class SubStream : Stream
             : Parent.WriteAsync(buffer, offset, count, cancellationToken);
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         if (checked(Position + buffer.Length) > length)
@@ -212,7 +208,6 @@ public class SubStream : Stream
         => checked(Position + buffer.Length) > length
         ? throw new ArgumentOutOfRangeException(nameof(buffer), "Attempt to write beyond end of SubStream")
         : Parent.WriteAsync(buffer, cancellationToken);
-#endif
 
     public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
     {

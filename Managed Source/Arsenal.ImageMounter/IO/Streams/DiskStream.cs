@@ -143,9 +143,9 @@ public class DiskStream : AligningStream
         }
     }
 
-#if true && NETCOREAPP
+#if NETCOREAPP
     private sealed class DiskFileStream(SafeFileHandle handle, FileAccess access)
-        : Stream
+        : CompatibilityStream
     {
         internal long? cachedLength;
 
