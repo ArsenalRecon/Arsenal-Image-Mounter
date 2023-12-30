@@ -3399,6 +3399,11 @@ Currently, the following application has files open on this volume:
             // WORD DisplayNameOffset
             // WORD DisplayNameLength
 
+            if (name_length > buffer.Length - 16)
+            {
+                throw new InvalidDataException("Invalid mount point or junction data");
+            }
+
             return Encoding.Unicode.GetString(buffer, 16, name_length);
         }
         finally

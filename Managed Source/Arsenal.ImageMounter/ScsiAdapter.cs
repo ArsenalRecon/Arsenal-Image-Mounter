@@ -796,6 +796,10 @@ public class ScsiAdapter : DeviceObject
         catch (DriveNotFoundException)
         {
         }
+        catch (Win32Exception win32ex)
+        when (win32ex.NativeErrorCode == NativeConstants.ERROR_NO_SUCH_DEVICE)
+        {
+        }
 
         RemoveDevice(DeviceNumber);
     }
