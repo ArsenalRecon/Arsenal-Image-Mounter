@@ -1905,6 +1905,14 @@ __inout __deref PKIRQL              LowestAssumedIrql
 
     RtlZeroMemory((PUCHAR)pLunList, pSrb->DataTransferLength);
 
+    if (pSrb->DataTransferLength < FIELD_OFFSET(LUN_LIST, Lun))
+    {
+        KdPrint(("PhDskMnt::ScsiOpReportLuns:  Buffer too small\n"));
+
+        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+        return;
+    }
+
     ImScsiAcquireLock(                   // Serialize the linked list of LUN extensions.              
         &pHBAExt->LUListLock, &LockHandle, *LowestAssumedIrql);
 
@@ -1918,10 +1926,14 @@ __inout __deref PKIRQL              LowestAssumedIrql
 
         if ((object->DeviceNumber.PathId == pSrb->PathId) &&
             (object->DeviceNumber.TargetId == pSrb->TargetId))
-            if (pSrb->DataTransferLength >= FIELD_OFFSET(LUN_LIST, Lun) + (sizeof(pLunList->Lun[0])*count))
-                pLunList->Lun[count++][1] = object->DeviceNumber.Lun;
-            else
-                break;
+        {
+            if (pSrb->DataTransferLength >= FIELD_OFFSET(LUN_LIST, Lun) + (sizeof(pLunList->Lun[0]) * ((SIZE_T)count + 1)))
+            {
+                pLunList->Lun[count][1] = object->DeviceNumber.Lun;
+            }
+
+            count++;
+        }
     }
 
     ImScsiReleaseLock(&LockHandle, LowestAssumedIrql);
@@ -1930,8 +1942,6 @@ __inout __deref PKIRQL              LowestAssumedIrql
 
     pLunList->LunListLength[3] =                  // Set length needed for LUNs.
         (UCHAR)(8 * count);
-
-    // Set the LUN numbers if there is enough room, and set only those LUNs to be reported.
 
     ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
