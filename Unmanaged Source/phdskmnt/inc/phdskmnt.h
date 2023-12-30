@@ -1028,7 +1028,7 @@ extern "C" {
         if (Irp->MdlAddress != NULL)
         {
             PMDL mdl;
-            PMDL nextMdl;
+            PMDL nextMdl = NULL;
             for (mdl = Irp->MdlAddress; mdl != NULL; mdl = nextMdl)
             {
                 nextMdl = mdl->Next;
