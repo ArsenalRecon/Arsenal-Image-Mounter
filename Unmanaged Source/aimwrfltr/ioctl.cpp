@@ -551,6 +551,14 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
         if (attrs->Action == DeviceDsmAction_Trim)
         {
+            if (!device_extension->TrimNotSupported)
+            {
+                status = STATUS_INVALID_DEVICE_REQUEST;
+                Irp->IoStatus.Status = status;
+                IoCompleteRequest(Irp, IO_NO_INCREMENT);
+                return status;
+            }
+
             InterlockedIncrement64(
                 &device_extension->Statistics.TrimRequests);
 

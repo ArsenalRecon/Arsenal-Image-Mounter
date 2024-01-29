@@ -26,7 +26,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
 
 namespace Arsenal.ImageMounter;
 
@@ -132,7 +132,7 @@ public static class DiscUtilsInteraction
 
         byte[]? allocated = null;
 
-        var vbr = sector_size <= 512
+        var vbr = sector_size <= 1024
             ? stackalloc byte[sector_size]
             : (allocated = ArrayPool<byte>.Shared.Rent(sector_size)).AsSpan(0, sector_size);
 
@@ -263,30 +263,37 @@ public static class DiscUtilsInteraction
         await volume.WriteAsync(vbr, cancellationToken).ConfigureAwait(false);
     }
 
-    public static DiscUtils.Raw.Disk OpenPhysicalDiskAsDiscUtilsDisk(this DiskDevice disk, Ownership ownsStream)
+    public static DiscUtils.Raw.Disk OpenPhysicalDiskAsDiscUtilsDisk(this DiskDevice diskDevice, Ownership ownsStream)
     {
         try
         {
-            var native_geometry = disk.Geometry
+            var native_geometry = diskDevice.Geometry
                 ?? throw new InvalidOperationException("Unknown geometry");
 
-            var native_disk_size = disk.DiskSize
+            var native_disk_size = diskDevice.DiskSize
                 ?? throw new InvalidOperationException("Unknown size");
 
             var geometry = new Geometry(native_disk_size, native_geometry.TracksPerCylinder, native_geometry.SectorsPerTrack, native_geometry.BytesPerSector);
 
-            var align_stream = disk.GetRawDiskStream();
+            var align_stream = diskDevice.GetRawDiskStream();
 
-            return new DiscUtils.Raw.Disk(align_stream, ownsStream, geometry);
+            var disk = new DiscUtils.Raw.Disk(align_stream, ownsStream, geometry);
+
+            if (ownsStream == Ownership.Dispose)
+            {
+                disk.Disposed += (sender, e) => diskDevice.Dispose();
+            }
+
+            return disk;
         }
         catch (Exception ex)
         {
             if (ownsStream == Ownership.Dispose)
             {
-                disk.Dispose();
+                diskDevice.Dispose();
             }
 
-            throw new IOException($"Failed to open device '{disk.DevicePath}'", ex);
+            throw new IOException($"Failed to open device '{diskDevice.DevicePath}'", ex);
         }
     }
 

@@ -17,20 +17,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 
-public class MultiPartFileStream : CombinedSeekStream
+public class MultiPartFileStream(IEnumerable<string> Imagefiles, FileAccess DiskAccess, FileShare ShareMode) : CombinedSeekStream(DiskAccess.HasFlag(FileAccess.Write), OpenImagefiles(Imagefiles, DiskAccess, ShareMode))
 {
 
     public MultiPartFileStream(IEnumerable<string> Imagefiles, FileAccess DiskAccess)
         : this(Imagefiles, DiskAccess, FileShare.Read | FileShare.Delete)
-    {
-    }
-
-    public MultiPartFileStream(IEnumerable<string> Imagefiles, FileAccess DiskAccess, FileShare ShareMode)
-        : base(DiskAccess.HasFlag(FileAccess.Write), OpenImagefiles(Imagefiles, DiskAccess, ShareMode))
     {
     }
 

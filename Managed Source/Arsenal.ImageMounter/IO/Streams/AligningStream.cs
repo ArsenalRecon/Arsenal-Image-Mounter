@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Async;
 using System;
 using System.Buffers;
@@ -17,30 +18,35 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0057 // Use range operator
+
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
-public class AligningStream : Stream
+public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly, bool ownsBaseStream) : CompatibilityStream
 {
-    private readonly bool ownsBaseStream;
+    private readonly byte[] lastReadBuffer = new byte[alignment];
 
-    public Stream BaseStream { get; }
+    private long lastReadPos = -1;
 
-    public int Alignment { get; }
+    public Stream BaseStream { get; } = baseStream;
 
-    public AligningStream(Stream BaseStream, int Alignment, bool ownsBaseStream)
+    public int Alignment { get; } = alignment;
+
+    public event EventHandler? Disposing;
+
+    public event EventHandler? Disposed;
+
+    public AligningStream(Stream baseStream, int alignment, bool ownsBaseStream)
+        : this(baseStream, alignment, forceReadOnly: false, ownsBaseStream)
     {
-        this.BaseStream = BaseStream;
-        this.Alignment = Alignment;
-        this.ownsBaseStream = ownsBaseStream;
     }
 
     public override bool CanRead => BaseStream.CanRead;
 
     public override bool CanSeek => BaseStream.CanSeek;
 
-    public override bool CanWrite => BaseStream.CanWrite;
+    public override bool CanWrite { get; } = !forceReadOnly && baseStream.CanWrite;
 
     public override long Length => BaseStream.Length;
 
@@ -55,10 +61,24 @@ public class AligningStream : Stream
             Trace.WriteLine($"Attempt to read {count} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
             return 0;
         }
-        else if (checked(Position + count > Length))
+        
+        if (checked(Position + count > Length))
         {
+#if DEBUG
             Trace.WriteLine($"Attempt to read {count} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
+#endif
             count = (int)(Length - Position);
+        }
+
+        if (Position == lastReadPos && count <= Alignment)
+        {
+            count = Math.Min(count, Alignment);
+
+            Array.Copy(lastReadBuffer, 0, buffer, offset, count);
+
+            Position += count;
+
+            return count;
         }
 
         var totalSize = 0;
@@ -79,77 +99,14 @@ public class AligningStream : Stream
             totalSize += blockSize;
         }
 
-        return totalSize;
-    }
-
-    private async Task<int> SafeBaseReadAsync(byte[] buffer, int offset, int count, CancellationToken token)
-    {
-        if (Position >= Length)
+        if (totalSize >= Alignment)
         {
-            Trace.WriteLine($"Attempt to read {count} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
-            return 0;
+            Array.Copy(buffer, offset - Alignment, lastReadBuffer, 0, Alignment);
+            lastReadPos = Position - Alignment;
         }
-        else if (checked(Position + count > Length))
+        else
         {
-            Trace.WriteLine($"Attempt to read {count} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
-            count = (int)(Length - Position);
-        }
-
-        var totalSize = 0;
-
-        while (count > 0)
-        {
-            BaseStream.Position = Position;
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-            var blockSize = await BaseStream.ReadAsync(buffer.AsMemory(offset, count), token).ConfigureAwait(false);
-#else
-            var blockSize = await BaseStream.ReadAsync(buffer, offset, count, token).ConfigureAwait(false);
-#endif
-            Position = BaseStream.Position;
-
-            if (blockSize == 0)
-            {
-                break;
-            }
-
-            count -= blockSize;
-            offset += blockSize;
-            totalSize += blockSize;
-        }
-
-        return totalSize;
-    }
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-
-    private int SafeBaseRead(Span<byte> buffer)
-    {
-        if (Position >= Length)
-        {
-            Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
-            return 0;
-        }
-        else if (checked(Position + buffer.Length > Length))
-        {
-            Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
-            buffer = buffer[..(int)(Length - Position)];
-        }
-
-        var totalSize = 0;
-
-        while (buffer.Length > 0)
-        {
-            BaseStream.Position = Position;
-            var blockSize = BaseStream.Read(buffer);
-            Position = BaseStream.Position;
-
-            if (blockSize == 0)
-            {
-                break;
-            }
-
-            buffer = buffer[blockSize..];
-            totalSize += blockSize;
+            lastReadPos = -1;
         }
 
         return totalSize;
@@ -162,18 +119,36 @@ public class AligningStream : Stream
             Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
             return 0;
         }
-        else if (checked(Position + buffer.Length > Length))
+        
+        if (checked(Position + buffer.Length > Length))
         {
+#if DEBUG
             Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
-            buffer = buffer[..(int)(Length - Position)];
+#endif
+            buffer = buffer.Slice(0, (int)(Length - Position));
+        }
+
+        if (Position == lastReadPos && buffer.Length <= Alignment)
+        {
+            var count = Math.Min(buffer.Length, Alignment);
+
+            lastReadBuffer.AsSpan(0, count).CopyTo(buffer.Span);
+
+            Position += count;
+
+            return count;
         }
 
         var totalSize = 0;
 
-        while (buffer.Length > 0)
-        {
+        var slice = buffer;
+
+        while (slice.Length > 0)
+        {            
             BaseStream.Position = Position;
-            var blockSize = await BaseStream.ReadAsync(buffer, token).ConfigureAwait(false);
+            
+            var blockSize = await BaseStream.ReadAsync(slice, token).ConfigureAwait(false);
+            
             Position = BaseStream.Position;
 
             if (blockSize == 0)
@@ -181,53 +156,90 @@ public class AligningStream : Stream
                 break;
             }
 
-            buffer = buffer[blockSize..];
+            slice = slice.Slice(blockSize);
             totalSize += blockSize;
+        }
+        
+        if (totalSize >= Alignment)
+        {
+            buffer.Span.Slice(totalSize - Alignment, Alignment).CopyTo(lastReadBuffer);
+            lastReadPos = Position - Alignment;
+        }
+        else
+        {
+            lastReadPos = -1;
         }
 
         return totalSize;
     }
 
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    private int SafeBaseRead(Span<byte> buffer)
     {
-        var count = buffer.Length;
-        var offset = 0;
-
-        var prefix = (int)(Position & Alignment - 1);
-        var suffix = -checked(prefix + count) & Alignment - 1;
-        var newsize = prefix + count + suffix;
-
-        if (newsize == count)
+        if (Position >= Length)
         {
-            return await SafeBaseReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-        }
-
-        using var newBufferHandle = MemoryPool<byte>.Shared.Rent(newsize);
-        var newBuffer = newBufferHandle.Memory[..newsize];
-        Position -= prefix;
-        var result = await SafeBaseReadAsync(newBuffer, cancellationToken).ConfigureAwait(false);
-        if (result < prefix)
-        {
+            Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
             return 0;
         }
-
-        result -= prefix;
-
-        if (result > count)
+        
+        if (checked(Position + buffer.Length > Length))
         {
-            Position += count - result;
-            result = count;
+#if DEBUG
+            Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
+#endif
+            buffer = buffer.Slice(0, (int)(Length - Position));
         }
 
-        newBuffer.Slice(prefix, result).CopyTo(buffer[offset..]);
+        if (Position == lastReadPos && buffer.Length <= Alignment)
+        {
+            var count = Math.Min(buffer.Length, Alignment);
 
-        return result;
+            lastReadBuffer.AsSpan(0, count).CopyTo(buffer);
+
+            Position += count;
+
+            return count;
+        }
+
+        var totalSize = 0;
+
+        var slice = buffer;
+
+        while (slice.Length > 0)
+        {
+            BaseStream.Position = Position;
+
+            var blockSize = BaseStream.Read(slice);
+
+            Position = BaseStream.Position;
+
+            if (blockSize == 0)
+            {
+                break;
+            }
+
+            slice = slice.Slice(blockSize);
+            totalSize += blockSize;
+        }
+
+        if (totalSize >= Alignment)
+        {
+            buffer.Slice(totalSize - Alignment, Alignment).CopyTo(lastReadBuffer);
+            lastReadPos = Position - Alignment;
+        }
+        else
+        {
+            lastReadPos = -1;
+        }
+
+        return totalSize;
     }
+
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        => InternalReadAsync(buffer, cancellationToken);
 
     public override int Read(Span<byte> buffer)
     {
         var count = buffer.Length;
-        var offset = 0;
 
         var prefix = (int)(Position & Alignment - 1);
         var suffix = -checked(prefix + count) & Alignment - 1;
@@ -239,7 +251,7 @@ public class AligningStream : Stream
         }
 
         using var newBufferHandle = MemoryPool<byte>.Shared.Rent(newsize);
-        var newBuffer = newBufferHandle.Memory.Span[..newsize];
+        var newBuffer = newBufferHandle.Memory.Span.Slice(0, newsize);
         Position -= prefix;
         var result = SafeBaseRead(newBuffer);
         if (result < prefix)
@@ -255,12 +267,46 @@ public class AligningStream : Stream
             result = count;
         }
 
-        newBuffer.Slice(prefix, result).CopyTo(buffer[offset..]);
+        newBuffer.Slice(prefix, result).CopyTo(buffer);
 
         return result;
     }
 
-#endif
+    private async ValueTask<int> InternalReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        var count = buffer.Length;
+        var offset = 0;
+
+        var prefix = (int)(Position & Alignment - 1);
+        var suffix = -checked(prefix + count) & Alignment - 1;
+        var newsize = prefix + count + suffix;
+
+        if (newsize == count)
+        {
+            return await SafeBaseReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+        }
+
+        using var newBufferHandle = MemoryPool<byte>.Shared.Rent(newsize);
+        var newBuffer = newBufferHandle.Memory.Slice(0, newsize);
+        Position -= prefix;
+        var result = await SafeBaseReadAsync(newBuffer, cancellationToken).ConfigureAwait(false);
+        if (result < prefix)
+        {
+            return 0;
+        }
+
+        result -= prefix;
+
+        if (result > count)
+        {
+            Position += count - result;
+            result = count;
+        }
+
+        newBuffer.Slice(prefix, result).CopyTo(buffer.Slice(offset));
+
+        return result;
+    }
 
     public override int Read(byte[] buffer, int offset, int count)
     {
@@ -304,46 +350,10 @@ public class AligningStream : Stream
     public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state) =>
         ReadAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
-    public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
+    public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).GetAwaiter().GetResult();
 
-    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-    {
-        var prefix = (int)(Position & Alignment - 1);
-        var suffix = -checked(prefix + count) & Alignment - 1;
-        var newsize = prefix + count + suffix;
-
-        if (newsize == count)
-        {
-            return await SafeBaseReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
-        }
-
-        var newbuffer = ArrayPool<byte>.Shared.Rent(newsize);
-        try
-        {
-            Position -= prefix;
-            var result = await SafeBaseReadAsync(newbuffer, 0, newsize, cancellationToken).ConfigureAwait(false);
-            if (result < prefix)
-            {
-                return 0;
-            }
-
-            result -= prefix;
-
-            if (result > count)
-            {
-                Position += count - result;
-                result = count;
-            }
-
-            Buffer.BlockCopy(newbuffer, prefix, buffer, offset, result);
-
-            return result;
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(newbuffer);
-        }
-    }
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        => InternalReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
 
     public override long Seek(long offset, SeekOrigin origin) => origin switch
     {
@@ -355,6 +365,11 @@ public class AligningStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
+        if (!CanWrite)
+        {
+            throw new UnauthorizedAccessException("Attempt to write to read-only stream");
+        }
+
         var original_position = Position;
 
         if (count == 0)
@@ -377,7 +392,11 @@ public class AligningStream : Stream
             {
                 if (new_buffer is null)
                 {
+#if NET7_0_OR_GREATER
+                    throw new UnreachableException();
+#else
                     throw new InvalidProgramException();
+#endif
                 }
 
                 if (prefix != 0)
@@ -416,6 +435,9 @@ public class AligningStream : Stream
             BaseStream.Write(buffer, offset, count);
             Position = BaseStream.Position;
 
+            Array.Copy(buffer, offset + count - Alignment, lastReadBuffer, 0, Alignment);
+            lastReadPos = Position - Alignment;
+
             if (suffix > 0)
             {
                 Position -= suffix;
@@ -435,88 +457,8 @@ public class AligningStream : Stream
 
     public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
 
-    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-    {
-        if (count == 0)
-        {
-            return;
-        }
-
-        var original_position = Position;
-
-        var prefix = (int)(Position & Alignment - 1);
-        var suffix = -checked(prefix + count) & Alignment - 1;
-
-        var new_array_size = checked(prefix + count + suffix);
-
-        Position -= prefix;
-
-        var new_buffer = new_array_size != count ?
-            ArrayPool<byte>.Shared.Rent(new_array_size) :
-            null;
-
-        try
-        {
-            if (count != new_array_size)
-            {
-                if (new_buffer is null)
-                {
-                    throw new InvalidProgramException();
-                }
-
-                if (prefix != 0)
-                {
-                    Position = checked(original_position - prefix);
-
-                    await SafeBaseReadAsync(new_buffer, 0, Alignment, cancellationToken).ConfigureAwait(false);
-                }
-
-                if (suffix != 0)
-                {
-                    Position = checked(original_position + count + suffix - Alignment);
-
-                    await SafeBaseReadAsync(new_buffer, new_array_size - Alignment, Alignment, cancellationToken).ConfigureAwait(false);
-                }
-
-                Buffer.BlockCopy(buffer, offset, new_buffer, prefix, count);
-
-                Position = original_position - prefix;
-
-                buffer = new_buffer;
-                offset = 0;
-                count = new_array_size;
-            }
-
-            var absolute = Position + new_array_size;
-
-            if (GrowInterval > 0 && absolute > Length)
-            {
-                absolute += -absolute & GrowInterval;
-
-                SetLength(absolute);
-            }
-
-            BaseStream.Position = Position;
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-            await BaseStream.WriteAsync(buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
-#else
-            await BaseStream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
-#endif
-            Position = BaseStream.Position;
-
-            if (suffix > 0)
-            {
-                Position -= suffix;
-            }
-        }
-        finally
-        {
-            if (new_buffer is not null)
-            {
-                ArrayPool<byte>.Shared.Return(new_buffer);
-            }
-        }
-    }
+    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        => InternalWriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
 
     public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
     {
@@ -526,14 +468,16 @@ public class AligningStream : Stream
     }
 
     public override Task FlushAsync(CancellationToken cancellationToken)
-    => BaseStream.FlushAsync(cancellationToken);
+        => BaseStream.FlushAsync(cancellationToken);
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-
-    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    private async ValueTask InternalWriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        if (!CanWrite)
+        {
+            throw new UnauthorizedAccessException("Attempt to write to read-only stream");
+        }
+
         var count = buffer.Length;
-        var offset = 0;
 
         if (count == 0)
         {
@@ -557,31 +501,34 @@ public class AligningStream : Stream
         {
             if (memory_owner is null)
             {
+#if NET7_0_OR_GREATER
+                throw new UnreachableException();
+#else
                 throw new InvalidProgramException();
+#endif
             }
 
-            var new_buffer = memory_owner.Memory[..new_array_size];
+            var new_buffer = memory_owner.Memory.Slice(0, new_array_size);
 
             if (prefix != 0)
             {
                 Position = checked(original_position - prefix);
 
-                await ReadAsync(new_buffer[..Alignment], cancellationToken).ConfigureAwait(false);
+                await this.ReadAsync(new_buffer.Slice(0, Alignment), cancellationToken).ConfigureAwait(false);
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                await ReadAsync(new_buffer[^Alignment..], cancellationToken).ConfigureAwait(false);
+                await this.ReadAsync(new_buffer.Slice(new_buffer.Length - Alignment), cancellationToken).ConfigureAwait(false);
             }
 
-            buffer.CopyTo(new_buffer[prefix..]);
+            buffer.CopyTo(new_buffer.Slice(prefix));
 
             Position = original_position - prefix;
 
             buffer = new_buffer;
-            offset = 0;
             count = new_array_size;
         }
 
@@ -595,8 +542,11 @@ public class AligningStream : Stream
         }
 
         BaseStream.Position = Position;
-        await BaseStream.WriteAsync(buffer.Slice(offset, count), cancellationToken).ConfigureAwait(false);
+        await BaseStream.WriteAsync(buffer.Slice(0, count), cancellationToken).ConfigureAwait(false);
         Position = BaseStream.Position;
+
+        buffer.Span.Slice(count - Alignment, Alignment).CopyTo(lastReadBuffer);
+        lastReadPos = Position - Alignment;
 
         if (suffix > 0)
         {
@@ -604,8 +554,16 @@ public class AligningStream : Stream
         }
     }
 
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        => InternalWriteAsync(buffer, cancellationToken);
+
     public override void Write(ReadOnlySpan<byte> buffer)
     {
+        if (!CanWrite)
+        {
+            throw new UnauthorizedAccessException("Attempt to write to read-only stream");
+        }
+
         var count = buffer.Length;
         var offset = 0;
 
@@ -631,26 +589,30 @@ public class AligningStream : Stream
         {
             if (memory_owner is null)
             {
+#if NET7_0_OR_GREATER
+                throw new UnreachableException();
+#else
                 throw new InvalidProgramException();
+#endif
             }
 
-            var new_buffer = memory_owner.Memory[..new_array_size].Span;
+            var new_buffer = memory_owner.Memory.Span.Slice(0, new_array_size);
 
             if (prefix != 0)
             {
                 Position = checked(original_position - prefix);
 
-                Read(new_buffer[..Alignment]);
+                Read(new_buffer.Slice(0, Alignment));
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                Read(new_buffer[^Alignment..]);
+                Read(new_buffer.Slice(new_buffer.Length - Alignment));
             }
 
-            buffer.CopyTo(new_buffer[prefix..]);
+            buffer.CopyTo(new_buffer.Slice(prefix));
 
             Position = original_position - prefix;
 
@@ -672,13 +634,14 @@ public class AligningStream : Stream
         BaseStream.Write(buffer.Slice(offset, count));
         Position = BaseStream.Position;
 
+        buffer.Slice(count - Alignment, Alignment).CopyTo(lastReadBuffer);
+        lastReadPos = Position - Alignment;
+
         if (suffix > 0)
         {
             Position -= suffix;
         }
     }
-
-#endif
 
     public override bool CanTimeout => BaseStream.CanTimeout;
 
@@ -686,11 +649,19 @@ public class AligningStream : Stream
     {
         if (disposing && ownsBaseStream)
         {
+            OnDisposing(EventArgs.Empty);
+
             BaseStream.Dispose();
+
+            OnDisposed(EventArgs.Empty);
         }
 
         base.Dispose(disposing);
     }
+
+    protected virtual void OnDisposing(EventArgs e) => Disposing?.Invoke(this, e);
+
+    protected virtual void OnDisposed(EventArgs e) => Disposed?.Invoke(this, e);
 
     public override int ReadTimeout
     {

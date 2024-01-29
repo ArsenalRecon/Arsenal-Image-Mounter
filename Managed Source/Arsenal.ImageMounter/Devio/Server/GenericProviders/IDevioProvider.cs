@@ -9,8 +9,8 @@
 // 
 
 using System;
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
@@ -56,6 +56,16 @@ public partial interface IDevioProvider : IDisposable
     /// <returns>True if virtual disk can be written to through this instance, or False
     /// if it is opened for reading only.</returns>
     bool CanWrite { get; }
+
+    /// <summary>
+    /// Indicates whether provider supports dispatching multiple simultaneous I/O requests.
+    /// </summary>
+    bool SupportsParallel { get; }
+
+    /// <summary>
+    /// Set to true to force single thread operation even if provider supports multithread
+    /// </summary>
+    bool ForceSingleThread { get; set; }
 
     /// <summary>
     /// Indicates whether provider supports shared image operations with registrations
@@ -118,6 +128,10 @@ public partial interface IDevioProvider : IDisposable
     /// <param name="fileoffset">Offset at virtual disk device where write starts.</param>
     /// <returns>Returns number of bytes written to device.</returns>
     int Write(byte[] buffer, int bufferoffset, int count, long fileoffset);
+
+    ValueTask<int> ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken);
+
+    ValueTask<int> WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken);
 
     /// <summary>
     /// Manage registrations and reservation keys for shared images.

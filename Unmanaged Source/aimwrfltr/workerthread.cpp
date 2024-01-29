@@ -151,6 +151,11 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
                     status = AIMWrFltrDeferredManageDataSetAttributes(device_extension, cached_irp,
                         block_buffer);
 
+                    if (status == STATUS_INVALID_DEVICE_REQUEST)
+                    {
+                        device_extension->TrimNotSupported = TRUE;
+                    }
+
                     break;
 #endif
 

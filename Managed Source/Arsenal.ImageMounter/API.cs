@@ -1,4 +1,4 @@
-﻿//  API.vb
+﻿//  API.cs
 //  API for manipulating flag values, issuing SCSI bus rescans and similar
 //  tasks.
 //  
@@ -27,8 +27,6 @@ using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace Arsenal.ImageMounter;
 
 /// <summary>
@@ -43,6 +41,22 @@ public static partial class API
     public static string Kernel { get; private set; } = GetKernelName();
 
     public static bool HasStorPort { get; private set; }
+
+    public static string DllPath { get; } =
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(API).Assembly.Location)
+            ?? ".", "lib", RuntimeInformation.ProcessArchitecture.ToString()));
+
+    public static void AddNativeLibDirectory()
+    {
+        if (Directory.Exists(DllPath))
+        {
+            NativeFileIO.AddUnmanagedDllDirectory(DllPath);
+        }
+        else
+        {
+            Trace.WriteLine($"Directory '{DllPath}' not found");
+        }
+    }
 
     private static string GetKernelName()
     {
@@ -364,7 +378,13 @@ public static partial class API
             throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
         }
 
-        var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
+        var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames: null,
+                                                                           NativeFileIO.ExcludeProcessesFromHandleSearch,
+                                                                           pdo_path,
+                                                                           dev_path)
+            .Take(10)
+            .Select(NativeFileIO.FormatProcessName)
+            .ToArray();
 
         if (in_use_apps.Length == 0 && last_error != 0)
         {
@@ -449,7 +469,12 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
             }
 
-            var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
+            var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames: null,
+                                                                               NativeFileIO.ExcludeProcessesFromHandleSearch,
+                                                                               dev.path)
+                .Take(10)
+                .Select(NativeFileIO.FormatProcessName)
+                .ToArray();
 
             if (in_use_apps.Length == 0 && last_error > 0)
             {
@@ -576,7 +601,13 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
             throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
         }
 
-        var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(pdo_path, dev_path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
+        var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames: null,
+                                                                           NativeFileIO.ExcludeProcessesFromHandleSearch,
+                                                                           pdo_path,
+                                                                           dev_path)
+            .Take(10)
+            .Select(NativeFileIO.FormatProcessName)
+            .ToArray();
 
         if (in_use_apps.Length == 0 && last_error != 0)
         {
@@ -660,7 +691,12 @@ Currently, the following application{(in_use_apps.Length != 1 ? "s" : "")} hold{
                 throw new IOException("Error adding write overlay to device", NativeFileIO.GetExceptionForNtStatus(statistics.LastErrorCode));
             }
 
-            var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(dev.path).Take(10).Select(NativeFileIO.FormatProcessName).ToArray();
+            var in_use_apps = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames: null,
+                                                                               NativeFileIO.ExcludeProcessesFromHandleSearch,
+                                                                               dev.path)
+                .Take(10)
+                .Select(NativeFileIO.FormatProcessName)
+                .ToArray();
 
             if (in_use_apps.Length == 0 && last_error > 0)
             {

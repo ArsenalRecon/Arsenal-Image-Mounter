@@ -14,7 +14,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable 0649
 
 namespace Arsenal.ImageMounter.IO.Native;

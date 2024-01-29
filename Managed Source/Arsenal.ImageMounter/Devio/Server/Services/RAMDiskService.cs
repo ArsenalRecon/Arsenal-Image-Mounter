@@ -118,20 +118,20 @@ public class RAMDiskService : DevioNoneService
     /// Creates a RAM disk at supplied adapter, creates a volume on it and
     /// formats a file system.
     /// </summary>
-    /// <param name="Adapter"></param>
-    /// <param name="DiskSize"></param>
-    /// <param name="FormatFileSystem"></param>
+    /// <param name="adapter"></param>
+    /// <param name="diskSize"></param>
+    /// <param name="formatFileSystem"></param>
     /// <returns></returns>
     /// <exception cref="IOException">Failed to create RAM disk or format file system</exception>
-    public static RAMDiskService Create(ScsiAdapter Adapter,
-                                        long DiskSize,
-                                        InitializeFileSystem FormatFileSystem)
+    public static RAMDiskService Create(ScsiAdapter adapter,
+                                        long diskSize,
+                                        InitializeFileSystem formatFileSystem)
     {
-        var newObj = new RAMDiskService(DiskSize, FormatFileSystem);
+        var newObj = new RAMDiskService(diskSize, formatFileSystem);
 
         try
         {
-            newObj.StartServiceThreadAndMount(Adapter, 0);
+            newObj.StartServiceThreadAndMount(adapter, 0);
         }
         catch (Exception ex)
         {
@@ -147,12 +147,12 @@ public class RAMDiskService : DevioNoneService
     /// Creates a service object that can later be "started" to create a RAM disk
     /// with specified size and file system.
     /// </summary>
-    /// <param name="DiskSize"></param>
-    /// <param name="FormatFileSystem"></param>
-    public RAMDiskService(long DiskSize, InitializeFileSystem? FormatFileSystem)
-        : base(DiskSize)
+    /// <param name="diskSize"></param>
+    /// <param name="formatFileSystem"></param>
+    public RAMDiskService(long diskSize, InitializeFileSystem? formatFileSystem)
+        : base(diskSize)
     {
-        formatFileSystem = FormatFileSystem;
+        this.formatFileSystem = formatFileSystem;
     }
 
     /// <summary>
@@ -169,22 +169,22 @@ public class RAMDiskService : DevioNoneService
     /// Creates a RAM disk at supplied adapter, creates a volume on it and
     /// formats a file system.
     /// </summary>
-    /// <param name="Adapter"></param>
-    /// <param name="DiskSize"></param>
-    /// <param name="FormatFileSystem"></param>
+    /// <param name="adapter"></param>
+    /// <param name="diskSize"></param>
+    /// <param name="formatFileSystem"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     /// <exception cref="IOException">Failed to create RAM disk or format file system</exception>
-    public static async Task<RAMDiskService> CreateAsync(ScsiAdapter Adapter,
-                                                         long DiskSize,
-                                                         InitializeFileSystem FormatFileSystem,
+    public static async Task<RAMDiskService> CreateAsync(ScsiAdapter adapter,
+                                                         long diskSize,
+                                                         InitializeFileSystem formatFileSystem,
                                                          CancellationToken cancellationToken)
     {
-        var newObj = new RAMDiskService(DiskSize, FormatFileSystem: null);
+        var newObj = new RAMDiskService(diskSize, formatFileSystem: null);
 
         try
         {
-            newObj.StartServiceThreadAndMount(Adapter, 0);
+            newObj.StartServiceThreadAndMount(adapter, 0);
 
             using var device = newObj.OpenDiskDevice(FileAccess.ReadWrite)
                 ?? throw new NotSupportedException("Cannot open disk device associated with this instance");
@@ -206,7 +206,7 @@ public class RAMDiskService : DevioNoneService
             var disk = new Disk(device.GetRawDiskStream(), Ownership.None, discutils_geometry);
 
             await DiscUtilsInteraction.InitializeVirtualDiskAsync(disk, discutils_geometry, PARTITION_STYLE.MBR,
-                                                                  FormatFileSystem, "RAM disk", cancellationToken).ConfigureAwait(false);
+                                                                  formatFileSystem, "RAM disk", cancellationToken).ConfigureAwait(false);
 
             device.FlushBuffers();
 

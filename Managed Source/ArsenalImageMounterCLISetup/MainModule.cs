@@ -19,7 +19,7 @@ using System.Reflection;
 using static Arsenal.ImageMounter.API;
 using static Arsenal.ImageMounter.DriverSetup;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter;
 

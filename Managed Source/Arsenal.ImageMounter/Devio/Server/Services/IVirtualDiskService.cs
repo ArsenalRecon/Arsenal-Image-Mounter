@@ -9,16 +9,16 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.IO.Devices;
 using System;
+using System.IO;
 using System.Threading;
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
 
 public interface IVirtualDiskService : IDisposable
 {
-
     event EventHandler? ServiceShutdown;
 
     event EventHandler? ServiceStopping;
@@ -37,12 +37,19 @@ public interface IVirtualDiskService : IDisposable
 
     string? Description { get; }
 
+    DiskDevice? OpenDiskDevice(FileAccess access);
+
+    Stream? OpenDiskStream(FileAccess access);
+
+    Stream? OpenVolumeStream(string volumeName, FileAccess access);
+
     string? GetDiskDeviceName();
 
     void RemoveDevice();
 
     void RemoveDeviceSafe();
 
-    void WaitForServiceThreadExit();
+    bool WaitForExit(TimeSpan millisecondsTimeout);
 
+    ValueTask<bool> WaitForExitAsync(TimeSpan millisecondsTimeout);
 }

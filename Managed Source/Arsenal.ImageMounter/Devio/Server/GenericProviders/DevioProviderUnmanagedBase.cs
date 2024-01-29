@@ -10,8 +10,8 @@
 // 
 
 using System;
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
@@ -21,7 +21,6 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 /// </summary>
 public abstract class DevioProviderUnmanagedBase : IDevioProvider
 {
-
     /// <summary>
     /// Event when object is about to be disposed
     /// </summary>
@@ -40,6 +39,18 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
     /// <returns>True if virtual disk can be written to through this instance, or False
     /// if it is opened for reading only.</returns>
     public abstract bool CanWrite { get; }
+
+    /// <summary>
+    /// Indicates whether provider supports dispatching multiple simultaneous I/O requests.
+    /// Most implementations do not support this, so by default this implementation returns
+    /// false but it can be overridden in derived classes.
+    /// </summary>
+    public virtual bool SupportsParallel => false;
+
+    /// <summary>
+    /// Set to true to force single thread operation even if provider supports multithread
+    /// </summary>
+    public virtual bool ForceSingleThread { get; set; }
 
     /// <summary>
     /// Indicates whether provider supports shared image operations with registrations
@@ -78,6 +89,16 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
         }
     }
 
+    unsafe ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        fixed (void* pinptr = buffer.Span)
+        {
+            return new(Read((nint)pinptr, 0, buffer.Length, fileoffset));
+        }
+    }
+
     unsafe int IDevioProvider.Read(Span<byte> buffer, long fileoffset)
     {
         fixed (void* pinptr = buffer)
@@ -110,6 +131,16 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
         fixed (byte* pinptr = buffer)
         {
             return Write((nint)pinptr, bufferoffset, count, fileoffset);
+        }
+    }
+
+    unsafe ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        fixed (void* pinptr = buffer.Span)
+        {
+            return new(Write((nint)pinptr, 0, buffer.Length, fileoffset));
         }
     }
 

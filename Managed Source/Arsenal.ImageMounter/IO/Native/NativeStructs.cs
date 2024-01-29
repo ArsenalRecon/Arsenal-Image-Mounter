@@ -23,8 +23,33 @@ using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 #pragma warning disable CA1069 // Enums values should not be duplicated
 #pragma warning disable IDE0032 // Use auto property
 #pragma warning disable IDE1006 // Naming Styles
+#pragma warning disable IDE0290 // Use primary constructor (cannot be used with unmanaged structs with explicit layout)
 
 namespace Arsenal.ImageMounter.IO.Native;
+
+public readonly struct FileSystemClusterSizes
+{
+    public FileSystemClusterSizes(int bytesPerSector, int sectorsPerCluster, long numberOfFreeClusters, long totalNumberOfClusters)
+    {
+        BytesPerSector = bytesPerSector;
+        SectorsPerCluster = sectorsPerCluster;
+        NumberOfFreeClusters = numberOfFreeClusters;
+        TotalNumberOfClusters = totalNumberOfClusters;
+    }
+
+    public int BytesPerSector { get; }
+    public int SectorsPerCluster { get; }
+    public int BytesPerCluster => BytesPerSector * SectorsPerCluster;
+    public long NumberOfFreeClusters { get; }
+    public long TotalNumberOfClusters { get; }
+    public long NumberOfUsedClusters => TotalNumberOfClusters - NumberOfFreeClusters;
+}
+
+public readonly struct VOLUME_BITMAP_BUFFER
+{
+    public long StartingLcn { get; }
+    public long BitmapSize { get; }
+}
 
 /// <summary>
 /// Structure for counted Unicode strings used in NT API calls
@@ -1611,15 +1636,6 @@ public readonly struct DISK_GROW_PARTITION
 
     public int PartitionNumber { get; }
     public long BytesToGrow { get; }
-}
-
-[StructLayout(LayoutKind.Sequential)]
-public class OVERLAPPED
-{
-    public UIntPtr Status { get; }
-    public UIntPtr BytesTransferred { get; }
-    public long StartOffset { get; set; }
-    public SafeWaitHandle? EventHandle { get; set; }
 }
 
 [StructLayout(LayoutKind.Sequential)]

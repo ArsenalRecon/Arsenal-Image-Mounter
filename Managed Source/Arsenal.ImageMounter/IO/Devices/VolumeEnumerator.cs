@@ -21,7 +21,7 @@ using static Arsenal.ImageMounter.IO.Native.NativeConstants;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO.UnsafeNativeMethods;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.IO.Devices;
 

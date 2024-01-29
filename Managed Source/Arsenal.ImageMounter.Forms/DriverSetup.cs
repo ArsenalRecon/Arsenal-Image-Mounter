@@ -196,9 +196,9 @@ public static class DriverSetup
 
     private static void StartInstalledServices()
     {
-        var array = new[] { "vhdaccess", "awealloc", "dokan2" };
+        var services = new[] { "vhdaccess", "deviodrv", "awealloc", "dokan2" };
 
-        foreach (var service_name in array)
+        foreach (var service_name in services)
         {
             try
             {

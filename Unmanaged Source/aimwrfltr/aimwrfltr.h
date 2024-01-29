@@ -393,6 +393,7 @@ typedef struct _DEVICE_EXTENSION
     //
     bool ShutdownThread;
 
+    bool TrimNotSupported;
     bool QueryRemoveDeviceSent;
     bool SurpriseRemoveDeviceSent;
     bool CancelRemoveDeviceSent;

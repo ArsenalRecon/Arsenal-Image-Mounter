@@ -15,7 +15,7 @@ using System.Security.AccessControl;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable CA1069 // Enums values should not be duplicated
 #pragma warning disable IDE0032 // Use auto property
 #pragma warning disable IDE1006 // Naming Styles
@@ -35,9 +35,9 @@ public static class NativeConstants
 
     public const FileAttributes FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = (FileAttributes)0x400000;
 
-    public const FileOptions FILE_FLAG_OVERLAPPED = (FileOptions)0x40000000;
     public const FileOptions FILE_FLAG_BACKUP_SEMANTICS = (FileOptions)0x2000000;
     public const FileOptions FILE_FLAG_OPEN_REPARSE_POINT = (FileOptions)0x200000;
+    public const FileOptions FILE_FLAG_NO_BUFFERING = (FileOptions)0x20000000;
 
     public const int VOLUME_NAME_DOS = 0x0;
     public const int VOLUME_NAME_GUID = 0x1;
@@ -72,7 +72,9 @@ public static class NativeConstants
     public const int ERROR_NOT_SUPPORTED = 50;
     public const int ERROR_DEV_NOT_EXIST = 55;
     public const int ERROR_INVALID_PARAMETER = 87;
+    public const int ERROR_ALREADY_EXISTS = 183;
     public const int ERROR_MORE_DATA = 0x234;
+    public const int ERROR_IO_PENDING = 997;
     public const int ERROR_NOT_ALL_ASSIGNED = 1300;
     public const int ERROR_INSUFFICIENT_BUFFER = 122;
     public const int ERROR_IN_WOW64 = unchecked((int)0xE0000235);
@@ -84,6 +86,7 @@ public static class NativeConstants
     public const uint FSCTL_SET_SPARSE = 0x900C4U;
     public const uint FSCTL_GET_RETRIEVAL_POINTERS = 0x90073U;
     public const uint FSCTL_ALLOW_EXTENDED_DASD_IO = 0x90083U;
+    public const uint FSCTL_GET_VOLUME_BITMAP = (((0x00000009) << 16) | ((0) << 14) | ((27) << 2) | (3));
 
     public const uint FSCTL_LOCK_VOLUME = 0x90018U;
     public const uint FSCTL_DISMOUNT_VOLUME = 0x90020U;
@@ -121,6 +124,7 @@ public static class NativeConstants
 
     public const int ERROR_WRITE_PROTECT = 19;
     public const int ERROR_NOT_READY = 21;
+    public const int ERROR_NO_SUCH_DEVICE = 433;
     public const int FVE_E_LOCKED_VOLUME = unchecked((int)0x80310000);
     public const int ERROR_NO_SUCH_DEVINST = unchecked((int)0xe000020b);
 

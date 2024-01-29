@@ -15,6 +15,7 @@
 // 
 
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Buffers;
 using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
@@ -23,7 +24,8 @@ using System.Runtime.Versioning;
 using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Client;
 
@@ -40,14 +42,14 @@ public partial class DevioShmStream : DevioStream
     private readonly SafeBuffer mapView;
     private readonly WaitHandle[] waitHandles;
 
-/// <summary>
-/// Creates a new instance by opening an existing Devio shared memory object and starts
-/// communication with a Devio service using this shared memory object.
-/// </summary>
-/// <param name="name">Name of shared memory object to use for communication.</param>
-/// <param name="read_only">Specifies if communication should be read-only.</param>
-/// <returns>Returns new instance of DevioShmStream.</returns>
-public static DevioShmStream Open(string name, bool read_only) => new(name, read_only);
+    /// <summary>
+    /// Creates a new instance by opening an existing Devio shared memory object and starts
+    /// communication with a Devio service using this shared memory object.
+    /// </summary>
+    /// <param name="name">Name of shared memory object to use for communication.</param>
+    /// <param name="read_only">Specifies if communication should be read-only.</param>
+    /// <returns>Returns new instance of DevioShmStream.</returns>
+    public static DevioShmStream Open(string name, bool read_only) => new(name, read_only);
 
     /// <summary>
     /// Creates a new instance by opening an existing Devio shared memory object and starts
@@ -68,7 +70,7 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
             requestEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Request");
             responseEvent = new EventWaitHandle(initialState: false, mode: EventResetMode.AutoReset, name: $@"Global\{ObjectName}_Response");
             serverMutex = new Mutex(initiallyOwned: false, name: $@"Global\{ObjectName}_Server");
-            waitHandles = new WaitHandle[] { responseEvent, serverMutex };
+            waitHandles = [responseEvent, serverMutex];
             mapView.Write(0x0, IMDPROXY_REQ.IMDPROXY_REQ_INFO);
             requestEvent.Set();
             if (WaitHandle.WaitAny(waitHandles) != 0)
@@ -140,7 +142,6 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         return Length;
     }
 
-#if NET6_0_OR_GREATER
     public override int Read(Span<byte> buffer)
     {
         var Request = default(IMDPROXY_READ_REQ);
@@ -162,12 +163,11 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
 
         var Length = (int)Response.length;
 
-        mapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer[..Length]);
+        mapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer.Slice(0, Length));
 
         Position += Length;
         return Length;
     }
-#endif
 
     public override void Write(byte[] buffer, int offset, int count)
     {
@@ -197,7 +197,6 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
         }
     }
 
-#if NET6_0_OR_GREATER
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         var Request = default(IMDPROXY_WRITE_REQ);
@@ -226,5 +225,4 @@ public static DevioShmStream Open(string name, bool read_only) => new(name, read
             throw new EndOfStreamException($"Write length mismatch. Wrote {Length} of {buffer.Length} bytes.");
         }
     }
-#endif
 }

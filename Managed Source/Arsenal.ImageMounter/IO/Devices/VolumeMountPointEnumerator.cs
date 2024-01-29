@@ -22,14 +22,14 @@ using static Arsenal.ImageMounter.IO.Native.NativeFileIO;
 using static Arsenal.ImageMounter.IO.Native.NativeFileIO.UnsafeNativeMethods;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.IO.Devices;
 
 [SupportedOSPlatform(SUPPORTED_WINDOWS_PLATFORM)]
-public readonly struct VolumeMountPointEnumerator : IEnumerable<string>
+public readonly struct VolumeMountPointEnumerator(string VolumePath) : IEnumerable<string>
 {
-    public string VolumePath { get; }
+    public string VolumePath { get; } = VolumePath;
 
     public IEnumerator<string> GetEnumerator() => new Enumerator(VolumePath);
 
@@ -37,23 +37,13 @@ public readonly struct VolumeMountPointEnumerator : IEnumerable<string>
 
     IEnumerator IEnumerable.GetEnumerator() => IEnumerable_GetEnumerator();
 
-    public VolumeMountPointEnumerator(string VolumePath)
+    private sealed class Enumerator(string VolumePath) : IEnumerator<string>
     {
-        this.VolumePath = VolumePath;
-    }
-
-    private sealed class Enumerator : IEnumerator<string>
-    {
-        private readonly string volumePath;
+        private readonly string volumePath = VolumePath;
 
         public SafeFindVolumeMountPointHandle? SafeHandle { get; private set; }
 
         private char[] sb = ArrayPool<char>.Shared.Rent(32767);
-
-        public Enumerator(string VolumePath)
-        {
-            volumePath = VolumePath;
-        }
 
         public string Current => disposedValue
             ? throw new ObjectDisposedException("VolumeMountPointEnumerator.Enumerator")

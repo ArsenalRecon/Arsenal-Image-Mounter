@@ -16,6 +16,9 @@ using System;
 using System.Collections.Generic;
 #if NET6_0_OR_GREATER
 using System.Collections.Immutable;
+using KnownFormatsOffsetDictionary = System.Collections.Immutable.ImmutableDictionary<string, long>;
+#else
+using KnownFormatsOffsetDictionary = System.Collections.ObjectModel.ReadOnlyDictionary<string, long>;
 #endif
 using System.IO;
 using System.Runtime.InteropServices;
@@ -24,7 +27,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0056 // Use index operator
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.IO.Native;
 
@@ -128,7 +131,7 @@ public static class NativeStruct
             ? NativeFileIO.OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, Overlapped)
             : new FileStream(FileName, CreationDisposition, DesiredAccess, ShareMode, 1, Overlapped).SafeFileHandle;
 
-    private static readonly IReadOnlyDictionary<string, long> KnownFormatsOffsets
+    private static readonly KnownFormatsOffsetDictionary KnownFormatsOffsets
         = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
         {
             { "nrg", 600 << 9 },

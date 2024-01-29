@@ -14,14 +14,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Reflection;
 
 public static class MembersStringSetter
 {
     internal static readonly MethodInfo EnumParseMethod = typeof(Enum)
-        .GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(Type), typeof(string) }, null)!;
+        .GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, [typeof(Type), typeof(string)], null)!;
 
     public static Action<T, string>? GenerateReferenceTypeMemberSetter<T>(string member_name)
         => MembersStringSetterType<T>.GenerateReferenceTypeMemberSetter(member_name);
@@ -77,7 +77,7 @@ public static class MembersStringSetter
             }
             else
             {
-                var method = member.Type.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
+                var method = member.Type.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, [typeof(string)], null);
                 if (method is not null)
                 {
                     assign_value = Expression.Call(method, param_value);

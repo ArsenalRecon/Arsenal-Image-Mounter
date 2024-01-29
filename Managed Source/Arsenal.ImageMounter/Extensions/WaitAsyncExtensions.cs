@@ -21,7 +21,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Extensions;
 
@@ -33,40 +33,45 @@ public static partial class WaitAsyncExtensions
         (SynchronizationContext?)owner.Invoke(() => SynchronizationContext.Current, null) :
         SynchronizationContext.Current;
 
-    public static async Task<bool> WaitAsync(this WaitHandle handle)
-        => await new WaitHandleAwaiter(handle, Timeout.InfiniteTimeSpan);
+    public static async ValueTask<bool> WaitAsync(this WaitHandle handle)
+        => handle.WaitOne(0) || await new WaitHandleAwaiter(handle, Timeout.InfiniteTimeSpan);
 
-    public static async Task<bool> WaitAsync(this WaitHandle handle, int millisecondsTimeout)
-        => await new WaitHandleAwaiter(handle, TimeSpan.FromMilliseconds(millisecondsTimeout));
+    public static async ValueTask<bool> WaitAsync(this WaitHandle handle, int millisecondsTimeout)
+        => handle.WaitOne(0) || await new WaitHandleAwaiter(handle, TimeSpan.FromMilliseconds(millisecondsTimeout));
 
-    public static async Task<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout)
-        => await new WaitHandleAwaiter(handle, timeout);
+    public static async ValueTask<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout)
+        => handle.WaitOne(0) || await new WaitHandleAwaiter(handle, timeout);
 
-    public static Task<bool> WaitAsync(this WaitHandle handle, CancellationToken cancellationToken)
-        => handle.WaitAsync(Timeout.InfiniteTimeSpan, cancellationToken);
+    public static ValueTask<bool> WaitAsync(this WaitHandle handle, CancellationToken cancellationToken)
+        => handle.WaitOne(0) ? new(true) : handle.WaitAsync(Timeout.InfiniteTimeSpan, cancellationToken);
 
-    public static Task<bool> WaitAsync(this WaitHandle handle, int millisecondsTimeout, CancellationToken cancellationToken)
-        => handle.WaitAsync(TimeSpan.FromMilliseconds(millisecondsTimeout), cancellationToken);
+    public static ValueTask<bool> WaitAsync(this WaitHandle handle, int millisecondsTimeout, CancellationToken cancellationToken)
+        => handle.WaitOne(0) ? new(true) : handle.WaitAsync(TimeSpan.FromMilliseconds(millisecondsTimeout), cancellationToken);
 
     [SuppressMessage("Reliability", "CA2016:Forward the 'CancellationToken' parameter to methods", Justification = "Implementation of cancellation")]
-    public static async Task<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout, CancellationToken cancellationToken)
+    public static async ValueTask<bool> WaitAsync(this WaitHandle handle, TimeSpan timeout, CancellationToken cancellationToken)
     {
+        if (handle.WaitOne(0))
+        {
+            return true;
+        }
+
         if (!cancellationToken.CanBeCanceled)
         {
             return await new WaitHandleAwaiter(handle, timeout);
         }
 
-        var handleTask = handle.WaitAsync(timeout);
+        var handleTask = handle.WaitAsync(timeout).AsTask();
 
 #if NET6_0_OR_GREATER
         return await handleTask.WaitAsync(cancellationToken);
 #else
-        await Task.WhenAny(handleTask, cancellationToken.WaitHandle.WaitAsync())
+        await Task.WhenAny(handleTask, cancellationToken.WaitHandle.WaitAsync().AsTask())
             .ConfigureAwait(false);
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        return handleTask.Result;
+        return handleTask.GetAwaiter().GetResult();
 #endif
     }
 
@@ -108,7 +113,7 @@ public static partial class WaitAsyncExtensions
 #if NET5_0_OR_GREATER
         await process.WaitForExitAsync(cancellationToken);
 #else
-        await Task.WhenAny(process.WaitForExitAsync(), cancellationToken.WaitHandle.WaitAsync())
+        await Task.WhenAny(process.WaitForExitAsync(), cancellationToken.WaitHandle.WaitAsync().AsTask())
             .ConfigureAwait(false);
 
         if (!process.HasExited)
@@ -217,19 +222,11 @@ public readonly struct ProcessAwaiter : ICriticalNotifyCompletion
     }
 }
 
-public sealed class WaitHandleAwaiter : ICriticalNotifyCompletion
+public sealed class WaitHandleAwaiter(WaitHandle handle, TimeSpan timeout) : ICriticalNotifyCompletion
 {
-    private readonly WaitHandle handle;
-    private readonly TimeSpan timeout;
     private RegisteredWaitHandle? callbackHandle;
     private Action? continuation;
     private bool result = true;
-
-    public WaitHandleAwaiter(WaitHandle handle, TimeSpan timeout)
-    {
-        this.handle = handle;
-        this.timeout = timeout;
-    }
 
     public WaitHandleAwaiter GetAwaiter() => this;
 

@@ -16,16 +16,16 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.InteropServices;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Data;
 
 public abstract class CsvReader : MarshalByRefObject, IEnumerable, IEnumerator, IDisposable
 {
 
-    protected readonly char[] delimiters = { ',' };
+    protected readonly char[] delimiters = [','];
 
-    protected readonly char[] textQuotes = { '"' };
+    protected readonly char[] textQuotes = ['"'];
 
     public TextReader BaseReader { get; }
 
@@ -155,7 +155,7 @@ public class CsvReader<T> : CsvReader, IEnumerable<T>, IEnumerator<T> where T : 
     {
         var line = BaseReader.ReadLine();
 
-        var field_names = line?.Split(base.delimiters, StringSplitOptions.None) ?? Array.Empty<string>();
+        var field_names = line?.Split(base.delimiters, StringSplitOptions.None) ?? [];
 
         properties = Array.ConvertAll(field_names, MembersStringSetter.GenerateReferenceTypeMemberSetter<T>);
     }

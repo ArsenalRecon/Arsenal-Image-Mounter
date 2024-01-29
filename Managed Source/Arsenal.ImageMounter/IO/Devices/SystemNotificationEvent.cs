@@ -17,7 +17,7 @@ using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Threading;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.IO.Devices;
 
@@ -86,38 +86,50 @@ public sealed class RegisteredEventHandler : IDisposable
     }
 }
 
-public class WaitEventHandler : IDisposable
+public class WaitEventHandler(WaitHandle WaitHandle, bool ownsHandle) : IDisposable
 {
-    public WaitHandle WaitHandle { get; }
+    public WaitHandle WaitHandle { get; } = WaitHandle;
 
-    private readonly bool ownsHandle;
-    private readonly List<RegisteredEventHandler> event_handlers = new();
-
-    public WaitEventHandler(WaitHandle WaitHandle, bool ownsHandle)
-    {
-        this.WaitHandle = WaitHandle;
-        this.ownsHandle = ownsHandle;
-    }
+    private readonly bool ownsHandle = ownsHandle;
+    private readonly List<RegisteredEventHandler> event_handlers = [];
 
     public event EventHandler Signalled
     {
-        add => event_handlers.Add(new RegisteredEventHandler(WaitHandle, value));
-        remove => event_handlers.RemoveAll(handler =>
+        add
         {
-            if (handler.EventHandler.Equals(value))
+            lock (event_handlers)
             {
-                handler.Dispose();
-                return true;
+                event_handlers.Add(new RegisteredEventHandler(WaitHandle, value));
             }
-            else
+        }
+
+        remove
+        {
+            lock (event_handlers)
             {
-                return false;
+                event_handlers.RemoveAll(handler =>
+                {
+                    if (handler.EventHandler.Equals(value))
+                    {
+                        handler.Dispose();
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                });
             }
-        });
+        }
     }
 
     private void OnSignalled(object sender, EventArgs e)
-        => event_handlers.ForEach(handler => handler.EventHandler?.Invoke(sender, e));
+    {
+        lock (event_handlers)
+        {
+            event_handlers.ForEach(handler => handler.EventHandler?.Invoke(sender, e));
+        }
+    }
 
     private bool disposedValue;
 
@@ -127,9 +139,12 @@ public class WaitEventHandler : IDisposable
         {
             if (disposing)
             {
-                event_handlers.ForEach(handler => handler.Dispose());
-                event_handlers.Clear();
-                
+                lock (event_handlers)
+                {
+                    event_handlers.ForEach(handler => handler.Dispose());
+                    event_handlers.Clear();
+                }
+
                 if (ownsHandle)
                 {
                     WaitHandle.Dispose();

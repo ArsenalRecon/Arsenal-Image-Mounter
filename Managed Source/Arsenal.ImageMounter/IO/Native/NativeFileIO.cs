@@ -1,4 +1,4 @@
-﻿//  NativeFileIO.vb
+﻿//  NativeFileIO.cs
 //  Routines for accessing some useful Win32 API functions to access features not
 //  directly accessible through .NET Framework.
 //  
@@ -15,6 +15,7 @@ using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Streams;
+using DiscUtils;
 using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
@@ -48,8 +49,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable IDE0057 // Use range operator
+#pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
+#pragma warning disable IDE0290 // Use primary constructor
 
 namespace Arsenal.ImageMounter.IO.Native;
 
@@ -86,6 +88,21 @@ public static partial class NativeFileIO
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool SetFileAttributesW(in char lpFileName, FileAttributes dwFileAttributes);
 
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetDllDirectoryW(in char lpPathName);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        public static partial nint AddDllDirectory(in char lpPathName);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool RemoveDllDirectory(nint cookie);
+
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetDefaultDllDirectories(DllImportSearchPath policy);
+
         [LibraryImport("kernel32", SetLastError = true), Obsolete]
         public static partial long GetTickCount64();
 #else
@@ -109,6 +126,20 @@ public static partial class NativeFileIO
         public static extern bool SetFileAttributesW(in char lpFileName, FileAttributes dwFileAttributes);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool SetDllDirectoryW(in char lpPathName);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern nint AddDllDirectory(in char lpPathName);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool RemoveDllDirectory(nint cookie);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetDefaultDllDirectories(DllImportSearchPath policy);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern long GetTickCount64();
 #endif
     }
@@ -127,6 +158,10 @@ public static partial class NativeFileIO
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool SetEvent(SafeWaitHandle hEvent);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool CancelIo(SafeHandle handle);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -281,7 +316,7 @@ public static partial class NativeFileIO
         internal static partial bool GetVolumePathNameW(in char lpszFileName, out char lpszVolumePathName, int cchBufferLength);
 
         [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-        internal static partial SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, int dwFlagsAndAttributes, nint hTemplateFile);
+        internal static partial SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, FileOptions dwFlagsAndAttributes, nint hTemplateFile);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -296,7 +331,7 @@ public static partial class NativeFileIO
 
         [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool GetDiskFreeSpaceW(in char lpRootPathName, out uint lpSectorsPerCluster, out uint lpBytesPerSector, out uint lpNumberOfFreeClusters, out uint lpTotalNumberOfClusters);
+        internal static partial bool GetDiskFreeSpaceW(in char lpRootPathName, out int lpSectorsPerCluster, out int lpBytesPerSector, out int lpNumberOfFreeClusters, out int lpTotalNumberOfClusters);
 
         [LibraryImport("kernel32", EntryPoint = "DeviceIoControl", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -305,6 +340,10 @@ public static partial class NativeFileIO
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in long lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -641,6 +680,9 @@ public static partial class NativeFileIO
         internal static extern bool SetEvent(SafeWaitHandle hEvent);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool CancelIo(SafeHandle handle);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool SetHandleInformation(SafeHandle h, uint mask, uint flags);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -767,7 +809,7 @@ public static partial class NativeFileIO
         internal static extern bool GetVolumePathNameW(in char lpszFileName, out char lpszVolumePathName, int cchBufferLength);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, int dwFlagsAndAttributes, nint hTemplateFile);
+        internal static extern SafeFileHandle CreateFileW(in char lpFileName, FileSystemRights dwDesiredAccess, FileShare dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, FileOptions dwFlagsAndAttributes, nint hTemplateFile);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool FlushFileBuffers(SafeFileHandle handle);
@@ -779,13 +821,16 @@ public static partial class NativeFileIO
         internal static extern FileAttributes GetFileAttributesW(in char path);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool GetDiskFreeSpaceW(in char lpRootPathName, out uint lpSectorsPerCluster, out uint lpBytesPerSector, out uint lpNumberOfFreeClusters, out uint lpTotalNumberOfClusters);
+        internal static extern bool GetDiskFreeSpaceW(in char lpRootPathName, out int lpSectorsPerCluster, out int lpBytesPerSector, out int lpNumberOfFreeClusters, out int lpTotalNumberOfClusters);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in bool lpInBuffer, uint nInBufferSize, nint lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+
+        [DllImport("kernel32", SetLastError = true)]
+        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in long lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, uint nInBufferSize, nint lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
@@ -1112,7 +1157,7 @@ public static partial class NativeFileIO
 
             byte[]? allocated = null;
 
-            var indata = bufferSize <= 512
+            var indata = bufferSize <= 1024
                 ? stackalloc byte[bufferSize]
                 : (allocated = ArrayPool<byte>.Shared.Rent(bufferSize)).AsSpan(0, bufferSize);
 
@@ -1357,7 +1402,7 @@ public static partial class NativeFileIO
 
         foreach (var hashProvider in hashProviders)
         {
-            hashProvider.Value.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            hashProvider.Value.TransformFinalBlock([], 0, 0);
             hashResults![hashProvider.Key] = hashProvider.Value.Hash!;
             Trace.WriteLine($"{hashProvider.Key}: {hashProvider.Value.Hash?.ToHexString()}");
         }
@@ -1438,6 +1483,11 @@ public static partial class NativeFileIO
 
     private static bool GetHostCpuSupportsCet()
     {
+        if (!X86Base.IsSupported)
+        {
+            return false;
+        }
+
         var (_, _, Ecx, _) = X86Base.CpuId(0x07, 0);
 
         return (Ecx & (1 << 7)) != 0;
@@ -1458,6 +1508,11 @@ public static partial class NativeFileIO
     [SuppressMessage("Style", "IDE0042:Deconstruct variable declaration", Justification = "Complete value tuple needed for string marshalling")]
     private static string? GetHypervisorId()
     {
+        if (!X86Base.IsSupported)
+        {
+            return null;
+        }
+
         var values = X86Base.CpuId(0x40000000, 0);
 
         if (values.Eax < 0x40000000)
@@ -1483,6 +1538,11 @@ public static partial class NativeFileIO
     [SuppressMessage("Style", "IDE0042:Deconstruct variable declaration", Justification = "Complete value tuple needed for string marshalling")]
     private static string? GetCpuId()
     {
+        if (!X86Base.IsSupported)
+        {
+            return null;
+        }
+
         var cpuid = X86Base.CpuId(0x00000000, 0);
 
         var values = (cpuid.Ebx, cpuid.Edx, cpuid.Ecx);
@@ -1542,6 +1602,12 @@ public static partial class NativeFileIO
         ? throw new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(result))
         : result;
 
+    public static List<string> ExcludeProcessesFromHandleSearch { get; } =
+    [
+        "spoolsv",
+        "paragon_service"
+    ];
+
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static bool OfflineDiskVolumes(string device_path, bool force)
         => OfflineDiskVolumes(device_path, force, CancellationToken.None);
@@ -1564,17 +1630,17 @@ public static partial class NativeFileIO
                     try
                     {
                         device.FlushBuffers();
-                        device.DismountVolumeFilesystem(Force: false);
+                        device.DismountVolumeFilesystem(force: false);
                     }
                     catch (Win32Exception ex)
                     when (ex.NativeErrorCode is NativeConstants.ERROR_WRITE_PROTECT or NativeConstants.ERROR_NOT_READY or NativeConstants.ERROR_DEV_NOT_EXIST)
                     {
-                        device.DismountVolumeFilesystem(Force: true);
+                        device.DismountVolumeFilesystem(force: true);
                     }
                 }
                 else
                 {
-                    device.DismountVolumeFilesystem(Force: true);
+                    device.DismountVolumeFilesystem(force: true);
                 }
 
                 device.SetVolumeOffline(true);
@@ -1590,7 +1656,10 @@ public static partial class NativeFileIO
                 if (!force)
                 {
                     var dev_paths = QueryDosDevice(volume.Substring(4, 44)).ToArray();
-                    var in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths).Take(10).Select(FormatProcessName).ToArray();
+                    var in_use_apps = EnumerateProcessesHoldingFileHandle(includeProcessNames: null, ExcludeProcessesFromHandleSearch, dev_paths)
+                        .Take(10)
+                        .Select(FormatProcessName)
+                        .ToArray();
 
                     if (in_use_apps.Length > 1)
                     {
@@ -1657,12 +1726,12 @@ Currently, the following application has files open on this volume:
                     try
                     {
                         device.FlushBuffers();
-                        await device.DismountVolumeFilesystemAsync(Force: false, cancellationToken).ConfigureAwait(false);
+                        await device.DismountVolumeFilesystemAsync(force: false, cancellationToken).ConfigureAwait(false);
                     }
                     catch (Win32Exception ex)
                     when (ex.NativeErrorCode is NativeConstants.ERROR_WRITE_PROTECT or NativeConstants.ERROR_NOT_READY or NativeConstants.ERROR_DEV_NOT_EXIST)
                     {
-                        t = device.DismountVolumeFilesystemAsync(Force: true, cancellationToken);
+                        t = device.DismountVolumeFilesystemAsync(force: true, cancellationToken);
                     }
 
                     if (t is not null)
@@ -1672,7 +1741,7 @@ Currently, the following application has files open on this volume:
                 }
                 else
                 {
-                    await device.DismountVolumeFilesystemAsync(Force: true, cancellationToken).ConfigureAwait(false);
+                    await device.DismountVolumeFilesystemAsync(force: true, cancellationToken).ConfigureAwait(false);
                 }
 
                 device.SetVolumeOffline(true);
@@ -1688,7 +1757,10 @@ Currently, the following application has files open on this volume:
                 if (!force)
                 {
                     var dev_paths = QueryDosDevice(volume.Substring(4, 44)).ToArray();
-                    var in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths).Take(10).Select(FormatProcessName).ToArray();
+                    var in_use_apps = EnumerateProcessesHoldingFileHandle(includeProcessNames: null, ExcludeProcessesFromHandleSearch, dev_paths)
+                        .Take(10)
+                        .Select(FormatProcessName)
+                        .ToArray();
 
                     if (in_use_apps.Length > 1)
                     {
@@ -1753,13 +1825,13 @@ Currently, the following application has files open on this volume:
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            in_use_apps = EnumerateProcessesHoldingFileHandle(dev_paths)
+            in_use_apps = EnumerateProcessesHoldingFileHandle(includeProcessNames: null, ExcludeProcessesFromHandleSearch, dev_paths)
                 .Take(10)
                 .ToArray();
             
             if (in_use_apps.Length == 0)
             {
-                return Array.Empty<HandleTableEntryInformation>();
+                return [];
             }
 
 #if DEBUG
@@ -1769,7 +1841,7 @@ Currently, the following application has files open on this volume:
             await Task.Delay(waitTime, cancellationToken).ConfigureAwait(false);
         }
 
-        return in_use_apps ?? Array.Empty<HandleTableEntryInformation>();
+        return in_use_apps ?? [];
     }
 
     public static void EnableFileSecurityBypassPrivileges()
@@ -2000,16 +2072,25 @@ Currently, the following application has files open on this volume:
     /// Enumerates open handles in the system.
     /// </summary>
     /// <param name="filterObjectType">Name of object types to return in the enumeration. Normally set to for example "File" to return file handles or "Key" to return registry key handles</param>
+    /// <param name="includeProcessNames"></param>
+    /// <param name="excludeProcessNames"></param>
     /// <returns>Enumeration with information about each handle table entry</returns>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static IEnumerable<HandleTableEntryInformation>? EnumerateHandleTableHandleInformation(string filterObjectType)
-        => EnumerateHandleTableHandleInformation(GetSystemHandleTable(), filterObjectType);
+    public static IEnumerable<HandleTableEntryInformation>? EnumerateHandleTableHandleInformation(string? filterObjectType,
+                                                                                                  IReadOnlyCollection<string>? includeProcessNames,
+                                                                                                  IReadOnlyCollection<string>? excludeProcessNames)
+        => EnumerateHandleTableHandleInformation(GetSystemHandleTable(),
+                                                 filterObjectType,
+                                                 includeProcessNames,
+                                                 excludeProcessNames);
 
     private static readonly ConcurrentDictionary<byte, string?> ObjectTypes = new();
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     private static IEnumerable<HandleTableEntryInformation>? EnumerateHandleTableHandleInformation(IEnumerable<SystemHandleTableEntryInformation> handleTable,
-                                                                                                   string filterObjectType)
+                                                                                                   string? filterObjectType,
+                                                                                                   IReadOnlyCollection<string>? includeProcessNames,
+                                                                                                   IReadOnlyCollection<string>? excludeProcessNames)
     {
         handleTable.NullCheck(nameof(handleTable));
 
@@ -2018,7 +2099,7 @@ Currently, the following application has files open on this volume:
             filterObjectType = string.Intern(filterObjectType);
         }
 
-        using var buffer = new HGlobalBuffer(65536);        
+        using var buffer = new HGlobalBuffer(65536);   
         using var processHandleList = new DisposableDictionary<int, SafeFileHandle?>();
         using var processInfoList = new DisposableDictionary<int, Process>();
 
@@ -2033,7 +2114,11 @@ Currently, the following application has files open on this volume:
                 || (filterObjectType is not null
                 && ObjectTypes.TryGetValue(handle.ObjectType, out object_type)
                 && !ReferenceEquals(object_type, filterObjectType))
-                || !processInfoList.TryGetValue(handle.ProcessId, out var processInfo))
+                || !processInfoList.TryGetValue(handle.ProcessId, out var processInfo)
+                || (includeProcessNames is not null
+                && !includeProcessNames.Contains(processInfo.ProcessName, StringComparer.OrdinalIgnoreCase))
+                || (excludeProcessNames is not null
+                && excludeProcessNames.Contains(processInfo.ProcessName, StringComparer.OrdinalIgnoreCase)))
             {
                 continue;
             }
@@ -2096,7 +2181,8 @@ Currently, the following application has files open on this volume:
                     return string.Intern(buffer.Read<UNICODE_STRING>(0UL).ToString());
                 });
 
-                if (object_type is null || (filterObjectType is not null && filterObjectType != object_type))
+                if (object_type is null
+                    || (filterObjectType is not null && filterObjectType != object_type))
                 {
                     continue;
                 }
@@ -2108,6 +2194,7 @@ Currently, the following application has files open on this volume:
                     is not DeviceType.NamedPipe
                     and not DeviceType.Console
                     and not DeviceType.Network
+                    and not DeviceType.NetworkBrowser
                     and not DeviceType.Unknown)
                 {
                     for (; ; )
@@ -2201,11 +2288,13 @@ Currently, the following application has files open on this volume:
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static IEnumerable<HandleTableEntryInformation> EnumerateProcessesHoldingFileHandle(params string[] nativeFullPaths)
+    public static IEnumerable<HandleTableEntryInformation> EnumerateProcessesHoldingFileHandle(IReadOnlyCollection<string>? includeProcessNames,
+                                                                                               IReadOnlyCollection<string>? excludeProcessNames,
+                                                                                               params string[] nativeFullPaths)
     {
         var paths = Array.ConvertAll(nativeFullPaths, path => (path, dir_path: string.Concat(path, @"\")));
 
-        return (from handle in EnumerateHandleTableHandleInformation("File")
+        return (from handle in EnumerateHandleTableHandleInformation("File", includeProcessNames, excludeProcessNames)
                 where handle.ObjectName is not null && !string.IsNullOrWhiteSpace(handle.ObjectName)
                     && paths.Any(path => handle.ObjectName.Equals(path.path, StringComparison.OrdinalIgnoreCase)
                         || handle.ObjectName.StartsWith(path.dir_path, StringComparison.OrdinalIgnoreCase))
@@ -2238,16 +2327,49 @@ Currently, the following application has files open on this volume:
         }
     }
 
-    public static bool GetDiskFreeSpace(string lpRootPathName,
-                                        out uint lpSectorsPerCluster,
-                                        out uint lpBytesPerSector,
-                                        out uint lpNumberOfFreeClusters,
-                                        out uint lpTotalNumberOfClusters)
-        => UnsafeNativeMethods.GetDiskFreeSpaceW(lpRootPathName.AsRef(),
-                                                 out lpSectorsPerCluster,
-                                                 out lpBytesPerSector,
-                                                 out lpNumberOfFreeClusters,
-                                                 out lpTotalNumberOfClusters);
+    public static bool GetDiskFreeSpace(string rootPathName,
+                                        out int sectorsPerCluster,
+                                        out int bytesPerSector,
+                                        out int numberOfFreeClusters,
+                                        out int totalNumberOfClusters)
+        => UnsafeNativeMethods.GetDiskFreeSpaceW(rootPathName.AsRef(),
+                                                 out sectorsPerCluster,
+                                                 out bytesPerSector,
+                                                 out numberOfFreeClusters,
+                                                 out totalNumberOfClusters);
+
+    public static unsafe bool GetAllocationBitmap(SafeFileHandle rootDirectory,
+                                                  ref long startingCluster,
+                                                  long totalNumberOfClusters,
+                                                  out Memory<byte> bitmap)
+    {
+        var buffer = new byte[(int)Math.Ceiling((double)totalNumberOfClusters / 8) + sizeof(VOLUME_BITMAP_BUFFER)];
+
+        if (!UnsafeNativeMethods.DeviceIoControl(rootDirectory,
+                                                 NativeConstants.FSCTL_GET_VOLUME_BITMAP,
+                                                 startingCluster,
+                                                 sizeof(long),
+                                                 out buffer[0],
+                                                 (uint)buffer.Length,
+                                                 out var bytesReturned,
+                                                 0))
+        {
+            bitmap = default;
+
+            return false;
+        }
+
+        var header = MemoryMarshal.Read<VOLUME_BITMAP_BUFFER>(buffer);
+
+        startingCluster = header.StartingLcn;
+
+        var length = Math.Min((int)bytesReturned - sizeof(VOLUME_BITMAP_BUFFER),
+            (int)Math.Ceiling((double)header.BitmapSize / 8));
+
+        bitmap = new(buffer, sizeof(VOLUME_BITMAP_BUFFER), length);
+
+        return true;
+    }
 
     public static bool DeviceIoControl(SafeFileHandle hDevice,
                                        uint dwIoControlCode,
@@ -2357,7 +2479,13 @@ Currently, the following application has files open on this volume:
     /// <param name="SecurityAttributes"></param>
     /// <param name="FlagsAndAttributes"></param>
     /// <param name="TemplateFile"></param>
-    public static SafeFileHandle CreateFile(string FileName, FileSystemRights DesiredAccess, FileShare ShareMode, nint SecurityAttributes, uint CreationDisposition, int FlagsAndAttributes, nint TemplateFile)
+    public static SafeFileHandle CreateFile(string FileName,
+                                            FileSystemRights DesiredAccess,
+                                            FileShare ShareMode,
+                                            nint SecurityAttributes,
+                                            uint CreationDisposition,
+                                            FileOptions FlagsAndAttributes,
+                                            nint TemplateFile)
     {
         var handle = UnsafeNativeMethods.CreateFileW(FileName.AsRef(),
                                                      DesiredAccess,
@@ -2381,7 +2509,11 @@ Currently, the following application has files open on this volume:
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Overlapped">Specifies whether to request overlapped I/O.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, bool Overlapped)
+    public static SafeFileHandle OpenFileHandle(string FileName,
+                                                FileAccess DesiredAccess,
+                                                FileShare ShareMode,
+                                                FileMode CreationDisposition,
+                                                bool Overlapped)
     {
         if (string.IsNullOrWhiteSpace(FileName))
         {
@@ -2399,12 +2531,12 @@ Currently, the following application has files open on this volume:
             FileMode.Truncate => NativeConstants.TRUNCATE_EXISTING,
             _ => throw new NotImplementedException(),
         };
-        
-        var NativeFlagsAndAttributes = FileAttributes.Normal;
+
+        var NativeFlagsAndAttributes = (FileOptions)FileAttributes.Normal;
         
         if (Overlapped)
         {
-            NativeFlagsAndAttributes |= (FileAttributes)NativeConstants.FILE_FLAG_OVERLAPPED;
+            NativeFlagsAndAttributes |= FileOptions.Asynchronous;
         }
 
         var Handle = UnsafeNativeMethods.CreateFileW(FileName.AsRef(),
@@ -2412,7 +2544,7 @@ Currently, the following application has files open on this volume:
                                                      ShareMode,
                                                      0,
                                                      NativeCreationDisposition,
-                                                     (int)NativeFlagsAndAttributes,
+                                                     NativeFlagsAndAttributes,
                                                      0);
 
         return Handle.IsInvalid
@@ -2429,8 +2561,8 @@ Currently, the following application has files open on this volume:
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Options">Specifies whether to request overlapped I/O.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, FileOptions Options)
-        => OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, (uint)Options);
+    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, uint Options)
+        => OpenFileHandle(FileName, DesiredAccess, ShareMode, CreationDisposition, (FileOptions)Options);
 
     /// <summary>
     /// Calls Win32 API CreateFile() function and encapsulates returned handle in a SafeFileHandle object.
@@ -2441,7 +2573,7 @@ Currently, the following application has files open on this volume:
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Options">Specifies whether to request overlapped I/O.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, uint Options)
+    public static SafeFileHandle OpenFileHandle(string FileName, FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, FileOptions Options)
     {
         if (string.IsNullOrWhiteSpace(FileName))
         {
@@ -2475,16 +2607,16 @@ Currently, the following application has files open on this volume:
                 }
         }
 
-        var NativeFlagsAndAttributes = FileAttributes.Normal;
+        var NativeFlagsAndAttributes = (FileOptions)FileAttributes.Normal;
 
-        NativeFlagsAndAttributes |= (FileAttributes)Options;
+        NativeFlagsAndAttributes |= Options;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FileName.AsRef(),
                                                      NativeDesiredAccess,
                                                      ShareMode,
                                                      0,
                                                      NativeCreationDisposition,
-                                                     (int)NativeFlagsAndAttributes,
+                                                     NativeFlagsAndAttributes,
                                                      0);
 
         return Handle.IsInvalid
@@ -2612,14 +2744,14 @@ Currently, the following application has files open on this volume:
             _ => throw new NotImplementedException(),
         };
 
-        var NativeFlagsAndAttributes = (FileAttributes)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
+        var NativeFlagsAndAttributes = NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FilePath.AsRef(),
                                                      NativeDesiredAccess,
                                                      ShareMode,
                                                      0,
                                                      NativeCreationDisposition,
-                                                     (int)NativeFlagsAndAttributes,
+                                                     NativeFlagsAndAttributes,
                                                      0);
 
         return Handle.IsInvalid
@@ -2665,14 +2797,14 @@ Currently, the following application has files open on this volume:
             _ => throw new NotImplementedException(),
         };
 
-        var NativeFlagsAndAttributes = (FileAttributes)NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
+        var NativeFlagsAndAttributes = NativeConstants.FILE_FLAG_BACKUP_SEMANTICS;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FilePath.AsRef(),
                                                      NativeDesiredAccess,
                                                      ShareMode,
                                                      0,
                                                      NativeCreationDisposition,
-                                                     (int)NativeFlagsAndAttributes,
+                                                     NativeFlagsAndAttributes,
                                                      0);
 
         if (Handle.IsInvalid)
@@ -2724,7 +2856,12 @@ Currently, the following application has files open on this volume:
     /// <param name="CreationDisposition">Open/creation mode.</param>
     /// <param name="Options">Specifies whether to request overlapped I/O.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static FileStream OpenFileStream(string FileName, FileMode CreationDisposition, FileAccess DesiredAccess, FileShare ShareMode, int bufferSize, FileOptions Options)
+    public static FileStream OpenFileStream(string FileName,
+                                            FileMode CreationDisposition,
+                                            FileAccess DesiredAccess,
+                                            FileShare ShareMode,
+                                            int bufferSize,
+                                            FileOptions Options)
         => new(OpenFileHandle(FileName,
                               DesiredAccess,
                               ShareMode,
@@ -2800,6 +2937,7 @@ Currently, the following application has files open on this volume:
             return err switch
             {
                 NativeConstants.ERROR_WRITE_PROTECT or NativeConstants.ERROR_NOT_READY or NativeConstants.FVE_E_LOCKED_VOLUME => false,
+                NativeConstants.ERROR_NO_SUCH_DEVINST or NativeConstants.ERROR_NO_SUCH_DEVICE => throw new DriveNotFoundException(),
                 _ => throw new Win32Exception(err),
             };
         }
@@ -3108,7 +3246,7 @@ Currently, the following application has files open on this volume:
 
         byte[]? allocated = null;
 
-        var buffer = StorageDescriptorHeader.Size <= 512
+        var buffer = StorageDescriptorHeader.Size <= 1024
             ? stackalloc byte[StorageDescriptorHeader.Size]
             : (allocated = ArrayPool<byte>.Shared.Rent(StorageDescriptorHeader.Size)).AsSpan(0, StorageDescriptorHeader.Size);
 
@@ -3275,6 +3413,11 @@ Currently, the following application has files open on this volume:
             var name_length = BitConverter.ToUInt16(buffer, 10) - 2; // WORD NameLength
             // WORD DisplayNameOffset
             // WORD DisplayNameLength
+
+            if (name_length > buffer.Length - 16)
+            {
+                throw new InvalidDataException("Invalid mount point or junction data");
+            }
 
             return Encoding.Unicode.GetString(buffer, 16, name_length);
         }
@@ -3742,6 +3885,31 @@ Currently, the following application has files open on this volume:
 
     public static void SetVolumeOffline(SafeFileHandle disk, bool offline)
         => Win32Try(UnsafeNativeMethods.DeviceIoControl(disk, offline ? NativeConstants.IOCTL_VOLUME_OFFLINE : NativeConstants.IOCTL_VOLUME_ONLINE, 0, 0U, 0, 0U, out _, 0));
+
+    public static void SetDefaultDllDirectory(DllImportSearchPath policy)
+    {
+        Win32Try(SafeNativeMethods.SetDefaultDllDirectories(policy));
+    }
+
+    public static void SetUnmanagedDllDirectory(string path)
+    {
+        Win32Try(SafeNativeMethods.SetDllDirectoryW(path.AsSpan()[0]));
+    }
+
+    public static nint AddUnmanagedDllDirectory(string path)
+    {
+        var cookie = SafeNativeMethods.AddDllDirectory(path.AsSpan()[0]);
+
+        if (cookie == 0)
+        {
+            throw new Win32Exception();
+        }
+
+        return cookie;
+    }
+
+    public static void RemoveUnmanagedDllDirectory(nint cookie)
+        => Win32Try(SafeNativeMethods.RemoveDllDirectory(cookie));
 
     public static Exception GetExceptionForNtStatus(int NtStatus)
         => new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(NtStatus));
@@ -4631,7 +4799,7 @@ Currently, the following application has files open on this volume:
 
         if (filters is null)
         {
-            filters = Array.Empty<string>();
+            filters = [];
         }
 
         else if (addfirst && driver.Equals(filters.FirstOrDefault(), StringComparison.OrdinalIgnoreCase))

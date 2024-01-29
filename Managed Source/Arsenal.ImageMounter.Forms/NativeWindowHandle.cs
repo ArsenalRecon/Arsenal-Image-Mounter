@@ -15,25 +15,17 @@ namespace Arsenal.ImageMounter.Dialogs;
 /// <summary>
 /// Implements <see cref="IWin32Window"/> using a native window handle
 /// </summary>
-public readonly struct NativeWindowHandle : IWin32Window
+/// <param name="handle">Native window handle to use</param>
+public readonly struct NativeWindowHandle(nint handle) : IWin32Window
 {
     /// <summary>
     /// Native window handle
     /// </summary>
-    public nint Handle { get; }
-
-    /// <summary>
-    /// Initializes a new instance
-    /// </summary>
-    /// <param name="handle">Native window handle to use</param>
-    public NativeWindowHandle(nint handle)
-    {
-        Handle = handle;
-    }
+    public nint Handle => handle;
 
     /// <summary>
     /// Converts the numeric value of the current native window handle to its equivalent string representation.
     /// </summary>
     /// <returns>The string representation of the value of this instance.</returns>
-    public override string ToString() => Handle.ToString();
+    public override string ToString() => handle.ToString();
 }

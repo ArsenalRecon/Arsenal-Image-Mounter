@@ -322,7 +322,7 @@ public class NativeFileVersion
         return QueryValueString(versionResource, SubBlock);
     }
 
-    private static readonly string[] Commonfields = {
+    private static readonly string[] Commonfields = [
         "CompanyName",
         "FileDescription",
         "FileVersion",
@@ -331,7 +331,7 @@ public class NativeFileVersion
         "OriginalFilename",
         "ProductName",
         "ProductVersion"
-    };
+    ];
 
     /// <summary>
     /// Parses raw or mapped file data into a NativeFileVersion structure

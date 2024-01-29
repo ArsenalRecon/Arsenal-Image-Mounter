@@ -10,7 +10,10 @@
 
 using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.CommandLine;
 using LTRData.Extensions.Formatting;
+using LTRData.Extensions.IO;
+using LTRData.Extensions.Native;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -44,26 +47,11 @@ public static class ConsoleApp
     private static string GetArchitectureLibPath()
         => RuntimeInformation.ProcessArchitecture.ToString();
 
-    private static readonly string[] AssemblyPaths = {
-        Path.Combine("lib", GetArchitectureLibPath()),
-        "Lib",
-        "DiskDriver"
-    };
-
     static ConsoleApp()
     {
-        if (NativeStruct.IsOsWindows)
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            var appPath = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
-
-            for (int i = 0, loopTo = AssemblyPaths.Length - 1; i <= loopTo; i++)
-            {
-                AssemblyPaths[i] = Path.Combine(appPath ?? "", AssemblyPaths[i]);
-            }
-
-            var native_dll_paths = AssemblyPaths.Append(Environment.GetEnvironmentVariable("PATH"));
-
-            Environment.SetEnvironmentVariable("PATH", string.Join(";", native_dll_paths));
+            API.AddNativeLibDirectory();
         }
     }
 
@@ -76,7 +64,7 @@ public static class ConsoleApp
     {
         try
         {
-            var commands = ConsoleSupport.ParseCommandLine(args, StringComparer.OrdinalIgnoreCase);
+            var commands = CommandLineParser.ParseCommandLine(args, StringComparer.OrdinalIgnoreCase);
 
             if (commands.ContainsKey("background"))
             {
@@ -121,7 +109,7 @@ public static class ConsoleApp
 
                 using var process_wait = NativeFileIO.CreateWaitHandle(process.SafeHandle, inheritable: false);
 
-                WaitHandle.WaitAny(new[] { process_wait, ready_wait });
+                WaitHandle.WaitAny([process_wait, ready_wait]);
 
                 return process.HasExited ? 0 : process.Id;
             }

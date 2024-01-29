@@ -18,13 +18,14 @@ using System.Collections.Immutable;
 #endif
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Xml.Serialization;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Reflection;
 
@@ -86,7 +87,11 @@ public static class ExpressionSupport
 
             var delegateType = enumerableStaticDelegate.GetType();
             var delegateInvokeMethod = delegateType.GetMethod("Invoke") ??
+#if NET7_0_OR_GREATER
+                throw new UnreachableException();
+#else
                 throw new InvalidProgramException();
+#endif
 
             Expression<Func<object, Delegate>> getDelegateInstanceOrDefault = obj =>
                 GetCompatibleMethodAsDelegate(obj.GetType(),

@@ -28,6 +28,9 @@ using System;
 using System.Collections.Generic;
 #if NET6_0_OR_GREATER
 using System.Collections.Immutable;
+using ProviderVirtualDiskAccessDictionary = System.Collections.Immutable.ImmutableDictionary<Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType, System.Collections.Generic.IReadOnlyCollection<Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess>>;
+#else
+using ProviderVirtualDiskAccessDictionary = System.Collections.ObjectModel.ReadOnlyDictionary<Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.ProviderType, System.Collections.Generic.IReadOnlyCollection<Arsenal.ImageMounter.Devio.Server.Interaction.DevioServiceFactory.VirtualDiskAccess>>;
 #endif
 using System.Diagnostics;
 using System.Globalization;
@@ -36,8 +39,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.Interaction;
 
@@ -72,7 +73,7 @@ public static class DevioServiceFactory
         ReadWriteFileSystem = 11
     }
 
-    private static readonly IReadOnlyDictionary<ProviderType, IReadOnlyCollection<VirtualDiskAccess>> SupportedVirtualDiskAccess
+    private static readonly ProviderVirtualDiskAccessDictionary SupportedVirtualDiskAccess
         = new Dictionary<ProviderType, IReadOnlyCollection<VirtualDiskAccess>>()
         {
             { ProviderType.None, new[]
@@ -120,7 +121,7 @@ public static class DevioServiceFactory
         .AsReadOnly();
 #endif
 
-    private static readonly string[] NotSupportedFormatsForWriteOverlay = { ".vdi", ".xva" };
+    private static readonly string[] NotSupportedFormatsForWriteOverlay = [".vdi", ".xva"];
 
     /// <summary>
     /// Creates an object, of a DevioServiceBase derived class, to support devio proxy server end
@@ -190,14 +191,14 @@ public static class DevioServiceFactory
         return Service;
     }
 
-    public static IReadOnlyCollection<VirtualDiskAccess> GetSupportedVirtualDiskAccess(ProviderType ProviderType, string imagePath)
+    public static IReadOnlyCollection<VirtualDiskAccess> GetSupportedVirtualDiskAccess(ProviderType providerType, string imagePath)
     {
-        if (!SupportedVirtualDiskAccess.TryGetValue(ProviderType, out var supportedVirtualDiskAccess))
+        if (!SupportedVirtualDiskAccess.TryGetValue(providerType, out var supportedVirtualDiskAccess))
         {
-            throw new ArgumentException($"Provider type not supported: {ProviderType}", nameof(ProviderType));
+            throw new ArgumentException($"Provider type not supported: {providerType}", nameof(providerType));
         }
 
-        if (ProviderType == ProviderType.DiscUtils
+        if (providerType == ProviderType.DiscUtils
             && NotSupportedFormatsForWriteOverlay.Contains(Path.GetExtension(imagePath), StringComparer.OrdinalIgnoreCase))
         {
             supportedVirtualDiskAccess = supportedVirtualDiskAccess
@@ -212,7 +213,7 @@ public static class DevioServiceFactory
                 .ToList();
         }
 
-        return supportedVirtualDiskAccess;
+        return supportedVirtualDiskAccess!;
     }
 
     /// <summary>
@@ -247,9 +248,7 @@ public static class DevioServiceFactory
                     var provider = GetProvider(Imagefile, DiskAccess, ProviderType)
                         ?? throw new NotSupportedException($"Cannot open '{Imagefile}' with provider {ProviderType}");
 
-                    var geom = Geometry.FromCapacity(provider.Length, (int)provider.SectorSize);
-
-                    virtualdisk = new DiscUtils.Raw.Disk(new DevioDirectStream(provider, ownsProvider: true), Ownership.Dispose, geom);
+                    virtualdisk = GetDiscUtilsVirtualDisk(provider, ownsProvider: true);
 
                     break;
                 }
@@ -257,6 +256,11 @@ public static class DevioServiceFactory
 
         return virtualdisk;
     }
+
+    public static VirtualDisk GetDiscUtilsVirtualDisk(IDevioProvider provider, bool ownsProvider)
+        => new DiscUtils.Raw.Disk(new DevioDirectStream(provider, ownsProvider),
+                                  Ownership.Dispose,
+                                  Geometry.FromCapacity(provider.Length, (int)provider.SectorSize));
 
     /// <summary>
     /// Opens a VMDK image file embedded in an OVA archive.
@@ -271,7 +275,7 @@ public static class DevioServiceFactory
             throw new NotSupportedException("Cannot modify OVA files");
         }
 
-        var ova = File.Open(imagefile, FileMode.Open, FileAccess.Read);
+        var ova = File.Open(imagefile, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
 
         try
         {
@@ -358,7 +362,8 @@ public static class DevioServiceFactory
 
     private static DevioProviderFromStream GetProviderRaw(string Imagefile, FileAccess DiskAccess)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && uint.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out var device_number))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            && uint.TryParse(Imagefile, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out var device_number))
         {
             return GetProviderPhysical(device_number, DiskAccess);
         }
@@ -375,7 +380,10 @@ public static class DevioServiceFactory
 
         var stream = new FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: true);
 
-        return new DevioProviderFromStream(stream, ownsStream: true) { CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile) };
+        return new DevioProviderFromStream(stream, ownsStream: true)
+        {
+            CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile)
+        };
     }
 
     public static IReadOnlyDictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndVirtualDiskAccess { get; } =
@@ -442,7 +450,7 @@ public static class DevioServiceFactory
         .AsReadOnly();
 #endif
 
-    private static readonly Assembly[] DiscUtilsAssemblies = {
+    private static readonly Assembly[] DiscUtilsAssemblies = [
         typeof(DiscUtils.Vmdk.Disk).Assembly,
         typeof(DiscUtils.Vhdx.Disk).Assembly,
         typeof(DiscUtils.Vhd.Disk).Assembly,
@@ -451,7 +459,7 @@ public static class DevioServiceFactory
         typeof(DiscUtils.Xva.Disk).Assembly,
         typeof(DiscUtils.OpticalDisk.Disc).Assembly,
         typeof(DiscUtils.Raw.Disk).Assembly
-    };
+    ];
 
     public static bool DiscUtilsInitialized { get; } = InitializeDiscUtils();
 
@@ -495,7 +503,11 @@ public static class DevioServiceFactory
         {
             return new DevioNoneService(Imagefile, DiskAccess);
         }
-        else if (ProviderType == ProviderType.DiscUtils && !FakeMBR && ((int)DiskAccess & (int)~FileAccess.ReadWrite) == 0 && (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) || Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase)))
+        else if (ProviderType == ProviderType.DiscUtils
+            && !FakeMBR
+            && DiskAccess is VirtualDiskAccess.ReadOnly or VirtualDiskAccess.ReadWriteOriginal or VirtualDiskAccess.ReadWriteOverlay
+            && (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase)
+            || Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase)))
         {
             return new DevioNoneService($@"\\?\vhdaccess{NativeFileIO.GetNtPath(Imagefile)}", DiskAccess);
         }
@@ -508,7 +520,10 @@ public static class DevioServiceFactory
             Provider = new DevioProviderWithFakeMBR(Provider);
         }
 
-        var Service = new DevioShmService(Provider, OwnsProvider: true) { Description = $"Image file {Imagefile}" };
+        var Service = new DevioDrvService(Provider, ownsProvider: true)
+        {
+            Description = $"Image file {Imagefile}"
+        };
 
         return Service;
     }
@@ -528,7 +543,8 @@ public static class DevioServiceFactory
         switch (ProviderType)
         {
             case ProviderType.None:
-                if (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) || Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase))
+                if (Imagefile.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase)
+                    || Imagefile.EndsWith(".avhd", StringComparison.OrdinalIgnoreCase))
                 {
                     return new DevioNoneService($@"\\?\vhdaccess{NativeFileIO.GetNtPath(Imagefile)}", DiskAccess);
                 }
@@ -543,7 +559,7 @@ public static class DevioServiceFactory
                 var provider = GetProvider(Imagefile, DiskAccess, ProviderType)
                     ?? throw new NotSupportedException($"Cannot open '{Imagefile}' with provider {ProviderType}");
 
-                Service = new DevioShmService(provider, OwnsProvider: true);
+                Service = new DevioDrvService(provider, ownsProvider: true);
 
                 break;
         }
@@ -618,7 +634,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
         Trace.WriteLine($"Image type class: {Disk.DiskTypeInfo?.Name} ({Disk.DiskTypeInfo?.Variant})");
 
-        var DisposableObjects = new List<IDisposable>() { Disk };
+        var DisposableObjects = new List<IDisposable> { Disk };
 
         try
         {
@@ -656,7 +672,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
                 Trace.WriteLine($"Using temporary overlay file '{DifferencingPath}'");
 
-                for(; ;)
+                for (; ; )
                 {
                     try
                     {
@@ -696,7 +712,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                 Trace.WriteLine("Read-only mode.");
             }
 
-            var provider = new DevioProviderFromStream(DiskStream, ownsStream: true) { CustomSectorSize = SectorSize };
+            var provider = new DevioProviderFromStream(DiskStream, ownsStream: true)
+            {
+                CustomSectorSize = SectorSize
+            };
 
             provider.Disposed += (sender, e)
                 => DisposableObjects.ForEach(obj => obj.Dispose());
@@ -748,7 +767,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
     private static bool UseExistingDifferencingDisk(ref string differencingPath)
     {
-        var e = new PathRequestEventArgs() { Path = differencingPath };
+        var e = new PathRequestEventArgs
+        {
+            Path = differencingPath
+        };
 
         UseExistingDifferencingDiskUserRequest?.Invoke(null, e);
 
@@ -776,7 +798,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     {
         var DiskStream = new MultiPartFileStream(Imagefile, DiskAccess);
 
-        return new DevioProviderFromStream(DiskStream, ownsStream: true) { CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile) };
+        return new DevioProviderFromStream(DiskStream, ownsStream: true)
+        {
+            CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile)
+        };
     }
 
     /// <summary>
@@ -790,7 +815,10 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     {
         var DiskStream = new MultiPartFileStream(Imagefile, DiskAccess, ShareMode);
 
-        return new DevioProviderFromStream(DiskStream, ownsStream: true) { CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile) };
+        return new DevioProviderFromStream(DiskStream, ownsStream: true)
+        {
+            CustomSectorSize = NativeStruct.GetSectorSizeFromFileName(Imagefile)
+        };
     }
 
     /// <summary>
@@ -901,7 +929,8 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     /// </summary>
     /// <param name="Imagefile">Image file.</param>
     /// <param name="DiskAccess">Only read access supported.</param>
-    public static IDevioProvider GetProviderLibAFF4(string Imagefile, FileAccess DiskAccess) => DiskAccess.HasFlag(FileAccess.Write)
+    public static IDevioProvider GetProviderLibAFF4(string Imagefile, FileAccess DiskAccess)
+        => DiskAccess.HasFlag(FileAccess.Write)
         ? throw new IOException("Only read-only mode supported with libaff4")
         : GetProviderLibAFF4(Imagefile, 0);
 
@@ -940,58 +969,31 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     /// <param name="containerfile">Container file containing image to mount.</param>
     /// <param name="index">Index of image to mount within container file.</param>
     public static IDevioProvider GetProviderLibAFF4(string containerfile, int index)
-        => new DevioProviderLibAFF4(string.Concat(containerfile, ContainerIndexSeparator, index.ToString()));
+        => new DevioProviderLibAFF4(string.Concat(Path.GetFullPath(containerfile), ContainerIndexSeparator, index.ToString()));
 
     private const string ContainerIndexSeparator = ":::";
 
-    public static VirtualDisk OpenImage(string imagepath)
+    public static VirtualDisk GetDiscUtilsVirtualDisk(string imagepath, FileAccess access)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             && (imagepath.StartsWith(@"\\?\", StringComparison.Ordinal)
             || imagepath.StartsWith(@"\\.\", StringComparison.Ordinal))
             && !NativeStruct.HasExtension(imagepath))
         {
-            var vdisk = new DiskDevice(imagepath, FileAccess.Read);
+            var vdisk = new DiskDevice(imagepath, access);
             var diskstream = vdisk.GetRawDiskStream();
             return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
         }
 
-        if (Path.GetExtension(imagepath) == ".001" && File.Exists(Path.ChangeExtension(imagepath, ".002")))
-        {
-            var diskstream = new DevioDirectStream(GetProviderMultiPartRaw(imagepath, FileAccess.Read), ownsProvider: true);
-            return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
-        }
+        var provider = GetProviderTypeFromFileName(imagepath);
 
-        if (imagepath.EndsWith(".e01", StringComparison.OrdinalIgnoreCase))
-        {
-            var diskstream = new DevioDirectStream(new DevioProviderLibEwf(imagepath, DevioProviderLibEwf.AccessFlagsRead), ownsProvider: true);
-            return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
-        }
-
-        if (imagepath.EndsWith(".qcow2", StringComparison.OrdinalIgnoreCase) || imagepath.EndsWith(".qcow", StringComparison.OrdinalIgnoreCase) || imagepath.EndsWith(".qcow2c", StringComparison.OrdinalIgnoreCase))
-        {
-            var diskstream = new DevioDirectStream(new DevioProviderLibQcow(imagepath, DevioProviderLibQcow.AccessFlagsRead), ownsProvider: true);
-            return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
-        }
-
-        if (imagepath.EndsWith(".aff4", StringComparison.OrdinalIgnoreCase))
-        {
-            var diskstream = new DevioDirectStream(new DevioProviderLibAFF4(imagepath), ownsProvider: true);
-            return new DiscUtils.Raw.Disk(diskstream, Ownership.Dispose);
-        }
-
-        if (imagepath.EndsWith(".ova", StringComparison.OrdinalIgnoreCase))
-        {
-            return OpenOVA(imagepath, FileAccess.Read);
-        }
-
-        var disk = VirtualDisk.OpenDisk(imagepath, FileAccess.Read);
-        disk ??= new DiscUtils.Raw.Disk(imagepath, FileAccess.Read);
-
-        return disk;
+        return GetDiscUtilsVirtualDisk(imagepath, access, provider);
     }
 
     public static Stream OpenImageAsStream(string imageFile)
+        => OpenImageAsStream(imageFile, FileAccess.Read);
+
+    public static Stream OpenImageAsStream(string imageFile, FileAccess access)
     {
         switch (Path.GetExtension(imageFile).ToLowerInvariant())
         {
@@ -1006,7 +1008,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         Trace.WriteLine("DiscUtils not available!");
                     }
 
-                    var provider = GetProviderDiscUtils(imageFile, FileAccess.Read)
+                    var provider = GetProviderDiscUtils(imageFile, access)
                         ?? throw new NotSupportedException($"Cannot open '{imageFile}' with provider DiscUtils");
 
                     Trace.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
@@ -1015,8 +1017,8 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
             case ".001":
                 return File.Exists(Path.ChangeExtension(imageFile, ".002"))
-                    ? new DevioDirectStream(GetProviderMultiPartRaw(imageFile, FileAccess.Read), ownsProvider: true)
-                    : new FileStream(imageFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    ? new DevioDirectStream(GetProviderMultiPartRaw(imageFile, access), ownsProvider: true)
+                    : new FileStream(imageFile, FileMode.Open, access, FileShare.Read | FileShare.Delete);
 
             case ".raw":
             case ".dd":
@@ -1025,7 +1027,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
             case ".iso":
             case ".bin":
             case ".nrg":
-                return new FileStream(imageFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+                return new FileStream(imageFile, FileMode.Open, access, FileShare.Read | FileShare.Delete);
 
             case ".e01":
             case ".aff":
@@ -1037,7 +1039,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         DevioProviderLibEwf.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName());
                     }
 
-                    var provider = GetProviderLibEwf(imageFile, FileAccess.Read);
+                    var provider = GetProviderLibEwf(imageFile, access);
                     Console.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
                     return new DevioDirectStream(provider, ownsProvider: true);
                 }
@@ -1051,14 +1053,14 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         DevioProviderLibQcow.SetNotificationFile(ConsoleSupport.GetConsoleOutputDeviceName());
                     }
 
-                    var provider = GetProviderLibEwf(imageFile, FileAccess.Read);
+                    var provider = GetProviderLibEwf(imageFile, access);
                     Console.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
                     return new DevioDirectStream(provider, ownsProvider: true);
                 }
 
             case ".aff4":
                 {
-                    var provider = GetProviderLibAFF4(imageFile, FileAccess.Read);
+                    var provider = GetProviderLibAFF4(imageFile, access);
                     Console.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
                     return new DevioDirectStream(provider, ownsProvider: true);
                 }
@@ -1068,16 +1070,17 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                     && (imageFile.StartsWith(@"\\?\", StringComparison.Ordinal)
                     || imageFile.StartsWith(@"\\.\", StringComparison.Ordinal)))
                 {
-
-                    var disk = new DiskDevice(imageFile, FileAccess.Read);
+                    var disk = new DiskDevice(imageFile, access);
                     var sector_size = (disk.Geometry?.BytesPerSector) ?? 512;
                     Console.WriteLine($"Physical disk '{imageFile}' sector size: {sector_size}");
-                    return disk.GetRawDiskStream();
+                    var diskStream = disk.GetRawDiskStream();
+                    diskStream.Disposed += (sender, e) => disk.Dispose();
+                    return diskStream;
                 }
                 else
                 {
                     Console.WriteLine($"Unknown image file extension '{imageFile}', using raw device data.");
-                    return new FileStream(imageFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    return new FileStream(imageFile, FileMode.Open, access, FileShare.Read | FileShare.Delete);
                 }
         }
     }

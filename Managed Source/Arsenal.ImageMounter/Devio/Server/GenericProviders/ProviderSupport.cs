@@ -20,6 +20,7 @@ using DiscUtils;
 using LTRData.Extensions.Formatting;
 using LTRData.Extensions.Native;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -31,7 +32,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
@@ -46,51 +47,63 @@ public static class ProviderSupport
 
         var bytesPerSector = (int)baseProvider.SectorSize;
 
-        var vbr = bytesPerSector <= 512
+        byte[]? allocated = null;
+
+        var vbr = bytesPerSector <= 1024
             ? stackalloc byte[bytesPerSector]
-            : new byte[bytesPerSector];
+            : (allocated = ArrayPool<byte>.Shared.Rent(bytesPerSector)).AsSpan(0, bytesPerSector);
 
-        if (baseProvider.Read(vbr, 0) < bytesPerSector)
+        try
         {
-            return 0;
+            if (baseProvider.Read(vbr, 0) < bytesPerSector)
+            {
+                return 0;
+            }
+
+            var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
+
+            if (vbr_sector_size <= 0)
+            {
+                return 0;
+            }
+
+            var sector_bits = 0;
+            var sector_shift = vbr_sector_size;
+
+            while ((sector_shift & 1) == 0)
+            {
+                sector_shift >>= 1;
+                sector_bits++;
+            }
+
+            if (sector_shift != 1)
+            {
+                throw new InvalidDataException($"Invalid VBR sector size: {vbr_sector_size} bytes");
+            }
+
+            long total_sectors;
+
+            total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
+
+            if (total_sectors == 0)
+            {
+                total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
+            }
+
+            if (total_sectors == 0)
+            {
+                total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
+            }
+
+            return total_sectors < 0 ? 0 : (total_sectors << sector_bits);
         }
-
-        var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
-
-        if (vbr_sector_size <= 0)
+        finally
         {
-            return 0;
+            if (allocated is not null)
+            {
+                ArrayPool<byte>.Shared.Return(allocated);
+            }
         }
-
-        var sector_bits = 0;
-        var sector_shift = vbr_sector_size;
-
-        while ((sector_shift & 1) == 0)
-        {
-            sector_shift >>= 1;
-            sector_bits++;
-        }
-
-        if (sector_shift != 1)
-        {
-            throw new InvalidDataException($"Invalid VBR sector size: {vbr_sector_size} bytes");
-        }
-
-        long total_sectors;
-
-        total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
-
-        if (total_sectors == 0)
-        {
-            total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
-        }
-
-        if (total_sectors == 0)
-        {
-            total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
-        }
-
-        return total_sectors < 0 ? 0 : (total_sectors << sector_bits);
     }
 
     public static IEnumerable<string> EnumerateMultiSegmentFiles(string FirstFile)
@@ -434,7 +447,8 @@ public static class ProviderSupport
                 throw new IOException($"Read error, {length_to_read} bytes from {source_position}");
             }
 
-            Parallel.ForEach(hashProviders.Values, hashProvider => hashProvider.TransformBlock(buffer, 0, count, null, 0));
+            Parallel.ForEach(hashProviders.Values,
+                hashProvider => hashProvider.TransformBlock(buffer, 0, count, null, 0));
 
             source_position += count;
 
@@ -442,6 +456,8 @@ public static class ProviderSupport
             {
                 completionPosition.LengthComplete = source_position;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (target is null)
             {
@@ -471,7 +487,7 @@ public static class ProviderSupport
         {
             foreach (var hashProvider in hashProviders)
             {
-                hashProvider.Value.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+                hashProvider.Value.TransformFinalBlock([], 0, 0);
                 hashResults[hashProvider.Key] = hashProvider.Value.Hash;
             }
         }

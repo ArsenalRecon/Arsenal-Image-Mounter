@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 namespace Arsenal.ImageMounter.Devio;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 #pragma warning disable IDE1006 // Naming Styles
 #pragma warning disable CA1712 // Do not prefix enum values with type name
 
@@ -41,7 +41,8 @@ public enum IMDPROXY_FLAGS : ulong
     IMDPROXY_FLAG_SUPPORTS_UNMAP = 0x2UL, // Unmap / TRIM ranges
     IMDPROXY_FLAG_SUPPORTS_ZERO = 0x4UL, // Zero - fill ranges
     IMDPROXY_FLAG_SUPPORTS_SCSI = 0x8UL, // SCSI SRB operations
-    IMDPROXY_FLAG_SUPPORTS_SHARED = 0x10UL // Shared image access With reservations
+    IMDPROXY_FLAG_SUPPORTS_SHARED = 0x10UL, // Shared image access With reservations
+    IMDPROXY_FLAG_KEEP_OPEN = 0x20UL, // DevIoDrv mode with persistent virtual file
 }
 
 /// <summary>
@@ -81,7 +82,12 @@ public partial struct IMDPROXY_INFO_RESP
 {
     public ulong file_size { get; set; }
     public ulong req_alignment { get; set; }
-    public IMDPROXY_FLAGS flags { get; set; }
+    private ulong ulflags;
+    public IMDPROXY_FLAGS flags
+    {
+        readonly get => (IMDPROXY_FLAGS)ulflags;
+        set => ulflags = (ulong)value;
+    }
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -203,3 +209,13 @@ public enum IMDPROXY_SHARED_RESP_CODE : ulong
     InvalidParameter,
     IOError
 }
+
+public struct IMDPROXY_DEVIODRV_BUFFER_HEADER
+{
+    public ulong request_code { get; set; }     // Request code to forward to response header.
+    public ulong io_tag { get; set; }           // Tag to forward to response header.
+    public ulong flags { get; set; }            // Reserved. Currently not used.
+
+    public static unsafe int SizeOf { get; } = sizeof(IMDPROXY_DEVIODRV_BUFFER_HEADER);
+}
+

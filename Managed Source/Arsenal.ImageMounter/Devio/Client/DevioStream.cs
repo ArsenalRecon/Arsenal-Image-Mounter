@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Async;
 using System;
 using System.IO;
@@ -15,14 +16,14 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Devio.Client;
 
 /// <summary>
 /// Base class for classes that implement Stream for client side of Devio protocol.
 /// </summary>
-public abstract partial class DevioStream : Stream
+public abstract partial class DevioStream : CompatibilityStream
 {
     public event EventHandler? Disposing;
     public event EventHandler? Disposed;
@@ -159,7 +160,7 @@ public abstract partial class DevioStream : Stream
         ReadAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
     public override int EndRead(IAsyncResult asyncResult) =>
-        ((Task<int>)asyncResult).Result;
+        ((Task<int>)asyncResult).GetAwaiter().GetResult();
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
         Task.FromResult(Read(buffer, offset, count));
@@ -175,7 +176,6 @@ public abstract partial class DevioStream : Stream
         return Task.CompletedTask;
     }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
         MemoryMarshal.TryGetArray((ReadOnlyMemory<byte>)buffer, out var segment)
         ? new(Read(segment.Array!, segment.Offset, segment.Count))
@@ -194,5 +194,4 @@ public abstract partial class DevioStream : Stream
 
         return default;
     }
-#endif
 }

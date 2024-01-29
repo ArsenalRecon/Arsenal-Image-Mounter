@@ -10,12 +10,14 @@
 //  Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.IO;
+using System.Linq.Expressions;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.IO.Devices;
 
@@ -59,7 +61,36 @@ public abstract class DeviceObject : IDisposable
     {
         SafeFileHandle = Handle;
         AccessMode = Access;
+
+        if (NativeFileIO.GetDiskSize(Handle) is { } length)
+        {
+            SetCachedLength?.Invoke(Handle, length);
+            SetLengthCanBeCached?.Invoke(Handle, true);
+        }
     }
+
+    static DeviceObject()
+    {
+        if (typeof(SafeFileHandle).GetField("_length", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance) is { } lengthField)
+        {
+            var parameter1 = Expression.Parameter(typeof(SafeFileHandle), "handle");
+            var parameter2 = Expression.Parameter(typeof(long), "length");
+            var expresison = Expression.Lambda<Action<SafeFileHandle, long>>(Expression.Assign(Expression.Field(parameter1, lengthField), parameter2), parameter1, parameter2);
+            SetCachedLength = expresison.Compile();
+        }
+
+        if (typeof(SafeFileHandle).GetField("_lengthCanBeCached", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance) is { } lengthCanBeCachedField)
+        {
+            var parameter1 = Expression.Parameter(typeof(SafeFileHandle), "handle");
+            var parameter2 = Expression.Parameter(typeof(bool), "lengthCanBeCached");
+            var expresison = Expression.Lambda<Action<SafeFileHandle, bool>>(Expression.Assign(Expression.Field(parameter1, lengthCanBeCachedField), parameter2), parameter1, parameter2);
+            SetLengthCanBeCached = expresison.Compile();
+        }
+    }
+
+    private static readonly Action<SafeFileHandle, long>? SetCachedLength;
+
+    private static readonly Action<SafeFileHandle, bool>? SetLengthCanBeCached;
 
     #region IDisposable Support
     private bool disposedValue; // To detect redundant calls

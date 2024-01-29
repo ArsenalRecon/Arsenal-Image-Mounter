@@ -14,12 +14,12 @@ using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Raw;
 using DiscUtils.Streams;
 using LTRData.Extensions.Formatting;
+using LTRData.Extensions.IO;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -33,11 +33,13 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.Json;
+using System.Threading;
 
 internal static class ConsoleAppHelpers
 {
+    private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
 
-    private static readonly string[] DefaultChecksumAlgorithms = { "MD5", "SHA1", "SHA256" };
+    private static readonly string[] DefaultChecksumAlgorithms = ["MD5", "SHA1", "SHA256"];
 
     public static void CloseConsole(SafeWaitHandle DetachEvent)
     {
@@ -56,7 +58,6 @@ internal static class ConsoleAppHelpers
         Console.SetError(TextWriter.Null);
 
         NativeFileIO.SafeNativeMethods.FreeConsole();
-
     }
 
     /// <summary>
@@ -118,7 +119,7 @@ internal static class ConsoleAppHelpers
 
                         var prop = NativeFileIO.GetStorageStandardProperties(h);
 
-                        Console.WriteLine($"Storage device properties: {JsonSerializer.Serialize(prop, new JsonSerializerOptions { WriteIndented = true })}");
+                        Console.WriteLine($"Storage device properties: {JsonSerializer.Serialize(prop, jsonOptions)}");
                     }
 
                     var device_name = $@"\\?\{dev.PhysicalDrive}";
@@ -162,7 +163,7 @@ internal static class ConsoleAppHelpers
             try
             {
                 using var adapter = new ScsiAdapter();
-                driver_ver = $"Driver version: {adapter.GetDriverSubVersion()}";
+                driver_ver = adapter.GetDriverSubVersion()?.ToString() ?? "Unknown";
             }
             catch (Exception ex)
             {
@@ -174,22 +175,31 @@ internal static class ConsoleAppHelpers
             driver_ver = "Driver is only available on Windows";
         }
 
-        Console.WriteLine($@"Integrated command line interface to Arsenal Image Mounter virtual
-SCSI miniport driver.
+        var msg = $@"Integrated command line interface to Arsenal Image Mounter virtual SCSI miniport driver.
 
-Operating system: {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}
-.NET runtime: {RuntimeInformation.FrameworkDescription}
-Process CPU architecture: {RuntimeInformation.ProcessArchitecture}
-
-Arsenal Image Mounter version {ConsoleApp.AssemblyFileVersion}
-
-{driver_ver}
+Operating system:               {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}
+.NET runtime:                   {RuntimeInformation.FrameworkDescription}
+Process CPU architecture:       {RuntimeInformation.ProcessArchitecture}
+Arsenal Image Mounter version:  {ConsoleApp.AssemblyFileVersion}
+Driver version:                 {driver_ver}
 
 Copyright (c) 2012-2023 Arsenal Recon.
 
 http://www.ArsenalRecon.com
 
-Please see EULA.txt for license information.");
+Please see EULA.txt for license information.";
+
+        msg = StringFormatting.LineFormat(msg.AsSpan(), indentWidth: 32);
+
+        Console.WriteLine(msg);
+    }
+
+    public enum IOCommunication
+    {
+        Auto,
+        Tcp,
+        Shm,
+        Drv
     }
 
     public static int UnsafeMain(IDictionary<string, string[]> commands)
@@ -199,8 +209,12 @@ Please see EULA.txt for license information.");
         string? objectName = null;
         var listenAddress = IPAddress.Any;
         var listenPort = 0;
-        var bufferSize = DevioShmService.DefaultBufferSize;
+        var ioCommunication = IOCommunication.Auto;
+        var forceSingleThread = false;
+        long? bufferSize = null;
         long? diskSize = null;
+        long? imageOffset = null;
+        var persistent = false;
         var diskAccess = FileAccess.Read;
         var mount = false;
         string? providerName = null;
@@ -273,6 +287,16 @@ Please see EULA.txt for license information.");
                 bufferSize = SizeFormatting.ParseSuffixedSize(cmd.Value[0])
                     ?? throw new InvalidOperationException($"Invalid buffer size '{cmd.Value[0]}'");
             }
+            else if (arg.Equals("offset", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            {
+                imageOffset = SizeFormatting.ParseSuffixedSize(cmd.Value[0])
+                    ?? throw new InvalidOperationException($"Invalid offset '{cmd.Value[0]}'");
+            }
+            else if (arg.Equals("persistent", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
+                && commands.ContainsKey("name") && !commands.ContainsKey("mount"))
+            {
+                persistent = true;
+            }
             else if (arg.Equals("filename", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
                 || arg.Equals("device", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
@@ -303,9 +327,9 @@ Please see EULA.txt for license information.");
             {
                 fakeMbr = true;
             }
-            else if (arg.Equals("writeoverlay", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            else if (arg.Equals("writeoverlay", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length is 0 or 1)
             {
-                writeOverlayImageFile = cmd.Value[0];
+                writeOverlayImageFile = cmd.Value.ElementAtOrDefault(0) ?? @"\\?\awealloc";
                 diskAccess = FileAccess.Read;
                 deviceFlags = deviceFlags | DeviceFlags.ReadOnly | DeviceFlags.WriteOverlay;
             }
@@ -402,7 +426,7 @@ Please see EULA.txt for license information.");
             }
             else if (arg.Equals("detach", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-#if NETCOREAPP
+#if NET5_0_OR_GREATER
                 detachEvent = new SafeWaitHandle(nint.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
 #else
                 detachEvent = new SafeWaitHandle((nint)long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
@@ -421,6 +445,14 @@ Please see EULA.txt for license information.");
             else if (arg.Equals("list", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
                 listDevices = true;
+            }
+            else if (arg.Equals("io", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
+                && Enum.TryParse(cmd.Value[0], ignoreCase: true, out ioCommunication))
+            {
+            }
+            else if (arg.Equals("single", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
+            {
+                forceSingleThread = true;
             }
             else if (arg.Length == 0)
             {
@@ -455,6 +487,18 @@ Please see EULA.txt for license information.");
             ListDevices(verbose);
 
             return 0;
+        }
+
+        if (ioCommunication == IOCommunication.Auto)
+        {
+            if (listenPort != 0)
+            {
+                ioCommunication = IOCommunication.Tcp;
+            }
+            else
+            {
+                ioCommunication = IOCommunication.Drv;
+            }
         }
 
         if (showHelp || (string.IsNullOrWhiteSpace(fileName) && string.IsNullOrWhiteSpace(dismount) && !ramDisk))
@@ -510,7 +554,7 @@ Syntax to display a list of mounted devices:
 
 ";
 
-            msg = msg.LineFormat(IndentWidth: 4);
+            msg = StringFormatting.LineFormat(msg.AsSpan(), indentWidth: 4);
 
             Console.WriteLine(msg);
 
@@ -762,6 +806,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 throw new NotSupportedException("Unknown size of source device");
             }
 
+            if (forceSingleThread)
+            {
+                provider.ForceSingleThread = true;
+            }
+
             if (!string.IsNullOrWhiteSpace(debugCompare))
             {
                 var DebugCompareStream = new FileStream(debugCompare,
@@ -774,6 +823,18 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 provider = new DebugProvider(provider, DebugCompareStream);
             }
 
+            if (!mount)
+            {
+                if (diskSize.HasValue)
+                {
+                    provider = new DevioProviderWithOffset(provider, imageOffset ?? 0, diskSize.Value);
+                }
+                else if (imageOffset.HasValue)
+                {
+                    provider = new DevioProviderWithOffset(provider, imageOffset.Value);
+                }
+            }
+
             if (fakeMbr)
             {
                 provider = new DevioProviderWithFakeMBR(provider);
@@ -781,17 +842,32 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             Console.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}");
 
-            if (objectName is not null && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
-            {
-                service = new DevioShmService(objectName, provider, OwnsProvider: true, BufferSize: bufferSize);
-            }
-            else if (listenPort != 0) // Listen on TCP/IP socket
+            if (ioCommunication == IOCommunication.Tcp
+                && listenPort != 0) // Listen on TCP/IP socket
             {
                 service = new DevioTcpService(listenAddress, listenPort, provider, ownsProvider: true);
             }
-            else if (mount) // Request to mount in-process
+            else if (ioCommunication == IOCommunication.Shm
+                && objectName is not null
+                && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
             {
-                service = new DevioShmService(provider, OwnsProvider: true, BufferSize: bufferSize);
+                service = new DevioShmService(objectName, provider, ownsProvider: true, bufferSize: bufferSize ?? DevioShmService.DefaultBufferSize);
+            }
+            else if (ioCommunication == IOCommunication.Shm
+                && mount) // Request to mount in-process
+            {
+                service = new DevioShmService(provider, ownsProvider: true, BufferSize: bufferSize ?? DevioShmService.DefaultBufferSize);
+            }
+            else if (ioCommunication == IOCommunication.Drv
+                && objectName is not null
+                && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
+            {
+                service = new DevioDrvService(objectName, provider, ownsProvider: true, initialBufferSize: bufferSize ?? DevioDrvService.DefaultInitialBufferSize);
+            }
+            else if (ioCommunication == IOCommunication.Drv
+                && mount) // Request to mount in-process
+            {
+                service = new DevioDrvService(provider, ownsProvider: true, initialBufferSize: bufferSize ?? DevioDrvService.DefaultInitialBufferSize);
             }
             else if (outputImage is not null && fileName is not null) // Convert to new image file format
             {
@@ -825,6 +901,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
         }
 
+        service.Persistent = persistent;
+
         if (mount || ramDisk)
         {
             Console.WriteLine("Mounting as virtual disk...");
@@ -841,6 +919,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             {
                 Trace.WriteLine($"Failed to open SCSI adapter: {ex.JoinMessages()}");
                 throw new IOException("Cannot access Arsenal Image Mounter driver. Check that the driver is installed and that you are running this application with administrative privileges.", ex);
+            }
+
+            if (imageOffset.HasValue)
+            {
+                service.Offset = imageOffset.Value;
             }
 
             if (diskSize.HasValue)
@@ -931,7 +1014,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
         if (service is not DevioNoneService)
         {
-            service.WaitForServiceThreadExit();
+            service.WaitForExit(Timeout.InfiniteTimeSpan);
 
             Console.WriteLine("Service stopped.");
         }

@@ -17,9 +17,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
+
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable CA1510 // Use ArgumentNullException throw helper
 
 /// <summary>
 /// A class to support test cases to verify that correct data is received through providers
@@ -74,7 +75,7 @@ public class DebugProvider : DevioProviderUnmanagedBase
         var compareTask = DebugCompareStream.ReadAsync(read_buf2, 0, count);
 
         var rc1 = BaseProvider.Read(buf1, bufferoffset, count, fileoffset);
-        var rc2 = compareTask.Result;
+        var rc2 = compareTask.GetAwaiter().GetResult();
 
         if (rc1 != rc2)
         {

@@ -19,8 +19,6 @@ using System.Text;
 using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace Arsenal.ImageMounter.Devio.Server.Services;
 
 /// <summary>
@@ -30,7 +28,6 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// </summary>
 public class DevioTcpService : DevioServiceBase
 {
-
     /// <summary>
     /// Server endpoint where this service listens for client connection.
     /// </summary>
@@ -42,34 +39,30 @@ public class DevioTcpService : DevioServiceBase
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
     /// TCP/IP based communication.
     /// </summary>
-    /// <param name="ListenAddress">IP address where service should listen for client connection.</param>
-    /// <param name="ListenPort">IP port where service should listen for client connection.</param>
-    /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+    /// <param name="listenAddress">IP address where service should listen for client connection.</param>
+    /// <param name="listenPort">IP port where service should listen for client connection.</param>
+    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
     /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    public DevioTcpService(IPAddress ListenAddress, int ListenPort, IDevioProvider DevioProvider, bool ownsProvider)
-        : base(DevioProvider, ownsProvider)
+    public DevioTcpService(IPAddress listenAddress, int listenPort, IDevioProvider devioProvider, bool ownsProvider)
+        : base(devioProvider, ownsProvider)
     {
-
-        ListenEndPoint = new IPEndPoint(ListenAddress, ListenPort);
-
+        ListenEndPoint = new(listenAddress, listenPort);
     }
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
     /// TCP/IP based communication.
     /// </summary>
-    /// <param name="ListenPort">IP port where service should listen for client connection. Instance will listen on all
+    /// <param name="listenPort">IP port where service should listen for client connection. Instance will listen on all
     /// interfaces where this port is available.</param>
-    /// <param name="DevioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="OwnsProvider">Indicates whether DevioProvider object will be automatically closed when this
+    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    public DevioTcpService(int ListenPort, IDevioProvider DevioProvider, bool OwnsProvider)
-        : base(DevioProvider, OwnsProvider)
+    public DevioTcpService(int listenPort, IDevioProvider devioProvider, bool ownsProvider)
+        : base(devioProvider, ownsProvider)
     {
-
-        ListenEndPoint = new IPEndPoint(IPAddress.Any, ListenPort);
-
+        ListenEndPoint = new(IPAddress.Any, listenPort);
     }
 
     /// <summary>
@@ -80,60 +73,57 @@ public class DevioTcpService : DevioServiceBase
     /// </summary>
     public override void RunService()
     {
-
         try
         {
             Trace.WriteLine($"Setting up listener at {ListenEndPoint}");
 
-            var Listener = new TcpListener(ListenEndPoint);
+            var listener = new TcpListener(ListenEndPoint);
 
             try
             {
-                Listener.ExclusiveAddressUse = false;
-                Listener.Start();
+                listener.ExclusiveAddressUse = false;
+                listener.Start();
             }
-
             catch (Exception ex)
             {
                 Trace.WriteLine($"Listen failed: {ex}");
                 Exception = new Exception("Listen failed on tcp port", ex);
                 OnServiceInitFailed(EventArgs.Empty);
                 return;
-
             }
 
             Trace.WriteLine("Raising service ready event.");
             OnServiceReady(EventArgs.Empty);
 
-            var StopServiceThreadHandler = new EventHandler((sender, e) => Listener.Stop());
-            StopServiceThread += StopServiceThreadHandler;
-            var TcpSocket = Listener.AcceptSocket();
-            StopServiceThread -= StopServiceThreadHandler;
-            Listener.Stop();
-            Trace.WriteLine($"Connection from {TcpSocket.RemoteEndPoint}");
+            var stopServiceThreadHandler = new EventHandler((sender, e) => listener.Stop());
+            StopServiceThread += stopServiceThreadHandler;
+            var tcpSocket = listener.AcceptSocket();
+            StopServiceThread -= stopServiceThreadHandler;
+            listener.Stop();
+            Trace.WriteLine($"Connection from {tcpSocket.RemoteEndPoint}");
 
-            using var TcpStream = new NetworkStream(TcpSocket, ownsSocket: true);
-            using var Reader = new BinaryReader(TcpStream, Encoding.Default);
-            using var Writer = new BinaryWriter(new MemoryStream(), Encoding.Default);
+            using var tcpStream = new NetworkStream(tcpSocket, ownsSocket: true);
+            using var reader = new BinaryReader(tcpStream, Encoding.Default);
+            using var writer = new BinaryWriter(new MemoryStream(), Encoding.Default);
 
             internalShutdownRequestAction = () =>
             {
                 try
                 {
-                    Reader.Dispose();
+                    reader.Dispose();
                 }
                 catch { }
             };
 
-            byte[]? ManagedBuffer = null;
+            byte[]? managedBuffer = null;
 
             for (; ; )
             {
-                IMDPROXY_REQ RequestCode;
+                IMDPROXY_REQ requestCode;
 
                 try
                 {
-                    RequestCode = (IMDPROXY_REQ)Reader.ReadUInt64();
+                    requestCode = (IMDPROXY_REQ)reader.ReadUInt64();
                 }
                 catch (EndOfStreamException)
                 {
@@ -142,45 +132,35 @@ public class DevioTcpService : DevioServiceBase
 
                 // Trace.WriteLine("Got client request: " & RequestCode.ToString())
 
-                switch (RequestCode)
+                switch (requestCode)
                 {
                     case IMDPROXY_REQ.IMDPROXY_REQ_INFO:
-                        {
-                            SendInfo(Writer);
-                            break;
-                        }
+                        SendInfo(writer);
+                        break;
 
                     case IMDPROXY_REQ.IMDPROXY_REQ_READ:
-                        {
-                            ReadData(Reader, Writer, ref ManagedBuffer);
-                            break;
-                        }
+                        ReadData(reader, writer, ref managedBuffer);
+                        break;
 
                     case IMDPROXY_REQ.IMDPROXY_REQ_WRITE:
-                        {
-                            WriteData(Reader, Writer, ref ManagedBuffer);
-                            break;
-                        }
+                        WriteData(reader, writer, ref managedBuffer);
+                        break;
 
                     case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
-                        {
-                            Trace.WriteLine("Closing connection.");
-                            return;
-                        }
+                        Trace.WriteLine("Closing connection.");
+                        return;
 
                     default:
-                        {
-                            Trace.WriteLine($"Unsupported request code: {RequestCode}");
-                            return;
-                        }
+                        Trace.WriteLine($"Unsupported request code: {requestCode}");
+                        return;
                 }
 
                 // Trace.WriteLine("Sending response and waiting for next request.")
 
-                Writer.Seek(0, SeekOrigin.Begin);
+                writer.Seek(0, SeekOrigin.Begin);
 
-                var baseStream = (MemoryStream)Writer.BaseStream;
-                baseStream.WriteTo(TcpStream);
+                var baseStream = (MemoryStream)writer.BaseStream;
+                baseStream.WriteTo(tcpStream);
                 baseStream.SetLength(0);
             }
         }
@@ -196,98 +176,93 @@ public class DevioTcpService : DevioServiceBase
         }
     }
 
-    private void SendInfo(BinaryWriter Writer)
+    private void SendInfo(BinaryWriter writer)
     {
-
-        Writer.Write((ulong)DevioProvider.Length);
-        Writer.Write((ulong)REQUIRED_ALIGNMENT);
-        Writer.Write((ulong)(DevioProvider.CanWrite ? IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE : IMDPROXY_FLAGS.IMDPROXY_FLAG_RO));
-
+        writer.Write((ulong)DevioProvider.Length);
+        writer.Write((ulong)REQUIRED_ALIGNMENT);
+        writer.Write((ulong)(DevioProvider.CanWrite ? IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE : IMDPROXY_FLAGS.IMDPROXY_FLAG_RO));
     }
 
-    private void ReadData(BinaryReader Reader, BinaryWriter Writer, ref byte[]? Data)
+    private void ReadData(BinaryReader reader, BinaryWriter writer, ref byte[]? data)
     {
-        var Offset = Reader.ReadInt64();
-        var ReadLength = (int)Reader.ReadUInt64();
-        if (Data is null || Data.Length < ReadLength)
+        var offset = reader.ReadInt64();
+        var readLength = (int)reader.ReadUInt64();
+
+        if (data is null || data.Length < readLength)
         {
-            Array.Resize(ref Data, ReadLength);
+            Array.Resize(ref data, readLength);
         }
 
-        ulong WriteLength;
-        ulong ErrorCode;
+        ulong writeLength;
+        ulong errorCode;
 
         try
         {
-            WriteLength = (ulong)DevioProvider.Read(Data, 0, ReadLength, Offset);
-            ErrorCode = 0UL;
+            writeLength = (ulong)DevioProvider.Read(data, 0, readLength, offset);
+            errorCode = 0UL;
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine(ex.ToString());
-            Trace.WriteLine($"Read request at {Offset:X8} for {ReadLength} bytes.");
-            ErrorCode = 1UL;
-            WriteLength = 0UL;
-
+            Trace.WriteLine($"Read request at {offset:X8} for {readLength} bytes.");
+            errorCode = 1UL;
+            writeLength = 0UL;
         }
 
-        Writer.Write(ErrorCode);
-        Writer.Write(WriteLength);
-        if (WriteLength > 0m)
+        writer.Write(errorCode);
+        writer.Write(writeLength);
+        if (writeLength > 0m)
         {
-            Writer.Write(Data, 0, (int)WriteLength);
+            writer.Write(data, 0, (int)writeLength);
         }
     }
 
-    private void WriteData(BinaryReader Reader, BinaryWriter Writer, ref byte[]? Data)
+    private void WriteData(BinaryReader reader, BinaryWriter writer, ref byte[]? data)
     {
-        var Offset = Reader.ReadInt64();
-        var Length = Reader.ReadUInt64();
-        if (Data is null || (ulong)Data.Length < Length)
+        var offset = reader.ReadInt64();
+        var length = reader.ReadUInt64();
+        if (data is null || (ulong)data.Length < length)
         {
-            Array.Resize(ref Data, (int)Length);
+            Array.Resize(ref data, (int)length);
         }
 
-        var ReadLength = Reader.Read(Data, 0, (int)Length);
-        ulong WriteLength;
-        ulong ErrorCode;
+        var readLength = reader.Read(data, 0, (int)length);
+        ulong writeLength;
+        ulong errorCode;
 
         try
         {
-            WriteLength = (ulong)DevioProvider.Write(Data, 0, ReadLength, Offset);
-            ErrorCode = 0UL;
+            writeLength = (ulong)DevioProvider.Write(data, 0, readLength, offset);
+            errorCode = 0UL;
         }
-
         catch (Exception ex)
         {
             Trace.WriteLine(ex.ToString());
-            Trace.WriteLine($"Write request at {Offset:X8} for {Length} bytes.");
-            ErrorCode = 1UL;
-            WriteLength = 0UL;
-
+            Trace.WriteLine($"Write request at {offset:X8} for {length} bytes.");
+            errorCode = 1UL;
+            writeLength = 0UL;
         }
 
-        Writer.Write(ErrorCode);
-        Writer.Write(WriteLength);
-
+        writer.Write(errorCode);
+        writer.Write(writeLength);
     }
 
-    protected override string ProxyObjectName
+    public override string ProxyObjectName
     {
         get
         {
-            var EndPoint = ListenEndPoint;
-            if (EndPoint.Address.Equals(IPAddress.Any))
+            var endPoint = ListenEndPoint;
+
+            if (endPoint.Address.Equals(IPAddress.Any))
             {
-                EndPoint = new IPEndPoint(IPAddress.Loopback, EndPoint.Port);
+                endPoint = new IPEndPoint(IPAddress.Loopback, endPoint.Port);
             }
 
-            return EndPoint.ToString();
+            return endPoint.ToString();
         }
     }
 
-    protected override DeviceFlags ProxyModeFlags => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeTCP;
+    public override DeviceFlags ProxyModeFlags => DeviceFlags.TypeProxy | DeviceFlags.ProxyTypeTCP;
 
     protected override void EmergencyStopServiceThread() => internalShutdownRequestAction?.Invoke();
 }

@@ -10,18 +10,19 @@
 // 
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
 /// <summary>
 /// Base class for implementing <see>IDevioProvider</see> interface with a storage backend where
-/// bytes to read from and write to device are provided in a managed byte array.
+/// bytes to read from and write to device are provided as <see cref="Span{Byte}"/>
 /// </summary>
 public abstract class DevioProviderSpanBase : IDevioProvider
 {
-
     /// <summary>
     /// Event when object is about to be disposed
     /// </summary>
@@ -40,6 +41,18 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <returns>True if virtual disk can be written to through this instance, or False
     /// if it is opened for reading only.</returns>
     public abstract bool CanWrite { get; }
+
+    /// <summary>
+    /// Indicates whether provider supports dispatching multiple simultaneous I/O requests.
+    /// Most implementations do not support this, so by default this implementation returns
+    /// false but it can be overridden in derived classes.
+    /// </summary>
+    public virtual bool SupportsParallel => false;
+
+    /// <summary>
+    /// Set to true to force single thread operation even if provider supports multithread
+    /// </summary>
+    public virtual bool ForceSingleThread { get; set; }
 
     /// <summary>
     /// Indicates whether provider supports shared image operations with registrations
@@ -69,9 +82,18 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <returns>Returns number of bytes read from device that were stored in byte array.</returns>
     public abstract int Read(Span<byte> buffer, long fileoffset);
 
-    unsafe int IDevioProvider.Read(nint buffer, int bufferoffset, int count, long fileoffset) => Read(new Span<byte>((byte*)buffer + bufferoffset, count), fileoffset);
+    unsafe ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
-    int IDevioProvider.Read(byte[] buffer, int bufferoffset, int count, long fileoffset) => Read(buffer.AsSpan(bufferoffset, count), fileoffset);
+        return new(Read(buffer.Span, fileoffset));
+    }
+
+    unsafe int IDevioProvider.Read(nint buffer, int bufferoffset, int count, long fileoffset)
+        => Read(new Span<byte>((byte*)buffer + bufferoffset, count), fileoffset);
+
+    int IDevioProvider.Read(byte[] buffer, int bufferoffset, int count, long fileoffset)
+        => Read(buffer.AsSpan(bufferoffset, count), fileoffset);
 
     /// <summary>
     /// Writes out bytes from byte array to virtual disk device.
@@ -81,9 +103,18 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <returns>Returns number of bytes written to device.</returns>
     public abstract int Write(ReadOnlySpan<byte> buffer, long fileoffset);
 
-    unsafe int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset) => Write(new ReadOnlySpan<byte>((byte*)buffer + bufferoffset, count), fileoffset);
+    unsafe ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
-    int IDevioProvider.Write(byte[] buffer, int bufferoffset, int count, long fileoffset) => Write(buffer.AsSpan(bufferoffset, count), fileoffset);
+        return new(Write(buffer.Span, fileoffset));
+    }
+
+    unsafe int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset)
+        => Write(new ReadOnlySpan<byte>((byte*)buffer + bufferoffset, count), fileoffset);
+
+    int IDevioProvider.Write(byte[] buffer, int bufferoffset, int count, long fileoffset)
+        => Write(buffer.AsSpan(bufferoffset, count), fileoffset);
 
     /// <summary>
     /// Manage registrations and reservation keys for shared images.
@@ -145,5 +176,4 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// </summary>
     /// <param name="e">Event arguments</param>
     protected virtual void OnDisposed(EventArgs e) => Disposed?.Invoke(this, e);
-
 }

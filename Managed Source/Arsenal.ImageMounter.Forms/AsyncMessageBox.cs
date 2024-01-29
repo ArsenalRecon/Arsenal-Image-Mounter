@@ -14,8 +14,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Windows.Forms;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace Arsenal.ImageMounter.Dialogs;
 
 [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed")]

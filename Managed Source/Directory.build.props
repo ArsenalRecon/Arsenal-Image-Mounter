@@ -2,10 +2,11 @@
 
   <PropertyGroup>
 
-    <TargetFrameworks>net48;netstandard2.1;net6.0;net7.0</TargetFrameworks>
+    <TargetFrameworks>net48;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
     <RootNamespace>Arsenal.ImageMounter</RootNamespace>
     <OutputPath Condition="'$(MSBuildProjectExtension)' != '.shfbproj'">..\bin\$(Configuration)\</OutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>1591</NoWarn>
     <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
@@ -25,7 +26,7 @@
     <Product>Arsenal Image Mounter</Product>
     <Copyright>Copyright © Arsenal Recon, 2015 - 2023</Copyright>
     <Trademark />
-    <FileVersion>3.10.266.0</FileVersion>
+    <FileVersion>3.11.280.0</FileVersion>
     <ProductVersion>$(FileVersion)</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <Authors>Arsenal Recon</Authors>

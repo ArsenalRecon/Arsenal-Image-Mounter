@@ -1,4 +1,4 @@
-﻿//  DevioNoneService.vb
+﻿//  DevioNoneService.cs
 //  
 //  Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 //  This source code and API are available under the terms of the Affero General Public
@@ -15,8 +15,6 @@ using Arsenal.ImageMounter.IO.Native;
 using System;
 using System.IO;
 using System.Runtime.Versioning;
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
 
@@ -44,10 +42,10 @@ public class DevioNoneService : DevioServiceBase
     /// Instead, it just passes a disk image file name for direct mounting internally in
     /// SCSI Adapter.
     /// </summary>
-    /// <param name="Imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
-    /// <param name="DiskAccess"></param>
-    public DevioNoneService(string Imagefile, FileAccess DiskAccess)
-        : this(Imagefile, NativeStruct.GetFileOrDiskSize(Imagefile), DiskAccess)
+    /// <param name="imagefile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+    /// <param name="diskAccess"></param>
+    public DevioNoneService(string imagefile, FileAccess diskAccess)
+        : this(imagefile, NativeStruct.GetFileOrDiskSize(imagefile), diskAccess)
     {
     }
 
@@ -149,9 +147,9 @@ public class DevioNoneService : DevioServiceBase
         ProxyObjectName = $@"\\?\vhdaccess\??\awealloc{NativeFileIO.GetNtPath(imageFile)}";
     }
 
-    protected override string? ProxyObjectName { get; }
+    public override string? ProxyObjectName { get; }
 
-    protected override DeviceFlags ProxyModeFlags { get; }
+    public override DeviceFlags ProxyModeFlags { get; }
 
     /// <summary>
     /// Dummy implementation that always returns True.
@@ -166,7 +164,8 @@ public class DevioNoneService : DevioServiceBase
     /// <summary>
     /// Dummy implementation that just raises ServiceReady event.
     /// </summary>
-    public override void RunService() => OnServiceReady(EventArgs.Empty);
+    public override void RunService()
+        => OnServiceReady(EventArgs.Empty);
 
     public override void DismountAndStopServiceThread()
     {

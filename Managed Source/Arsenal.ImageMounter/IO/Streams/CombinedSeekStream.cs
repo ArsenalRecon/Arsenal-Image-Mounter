@@ -18,11 +18,10 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
-public class CombinedSeekStream : Stream
+public class CombinedSeekStream : CompatibilityStream
 {
     private readonly List<KeyValuePair<long, Stream>> streams;
 
@@ -53,7 +52,7 @@ public class CombinedSeekStream : Stream
     {
         if (inputStreams is null || inputStreams.Length == 0)
         {
-            streams = new();
+            streams = [];
 
             Extendable = true;
         }
@@ -71,7 +70,7 @@ public class CombinedSeekStream : Stream
 
     public CombinedSeekStream(bool writable, IEnumerable<Stream> inputStreams)
     {
-        streams = new();
+        streams = [];
 
         foreach (var stream in inputStreams)
         {
@@ -160,9 +159,8 @@ public class CombinedSeekStream : Stream
         ReadAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
     public override int EndRead(IAsyncResult asyncResult) =>
-        ((Task<int>)asyncResult).Result;
+        ((Task<int>)asyncResult).GetAwaiter().GetResult();
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var count = buffer.Length;
@@ -191,12 +189,11 @@ public class CombinedSeekStream : Stream
     public override int Read(Span<byte> buffer)
     {
         var count = buffer.Length;
-        var index = 0;
         var num = 0;
 
         while (current.Value is not null && count > 0)
         {
-            var r = current.Value.Read(buffer.Slice(index, count));
+            var r = current.Value.Read(buffer.Slice(num, count));
 
             if (r <= 0)
             {
@@ -206,14 +203,11 @@ public class CombinedSeekStream : Stream
             Seek(r, SeekOrigin.Current);
 
             num += r;
-            index += r;
             count -= r;
         }
 
         return num;
     }
-
-#endif
 
     public override void Write(byte[] buffer, int index, int count)
     {
@@ -287,9 +281,8 @@ public class CombinedSeekStream : Stream
         WriteAsync(buffer, offset, count, CancellationToken.None).AsAsyncResult(callback, state);
 
     public override void EndWrite(IAsyncResult asyncResult) =>
-        ((Task)asyncResult).Wait();
+        ((Task)asyncResult).GetAwaiter().GetResult();
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (!CanWrite)
@@ -363,7 +356,6 @@ public class CombinedSeekStream : Stream
             count -= current_count;
         }
     }
-#endif
 
     public override void Flush() => current.Value?.Flush();
 

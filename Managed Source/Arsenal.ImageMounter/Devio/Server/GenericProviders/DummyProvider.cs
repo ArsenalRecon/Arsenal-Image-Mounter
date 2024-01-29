@@ -9,14 +9,13 @@
 // 
 
 using System;
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
-public sealed class DummyProvider : IDevioProvider
+public sealed class DummyProvider(long Length) : IDevioProvider
 {
-
     /// <summary>
     /// Event when object is about to be disposed
     /// </summary>
@@ -27,20 +26,17 @@ public sealed class DummyProvider : IDevioProvider
     /// </summary>
     public event EventHandler? Disposed;
 
-    public DummyProvider(long Length)
-    {
-
-        this.Length = Length;
-
-    }
-
-    public long Length { get; }
+    public long Length { get; } = Length;
 
     public uint SectorSize => 512U;
 
     public bool CanWrite => true;
 
+    public bool SupportsParallel => true;
+
     bool IDevioProvider.SupportsShared => false;
+
+    bool IDevioProvider.ForceSingleThread { get; set; }
 
     void IDevioProvider.SharedKeys(IMDPROXY_SHARED_REQ Request, out IMDPROXY_SHARED_RESP Response, out ulong[] Keys) => throw new NotImplementedException();
 
@@ -50,11 +46,15 @@ public sealed class DummyProvider : IDevioProvider
 
     int IDevioProvider.Read(Span<byte> buffer, long fileoffset) => throw new NotImplementedException();
 
+    ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken) => throw new NotImplementedException();
+
     int IDevioProvider.Write(nint buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
 
     int IDevioProvider.Write(byte[] buffer, int bufferoffset, int count, long fileoffset) => throw new NotImplementedException();
 
     int IDevioProvider.Write(ReadOnlySpan<byte> buffer, long fileoffset) => throw new NotImplementedException();
+
+    ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken) => throw new NotImplementedException();
 
     public void Dispose()
     {

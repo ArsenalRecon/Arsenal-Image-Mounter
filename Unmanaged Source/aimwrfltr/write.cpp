@@ -110,7 +110,8 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     // Detect possible risk of stack overflow. Defer to worker thread if we are
     // called in the completion routine for the same IRP
-    if (device_extension->CompletingIrp == Irp)
+    if (QueueWithoutCache ||
+        device_extension->CompletingIrp == Irp)
     {
         PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
@@ -849,9 +850,11 @@ PUCHAR BlockBuffer)
     if (status == STATUS_PENDING)
     {
         KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
+
+        status = io_status.Status;
     }
 
-    return io_status.Status;
+    return status;
 }
 
 #endif
