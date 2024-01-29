@@ -1483,6 +1483,11 @@ public static partial class NativeFileIO
 
     private static bool GetHostCpuSupportsCet()
     {
+        if (!X86Base.IsSupported)
+        {
+            return false;
+        }
+
         var (_, _, Ecx, _) = X86Base.CpuId(0x07, 0);
 
         return (Ecx & (1 << 7)) != 0;
@@ -1503,6 +1508,11 @@ public static partial class NativeFileIO
     [SuppressMessage("Style", "IDE0042:Deconstruct variable declaration", Justification = "Complete value tuple needed for string marshalling")]
     private static string? GetHypervisorId()
     {
+        if (!X86Base.IsSupported)
+        {
+            return null;
+        }
+
         var values = X86Base.CpuId(0x40000000, 0);
 
         if (values.Eax < 0x40000000)
@@ -1528,6 +1538,11 @@ public static partial class NativeFileIO
     [SuppressMessage("Style", "IDE0042:Deconstruct variable declaration", Justification = "Complete value tuple needed for string marshalling")]
     private static string? GetCpuId()
     {
+        if (!X86Base.IsSupported)
+        {
+            return null;
+        }
+
         var cpuid = X86Base.CpuId(0x00000000, 0);
 
         var values = (cpuid.Ebx, cpuid.Edx, cpuid.Ecx);
