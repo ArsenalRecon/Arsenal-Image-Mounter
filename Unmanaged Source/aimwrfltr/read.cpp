@@ -86,7 +86,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     // in worker thread queue in correct order vs queued write requests. Useful to troubleshoot
     // flaws in the read cache logic.
 
-    if (QueueWithoutCache)
+#ifdef QUEUE_READ_REQUESTS
     {
         PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
@@ -140,6 +140,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         return STATUS_PENDING;
     }
+#endif
 
     PUCHAR system_buffer = NULL;
 

@@ -20,7 +20,8 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 {
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)Context;
 
-    KdPrint(("AIMWrFltr: Worker thread started for device %p\n",
+    KdPrint(("AIMWrFltr: Worker thread %p started for device %p\n",
+        KeGetCurrentThread(),
         device_extension->DeviceObject));
 
     PUCHAR block_buffer = new UCHAR[DIFF_BLOCK_SIZE];
@@ -96,7 +97,8 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 
         PCACHED_IRP cached_irp = CONTAINING_RECORD(request, CACHED_IRP, ListEntry);
 
-        if (device_extension->ShutdownThread && device_extension->Statistics.IgnoreFlushBuffers)
+        if (device_extension->ShutdownThread &&
+            (device_extension->DiffFileObject->Flags & FO_DELETE_ON_CLOSE) != 0)
         {
             if (cached_irp->Irp != NULL)
             {

@@ -33,7 +33,8 @@ HANDLE AIMWrFltrParametersKey = NULL;
 PKEVENT AIMWrFltrDiffFullEvent = NULL;
 PDRIVER_OBJECT AIMWrFltrDriverObject = NULL;
 bool AIMWrFltrLinksCreated = false;
-bool QueueWithoutCache = false;
+ULONG MaxQueueDepth = 0;
+PKEVENT HighCommitCondition = NULL;
 
 //
 // Define the sections that allow for discarding (i.e. paging) some of
@@ -90,6 +91,10 @@ STATUS_SUCCESS if successful
         DbgBreakPoint();
     }
 #endif
+
+    //
+    // Create diff full event object
+    //
 
     NTSTATUS status;
     HANDLE event_handle;
@@ -213,7 +218,11 @@ STATUS_SUCCESS if successful
 
         return STATUS_SUCCESS;
     }
-    
+
+    //
+    // Registry setting for max queue depth
+    //
+
     UNICODE_STRING queue_without_cache_str;
     RtlInitUnicodeString(&queue_without_cache_str, L"QueueWithoutCache");
     union
@@ -225,10 +234,51 @@ STATUS_SUCCESS if successful
     status = ZwQueryValueKey(AIMWrFltrParametersKey, &queue_without_cache_str,
         KeyValuePartialInformation, &queue_without_cache_value, sizeof(queue_without_cache_value), &length);
 
-    if (NT_SUCCESS(status))
+    if (NT_SUCCESS(status) && queue_without_cache_value.DataLength >= sizeof(ULONG))
     {
-        QueueWithoutCache = *(bool*)queue_without_cache_value.Data;
-        DbgPrint("AIMWrFltr: QueueWithoutCache = 0x%X\n", QueueWithoutCache);
+        MaxQueueDepth = *(ULONG*)queue_without_cache_value.Data;
+        DbgPrint("AIMWrFltr: MaxQueueDepth = 0x%X\n", MaxQueueDepth);
+    }
+
+    //
+    // Event object that monitors memory usage
+    //
+
+    RtlInitUnicodeString(&event_path, L"\\KernelObjects\\HighCommitCondition");
+
+    InitializeObjectAttributes(&event_obj_attrs,
+        &event_path,
+        OBJ_PERMANENT | OBJ_OPENIF,
+        NULL,
+        event_security_descriptor);
+
+    status = ZwOpenEvent(
+        &event_handle,
+        EVENT_QUERY_STATE,
+        &event_obj_attrs);
+
+    if (!NT_SUCCESS(status))
+    {
+        DbgPrint("AIMWrFltr:DriverEntry: Cannot open event '%wZ': %#x\n",
+            event_obj_attrs.ObjectName, status);
+
+        KdBreakPoint();
+    }
+    else
+    {
+        status = ObReferenceObjectByHandle(event_handle, EVENT_QUERY_STATE,
+            *ExEventObjectType, KernelMode, (PVOID*)&HighCommitCondition,
+            NULL);
+
+        if (!NT_SUCCESS(status))
+        {
+            DbgPrint("AIMWrFltr:DriverEntry: Cannot reference event '%wZ': %#x\n",
+                event_obj_attrs.ObjectName, status);
+
+            HighCommitCondition = NULL;
+        }
+
+        ZwClose(event_handle);
     }
 
     //
@@ -558,25 +608,20 @@ AIMWrFltrSynchronousReadWrite(
 
     if (MajorFunction == IRP_MJ_WRITE)
     {
+        lower_irp->Flags |= IRP_WRITE_OPERATION;
+
         if (FileObject == NULL || (FileObject->Flags & FO_NO_INTERMEDIATE_BUFFERING) != 0)
         {
             lower_irp->Flags |= IRP_WRITE_OPERATION | IRP_NOCACHE;
-            lower_io_stack->Flags |= SL_WRITE_THROUGH;
-        }
-        else
-        {
-            lower_irp->Flags |= IRP_WRITE_OPERATION;
         }
     }
     else if (MajorFunction == IRP_MJ_READ)
     {
+        lower_irp->Flags |= IRP_READ_OPERATION;
+
         if (FileObject == NULL || (FileObject->Flags & FO_NO_INTERMEDIATE_BUFFERING) != 0)
         {
             lower_irp->Flags |= IRP_READ_OPERATION | IRP_NOCACHE;
-        }
-        else
-        {
-            lower_irp->Flags |= IRP_READ_OPERATION;
         }
     }
 
@@ -904,6 +949,11 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
         DeviceExtension->DiffDeviceObject = IoGetRelatedDeviceObject(file_object);
         DeviceExtension->DiffFileObject = file_object;
 
+        if ((file_object->Flags & FO_DELETE_ON_CLOSE) != 0)
+        {
+            DeviceExtension->Statistics.IgnoreFlushBuffers = TRUE;
+        }
+
         KdPrint((
             "AIMWrFltrInitializePhDskMntDiffDevice: Diff device driver: '%wZ'\n",
             &DeviceExtension->DiffFileObject->DeviceObject->DriverObject->DriverName));
@@ -1162,6 +1212,35 @@ AIMWrFltrInitializeDiffDevice(IN PDEVICE_EXTENSION DeviceExtension)
     }
 
     return status;
+}
+
+ULONG
+AIMWrFltrIsQueueDeeperThan(IN PDEVICE_EXTENSION DeviceExtension, ULONG MaxDepth, BOOLEAN Lock, PKIRQL CurrentIrql)
+{
+    KLOCK_QUEUE_HANDLE lock_handle = { 0 };
+
+    ULONG items_in_queue = 0;
+
+    if (Lock)
+    {
+        AIMWrFltrAcquireLock(&DeviceExtension->ListLock, &lock_handle,
+            *CurrentIrql);
+    }
+
+    for (PLIST_ENTRY entry = DeviceExtension->ListHead.Flink;
+        entry != &DeviceExtension->ListHead &&
+        items_in_queue < MaxDepth;
+        entry = entry->Flink)
+    {
+        items_in_queue++;
+    }
+
+    if (Lock)
+    {
+        AIMWrFltrReleaseLock(&lock_handle, CurrentIrql);
+    }
+
+    return items_in_queue;
 }
 
 NTSTATUS
@@ -2203,6 +2282,12 @@ VOID.
     {
         ObDereferenceObject(AIMWrFltrDiffFullEvent);
         AIMWrFltrDiffFullEvent = NULL;
+    }
+
+    if (HighCommitCondition != NULL)
+    {
+        ObDereferenceObject(HighCommitCondition);
+        HighCommitCondition = NULL;
     }
 }
 

@@ -2286,7 +2286,7 @@ __in __deref PETHREAD ClientThread)
             FILE_SHARE_READ | FILE_SHARE_DELETE,
             FILE_OPEN_IF,
             FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS |
-            FILE_SYNCHRONOUS_IO_NONALERT,
+            FILE_SYNCHRONOUS_IO_NONALERT | FILE_NO_INTERMEDIATE_BUFFERING,
             NULL,
             0);
 

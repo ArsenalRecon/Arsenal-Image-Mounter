@@ -909,11 +909,19 @@ extern "C"
         return STATUS_DEVICE_DOES_NOT_EXIST;
     }
 
+    ULONG
+        AIMWrFltrIsQueueDeeperThan(
+            IN PDEVICE_EXTENSION DeviceExtension,
+            ULONG MaxDepth,
+            BOOLEAN Lock,
+            PKIRQL CurrentIrql);
+    
     extern HANDLE AIMWrFltrParametersKey;
     extern PKEVENT AIMWrFltrDiffFullEvent;
     extern PDRIVER_OBJECT AIMWrFltrDriverObject;
     extern bool AIMWrFltrLinksCreated;
-    extern bool QueueWithoutCache;
+    extern ULONG MaxQueueDepth;
+    extern PKEVENT HighCommitCondition;
 
 #if _NT_TARGET_VERSION >= 0x501
 

@@ -109,9 +109,13 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     KLOCK_QUEUE_HANDLE lock_handle;
 
     // Detect possible risk of stack overflow. Defer to worker thread if we are
-    // called in the completion routine for the same IRP
-    if (QueueWithoutCache ||
-        device_extension->CompletingIrp == Irp)
+    // called in the completion routine for the same IRP. Also, queue original
+    // request directly if queue is becoming too deep.
+    if (device_extension->CompletingIrp == Irp ||
+        (MaxQueueDepth != 0 &&
+            AIMWrFltrIsQueueDeeperThan(device_extension, MaxQueueDepth, TRUE, &current_irql) >= MaxQueueDepth) ||
+        (HighCommitCondition != NULL &&
+            KeReadStateEvent(HighCommitCondition)))
     {
         PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
@@ -505,17 +509,26 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     Irp->IoStatus.Information = 0;
     
+    KLOCK_QUEUE_HANDLE lock_handle;
+    KIRQL current_irql = PASSIVE_LEVEL;
+
     if (device_extension->Statistics.IgnoreFlushBuffers)
     {
-        KdPrint(("AIMWrFltrFlushBuffers: Ignoring IRP_MJ_FLUSH_BUFFERS\n"));
+
+#if DBG
+
+        ULONG items_in_queue = AIMWrFltrIsQueueDeeperThan(device_extension, MAXULONG, TRUE, &current_irql);
+
+        DbgPrint(
+            "AIMWrFltrFlushBuffers: Ignoring flush request, %u items in queue.\n",
+            items_in_queue);
+
+#endif
 
         Irp->IoStatus.Status = STATUS_SUCCESS;
         IoCompleteRequest(Irp, IO_DISK_INCREMENT);
         return STATUS_SUCCESS;
     }
-
-    KLOCK_QUEUE_HANDLE lock_handle;
-    KIRQL current_irql = PASSIVE_LEVEL;
 
     PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
@@ -573,14 +586,7 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
 #if DBG
 
-    ULONG items_in_queue = 0;
-
-    for (PLIST_ENTRY entry = device_extension->ListHead.Flink;
-        entry != &device_extension->ListHead;
-        entry = entry->Flink)
-    {
-        items_in_queue++;
-    }
+    ULONG items_in_queue = AIMWrFltrIsQueueDeeperThan(device_extension, MAXULONG, FALSE, NULL);
 
     DbgPrint(
         "AIMWrFltrFlushBuffers: Queuing flush request, %u items in queue.\n",
