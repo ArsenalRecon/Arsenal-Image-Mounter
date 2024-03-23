@@ -3,7 +3,7 @@
 //  Proxy provider that implements devio proxy service with a .NET Stream derived
 //  object as storage backend.
 //  
-//  Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+//  Copyright (c) 2012-2024, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 //  This source code and API are available under the terms of the Affero General Public
 //  License v3.
 // 
