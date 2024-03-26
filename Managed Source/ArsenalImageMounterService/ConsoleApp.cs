@@ -44,9 +44,6 @@ public static class ConsoleApp
         ? null
         : NativePE.GetFixedFileVerInfo(AssemblyLocation).FileVersion;
 
-    private static string GetArchitectureLibPath()
-        => RuntimeInformation.ProcessArchitecture.ToString();
-
     static ConsoleApp()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

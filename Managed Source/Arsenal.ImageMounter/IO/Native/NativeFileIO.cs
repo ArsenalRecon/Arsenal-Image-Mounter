@@ -16,6 +16,7 @@ using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Streams;
 using DiscUtils;
+using DiscUtils.Partitions;
 using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
@@ -1607,6 +1608,223 @@ public static partial class NativeFileIO
         "spoolsv",
         "paragon_service"
     ];
+
+    private static readonly byte[] WindowsRecognizedMBRPartitionTypes =
+    [
+        BiosPartitionTypes.Fat12,
+        BiosPartitionTypes.Fat16,
+        BiosPartitionTypes.Fat16Lba,
+        BiosPartitionTypes.Fat16Small,
+        BiosPartitionTypes.EfiSystem,
+        BiosPartitionTypes.Fat32,
+        BiosPartitionTypes.Fat32Lba,
+        BiosPartitionTypes.Ntfs
+    ];
+
+    private static readonly Guid[] WindowsRecognizedGPTPartitionTypes =
+    [
+        GuidPartitionTypes.EfiSystem,
+        GuidPartitionTypes.BiosBoot,
+        GuidPartitionTypes.WindowsBasicData,
+        GuidPartitionTypes.WindowsLdmData,
+        GuidPartitionTypes.WindowsRecovery
+    ];
+
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public static string[] OnlineDiskVolumes(string devicepath)
+    {
+        var partitioncount = default(int);
+
+        var disk_is_offline = false;
+
+        using (var device = new DiskDevice(devicepath, FileAccess.Read))
+        {
+            var partitions = device.DriveLayoutEx?.Partitions;
+
+            if (partitions is not null)
+            {
+                partitioncount = Enumerable.Count(partitions,
+                                                part => part.PartitionLength > 0 &&
+                                                ((part.PartitionStyle == PARTITION_STYLE.GPT &&
+                                                WindowsRecognizedGPTPartitionTypes.Contains(part.GPT.PartitionType)) ||
+                                                (part.PartitionStyle == PARTITION_STYLE.MBR &&
+                                                WindowsRecognizedMBRPartitionTypes.Contains((byte)part.MBR.PartitionType))));
+
+                Trace.WriteLine($"Found {partitioncount} recognizable partitions of {partitions.Count} total in partition table.");
+            }
+            else
+            {
+                Trace.WriteLine($"No partition table found.");
+            }
+
+            if (partitioncount == 0)
+            {
+                return [];
+            }
+
+            disk_is_offline = device.DiskPolicyOffline ?? true;
+        }
+
+        var volumes = Array.Empty<string>();
+
+        for (var i = 1; i <= 15; i++)
+        {
+            volumes = EnumerateDiskVolumes(devicepath).ToArray();
+
+            Trace.WriteLine($"Found {volumes.Length} partitions detected by Mount Manager out of {partitioncount}.");
+
+            if (disk_is_offline || volumes.Length >= partitioncount)
+            {
+                break;
+            }
+
+            if (!UpdateDiskProperties(devicepath))
+            {
+                break;
+            }
+
+            Thread.Sleep(200);
+        }
+
+        foreach (var volume in volumes)
+        {
+            try
+            {
+                var raw_volume_path = volume.TrimEnd('\\');
+
+                using (var device = new DiskDevice(raw_volume_path, FileAccess.ReadWrite))
+                {
+                    device.SetVolumeOffline(false);
+                }
+
+                var freedrive = FindFirstFreeDriveLetter();
+
+                var mountpoint = EnumerateVolumeMountPoints(volume).FirstOrDefault();
+
+                if (freedrive != default && string.IsNullOrWhiteSpace(mountpoint))
+                {
+                    mountpoint = $@"{freedrive}:\";
+
+                    SetVolumeMountPoint(mountpoint, volume);
+                }
+
+                if (string.IsNullOrWhiteSpace(mountpoint))
+                {
+                    mountpoint = volume;
+                }
+
+                Trace.WriteLine($"Volume '{volume}' is mounted at '{mountpoint}'");
+
+                // ' Open and close root directory to trigger file system mount
+                OpenBackupHandle(volume, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, FileMode.Open)
+                    .Close();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Failed to online or mount volume '{volume}': {ex.JoinMessages()}");
+            }
+        }
+
+        return volumes;
+    }
+
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public static async Task<string[]> OnlineDiskVolumesAsync(string devicepath)
+    {
+        var partitioncount = default(int);
+
+        var disk_is_offline = false;
+
+        using (var device = new DiskDevice(devicepath, FileAccess.Read))
+        {
+            var partitions = device.DriveLayoutEx?.Partitions;
+
+            if (partitions is not null)
+            {
+                partitioncount = Enumerable.Count(partitions,
+                                                part => part.PartitionLength > 0 &&
+                                                ((part.PartitionStyle == PARTITION_STYLE.GPT &&
+                                                WindowsRecognizedGPTPartitionTypes.Contains(part.GPT.PartitionType)) ||
+                                                (part.PartitionStyle == PARTITION_STYLE.MBR &&
+                                                WindowsRecognizedMBRPartitionTypes.Contains((byte)part.MBR.PartitionType))));
+
+                Trace.WriteLine($"Found {partitioncount} recognizable partitions of {partitions.Count} total in partition table.");
+            }
+            else
+            {
+                Trace.WriteLine($"No partition table found.");
+            }
+
+            if (partitioncount == 0)
+            {
+                return [];
+            }
+
+            disk_is_offline = device.DiskPolicyOffline ?? true;
+        }
+
+        var volumes = Array.Empty<string>();
+
+        for (var i = 1; i <= 15; i++)
+        {
+            volumes = EnumerateDiskVolumes(devicepath).ToArray();
+
+            Trace.WriteLine($"Found {volumes.Length} partitions detected by Mount Manager out of {partitioncount}.");
+
+            if (disk_is_offline || volumes.Length >= partitioncount)
+            {
+                break;
+            }
+
+            if (!UpdateDiskProperties(devicepath))
+            {
+                break;
+            }
+
+            await Task.Delay(200);
+        }
+
+        foreach (var volume in volumes)
+        {
+            try
+            {
+                var raw_volume_path = volume.TrimEnd('\\');
+
+                using (var device = new DiskDevice(raw_volume_path, FileAccess.ReadWrite))
+                {
+                    device.SetVolumeOffline(false);
+                }
+
+                var freedrive = FindFirstFreeDriveLetter();
+
+                var mountpoint = EnumerateVolumeMountPoints(volume).FirstOrDefault();
+
+                if (freedrive != default && string.IsNullOrWhiteSpace(mountpoint))
+                {
+                    mountpoint = $@"{freedrive}:\";
+
+                    SetVolumeMountPoint(mountpoint, volume);
+                }
+
+                if (string.IsNullOrWhiteSpace(mountpoint))
+                {
+                    mountpoint = volume;
+                }
+
+                Trace.WriteLine($"Volume '{volume}' is mounted at '{mountpoint}'");
+
+                // ' Open and close root directory to trigger file system mount
+                OpenBackupHandle(volume, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, FileMode.Open)
+                    .Close();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Failed to online or mount volume '{volume}': {ex.JoinMessages()}");
+            }
+        }
+
+        return volumes;
+    }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static bool OfflineDiskVolumes(string device_path, bool force)
@@ -4176,7 +4394,7 @@ Currently, the following application has files open on this volume:
     {
         if (DevicePath is null)
         {
-            return Enumerable.Empty<string>();
+            return [];
         }
         else if (DevicePath.StartsWith(@"\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase)
             || DevicePath.StartsWith(@"\\.\PhysicalDrive", StringComparison.OrdinalIgnoreCase))          // \\?\PhysicalDrive paths to partitioned disks
@@ -4195,7 +4413,7 @@ Currently, the following application has files open on this volume:
         }
         else
         {
-            return Enumerable.Empty<string>();
+            return [];
         }
     }
 

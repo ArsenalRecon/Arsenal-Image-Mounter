@@ -266,7 +266,7 @@ public static partial class API
            where !string.IsNullOrWhiteSpace(path)
            let address = NativeFileIO.GetScsiAddressForNtDevice(path)
            where address.HasValue && address.Value.DWordDeviceNumber == DeviceNumber
-           from value in NativeFileIO.GetDeviceRegistryProperty(devinstChild, prop) ?? Enumerable.Empty<string>()
+           from value in NativeFileIO.GetDeviceRegistryProperty(devinstChild, prop) ?? []
            select value;
 
     public static void UnregisterWriteOverlayImage(uint devInst)

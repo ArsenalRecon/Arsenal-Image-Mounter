@@ -14,6 +14,7 @@ using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Raw;
@@ -234,6 +235,7 @@ Please see EULA.txt for license information.";
         var ramDisk = false;
         var autoDelete = false;
         var listDevices = false;
+        var autoOnline = false;
 
         foreach (var cmd in commands)
         {
@@ -318,6 +320,10 @@ Please see EULA.txt for license information.";
             else if (arg.Equals("writable", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
                 diskAccess = FileAccess.ReadWrite;
+            }
+            else if (arg.Equals("online", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
+            {
+                autoOnline = true;
             }
             else if (arg.Equals("fakesig", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
             {
@@ -516,7 +522,7 @@ Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User L
 Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01), AFF4 forensic disk images or QEMU Qcow images, you must make the Libewf (libewf.dll), LibAFF4 (libaff4.dll) and Libqcow (libqcow.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI now mounts disk images in read-only mode by default.
 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
-{asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly|--writable] [--fakesig] [--fakembr] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile [--autodelete]] [--background]
+{asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly|--writable] [--fakesig] [--fakembr] [--online] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile [--autodelete]] [--background]
 
 Syntax to mount a RAM disk:
 {asmname} --ramdisk --disksize=size
@@ -529,7 +535,7 @@ Syntax to create a new disk image file:
 {asmname} --create --filename=imagefilename --disksize=size [--variant=fixed|dynamic] [--mount]
 Size in bytes, can be suffixed with for example M or G for MB or GB.
 
-Syntax to start shared memory service mode, for mounting from other applications:
+Syntax to start service mode, for mounting from other applications:
 {asmname} --name=objectname [--buffersize=size] [--readonly|--writable] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
 Size in bytes, can be suffixed with for example K or M for KB or MB.
 
@@ -860,7 +866,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
             else if (ioCommunication == IOCommunication.Drv
                 && objectName is not null
-                && !string.IsNullOrWhiteSpace(objectName)) // Listen on shared memory object
+                && !string.IsNullOrWhiteSpace(objectName)) // Listen on deviodrv object
             {
                 service = new DevioDrvService(objectName, provider, ownsProvider: true, initialBufferSize: bufferSize ?? DevioDrvService.DefaultInitialBufferSize);
             }
@@ -948,9 +954,64 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
                 Console.WriteLine($"Device number {service.DiskDeviceNumber:X6}");
                 Console.WriteLine($"Device is {device_name}");
+
+                using (var device = new DiskDevice(device_name, FileAccess.ReadWrite))
+                {
+                    switch (device.DiskPolicyOffline)
+                    {
+                        case true:
+                            Console.WriteLine($"Mounted offline");
+                            break;
+
+                        case false:
+                            Console.WriteLine($"Mounted online");
+                            break;
+                    }
+
+                    switch (device.DiskPolicyReadOnly)
+                    {
+                        case true:
+                            Console.WriteLine($"Mounted read only");
+                            break;
+
+                        case false:
+                            Console.WriteLine($"Mounted writable");
+                            break;
+                    }
+
+                    if (autoOnline)
+                    {
+                        if (device.DiskPolicyReadOnly == true
+                            && diskAccess.HasFlag(FileAccess.Write))
+                        {
+                            Console.WriteLine($"Setting device policy to writable");
+                            device.DiskPolicyReadOnly = false;
+                        }
+
+                        if (device.DiskPolicyOffline == true)
+                        {
+                            Console.WriteLine($"Setting device policy to online");
+                            device.DiskPolicyOffline = false;
+                        }
+
+                        device.UpdateProperties();
+                    }
+                }
+
                 Console.WriteLine();
 
-                foreach (var vol in NativeFileIO.EnumerateDiskVolumes(device_name))
+                IEnumerable<string> volumes;
+
+                if (autoOnline)
+                {
+                    volumes = NativeFileIO.OnlineDiskVolumes(device_name);
+                }
+                else
+                {
+                    volumes = NativeFileIO.EnumerateDiskVolumes(device_name);
+                }
+
+                foreach (var vol in volumes)
                 {
                     Console.WriteLine($"Contains volume {vol}");
 
@@ -958,6 +1019,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     {
                         Console.WriteLine($"  Mounted at {mnt}");
                     }
+
+                    Console.WriteLine();
                 }
             }
             catch (Exception ex)
