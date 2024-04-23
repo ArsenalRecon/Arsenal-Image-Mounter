@@ -105,6 +105,8 @@ public readonly struct IMAGE_OPTIONAL_HEADER
 
 internal unsafe struct IMAGE_DOS_HEADER
 {      // DOS .EXE header
+    public static readonly WORD ExpectedMagic = MemoryMarshal.Read<WORD>("MZ"u8);
+
     public readonly WORD e_magic;                     // Magic number
     public readonly WORD e_cblp;                      // Bytes on last page of file
     public readonly WORD e_cp;                        // Pages in file
@@ -131,6 +133,8 @@ internal unsafe struct IMAGE_DOS_HEADER
 /// </summary>
 public readonly struct IMAGE_NT_HEADERS
 {
+    public static readonly WORD ExpectedSignature = MemoryMarshal.Read<WORD>("PE\0\0"u8);
+
     public int Signature { get; }
     public IMAGE_FILE_HEADER FileHeader { get; }
     public IMAGE_OPTIONAL_HEADER OptionalHeader { get; }

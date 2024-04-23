@@ -192,13 +192,19 @@ public static class NativePE
 
         ref readonly var dos_header = ref fileData.CastRef<IMAGE_DOS_HEADER>();
 
+        if (dos_header.e_magic != IMAGE_DOS_HEADER.ExpectedMagic)
+        {
+            throw new BadImageFormatException();
+        }
+
         var header_ptr = fileData.Slice(dos_header.e_lfanew);
 
         ref readonly var header = ref header_ptr.CastRef<IMAGE_NT_HEADERS>();
 
         var sizeOfOptionalHeader = header.FileHeader.SizeOfOptionalHeader;
 
-        if (header.Signature != 0x4550 || sizeOfOptionalHeader == 0)
+        if (header.Signature != IMAGE_NT_HEADERS.ExpectedSignature
+            || sizeOfOptionalHeader == 0)
         {
             throw new BadImageFormatException();
         }
@@ -270,7 +276,7 @@ public static class NativePE
                         found_res_block.FixedFileInfo.StructVersion == 0 ||
                         found_res_block.FixedFileInfo.Signature != FixedFileVerInfo.FixedFileVerSignature)
                     {
-                        throw new BadImageFormatException("No valid version resource in PE file");
+                        throw new FileNotFoundException("No valid version resource in PE file");
                     }
 
                     resourceSize = (int)found_data_entry_header.Size;
@@ -280,7 +286,7 @@ public static class NativePE
             }
         }
 
-        throw new BadImageFormatException("No version resource in PE file");
+        throw new FileNotFoundException("No version resource in PE file");
     }
 
     private static ref readonly IMAGE_SECTION_HEADER FindResourceSection(ReadOnlySpan<IMAGE_SECTION_HEADER> section_table)
