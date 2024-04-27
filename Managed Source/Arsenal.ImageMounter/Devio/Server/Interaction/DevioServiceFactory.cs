@@ -654,15 +654,15 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
             uint SectorSize;
 
-            if (Disk.Geometry is null)
+            if (Disk.Geometry is { } diskGeometry)
             {
-                SectorSize = 512U;
-                Trace.WriteLine("Image sector size is unknown, assuming 512 bytes");
+                SectorSize = (uint)diskGeometry.BytesPerSector;
+                Trace.WriteLine($"Image sector size is {SectorSize} bytes");
             }
             else
             {
-                SectorSize = (uint)Disk.Geometry.BytesPerSector;
-                Trace.WriteLine($"Image sector size is {SectorSize} bytes");
+                SectorSize = 512;
+                Trace.WriteLine("Image sector size is unknown, assuming 512 bytes");
             }
 
             if (DiskAccess == VirtualDiskAccess.ReadWriteOverlay)
