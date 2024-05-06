@@ -529,6 +529,10 @@
     <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
     <TimeStampServer />
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|ARM'">
+    <ClCompile />
+    <ClCompile />
+  </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
     <FilesToPackage Include="@(Inf->'%(CopyOutput)')" Condition="'@(Inf)'!=''" />

@@ -1589,7 +1589,7 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
             if (MountPoint[wcslen(MountPoint) - 1] != L'\\')
             {
                 mount_point_buffer =
-                    ImDiskAllocPrintF(L"%1\\", MountPoint);
+                    ImDiskAllocPrintF(L"%1!ws!\\", MountPoint);
 
                 if (mount_point_buffer)
                 {
@@ -1668,7 +1668,7 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
                         ImScsiMsgBoxPrintF(hWnd,
                             MB_ICONEXCLAMATION,
                             L"Arsenal Image Mounter",
-                            L"Error setting volume '%1!ws!' mount point to '%2!ws!':",
+                            L"Error setting volume '%1!ws!' mount point to '%2!ws!': '%3!ws!'",
                             vol_name, MountPoint, (LPCWSTR)errmsg);
 
                         FindVolumeClose(vol_hanle);
@@ -1744,7 +1744,7 @@ DEVICE_NUMBER DeviceNumber)
         LocalFree(msg);
     }
 
-    SRB_IMSCSI_REMOVE_DEVICE remove_device;
+    SRB_IMSCSI_REMOVE_DEVICE remove_device = { 0 };
 
     ImScsiInitializeSrbIoBlock(&remove_device.SrbIoControl,
         sizeof(SRB_IMSCSI_REMOVE_DEVICE),

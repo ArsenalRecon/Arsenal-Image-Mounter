@@ -353,6 +353,42 @@ ImScsiSyntaxHelp()
         exit(IMSCSI_CLI_ERROR_FATAL);
 }
 
+SHORT
+consolewidth;
+
+BYTE
+GetConsoleWidth()
+{
+    if (consolewidth == 0)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO info = { 0 };
+        HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        if (hstdout != INVALID_HANDLE_VALUE &&
+            !GetConsoleScreenBufferInfo(hstdout, &info))
+        {
+            consolewidth = info.dwSize.X - 2;
+        }
+
+        if (consolewidth <= 1)
+        {
+            consolewidth = -1;
+        }
+    }
+
+    if (consolewidth > 254)
+    {
+        return 254;
+    }
+
+    if (consolewidth < 0)
+    {
+        return 0;
+    }
+
+    return (BYTE)consolewidth;
+}
+
 // Prints out a FormatMessage style parameterized message to specified stream.
 BOOL
 ImScsiOemPrintF(FILE *Stream, LPCSTR Message, ...)
@@ -362,7 +398,7 @@ ImScsiOemPrintF(FILE *Stream, LPCSTR Message, ...)
 
     va_start(param_list, Message);
 
-    if (!FormatMessageA(78 |
+    if (!FormatMessageA(GetConsoleWidth() |
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_STRING, Message, 0, 0,
         (LPSTR)&lpBuf, 0, &param_list))
@@ -886,7 +922,10 @@ LPWSTR FormatOptions)
         &dw, NULL)) &&
         (GetLastError() != ERROR_INVALID_FUNCTION))
     {
-        PrintLastError(L"Cannot set disk in writable online mode:");
+        if (!IMSCSI_READONLY(create_data->Fields.Flags))
+            PrintLastError(L"Cannot set disk writable online mode:");
+        else
+            PrintLastError(L"Cannot set disk online mode:");
     }
 
     DeviceIoControl(disk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0,
@@ -991,6 +1030,20 @@ LPWSTR FormatOptions)
     CloseHandle(disk);
 
     disk = INVALID_HANDLE_VALUE;
+
+    WMem<WCHAR> mount_point_buffer;
+
+    if ((MountPoint != NULL) && (MountPoint[0] != 0) &&
+        (MountPoint[wcslen(MountPoint) - 1] != L'\\'))
+    {
+        mount_point_buffer =
+            ImDiskAllocPrintF(L"%1!ws!\\", MountPoint);
+
+        if (mount_point_buffer)
+        {
+            MountPoint = mount_point_buffer;
+        }
+    }
 
     int return_code = IMSCSI_CLI_SUCCESS;
 
@@ -1139,20 +1192,6 @@ LPWSTR FormatOptions)
             {
                 PrintLastError(L"Error enumerating mount points");
                 continue;
-            }
-
-            WMem<WCHAR> mount_point_buffer;
-
-            if ((MountPoint != NULL) && (MountPoint[0] != 0) &&
-                (MountPoint[wcslen(MountPoint) - 1] != L'\\'))
-            {
-                mount_point_buffer =
-                    ImDiskAllocPrintF(L"%1\\", MountPoint);
-
-                if (mount_point_buffer)
-                {
-                    MountPoint = mount_point_buffer;
-                }
             }
 
             bool mount_point_found = false;

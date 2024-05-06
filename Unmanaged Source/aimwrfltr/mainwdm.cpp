@@ -406,7 +406,7 @@ AIMWrFltrCleanupDevice(IN PDEVICE_EXTENSION DeviceExtension)
 #if DBG
 
         KIRQL current_irql = PASSIVE_LEVEL;
-        KLOCK_QUEUE_HANDLE lock_handle;
+        KLOCK_QUEUE_HANDLE lock_handle = { 0 };
         ULONG items_in_queue = 0;
 
         AIMWrFltrAcquireLock(&DeviceExtension->ListLock, &lock_handle,
@@ -1782,7 +1782,7 @@ NTSTATUS
 #if DBG
 
         KIRQL current_irql = PASSIVE_LEVEL;
-        KLOCK_QUEUE_HANDLE lock_handle;
+        KLOCK_QUEUE_HANDLE lock_handle = { 0 };
         ULONG items_in_queue = 0;
 
         AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
