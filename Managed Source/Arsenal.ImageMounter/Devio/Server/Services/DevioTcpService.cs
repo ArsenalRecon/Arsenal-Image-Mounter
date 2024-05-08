@@ -97,9 +97,25 @@ public class DevioTcpService : DevioServiceBase
 
             var stopServiceThreadHandler = new EventHandler((sender, e) => listener.Stop());
             StopServiceThread += stopServiceThreadHandler;
-            var tcpSocket = listener.AcceptSocket();
-            StopServiceThread -= stopServiceThreadHandler;
+            Socket tcpSocket;
+            try
+            {
+                tcpSocket = listener.AcceptSocket();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"TCP listener failed: {ex}");
+                return;
+            }
+            finally
+            {
+                StopServiceThread -= stopServiceThreadHandler;
+            }
+            
             listener.Stop();
+
+            StopServiceThread += (sender, e) => EmergencyStopServiceThread();
+
             Trace.WriteLine($"Connection from {tcpSocket.RemoteEndPoint}");
 
             using var tcpStream = new NetworkStream(tcpSocket, ownsSocket: true);

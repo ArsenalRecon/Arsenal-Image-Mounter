@@ -337,9 +337,7 @@ public static class DevioServiceFactory
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     private static DevioProviderFromStream GetProviderPhysical(uint DeviceNumber, FileAccess DiskAccess)
     {
-        using var adapter = new ScsiAdapter();
-
-        var disk = adapter.OpenDevice(DeviceNumber, DiskAccess);
+        var disk = API.OpenDevice(DeviceNumber, DiskAccess);
 
         return new DevioProviderFromStream(disk.GetRawDiskStream(), ownsStream: true)
         {

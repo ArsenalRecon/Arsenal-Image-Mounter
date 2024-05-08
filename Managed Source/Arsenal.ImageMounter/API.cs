@@ -24,6 +24,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -106,6 +107,48 @@ public static partial class API
         }
 
         return Kernel;
+    }
+
+    /// <summary>
+    /// Opens a mounted virtual disk device by device number assigned by AIM driver.
+    /// </summary>
+    /// <param name="device">Device number</param>
+    /// <param name="access">Access</param>
+    /// <returns><see cref="DiskDevice"/> object</returns>
+    public static DiskDevice OpenDevice(uint device, FileAccess access)
+    {
+        using var adapter = new ScsiAdapter();
+        return adapter.OpenDevice(device, access);
+    }
+
+    /// <summary>
+    /// Checks whether current access token is member of local Administrators group and
+    /// throws <see cref="UnauthorizedAccessException"/> otherwise.
+    /// </summary>
+    /// <exception cref="UnauthorizedAccessException">Current user is not an administrator</exception>
+    public static void DemandAdminPrivileges()
+    {
+        if (!IsCurrentUserAdmin)
+        {
+            throw new UnauthorizedAccessException("This feature requires administrative privileges");
+        }
+    }
+
+    private static bool? isCurrentUserAdmin;
+
+    private static readonly SecurityIdentifier localAdministratorsGroup = new(WellKnownSidType.BuiltinAdministratorsSid, domainSid: null);
+
+    /// <summary>
+    /// Checks whether current access token is member of local Administrators group.
+    /// </summary>
+    /// <returns>True if current user is administrator, false otherwise.</returns>
+    public static bool IsCurrentUserAdmin
+    {
+        get
+        {
+            isCurrentUserAdmin ??= WindowsIdentity.GetCurrent().Groups?.Any(g => g == localAdministratorsGroup) == true;
+            return isCurrentUserAdmin.Value;
+        }
     }
 
     /// <summary>

@@ -67,6 +67,8 @@ public enum IMAGE_FILE_MACHINE : WORD
 /// </summary>
 public readonly struct IMAGE_FILE_HEADER
 {
+    public static readonly unsafe int SizeOf = sizeof(IMAGE_FILE_HEADER);
+
     public IMAGE_FILE_MACHINE Machine { get; }
     public WORD NumberOfSections { get; }
     public DWORD TimeDateStamp { get; }
@@ -87,6 +89,8 @@ internal readonly struct IMAGE_DATA_DIRECTORY
 /// </summary>
 public readonly struct IMAGE_OPTIONAL_HEADER
 {
+    public static readonly unsafe int SizeOf = sizeof(IMAGE_OPTIONAL_HEADER);
+
     //
     // Standard fields.
     //
@@ -103,9 +107,11 @@ public readonly struct IMAGE_OPTIONAL_HEADER
     // Different fields follow depending on architecture
 }
 
-internal unsafe struct IMAGE_DOS_HEADER
+public struct IMAGE_DOS_HEADER
 {      // DOS .EXE header
     public static readonly WORD ExpectedMagic = MemoryMarshal.Read<WORD>("MZ"u8);
+
+    public static unsafe readonly int SizeOf = sizeof(IMAGE_DOS_HEADER);
 
     public readonly WORD e_magic;                     // Magic number
     public readonly WORD e_cblp;                      // Bytes on last page of file
@@ -121,10 +127,10 @@ internal unsafe struct IMAGE_DOS_HEADER
     public readonly WORD e_cs;                        // Initial (relative) CS value
     public readonly WORD e_lfarlc;                    // File address of relocation table
     public readonly WORD e_ovno;                      // Overlay number
-    public fixed WORD e_res[4];                       // Reserved words
+    public unsafe fixed WORD e_res[4];                // Reserved words
     public readonly WORD e_oemid;                     // OEM identifier (for e_oeminfo)
     public readonly WORD e_oeminfo;                   // OEM information; e_oemid specific
-    public fixed WORD e_res2[10];                     // Reserved words
+    public unsafe fixed WORD e_res2[10];              // Reserved words
     public readonly LONG e_lfanew;                    // File address of new exe header
 }
 
@@ -133,6 +139,8 @@ internal unsafe struct IMAGE_DOS_HEADER
 /// </summary>
 public readonly struct IMAGE_NT_HEADERS
 {
+    public static readonly unsafe int SizeOf = sizeof(IMAGE_NT_HEADERS);
+
     public static readonly WORD ExpectedSignature = MemoryMarshal.Read<WORD>("PE\0\0"u8);
 
     public int Signature { get; }
