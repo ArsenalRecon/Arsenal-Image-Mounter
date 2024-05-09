@@ -26,7 +26,7 @@
     <Product>Arsenal Image Mounter</Product>
     <Copyright>Copyright © Arsenal Recon, 2015 - 2024</Copyright>
     <Trademark />
-    <FileVersion>3.11.289.0</FileVersion>
+    <FileVersion>3.11.290.0</FileVersion>
     <ProductVersion>$(FileVersion)</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <Authors>Arsenal Recon</Authors>

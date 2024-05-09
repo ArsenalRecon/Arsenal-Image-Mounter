@@ -271,7 +271,14 @@ public class DiskStream : AligningStream
         {
             if (CanWrite)
             {
-                NativeFileIO.FlushBuffers(handle);
+#if NET8_0_OR_GREATER
+                RandomAccess.FlushToDisk(handle);
+#else
+                if (OperatingSystem.IsWindows())
+                {
+                    NativeFileIO.FlushBuffers(handle);
+                }
+#endif
             }
         }
 
@@ -362,6 +369,12 @@ public class DiskStream : AligningStream
 
         public override void WriteByte(byte value)
             => Write(MemoryMarshal.CreateReadOnlySpan(ref value, 1));
+
+        public override void Close()
+        {
+            handle?.Dispose();
+            base.Close();
+        }
     }
 #else
     private sealed class DiskFileStream(SafeFileHandle handle, FileAccess access)
@@ -385,4 +398,4 @@ public class DiskStream : AligningStream
             => throw new NotImplementedException();
     }
 #endif
-}
+            }
