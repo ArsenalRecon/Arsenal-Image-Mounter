@@ -178,18 +178,15 @@ public static class NativePE
     /// <param name="fileData">Pointer to raw or mapped exe or dll</param>
     /// <returns>Copy of data from located version resource</returns>
     public static FixedFileVerInfo GetFixedFileVerInfo(ReadOnlySpan<byte> fileData) =>
-        GetRawFileVersionResource(fileData, out _).FixedFileInfo;
+        GetRawFileVersionResource(fileData).CastRef<VS_VERSIONINFO>().FixedFileInfo;
 
     /// <summary>
     /// Locates version resource in a PE image
     /// </summary>
     /// <param name="fileData">Pointer to raw or mapped exe or dll</param>
-    /// <param name="resourceSize">Returns size of found resource</param>
     /// <returns>Reference to located version resource</returns>
-    public static unsafe ref readonly VS_VERSIONINFO GetRawFileVersionResource(ReadOnlySpan<byte> fileData, out int resourceSize)
+    public static unsafe ReadOnlySpan<byte> GetRawFileVersionResource(ReadOnlySpan<byte> fileData)
     {
-        resourceSize = 0;
-
         ref readonly var dos_header = ref fileData.CastRef<IMAGE_DOS_HEADER>();
 
         if (dos_header.e_magic != IMAGE_DOS_HEADER.ExpectedMagic)
@@ -222,7 +219,8 @@ public static class NativePE
 
         var resource_section = raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress));
         ref readonly var resource_dir = ref resource_section.CastRef<IMAGE_RESOURCE_DIRECTORY>();
-        var resource_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress) + sizeof(IMAGE_RESOURCE_DIRECTORY)));
+        var resource_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(
+            raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress) + sizeof(IMAGE_RESOURCE_DIRECTORY)));
 
         for (var i = 0; i < resource_dir.NumberOfNamedEntries + resource_dir.NumberOfIdEntries; i++)
         {
@@ -268,10 +266,13 @@ public static class NativePE
                     var found_data_entry = resource_section.Slice((int)found_subdir_entry_header.OffsetToData);
                     ref readonly var found_data_entry_header = ref found_data_entry.CastRef<IMAGE_RESOURCE_DATA_ENTRY>();
 
-                    var found_res = raw.Slice((int)(found_data_entry_header.OffsetToData - section_header.VirtualAddress));
+                    var found_res = raw.Slice(
+                        (int)(found_data_entry_header.OffsetToData - section_header.VirtualAddress),
+                        (int)found_data_entry_header.Size);
+
                     ref readonly var found_res_block = ref found_res.CastRef<VS_VERSIONINFO>();
 
-                    if (found_res_block.Type != 0 ||
+                    if (found_res_block.Header.Type != VersionResourceType.Binary ||
                         !found_res_block.Key.Equals("VS_VERSION_INFO\0".AsSpan(), StringComparison.Ordinal) ||
                         found_res_block.FixedFileInfo.StructVersion == 0 ||
                         found_res_block.FixedFileInfo.Signature != FixedFileVerInfo.FixedFileVerSignature)
@@ -279,9 +280,7 @@ public static class NativePE
                         throw new FileNotFoundException("No valid version resource in PE file");
                     }
 
-                    resourceSize = (int)found_data_entry_header.Size;
-
-                    return ref found_res_block;
+                    return found_res;
                 }
             }
         }
