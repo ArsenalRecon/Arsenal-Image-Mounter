@@ -1,13 +1,8 @@
 ﻿using Arsenal.ImageMounter.IO.Native;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 
-namespace Arsenal.ImageMounter;
+namespace Arsenal.ImageMounter.Tests;
 
 public class Version
 {

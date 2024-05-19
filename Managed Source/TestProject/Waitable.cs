@@ -47,6 +47,8 @@ public class Waitable
         ThreadPool.QueueUserWorkItem(_ => { evt.Set(); });
 
         result = await evt.WaitAsync();
+
+        Assert.True(result);
     }
 
     [Fact]
@@ -69,5 +71,7 @@ public class Waitable
         ThreadPool.QueueUserWorkItem(_ => { evt.Set(); });
 
         result = await evt.WaitHandle.WaitAsync();
+
+        Assert.True(result);
     }
 }

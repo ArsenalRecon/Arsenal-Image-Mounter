@@ -55,7 +55,7 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// instance is disposed.</param>
 /// <param name="initialBufferSize">Initial buffer size to use for shared memory I/O communication between driver and this service.
 /// This will be automatically increased later if needed.</param>
-[SupportedOSPlatform("windows")]
+[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public partial class DevioDrvService(string objectName, IDevioProvider devioProvider, bool ownsProvider, long initialBufferSize) : DevioServiceBase(devioProvider, ownsProvider)
 {
     /// <summary>
