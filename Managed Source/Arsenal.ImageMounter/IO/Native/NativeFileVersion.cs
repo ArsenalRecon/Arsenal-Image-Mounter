@@ -350,14 +350,15 @@ public class NativeFileVersion
         {
             ref readonly var fileInfoBlockHeader = ref versionResource.CastRef<VS_VERSIONHEADER>();
 
-            if (fileInfoBlockHeader.Length == 0)
+            if (fileInfoBlockHeader.Length == 0
+                || fileInfoBlockHeader.Length > versionResource.Length)
             {
                 break;
             }
 
             var fileInfoBlock = versionResource.Slice(0, fileInfoBlockHeader.Length);
 
-            idx = fileInfoBlock.Length;
+            idx = fileInfoBlockHeader.Length;
             idx += -idx & 3;
             versionResource = idx < versionResource.Length ? versionResource.Slice(idx) : default;
 
@@ -444,14 +445,15 @@ public class NativeFileVersion
         {
             ref readonly var fileInfoBlockHeader = ref versionResource.CastRef<VS_VERSIONHEADER>();
 
-            if (fileInfoBlockHeader.Length == 0)
+            if (fileInfoBlockHeader.Length == 0
+                || fileInfoBlockHeader.Length > versionResource.Length)
             {
                 break;
             }
 
             var fileInfoBlock = versionResource.Slice(0, fileInfoBlockHeader.Length);
 
-            idx = fileInfoBlock.Length;
+            idx = fileInfoBlockHeader.Length;
             idx += -idx & 3;
             versionResource = idx < versionResource.Length ? versionResource.Slice(idx) : default;
 
