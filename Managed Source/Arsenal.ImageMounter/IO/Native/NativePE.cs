@@ -162,14 +162,17 @@ public static class NativePE
     /// </summary>
     /// <param name="fileData">Raw exe or dll data</param>
     /// <returns>IMAGE_NT_HEADERS structure</returns>
-    public static IMAGE_NT_HEADERS GetImageNtHeaders(ReadOnlySpan<byte> fileData)
+    public static ref readonly IMAGE_NT_HEADERS GetImageNtHeaders(ReadOnlySpan<byte> fileData)
     {
-        var dos_header = MemoryMarshal.Read<IMAGE_DOS_HEADER>(fileData);
-        var header = MemoryMarshal.Read<IMAGE_NT_HEADERS>(fileData.Slice(dos_header.e_lfanew));
+        ref readonly var dos_header = ref fileData.CastRef<IMAGE_DOS_HEADER>();
+        ref readonly var header = ref fileData.Slice(dos_header.e_lfanew).CastRef<IMAGE_NT_HEADERS>();
 
-        return header.Signature == 0x4550 && header.FileHeader.SizeOfOptionalHeader != 0
-            ? header
-            : throw new BadImageFormatException();
+        if (header.Signature != 0x4550 || header.FileHeader.SizeOfOptionalHeader == 0)
+        {
+            throw new BadImageFormatException();
+        }
+
+        return ref header;
     }
 
     /// <summary>
@@ -277,7 +280,7 @@ public static class NativePE
                         found_res_block.FixedFileInfo.StructVersion == 0 ||
                         found_res_block.FixedFileInfo.Signature != FixedFileVerInfo.FixedFileVerSignature)
                     {
-                        throw new FileNotFoundException("No valid version resource in PE file");
+                        throw new FileNotFoundException("Unsupported version resource in PE file");
                     }
 
                     return found_res;
@@ -292,12 +295,10 @@ public static class NativePE
     {
         for (var i = 0; i < section_table.Length; i++)
         {
-            if (section_table[i].Name != RsrcId)
+            if (section_table[i].Name == RsrcId)
             {
-                continue;
+                return ref section_table[i];
             }
-
-            return ref section_table[i];
         }
 
         throw new BadImageFormatException("No resource section found in PE file");
