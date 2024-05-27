@@ -65,50 +65,7 @@ public static class ConsoleApp
 
             if (commands.ContainsKey("background"))
             {
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.Error.WriteLine("The --background switch is only supported on Windows");
-                    Console.ResetColor();
-                    return -1;
-                }
-
-                var cmdLine = NativeFileIO.GetProcessCommandLineAsArgumentArray();
-
-                using var ready_wait = new ManualResetEvent(initialState: false);
-
-                NativeFileIO.SetInheritable(ready_wait.SafeWaitHandle, inheritable: true);
-
-                for (var i = 0; i < cmdLine.Length; i++)
-                {
-                    if (cmdLine[i] is "--background" or "/background")
-                    {
-                        cmdLine[i] = $"--detach={ready_wait.SafeWaitHandle.DangerousGetHandle()}";
-                    }
-                    else if (cmdLine[i].Contains(' ') && !cmdLine[i].Contains('"'))
-                    {
-                        cmdLine[i] = $@"""{cmdLine[i]}""";
-                    }
-                }
-
-                using var process = new Process();
-
-#if NET6_0_OR_GREATER
-                process.StartInfo.FileName = Environment.ProcessPath;
-#else
-                process.StartInfo.FileName = Process.GetCurrentProcess().MainModule.FileName;
-#endif
-
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.Arguments = string.Join(" ", cmdLine.Skip(1));
-
-                process.Start();
-
-                using var process_wait = NativeFileIO.CreateWaitHandle(process.SafeHandle, inheritable: false);
-
-                WaitHandle.WaitAny([process_wait, ready_wait]);
-
-                return process.HasExited ? 0 : process.Id;
+                return ConsoleAppHelpers.StartBackgroundProcess();
             }
 
             return ConsoleAppHelpers.UnsafeMain(commands);

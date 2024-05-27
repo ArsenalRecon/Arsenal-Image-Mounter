@@ -283,6 +283,14 @@ public static partial class NativeFileIO
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetStdHandle(StdHandle nStdHandle, nint handle);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool CloseHandle(nint handle);
+
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool GetConsoleScreenBufferInfo(nint hConsoleOutput, out CONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo);
 
         [LibraryImport("kernel32", SetLastError = true)]
@@ -781,6 +789,12 @@ public static partial class NativeFileIO
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern nint GetStdHandle(StdHandle nStdHandle);
+
+        [DllImport("kernel32", SetLastError = true)]
+        internal static extern bool SetStdHandle(StdHandle nStdHandle, nint handle);
+
+        [DllImport("kernel32", SetLastError = true)]
+        internal static extern bool CloseHandle(nint handle);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool GetConsoleScreenBufferInfo(nint hConsoleOutput, out CONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo);

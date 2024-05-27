@@ -14,13 +14,16 @@ using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Raw;
 using DiscUtils.Streams;
+using LTRData.Extensions.CommandLine;
 using LTRData.Extensions.Formatting;
 using LTRData.Extensions.IO;
+using LTRData.Extensions.Native;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -36,7 +39,9 @@ using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Threading;
 
-internal static class ConsoleAppHelpers
+namespace Arsenal.ImageMounter;
+
+public static class ConsoleAppHelpers
 {
     private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
 
@@ -54,9 +59,20 @@ internal static class ConsoleAppHelpers
             NativeFileIO.SetEvent(DetachEvent);
         }
 
+        Console.In.Dispose();
+        Console.Out.Dispose();
+        Console.Error.Dispose();
+
         Console.SetIn(TextReader.Null);
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
+
+        foreach (var std in new[] { StdHandle.Input, StdHandle.Output, StdHandle.Error })
+        {
+            var handle = NativeFileIO.UnsafeNativeMethods.GetStdHandle(std);
+            NativeFileIO.UnsafeNativeMethods.SetStdHandle(std, 0);
+            NativeFileIO.UnsafeNativeMethods.CloseHandle(handle);
+        }
 
         NativeFileIO.SafeNativeMethods.FreeConsole();
     }
@@ -1085,5 +1101,53 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
         return service.Exception is not null
             ? throw new Exception("Service failed.", service.Exception)
             : 0;
+    }
+
+    public static int StartBackgroundProcess()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Error.WriteLine("The --background switch is only supported on Windows");
+            Console.ResetColor();
+            return -1;
+        }
+
+        var cmdLine = NativeFileIO.GetProcessCommandLineAsArgumentArray();
+        
+        using var ready_wait = new ManualResetEvent(initialState: false);
+        
+        NativeFileIO.SetInheritable(ready_wait.SafeWaitHandle, inheritable: true);
+
+        for (var i = 0; i < cmdLine.Length; i++)
+        {
+            if (cmdLine[i] is "--background" or "/background")
+            {
+                cmdLine[i] = $"--detach={ready_wait.SafeWaitHandle.DangerousGetHandle()}";
+            }
+            else if (cmdLine[i].Contains(' ') && !cmdLine[i].Contains('"'))
+            {
+                cmdLine[i] = $@"""{cmdLine[i]}""";
+            }
+        }
+        
+        using var process = new Process();
+
+#if NET6_0_OR_GREATER
+        process.StartInfo.FileName = Environment.ProcessPath;
+#else
+                process.StartInfo.FileName = Process.GetCurrentProcess().MainModule.FileName;
+#endif
+
+        process.StartInfo.UseShellExecute = false;
+        process.StartInfo.Arguments = string.Join(" ", cmdLine.Skip(1));
+
+        process.Start();
+        using var process_wait = NativeFileIO.CreateWaitHandle(process.SafeHandle, inheritable: false);
+        WaitHandle.WaitAny([process_wait, ready_wait]);
+
+        var id = process.HasExited ? 0 : process.Id;
+
+        return id;
     }
 }
