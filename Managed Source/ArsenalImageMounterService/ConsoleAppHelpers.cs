@@ -535,7 +535,7 @@ Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to th
 
 Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
 
-Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01 and Ex01), AFF4 forensic disk images or QEMU Qcow images, you must make the Libewf (libewf.dll), LibAFF4 (libaff4.dll) and Libqcow (libqcow.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI now mounts disk images in read-only mode by default.
+Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01, Ex01, S01 and AFF), AFF4 forensic disk images or QEMU Qcow images, you must make the Libewf (libewf.dll), LibAFF4 (libaff4.dll) and Libqcow (libqcow.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI now mounts disk images in read-only mode by default.
 
 Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
 {asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly|--writable] [--fakesig] [--fakembr] [--online] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile [--autodelete]] [--background]

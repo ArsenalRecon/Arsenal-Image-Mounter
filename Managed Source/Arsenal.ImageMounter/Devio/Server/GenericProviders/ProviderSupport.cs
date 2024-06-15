@@ -346,15 +346,33 @@ public static class ProviderSupport
 
     public static void ConvertToLibEwfImage(this IDevioProvider provider,
                                             string outputImage,
+                                            string image_type,
                                             Dictionary<string, byte[]?>? hashResults,
-                                            CompletionPosition? completionPosition,
-                                            CancellationToken cancellationToken)
+                                            CompletionPosition? completionPosition, CancellationToken cancellationToken)
     {
         var imaging_parameters = new DevioProviderLibEwf.ImagingParameters
         {
             MediaSize = (ulong)provider.Length,
             BytesPerSector = provider.SectorSize
         };
+
+        switch (image_type)
+        {
+            case "E01":
+                imaging_parameters.UseEWFFileFormat = DevioProviderLibEwf.LIBEWF_FORMAT.ENCASE6;
+                imaging_parameters.SegmentFileSize = 2UL << 40;
+                break;
+
+            case "EX01":
+                imaging_parameters.UseEWFFileFormat = DevioProviderLibEwf.LIBEWF_FORMAT.V2_ENCASE7;
+                imaging_parameters.SegmentFileSize = 2UL << 40;
+                break;
+
+            case "S01":
+                imaging_parameters.UseEWFFileFormat = DevioProviderLibEwf.LIBEWF_FORMAT.SMART;
+                imaging_parameters.SegmentFileSize = int.MaxValue;
+                break;
+        }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -371,7 +389,7 @@ public static class ProviderSupport
             }
         }
 
-        using var target = new DevioProviderLibEwf(new[] { Path.ChangeExtension(outputImage, null) }, DevioProviderLibEwf.AccessFlagsWrite);
+        using var target = new DevioProviderLibEwf([Path.ChangeExtension(outputImage, null)], DevioProviderLibEwf.AccessFlagsWrite);
 
         target.SetOutputParameters(imaging_parameters);
 

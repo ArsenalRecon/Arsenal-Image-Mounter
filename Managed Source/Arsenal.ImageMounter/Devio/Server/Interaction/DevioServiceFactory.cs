@@ -1030,6 +1030,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
             case ".e01":
             case ".aff":
             case ".ex01":
+            case ".s01":
             case ".lx01":
                 {
                     if (!Console.IsErrorRedirected)
@@ -1089,7 +1090,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
             ".vhd" or ".vdi" or ".vmdk" or ".vhdx" or ".dmg" or ".ova" => ProviderType.DiscUtils,
             ".001" => File.Exists(Path.ChangeExtension(imageFile, ".002")) ? ProviderType.MultiPartRaw : ProviderType.None,
             ".raw" or ".dd" or ".img" or ".ima" or ".iso" or ".bin" or ".nrg" => ProviderType.None,
-            ".e01" or ".aff" or ".ex01" or ".lx01" => ProviderType.LibEwf,
+            ".e01" or ".aff" or ".ex01" or ".s01" or ".lx01" => ProviderType.LibEwf,
             ".qcow" or ".qcow2" or ".qcow2c" => ProviderType.LibQcow,
             ".aff4" => ProviderType.LibAFF4,
             _ => ProviderType.None,

@@ -75,7 +75,7 @@ public static class ExtensionMethods
         : typeof(Reflection.MembersStringParser<>)
             .MakeGenericType(o.GetType())
             .GetMethod("ToString", BindingFlags.Public | BindingFlags.Static)?
-            .Invoke(null, new[] { o }) as string ?? "(null)";
+            .Invoke(null, [o]) as string ?? "(null)";
 
     /// <summary>
     /// Creates a string with formatted values of all members of an object.

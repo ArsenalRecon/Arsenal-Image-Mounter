@@ -902,9 +902,9 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
         SetOutputValueParameter(libewf_handle_set_maximum_segment_size, ImagingParameters.SegmentFileSize);
         SetOutputValueParameter(libewf_handle_set_sectors_per_chunk, ImagingParameters.SectorsPerChunk);
 
-        if (ImagingParameters.SectorErrorGranularity == 0 || ImagingParameters.SectorErrorGranularity >= ImagingParameters.SectorsPerChunk)
+        if (ImagingParameters.SectorErrorGranularity == 0
+            || ImagingParameters.SectorErrorGranularity >= ImagingParameters.SectorsPerChunk)
         {
-
             ImagingParameters.SectorErrorGranularity = ImagingParameters.SectorsPerChunk;
         }
 

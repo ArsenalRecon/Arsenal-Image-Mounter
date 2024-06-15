@@ -206,8 +206,10 @@ internal static class ImageConversions
                         }
 
                     case "E01":
+                    case "EX01":
+                    case "S01":
                         {
-                            provider.ConvertToLibEwfImage(outputImage, hashResults, completionPosition, cancellationToken);
+                            provider.ConvertToLibEwfImage(outputImage, image_type, hashResults, completionPosition, cancellationToken);
                             break;
                         }
 
