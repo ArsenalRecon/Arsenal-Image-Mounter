@@ -73,7 +73,7 @@ public static class NativeConstants
     public const int ERROR_DEV_NOT_EXIST = 55;
     public const int ERROR_INVALID_PARAMETER = 87;
     public const int ERROR_ALREADY_EXISTS = 183;
-    public const int ERROR_MORE_DATA = 0x234;
+    public const int ERROR_MORE_DATA = 234;
     public const int ERROR_IO_PENDING = 997;
     public const int ERROR_NOT_ALL_ASSIGNED = 1300;
     public const int ERROR_INSUFFICIENT_BUFFER = 122;
