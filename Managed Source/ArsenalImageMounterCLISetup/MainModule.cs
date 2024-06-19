@@ -72,20 +72,38 @@ public static class MainModule
 
     public static int SetupOperation(OpMode opMode)
     {
-
         Trace.WriteLine($"Kernel type: {Kernel}");
         Trace.WriteLine($"Kernel supports StorPort: {HasStorPort}");
 
         switch (opMode)
         {
-
             case OpMode.Install:
+                using (var zipStream = typeof(MainModule).Assembly.GetManifestResourceStream(typeof(MainModule), "DriverFiles.zip")
+                    ?? throw new KeyNotFoundException("Cannot find embedded DriverFiles.zip"))
                 {
-                    using (var zipStream = typeof(MainModule).Assembly.GetManifestResourceStream(typeof(MainModule), "DriverFiles.zip")
-                        ?? throw new KeyNotFoundException("Cannot find embedded DriverFiles.zip"))
+                    InstallFromZipStream(OwnerWindow, zipStream);
+                }
+
+                try
+                {
+                    using (new ScsiAdapter())
                     {
-                        InstallFromZipStream(OwnerWindow, zipStream);
                     }
+
+                    Trace.WriteLine("Driver successfully installed.");
+                    return 0;
+                }
+                catch
+                {
+                    Trace.WriteLine("A reboot may be required to complete driver setup.");
+                    return 1;
+                }
+
+            case OpMode.Uninstall:
+                if (AdapterDevicePresent)
+                {
+                    Uninstall(OwnerWindow);
+                    Trace.WriteLine("Driver successfully uninstalled.");
 
                     try
                     {
@@ -93,62 +111,34 @@ public static class MainModule
                         {
                         }
 
-                        Trace.WriteLine("Driver successfully installed.");
-                        return 0;
+                        Trace.WriteLine("A reboot may be required to complete driver setup.");
+                        return 2;
                     }
                     catch
                     {
-                        Trace.WriteLine("A reboot may be required to complete driver setup.");
-                        return 1;
+                        return 0;
                     }
                 }
-
-            case OpMode.Uninstall:
+                else
                 {
-                    if (AdapterDevicePresent)
-                    {
-                        Uninstall(OwnerWindow);
-                        Trace.WriteLine("Driver successfully uninstalled.");
-
-                        try
-                        {
-                            using (new ScsiAdapter())
-                            {
-                            }
-
-                            Trace.WriteLine("A reboot may be required to complete driver setup.");
-                            return 2;
-                        }
-                        catch
-                        {
-                            return 0;
-                        }
-                    }
-                    else
-                    {
-                        Trace.WriteLine("Virtual SCSI adapter not installed.");
-                        return 1;
-                    }
+                    Trace.WriteLine("Virtual SCSI adapter not installed.");
+                    return 1;
                 }
 
             case OpMode.Status:
+                if (AdapterDevicePresent)
                 {
-                    if (AdapterDevicePresent)
-                    {
-                        Trace.WriteLine("Virtual SCSI adapter installed.");
-                        return 0;
-                    }
-                    else
-                    {
-                        Trace.WriteLine("Virtual SCSI adapter not installed.");
-                        return 1;
-                    }
+                    Trace.WriteLine("Virtual SCSI adapter installed.");
+                    return 0;
+                }
+                else
+                {
+                    Trace.WriteLine("Virtual SCSI adapter not installed.");
+                    return 1;
                 }
 
             default:
-                {
-                    return -1;
-                }
+                return -1;
         }
     }
 }

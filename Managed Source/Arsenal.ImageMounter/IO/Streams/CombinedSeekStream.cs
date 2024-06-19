@@ -411,7 +411,7 @@ public class CombinedSeekStream : CompatibilityStream
                 break;
 
             case SeekOrigin.End:
-                offset = Length + offset;
+                offset += Length;
                 break;
         }
 

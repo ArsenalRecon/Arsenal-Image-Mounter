@@ -39,30 +39,13 @@ public class ConsoleSpinProgress : IDisposable
 
     public static void UpdateConsoleSpinProgress(ref char chr)
     {
-        switch (chr)
+        chr = chr switch
         {
-            case '\\':
-                {
-                    chr = '|';
-                    break;
-                }
-            case '|':
-                {
-                    chr = '/';
-                    break;
-                }
-            case '/':
-                {
-                    chr = '-';
-                    break;
-                }
-
-            default:
-                {
-                    chr = '\\';
-                    break;
-                }
-        }
+            '\\' => '|',
+            '|' => '/',
+            '/' => '-',
+            _ => '\\',
+        };
 
         lock (ConsoleSupport.ConsoleSync)
         {

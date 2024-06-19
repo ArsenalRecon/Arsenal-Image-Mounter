@@ -125,7 +125,7 @@ public static partial class WaitAsyncExtensions
 
     public static async Task<int> WaitForResultAsync(this Process process, CancellationToken cancellationToken = default)
     {
-        await process.WaitForExitAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
         return process.ExitCode;
     }
 

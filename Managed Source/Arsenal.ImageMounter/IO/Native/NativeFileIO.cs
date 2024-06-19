@@ -2559,35 +2559,19 @@ Currently, the following application has files open on this volume:
         }
 
         var NativeDesiredAccess = ConvertManagedFileAccess(DesiredAccess);
-
-        uint NativeCreationDisposition;
-        switch (CreationDisposition)
+        
+        var NativeCreationDisposition = CreationDisposition switch
         {
-            case FileMode.Create:
-                NativeCreationDisposition = NativeConstants.CREATE_ALWAYS;
-                break;
-            case FileMode.CreateNew:
-                NativeCreationDisposition = NativeConstants.CREATE_NEW;
-                break;
-            case FileMode.Open:
-                NativeCreationDisposition = NativeConstants.OPEN_EXISTING;
-                break;
-            case FileMode.OpenOrCreate:
-                NativeCreationDisposition = NativeConstants.OPEN_ALWAYS;
-                break;
-            case FileMode.Truncate:
-                NativeCreationDisposition = NativeConstants.TRUNCATE_EXISTING;
-                break;
-
-            default:
-                {
-                    throw new NotImplementedException();
-                }
-        }
-
-        var NativeFlagsAndAttributes = (FileOptions)FileAttributes.Normal;
-
-        NativeFlagsAndAttributes |= Options;
+            FileMode.Create => NativeConstants.CREATE_ALWAYS,
+            FileMode.CreateNew => NativeConstants.CREATE_NEW,
+            FileMode.Open => NativeConstants.OPEN_EXISTING,
+            FileMode.OpenOrCreate => NativeConstants.OPEN_ALWAYS,
+            FileMode.Truncate => NativeConstants.TRUNCATE_EXISTING,
+            _ => throw new NotImplementedException(),
+        };
+        
+        var NativeFlagsAndAttributes = (FileOptions)FileAttributes.Normal
+            | Options;
 
         var Handle = UnsafeNativeMethods.CreateFileW(FileName.AsRef(),
                                                      NativeDesiredAccess,

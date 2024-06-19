@@ -200,24 +200,18 @@ internal static class ImageConversions
                     case "ISO":
                     case "BIN":
                     case "001":
-                        {
-                            provider.ConvertToRawImage(outputImage, OutputImageVariant, hashResults, completionPosition, cancellationToken);
-                            break;
-                        }
+                        provider.ConvertToRawImage(outputImage, OutputImageVariant, hashResults, completionPosition, cancellationToken);
+                        break;
 
                     case "E01":
                     case "EX01":
                     case "S01":
-                        {
-                            provider.ConvertToLibEwfImage(outputImage, image_type, hashResults, completionPosition, cancellationToken);
-                            break;
-                        }
+                        provider.ConvertToLibEwfImage(outputImage, image_type, hashResults, completionPosition, cancellationToken);
+                        break;
 
                     default:
-                        {
-                            provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, hashResults, completionPosition, cancellationToken);
-                            break;
-                        }
+                        provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, hashResults, completionPosition, cancellationToken);
+                        break;
                 }
             }, cancellationToken);
 
