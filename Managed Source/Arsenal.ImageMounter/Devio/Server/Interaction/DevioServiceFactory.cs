@@ -996,9 +996,11 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
         switch (Path.GetExtension(imageFile).ToLowerInvariant())
         {
             case ".vhd":
+            case ".avhd":
             case ".vdi":
             case ".vmdk":
             case ".vhdx":
+            case ".avhdx":
             case ".dmg":
                 {
                     if (!DiscUtilsInitialized)
@@ -1087,7 +1089,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     public static ProviderType GetProviderTypeFromFileName(string imageFile)
         => Path.GetExtension(imageFile).ToLowerInvariant() switch
         {
-            ".vhd" or ".vdi" or ".vmdk" or ".vhdx" or ".dmg" or ".ova" => ProviderType.DiscUtils,
+            ".vhd" or ".avhd" or ".vdi" or ".vmdk" or ".vhdx" or ".avhdx" or ".dmg" or ".ova" => ProviderType.DiscUtils,
             ".001" => File.Exists(Path.ChangeExtension(imageFile, ".002")) ? ProviderType.MultiPartRaw : ProviderType.None,
             ".raw" or ".dd" or ".img" or ".ima" or ".iso" or ".bin" or ".nrg" => ProviderType.None,
             ".e01" or ".aff" or ".ex01" or ".s01" or ".lx01" => ProviderType.LibEwf,
