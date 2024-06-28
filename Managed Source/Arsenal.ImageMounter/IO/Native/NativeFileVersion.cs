@@ -17,7 +17,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 #endif
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using BYTE = System.Byte;
 using DWORD = System.UInt32;
 using LONG = System.Int32;

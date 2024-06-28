@@ -11,7 +11,6 @@
 using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
-using LTRData.Extensions.Async;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.IO;
 using System;

@@ -10,7 +10,6 @@
 //  Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using Microsoft.Win32.SafeHandles;
 using System;

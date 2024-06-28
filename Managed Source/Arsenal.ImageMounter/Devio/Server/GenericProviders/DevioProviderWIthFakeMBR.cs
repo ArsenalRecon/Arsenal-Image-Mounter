@@ -14,7 +14,6 @@ using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Partitions;
 using System;
-using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;

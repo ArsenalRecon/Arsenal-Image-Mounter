@@ -9,23 +9,19 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
-using DiscUtils.Streams;
 using LTRData.Extensions.Async;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;

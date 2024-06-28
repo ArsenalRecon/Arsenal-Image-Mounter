@@ -494,13 +494,13 @@ Public Class MainForm
                 Dim item = Task.Run(
                     Function()
 
-                        Dim pdo_path = API.EnumeratePhysicalDeviceObjectPaths(Adapter.DeviceInstance, DeviceItem.DeviceProperties.DeviceNumber).FirstOrDefault()
-                        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDriveNameForNtDevice(pdo_path)).FirstOrDefault()
+                        Dim pdo_path = API.EnumeratePhysicalDeviceObjectPaths(Adapter.DeviceInstance, DeviceItem.DeviceProperties.DeviceNumber)
+                        Dim dev_path = NativeFileIO.QueryDosDevice(NativeFileIO.GetPhysicalDriveNameForNtDevice(pdo_path.FirstOrDefault()))
+                        Dim vol_path = NativeFileIO.EnumerateDiskVolumes(DeviceItem.DevicePath).SelectMany(Function(vol) NativeFileIO.QueryDosDevice(vol.Substring(4, 44)))
 
                         Dim processes = NativeFileIO.EnumerateProcessesHoldingFileHandle(includeProcessNames:=Nothing,
                                                                                          NativeFileIO.ExcludeProcessesFromHandleSearch,
-                                                                                         pdo_path,
-                                                                                         dev_path).
+                                                                                         pdo_path.Concat(dev_path).Concat(vol_path).ToArray()).
                             Select(AddressOf NativeFileIO.FormatProcessName)
 
                         Dim processlist = String.Join(Environment.NewLine, processes)

@@ -1,10 +1,6 @@
 ﻿using Arsenal.ImageMounter.IO.Streams;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Arsenal.ImageMounter.Tests;

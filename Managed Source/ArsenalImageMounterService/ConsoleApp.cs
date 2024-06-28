@@ -8,16 +8,11 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Native;
 using LTRData.Extensions.CommandLine;
 using LTRData.Extensions.Formatting;
-using LTRData.Extensions.IO;
-using LTRData.Extensions.Native;
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;

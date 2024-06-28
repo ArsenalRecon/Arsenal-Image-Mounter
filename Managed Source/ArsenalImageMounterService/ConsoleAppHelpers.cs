@@ -8,22 +8,18 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
 using Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.ConsoleIO;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Raw;
 using DiscUtils.Streams;
-using LTRData.Extensions.CommandLine;
 using LTRData.Extensions.Formatting;
 using LTRData.Extensions.IO;
-using LTRData.Extensions.Native;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -614,7 +610,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
                 if (devicenumber == ScsiAdapter.AutoDeviceNumber)
                 {
-                    if (adapter.GetDeviceList().Length == 0)
+                    if (!adapter.EnumerateDevices().Any())
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.Error.WriteLine("No mounted devices.");
@@ -635,7 +631,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 }
                 else
                 {
-                    if (!adapter.GetDeviceList().Contains(devicenumber))
+                    if (!adapter.EnumerateDevices().Contains(devicenumber))
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.Error.WriteLine($"No device mounted with device number {devicenumber:X6}.");

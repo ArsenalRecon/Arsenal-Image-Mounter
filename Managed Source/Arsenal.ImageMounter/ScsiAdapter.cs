@@ -13,6 +13,7 @@
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
 using System;
@@ -29,6 +30,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter;
 
@@ -185,26 +187,60 @@ public class ScsiAdapter : DeviceObject
     /// Retrieves a list of virtual disks on this adapter. Each element in returned list holds device number of an existing
     /// virtual disk.
     /// </summary>
-    public uint[] GetDeviceList()
+    public IEnumerable<uint> EnumerateDevices()
     {
         var buffer = ArrayPool<byte>.Shared.Rent(65536);
         try
         {
-            var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_ADAPTER, 0U, buffer, out var ReturnCode);
+            var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_ADAPTER, 0U, buffer, out var ReturnCode);
 
             if (ReturnCode != 0)
             {
                 throw NativeFileIO.GetExceptionForNtStatus(ReturnCode);
             }
 
-            var NumberOfDevices = MemoryMarshal.Read<int>(Response);
+            var NumberOfDevices = MemoryMarshal.Read<int>(buffer);
+
+            if (NumberOfDevices == 0)
+            {
+                yield break;
+            }
+
+            for (var i = sizeof(uint); i <= NumberOfDevices * sizeof(uint); i += sizeof(uint))
+            {
+                yield return MemoryMarshal.Read<uint>(buffer.AsSpan(i, sizeof(uint)));
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    /// <summary>
+    /// Retrieves a list of virtual disks on this adapter. Each element in returned list holds device number of an existing
+    /// virtual disk.
+    /// </summary>
+    public uint[] GetDeviceList()
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(65536);
+        try
+        {
+            var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_ADAPTER, 0U, buffer, out var ReturnCode);
+
+            if (ReturnCode != 0)
+            {
+                throw NativeFileIO.GetExceptionForNtStatus(ReturnCode);
+            }
+
+            var NumberOfDevices = MemoryMarshal.Read<int>(buffer);
 
             if (NumberOfDevices == 0)
             {
                 return [];
             }
 
-            var array = MemoryMarshal.Cast<byte, uint>(Response.Slice(sizeof(uint), NumberOfDevices * sizeof(uint)))
+            var array = MemoryMarshal.Cast<byte, uint>(buffer.AsSpan(sizeof(uint), NumberOfDevices * sizeof(uint)))
                 .ToArray();
 
             return array;
@@ -219,7 +255,7 @@ public class ScsiAdapter : DeviceObject
     /// Retrieves a list of DeviceProperties objects for each virtual disk on this adapter.
     /// </summary>
     public IEnumerable<DeviceProperties> EnumerateDevicesProperties()
-        => GetDeviceList().Select(QueryDevice);
+        => EnumerateDevices().Select(QueryDevice);
 
     /// <summary>
     /// Creates a new virtual disk.
@@ -369,32 +405,36 @@ public class ScsiAdapter : DeviceObject
                                                                fileNameLength: (ushort)MemoryMarshal.AsBytes(Filename.AsSpan()).Length,
                                                                writeOverlayFileNameLength: (ushort)MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan()).Length);
 
-            var Request = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize
+            var buffer = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize
                 + deviceConfig.FileNameLength
                 + deviceConfig.WriteOverlayFileNameLength);
 
-            MemoryMarshal.Write(Request, ref deviceConfig);
+            MemoryMarshal.Write(buffer, ref deviceConfig);
 
             if (!string.IsNullOrWhiteSpace(Filename))
             {
                 MemoryMarshal.AsBytes(Filename.AsSpan())
-                    .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize));
+                    .CopyTo(buffer.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize));
             }
 
             if (!string.IsNullOrWhiteSpace(WriteOverlayFilename))
             {
                 MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan())
-                    .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength));
+                    .CopyTo(buffer.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength));
             }
 
-            var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE, 0U, Request, out var ReturnCode);
+            var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                                            NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
+                                                                            0U,
+                                                                            buffer,
+                                                                            out var ReturnCode);
 
             if (ReturnCode != 0)
             {
                 throw NativeFileIO.GetExceptionForNtStatus(ReturnCode);
             }
 
-            deviceConfig = MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(Response);
+            deviceConfig = MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(buffer.AsSpan(0, responseLength));
 
             DeviceNumber = deviceConfig.DeviceNumber;
             DiskSize = deviceConfig.DiskSize;
@@ -402,7 +442,7 @@ public class ScsiAdapter : DeviceObject
             ImageOffset = deviceConfig.ImageOffset;
             Flags = (DeviceFlags)deviceConfig.Flags;
 
-            while (!GetDeviceList().Contains(DeviceNumber))
+            while (!EnumerateDevices().Contains(DeviceNumber))
             {
                 Trace.WriteLine($"Waiting for new device {DeviceNumber:X6} to be registered by driver...");
                 Thread.Sleep(2500);
@@ -410,7 +450,7 @@ public class ScsiAdapter : DeviceObject
 
             DiskDevice DiskDevice;
 
-            var waittime = TimeSpan.FromMilliseconds(500d);
+            var waittime = TimeSpan.FromMilliseconds(500);
             
             for(; ;)
             {
@@ -423,7 +463,7 @@ public class ScsiAdapter : DeviceObject
                 catch (DriveNotFoundException ex)
                 {
                     Trace.WriteLine($"Error opening device: {ex.JoinMessages()}");
-                    waittime += TimeSpan.FromMilliseconds(500d);
+                    waittime += TimeSpan.FromMilliseconds(500);
 
                     Trace.WriteLine("Not ready, rescanning SCSI adapter...");
 
@@ -623,18 +663,20 @@ public class ScsiAdapter : DeviceObject
                     .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength));
             }
 
-            static IMSCSI_DEVICE_CONFIGURATION CreateDevice(SafeFileHandle SafeFileHandle, byte[] Request)
+            static IMSCSI_DEVICE_CONFIGURATION CreateDevice(SafeFileHandle SafeFileHandle, Span<byte> buffer)
             {
-                var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
-                                                                          NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
-                                                                          0U, Request, out var ReturnCode);
+                var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                                                NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
+                                                                                0U,
+                                                                                buffer,
+                                                                                out var returnCode);
 
-                if (ReturnCode != 0)
+                if (returnCode != 0)
                 {
-                    throw NativeFileIO.GetExceptionForNtStatus(ReturnCode);
+                    throw NativeFileIO.GetExceptionForNtStatus(returnCode);
                 }
 
-                return MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(Response);
+                return MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(buffer.Slice(0, responseLength));
             }
 
             deviceConfig = CreateDevice(SafeFileHandle, Request);
@@ -645,7 +687,7 @@ public class ScsiAdapter : DeviceObject
             ImageOffset = deviceConfig.ImageOffset;
             Flags = (DeviceFlags)deviceConfig.Flags;
 
-            while (!GetDeviceList().Contains(DeviceNumber))
+            while (!EnumerateDevices().Contains(DeviceNumber))
             {
                 Trace.WriteLine($"Waiting for new device {DeviceNumber:X6} to be registered by driver...");
                 await Task.Delay(2500, cancellationToken).ConfigureAwait(false);
@@ -666,7 +708,7 @@ public class ScsiAdapter : DeviceObject
                 catch (DriveNotFoundException ex)
                 {
                     Trace.WriteLine($"Error opening device: {ex.JoinMessages()}");
-                    waittime += TimeSpan.FromMilliseconds(500d);
+                    waittime += TimeSpan.FromMilliseconds(500);
 
                     Trace.WriteLine("Not ready, rescanning SCSI adapter...");
 
@@ -882,15 +924,15 @@ public class ScsiAdapter : DeviceObject
         Filename = null;
         WriteOverlayImagefile = null;
 
-        var Request = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + 65535);
+        var buffer = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + 65535);
 
         try
         {
             var deviceConfig = new IMSCSI_DEVICE_CONFIGURATION(deviceNumber: DeviceNumber, fileNameLength: 65535);
 
-            MemoryMarshal.Write(Request, ref deviceConfig);
+            MemoryMarshal.Write(buffer, ref deviceConfig);
 
-            var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_DEVICE, 0U, Request, out var ReturnCode);
+            var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_DEVICE, 0U, buffer, out var ReturnCode);
 
             // STATUS_OBJECT_NAME_NOT_FOUND. Possible "zombie" device, just return empty data.
             if (ReturnCode == NativeConstants.STATUS_OBJECT_NAME_NOT_FOUND)
@@ -902,7 +944,9 @@ public class ScsiAdapter : DeviceObject
                 throw NativeFileIO.GetExceptionForNtStatus(ReturnCode);
             }
 
-            deviceConfig = MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(Response);
+            var response = buffer.AsSpan(0, responseLength);
+
+            deviceConfig = MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(response);
             DeviceNumber = deviceConfig.DeviceNumber;
             DiskSize = deviceConfig.DiskSize;
             BytesPerSector = deviceConfig.BytesPerSector;
@@ -914,14 +958,14 @@ public class ScsiAdapter : DeviceObject
             }
             else
             {
-                Filename = MemoryMarshal.Cast<byte, char>(Response.Slice(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize,
+                Filename = MemoryMarshal.Cast<byte, char>(response.Slice(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize,
                                                                          deviceConfig.FileNameLength))
                     .ToString();
             }
 
             if (Flags.HasFlag(DeviceFlags.WriteOverlay))
             {
-                WriteOverlayImagefile = MemoryMarshal.Cast<byte, char>(Response.Slice(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength,
+                WriteOverlayImagefile = MemoryMarshal.Cast<byte, char>(response.Slice(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength,
                                                                                       deviceConfig.WriteOverlayFileNameLength))
                     .ToString();
             }
@@ -929,7 +973,7 @@ public class ScsiAdapter : DeviceObject
 
         finally
         {
-            ArrayPool<byte>.Shared.Return(Request);
+            ArrayPool<byte>.Shared.Return(buffer);
 
         }
     }
@@ -1022,7 +1066,11 @@ public class ScsiAdapter : DeviceObject
 
         try
         {
-            var Response = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle, NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION, 0U, buffer, out var ReturnCode);
+            var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                                            NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_QUERY_VERSION,
+                                                                            0U,
+                                                                            buffer,
+                                                                            out var ReturnCode);
 
             Trace.WriteLine($"Library version: {CompatibleDriverVersion:X4}");
             Trace.WriteLine($"Driver version: {ReturnCode:X4}");
@@ -1032,10 +1080,10 @@ public class ScsiAdapter : DeviceObject
                 return null;
             }
 
-            var build = Response[0];
-            var low = Response[1];
-            var minor = Response[2];
-            var major = Response[3];
+            var build = buffer[0];
+            var low = buffer[1];
+            var minor = buffer[2];
+            var major = buffer[3];
 
             return new Version(major, minor, low, build);
         }
@@ -1070,7 +1118,7 @@ public class ScsiAdapter : DeviceObject
     /// </summary>
     public void UpdateDiskProperties()
     {
-        foreach (var device in GetDeviceList())
+        foreach (var device in EnumerateDevices())
         {
             UpdateDiskProperties(device);
         }

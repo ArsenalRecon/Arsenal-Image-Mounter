@@ -14,14 +14,9 @@
 using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Streams;
-using DiscUtils;
 using DiscUtils.Partitions;
-using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
-using LTRData.Extensions.IO;
-using LTRData.Extensions.Native;
 using Microsoft.Win32;
 using Microsoft.Win32.SafeHandles;
 using System;
@@ -37,14 +32,12 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 #if NET5_0_OR_GREATER
 using System.Runtime.Intrinsics.X86;
 #endif
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1163,11 +1156,11 @@ public static partial class NativeFileIO
         /// <param name="ctrlcode">Control code to set in SRB_IO_CONTROL header.</param>
         /// <param name="timeout">Timeout to set in SRB_IO_CONTROL header.</param>
         /// <param name="databytes">Optional request data after SRB_IO_CONTROL header. The Length field in
-        /// SRB_IO_CONTROL header will be automatically adjusted to reflect the amount of data passed by this function.</param>
+        /// SRB_IO_CONTROL header will be automatically adjusted to reflect the amount of data passed by this function.
+        /// Upon return, this buffer contains response data from the driver.</param>
         /// <param name="returncode">ReturnCode value from SRB_IO_CONTROL header upon return.</param>
-        /// <returns>This method returns a BinaryReader object that can be used to read and parse data returned after the
-        /// SRB_IO_CONTROL header.</returns>
-        public static unsafe Span<byte> SendSrbIoControl(SafeFileHandle adapter, uint ctrlcode, uint timeout, Span<byte> databytes, out int returncode)
+        /// <returns>This method returns number of bytes in the response saved in buffer specified in <paramref name="databytes"/> parameter.</returns>
+        public static unsafe int SendSrbIoControl(SafeFileHandle adapter, uint ctrlcode, uint timeout, Span<byte> databytes, out int returncode)
         {
             var header = new SRB_IO_CONTROL(SrbIoCtlSignature, timeout, ctrlcode, databytes.Length);
 
@@ -1197,7 +1190,7 @@ public static partial class NativeFileIO
                     databytes = databytes.Slice(0, ResponseLength);
                 }
 
-                return databytes;
+                return databytes.Length;
             }
             finally
             {
@@ -1356,7 +1349,7 @@ public static partial class NativeFileIO
         "paragon_service"
     ];
 
-    private static readonly byte[] WindowsRecognizedMBRPartitionTypes =
+    private static readonly HashSet<byte> WindowsRecognizedMBRPartitionTypes =
     [
         BiosPartitionTypes.Fat12,
         BiosPartitionTypes.Fat16,
@@ -1368,7 +1361,7 @@ public static partial class NativeFileIO
         BiosPartitionTypes.Ntfs
     ];
 
-    private static readonly Guid[] WindowsRecognizedGPTPartitionTypes =
+    private static readonly HashSet<Guid> WindowsRecognizedGPTPartitionTypes =
     [
         GuidPartitionTypes.EfiSystem,
         GuidPartitionTypes.BiosBoot,
@@ -1972,10 +1965,18 @@ Currently, the following application has files open on this volume:
 
                 if (status == NativeConstants.STATUS_INFO_LENGTH_MISMATCH)
                 {
-                    var oldSize = buffer.Length;
+                    var size = buffer.Length;
                     ArrayPool<byte>.Shared.Return(buffer);
                     buffer = null;
-                    buffer = ArrayPool<byte>.Shared.Rent(oldSize << 1);
+                    if (argpuReturnLength > size)
+                    {
+                        size = argpuReturnLength;
+                    }
+                    else
+                    {
+                        size <<= 1;
+                    }
+                    buffer = ArrayPool<byte>.Shared.Rent(size);
                     continue;
                 }
 
@@ -2014,7 +2015,6 @@ Currently, the following application has files open on this volume:
 
         internal HandleTableEntryInformation(in SystemHandleTableEntryInformation HandleTableEntry, string? ObjectType, string? ObjectName, Process Process)
         {
-
             this.HandleTableEntry = HandleTableEntry;
             this.ObjectType = ObjectType;
             this.ObjectName = ObjectName;
