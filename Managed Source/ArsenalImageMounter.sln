@@ -49,6 +49,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestProject", "TestProject\
 EndProject
 Project("{7CF6DF6D-3B04-46F8-A40B-537D21BCA0B4}") = "ArsenalImageMounterHelpBuilder", "ArsenalImageMounterHelpBuilder\ArsenalImageMounterHelpBuilder.shfbproj", "{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arsenal.ImageMounter.PowerShell", "Arsenal.ImageMounter.PowerShell\Arsenal.ImageMounter.PowerShell.csproj", "{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -165,6 +167,18 @@ Global
 		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x64.Build.0 = Release|Any CPU
 		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x86.ActiveCfg = Release|Any CPU
 		{FF9B3F4A-C5D0-4215-9D57-120A2E5974CA}.Release|x86.Build.0 = Release|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Debug|x64.Build.0 = Debug|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Debug|x86.Build.0 = Debug|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Release|x64.ActiveCfg = Release|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Release|x64.Build.0 = Release|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Release|x86.ActiveCfg = Release|Any CPU
+		{4C942CF2-EE43-4B88-A177-00C0FC38A9F6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
