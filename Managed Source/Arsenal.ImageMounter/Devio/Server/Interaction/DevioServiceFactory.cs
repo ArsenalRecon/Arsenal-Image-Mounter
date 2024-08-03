@@ -301,7 +301,7 @@ public static class DevioServiceFactory
     /// <param name="Imagefile">Image file.</param>
     /// <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
     /// <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
-    public static IDevioProvider? GetProvider(string Imagefile, FileAccess DiskAccess, ProviderType ProviderType)
+    public static IDevioProvider GetProvider(string Imagefile, FileAccess DiskAccess, ProviderType ProviderType)
         => InstalledProvidersByProxyValueAndFileAccess.TryGetValue(ProviderType, out var GetProviderFunc)
             ? GetProviderFunc(Imagefile, DiskAccess)
             : throw new InvalidOperationException($"Provider '{ProviderType}' not supported.");
@@ -315,19 +315,19 @@ public static class DevioServiceFactory
     /// <param name="Imagefile">Image file.</param>
     /// <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
     /// <param name="ProviderType">One of known image libraries that can handle specified image file.</param>
-    public static IDevioProvider? GetProvider(string Imagefile, VirtualDiskAccess DiskAccess, ProviderType ProviderType)
+    public static IDevioProvider GetProvider(string Imagefile, VirtualDiskAccess DiskAccess, ProviderType ProviderType)
         => InstalledProvidersByProxyValueAndVirtualDiskAccess.TryGetValue(ProviderType, out var GetProviderFunc)
             ? GetProviderFunc(Imagefile, DiskAccess)
             : throw new InvalidOperationException($"Provider '{ProviderType}' not supported.");
 
-    public static IDevioProvider? GetProvider(string Imagefile, FileAccess DiskAccess)
+    public static IDevioProvider GetProvider(string Imagefile, FileAccess DiskAccess)
     {
         var provider = GetProviderTypeFromFileName(Imagefile);
 
         return GetProvider(Imagefile, DiskAccess, provider);
     }
 
-    public static IDevioProvider? GetProvider(string imageFile, FileAccess DiskAccess, string ProviderName)
+    public static IDevioProvider GetProvider(string imageFile, FileAccess DiskAccess, string ProviderName)
         => InstalledProvidersByNameAndFileAccess.TryGetValue(ProviderName, out var GetProviderFunc)
             ? GetProviderFunc(imageFile, DiskAccess)
             : throw new NotSupportedException($"Provider '{ProviderName}' not supported. Valid values are: {string.Join(", ", InstalledProvidersByNameAndFileAccess.Keys)}.");
@@ -382,8 +382,8 @@ public static class DevioServiceFactory
         };
     }
 
-    public static IReadOnlyDictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndVirtualDiskAccess { get; } =
-        new Dictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider?>>()
+    public static IReadOnlyDictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider>> InstalledProvidersByProxyValueAndVirtualDiskAccess { get; } =
+        new Dictionary<ProviderType, Func<string, VirtualDiskAccess, IDevioProvider>>()
         {
             { ProviderType.DiscUtils, GetProviderDiscUtils },
             { ProviderType.LibEwf, GetProviderLibEwf },
@@ -398,8 +398,8 @@ public static class DevioServiceFactory
         .AsReadOnly();
 #endif
 
-    public static IReadOnlyDictionary<ProviderType, Func<string, FileAccess, IDevioProvider?>> InstalledProvidersByProxyValueAndFileAccess { get; } =
-        new Dictionary<ProviderType, Func<string, FileAccess, IDevioProvider?>>()
+    public static IReadOnlyDictionary<ProviderType, Func<string, FileAccess, IDevioProvider>> InstalledProvidersByProxyValueAndFileAccess { get; } =
+        new Dictionary<ProviderType, Func<string, FileAccess, IDevioProvider>>()
         {
             { ProviderType.DiscUtils, GetProviderDiscUtils },
             { ProviderType.LibEwf, GetProviderLibEwf },
@@ -414,8 +414,8 @@ public static class DevioServiceFactory
         .AsReadOnly();
 #endif
 
-    public static IReadOnlyDictionary<string, Func<string, VirtualDiskAccess, IDevioProvider?>> InstalledProvidersByNameAndVirtualDiskAccess { get; } =
-        new Dictionary<string, Func<string, VirtualDiskAccess, IDevioProvider?>>(StringComparer.OrdinalIgnoreCase)
+    public static IReadOnlyDictionary<string, Func<string, VirtualDiskAccess, IDevioProvider>> InstalledProvidersByNameAndVirtualDiskAccess { get; } =
+        new Dictionary<string, Func<string, VirtualDiskAccess, IDevioProvider>>(StringComparer.OrdinalIgnoreCase)
         {
             { "DiscUtils", GetProviderDiscUtils },
             { "LibEwf", GetProviderLibEwf },
@@ -430,8 +430,8 @@ public static class DevioServiceFactory
         .AsReadOnly();
 #endif
 
-    public static IReadOnlyDictionary<string, Func<string, FileAccess, IDevioProvider?>> InstalledProvidersByNameAndFileAccess { get; } =
-        new Dictionary<string, Func<string, FileAccess, IDevioProvider?>>(StringComparer.OrdinalIgnoreCase)
+    public static IReadOnlyDictionary<string, Func<string, FileAccess, IDevioProvider>> InstalledProvidersByNameAndFileAccess { get; } =
+        new Dictionary<string, Func<string, FileAccess, IDevioProvider>>(StringComparer.OrdinalIgnoreCase)
         {
             { "DiscUtils", GetProviderDiscUtils },
             { "LibEwf", GetProviderLibEwf },
@@ -575,7 +575,7 @@ public static class DevioServiceFactory
     /// </summary>
     /// <param name="Imagefile">Image file.</param>
     /// <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-    public static IDevioProvider? GetProviderDiscUtils(string Imagefile, FileAccess DiskAccess)
+    public static IDevioProvider GetProviderDiscUtils(string Imagefile, FileAccess DiskAccess)
     {
         var VirtualDiskAccess = DiskAccess switch
         {
@@ -593,7 +593,7 @@ public static class DevioServiceFactory
     /// </summary>
     /// <param name="Imagefile">Image file.</param>
     /// <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
-    public static IDevioProvider? GetProviderDiscUtils(string Imagefile, VirtualDiskAccess DiskAccess)
+    public static IDevioProvider GetProviderDiscUtils(string Imagefile, VirtualDiskAccess DiskAccess)
     {
         var FileAccess = DiskAccess switch
         {
@@ -621,11 +621,9 @@ public static class DevioServiceFactory
 
         if (Disk is null)
         {
-            Trace.WriteLine($@"Image not recognized by DiscUtils.
+            throw new NotSupportedException($@"Image not recognized by DiscUtils.
 
-Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDiskTypes)}", "Error");
-
-            return null;
+Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDiskTypes)}");
         }
 
         Trace.WriteLine($"Image type class: {Disk.DiskTypeInfo?.Name} ({Disk.DiskTypeInfo?.Variant})");

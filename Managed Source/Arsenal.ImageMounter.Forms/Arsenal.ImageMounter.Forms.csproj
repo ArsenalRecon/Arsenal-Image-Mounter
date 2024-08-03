@@ -29,11 +29,4 @@
     <ProjectReference Include="..\Arsenal.ImageMounter\Arsenal.ImageMounter.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="README.md">
-      <PackagePath>\</PackagePath>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
-
 </Project>

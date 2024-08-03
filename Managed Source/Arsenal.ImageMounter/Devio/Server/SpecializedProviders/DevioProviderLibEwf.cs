@@ -33,8 +33,6 @@ using System.Runtime.InteropServices.Marshalling;
 #endif
 using System.Text;
 
-
-
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 
 public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase

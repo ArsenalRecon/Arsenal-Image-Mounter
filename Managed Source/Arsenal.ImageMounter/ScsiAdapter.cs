@@ -131,7 +131,6 @@ public class ScsiAdapter : DeviceObject
     /// compatible adapter.</returns>
     private static AdapterDeviceInstance OpenAdapter()
     {
-
         var devinstNames = API.EnumerateAdapterDeviceInstanceNames()
             ?? throw new FileNotFoundException("No Arsenal Image Mounter adapter found.");
 
@@ -154,13 +153,11 @@ public class ScsiAdapter : DeviceObject
     public ScsiAdapter()
         : this(OpenAdapter())
     {
-
     }
 
     private ScsiAdapter(AdapterDeviceInstance OpenAdapterHandle)
         : base(OpenAdapterHandle.SafeHandle, FileAccess.ReadWrite)
     {
-
         DeviceInstance = OpenAdapterHandle.DevInst;
         DeviceInstanceName = OpenAdapterHandle.DevInstName;
 
@@ -174,7 +171,6 @@ public class ScsiAdapter : DeviceObject
     public ScsiAdapter(byte ScsiPortNumber)
         : base($@"\\?\Scsi{ScsiPortNumber}:", FileAccess.ReadWrite)
     {
-
         Trace.WriteLine($"Successfully opened adapter with SCSI portnumber = {ScsiPortNumber}.");
 
         if (!CheckDriverVersion())

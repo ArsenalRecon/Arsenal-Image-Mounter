@@ -63,7 +63,7 @@ public static class ConsoleAppHelpers
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
 
-        foreach (var std in new[] { StdHandle.Input, StdHandle.Output, StdHandle.Error })
+        foreach (var std in stackalloc[] { StdHandle.Input, StdHandle.Output, StdHandle.Error })
         {
             var handle = NativeFileIO.UnsafeNativeMethods.GetStdHandle(std);
             NativeFileIO.UnsafeNativeMethods.SetStdHandle(std, 0);
