@@ -980,13 +980,13 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                             break;
                     }
 
-                    switch (device.DiskPolicyReadOnly)
+                    switch (device.IsDiskWritable)
                     {
-                        case true:
+                        case false:
                             Console.WriteLine($"Mounted read only");
                             break;
 
-                        case false:
+                        case true:
                             Console.WriteLine($"Mounted writable");
                             break;
                     }
@@ -994,7 +994,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     if (autoOnline)
                     {
                         if (device.DiskPolicyReadOnly == true
-                            && diskAccess.HasFlag(FileAccess.Write))
+                            && (diskAccess.HasFlag(FileAccess.Write)
+                            || writeOverlayImageFile is not null))
                         {
                             Console.WriteLine($"Setting device policy to writable");
                             device.DiskPolicyReadOnly = false;
