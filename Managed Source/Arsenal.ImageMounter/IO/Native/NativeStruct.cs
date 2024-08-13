@@ -175,7 +175,9 @@ public static class NativeStruct
     {
         imagefile.NullCheck(nameof(imagefile));
 
-        return imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) || imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase)
+        return imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) ||
+            imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) ||
+            imagefile.EndsWith(".bin", StringComparison.OrdinalIgnoreCase)
             ? 2048U
             : 512U;
     }
@@ -185,7 +187,7 @@ public static class NativeStruct
     /// </summary>
     /// <param name="source">Source stream to copy from</param>
     /// <param name="target">Target stream to copy to</param>
-    /// <param name="sourceLength">Total length of source to copy</param>
+    /// <param name="sourceLength">Total length of source to copy. This can be null if source length is not known, in which case data will be copied until end of stream.</param>
     /// <param name="bufferSize">Number of bytes to copy in each iteration</param>
     /// <param name="skipWriteZeroBlocks">Skip writing blocks with all zeros. If true, target position is instead adjusted forward with the same size instead of writing anything when a block with all zeros is read from source</param>
     /// <param name="adjustTargetSize">Adjusts size of target stream to <paramref name="sourceLength"/></param>
@@ -196,15 +198,15 @@ public static class NativeStruct
     /// <exception cref="NotSupportedException">One of hash algorithms in <paramref name="hashResults"/> is not supported</exception>
     public static async Task CopyToSkipEmptyBlocksAsync(this Stream source,
                                                         Stream target,
-                                                        long sourceLength,
+                                                        long? sourceLength,
                                                         int bufferSize,
                                                         bool skipWriteZeroBlocks,
                                                         bool adjustTargetSize,
                                                         Dictionary<string, byte[]?>? hashResults,
-                                                        CompletionPosition completionPosition,
+                                                        CompletionPosition? completionPosition,
                                                         CancellationToken cancellationToken)
     {
-        Trace.WriteLine($"Starting copy {source.Length} bytes stream, sourceLength = {sourceLength}, bufferSize = {bufferSize}, skipWriteZeroBlocks = {skipWriteZeroBlocks}");
+        Trace.WriteLine($"Starting copy {sourceLength} bytes stream, sourceLength = {sourceLength}, bufferSize = {bufferSize}, skipWriteZeroBlocks = {skipWriteZeroBlocks}");
 
         using var hashProviders = new DisposableDictionary<string, HashAlgorithm>(StringComparer.OrdinalIgnoreCase);
 
@@ -232,7 +234,9 @@ public static class NativeStruct
 
         for (; ; )
         {
-            var length_to_read = (int)Math.Min(buffer2.Length, sourceLength - source.Position);
+            var length_to_read = sourceLength.HasValue
+                ? (int)Math.Min(buffer2.Length, sourceLength.Value - source.Position)
+                : buffer2.Length;
 
             if (length_to_read > 0)
             {
