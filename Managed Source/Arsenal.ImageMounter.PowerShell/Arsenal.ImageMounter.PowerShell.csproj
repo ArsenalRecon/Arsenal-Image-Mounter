@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Management.Automation" Version="*" />
+    <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="*" Condition="'$(TargetFramework)' == 'net48'" />
+    <PackageReference Include="System.Management.Automation" Version="*" Condition="'$(TargetFramework)' == 'net8.0'" />
   </ItemGroup>
 
   <ItemGroup>

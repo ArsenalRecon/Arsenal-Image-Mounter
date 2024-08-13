@@ -16,9 +16,13 @@ public enum VirtualDiskType
 }
 
 [Cmdlet(VerbsCommon.New, "AimVirtualDisk")]
+#if NET5_0_OR_GREATER
 [SupportedOSPlatform("windows")]
+#endif
 public class NewAimVirtualDisk : Cmdlet
 {
+    private static ScsiAdapter? ScsiAdapter;
+
     [Parameter(Position = 0, HelpMessage = "Path to image file to mount.", Mandatory = true)]
     public string FileName { get; set; } = null!;
 
@@ -51,7 +55,7 @@ public class NewAimVirtualDisk : Cmdlet
 
     protected override void ProcessRecord()
     {
-        var adapter = new ScsiAdapter();
+        ScsiAdapter ??= new();
 
         IDevioProvider? provider = null;
         DevioServiceBase? service = null;
@@ -114,7 +118,7 @@ public class NewAimVirtualDisk : Cmdlet
                 service.AdditionalFlags |= DeviceFlags.WriteOverlay;
             }
 
-            service.StartServiceThreadAndMount(adapter, 0);
+            service.StartServiceThreadAndMount(ScsiAdapter, 0);
 
             var device_name = $@"\\?\{service.GetDiskDeviceName()}";
 
