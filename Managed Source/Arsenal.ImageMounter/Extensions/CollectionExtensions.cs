@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 
@@ -23,17 +24,6 @@ namespace Arsenal.ImageMounter.Extensions;
 
 public static class CollectionExtensions
 {
-    /// <summary>
-    /// Checks if reference is null and in that case throws an <see cref="ArgumentNullException"/> with supplied argument name.
-    /// </summary>
-    /// <typeparam name="T">Type of reference to check</typeparam>
-    /// <param name="obj">Reference to check</param>
-    /// <param name="param">Name of parameter in calling code</param>
-    /// <returns>Reference in <paramref name="obj"/> parameter, if not null.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="obj"/> is null</exception>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T NullCheck<T>(this T? obj, string? param) where T : class => obj ?? throw new ArgumentNullException(param);
-
     private static class StaticHashAlgs<THashAlgorithm> where THashAlgorithm : HashAlgorithm, new()
     {
         [ThreadStatic]

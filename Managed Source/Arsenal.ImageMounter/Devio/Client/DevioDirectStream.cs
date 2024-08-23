@@ -36,7 +36,7 @@ public partial class DevioDirectStream : DevioStream
     /// Initiates a new instance with supplied provider object.
     /// </summary>
     public DevioDirectStream(IDevioProvider provider, bool ownsProvider)
-        : base(provider.NullCheck(nameof(provider)).ToString(), !provider.CanWrite)
+        : base((provider ?? throw new ArgumentNullException(nameof(provider))).ToString(), !provider.CanWrite)
     {
         Provider = provider;
         OwnsProvider = ownsProvider;

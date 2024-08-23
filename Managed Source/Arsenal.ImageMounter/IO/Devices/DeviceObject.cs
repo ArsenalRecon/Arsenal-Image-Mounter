@@ -15,6 +15,8 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.IO;
 using System.Linq.Expressions;
+using System.Runtime.Versioning;
+using System.Threading.Tasks;
 
 
 
@@ -25,7 +27,6 @@ namespace Arsenal.ImageMounter.IO.Devices;
 /// </summary>
 public abstract class DeviceObject : IDisposable
 {
-
     public SafeFileHandle SafeFileHandle { get; }
 
     public FileAccess AccessMode { get; }
@@ -35,6 +36,7 @@ public abstract class DeviceObject : IDisposable
     /// in a new DeviceObject.
     /// </summary>
     /// <param name="Path">Path to pass to CreateFile API</param>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     protected DeviceObject(string Path)
         : this(NativeStruct.OpenFileHandle(Path, 0, FileShare.ReadWrite, FileMode.Open, Overlapped: false), 0)
     {
@@ -46,6 +48,7 @@ public abstract class DeviceObject : IDisposable
     /// </summary>
     /// <param name="Path">Path to pass to CreateFile API</param>
     /// <param name="AccessMode">Access mode for opening and for underlying FileStream</param>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     protected DeviceObject(string Path, FileAccess AccessMode)
         : this(NativeStruct.OpenFileHandle(Path, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped: false), AccessMode)
     {
@@ -56,6 +59,7 @@ public abstract class DeviceObject : IDisposable
     /// </summary>
     /// <param name="Handle">Existing handle to use</param>
     /// <param name="Access">Access mode for underlying FileStream</param>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     protected DeviceObject(SafeFileHandle Handle, FileAccess Access)
     {
         SafeFileHandle = Handle;
@@ -129,6 +133,7 @@ public abstract class DeviceObject : IDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+
     #endregion
 
 }

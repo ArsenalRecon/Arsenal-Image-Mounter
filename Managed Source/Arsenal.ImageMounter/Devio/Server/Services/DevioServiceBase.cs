@@ -31,7 +31,14 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// use an object implementing <see>IDevioProvider</see> interface as storage backend
 /// for I/O requests received from client.
 /// </summary>
-public abstract class DevioServiceBase : IVirtualDiskService
+/// <remarks>
+/// Creates a new service instance with enough data to later run a service that acts as server end in Devio
+/// communication.
+/// </remarks>
+/// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
+/// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
+/// instance is disposed.</param>
+public abstract class DevioServiceBase(IDevioProvider devioProvider, bool ownsProvider) : IVirtualDiskService
 {
     public Exception? Exception { get; set; }
 
@@ -40,7 +47,8 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// <summary>
     /// IDevioProvider object used by this instance.
     /// </summary>
-    public IDevioProvider DevioProvider { get; private set; }
+    public IDevioProvider DevioProvider { get; private set; } = devioProvider
+        ?? throw new ArgumentNullException(nameof(devioProvider));
 
     /// <summary>
     /// ScsiAdapter object used when StartServiceThreadAndMount was called. This object
@@ -53,14 +61,14 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// Indicates whether DevioProvider will be automatically closed when this instance
     /// is disposed.
     /// </summary>
-    public bool OwnsProvider { get; }
+    public bool OwnsProvider { get; } = ownsProvider;
 
     /// <summary>
     /// Size of virtual disk device.
     /// </summary>
     /// <value>Size of virtual disk device.</value>
     /// <returns>Size of virtual disk device.</returns>
-    public virtual long DiskSize { get; set; }
+    public virtual long DiskSize { get; set; } = devioProvider.Length;
 
     /// <summary>
     /// Offset in disk image where this virtual disk device begins.
@@ -74,7 +82,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
     /// </summary>
     /// <value>Sector size of virtual disk device.</value>
     /// <returns>Sector size of virtual disk device.</returns>
-    public virtual uint SectorSize { get; set; }
+    public virtual uint SectorSize { get; set; } = devioProvider.SectorSize;
 
     /// <summary>
     /// Create a persistent virtual file at client side that can be reopened again
@@ -161,24 +169,6 @@ public abstract class DevioServiceBase : IVirtualDiskService
         => StopServiceThread?.Invoke(this, e);
 
     /// <summary>
-    /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
-    /// communication.
-    /// </summary>
-    /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
-    /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
-    /// instance is disposed.</param>
-    protected DevioServiceBase(IDevioProvider devioProvider, bool ownsProvider)
-    {
-        OwnsProvider = ownsProvider;
-
-        DevioProvider = devioProvider.NullCheck(nameof(devioProvider));
-
-        DiskSize = devioProvider.Length;
-
-        SectorSize = devioProvider.SectorSize;
-    }
-
-    /// <summary>
     /// When overridden in a derived class, runs service that acts as server end in Devio communication. It will
     /// first wait for a client to connect, then serve client I/O requests and when client finally requests service to
     /// terminate, this method returns to caller. To run service in a worker thread that automatically disposes this
@@ -210,7 +200,7 @@ public abstract class DevioServiceBase : IVirtualDiskService
 
         ServiceThread = new Thread(ServiceThreadProcedure);
         ServiceThread.Start();
-        WaitHandle.WaitAny(new[] { ServiceReadyEvent, ServiceInitFailedEvent });
+        WaitHandle.WaitAny([ServiceReadyEvent, ServiceInitFailedEvent]);
 
         ServiceReady -= ServiceReadyHandler;
         ServiceInitFailed -= ServiceInitFailedHandler;
@@ -307,7 +297,13 @@ public abstract class DevioServiceBase : IVirtualDiskService
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual void StartServiceThreadAndMount(ScsiAdapter scsiAdapter, DeviceFlags flags)
     {
-        ScsiAdapter = scsiAdapter.NullCheck(nameof(scsiAdapter));
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(scsiAdapter);
+        ScsiAdapter = scsiAdapter;
+#else
+        ScsiAdapter = scsiAdapter
+            ?? throw new ArgumentNullException(nameof(scsiAdapter));
+#endif
 
         if (!StartServiceThread())
         {

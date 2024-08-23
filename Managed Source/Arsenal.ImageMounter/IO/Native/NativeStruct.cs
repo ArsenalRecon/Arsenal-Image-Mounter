@@ -36,6 +36,7 @@ using DiscUtils.Streams.Compatibility;
 #if NET5_0_OR_GREATER
 using System.Runtime.Intrinsics.X86;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Versioning;
 #endif
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
@@ -83,12 +84,14 @@ public static class NativeStruct
             return await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
         }
 
-        using var stream = NativeFileIO.OpenFileStream(path,
-                                                       FileMode.Open,
-                                                       FileAccess.Read,
-                                                       FileShare.Read | FileShare.Delete,
-                                                       65536,
-                                                       NativeConstants.FILE_FLAG_BACKUP_SEMANTICS | FileOptions.Asynchronous);
+        var stream = NativeFileIO.OpenFileStream(path,
+                                                 FileMode.Open,
+                                                 FileAccess.Read,
+                                                 FileShare.Read | FileShare.Delete,
+                                                 65536,
+                                                 NativeConstants.FILE_FLAG_BACKUP_SEMANTICS | FileOptions.Asynchronous);
+
+        await using var _ = stream.ConfigureAwait(false);
 
         var buffer = new byte[stream.Length];
 
@@ -115,6 +118,9 @@ public static class NativeStruct
         !string.IsNullOrEmpty(Path.GetExtension(filepath));
 #endif
 
+#if NETCOREAPP
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+#endif
     public static long GetDiskSize(string imagefile)
     {
         using var disk = new DiskDevice(imagefile, FileAccess.Read);
@@ -173,7 +179,14 @@ public static class NativeStruct
     /// <param name="imagefile">Name of disk image file.</param>
     public static uint GetSectorSizeFromFileName(string imagefile)
     {
-        imagefile.NullCheck(nameof(imagefile));
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(imagefile);
+#else
+        if (imagefile is null)
+        {
+            throw new ArgumentNullException(nameof(imagefile));
+        }
+#endif
 
         return imagefile.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) ||
             imagefile.EndsWith(".nrg", StringComparison.OrdinalIgnoreCase) ||

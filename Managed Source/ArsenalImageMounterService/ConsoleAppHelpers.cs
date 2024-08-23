@@ -1133,7 +1133,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 #if NET6_0_OR_GREATER
         process.StartInfo.FileName = Environment.ProcessPath;
 #else
-                process.StartInfo.FileName = Process.GetCurrentProcess().MainModule.FileName;
+        process.StartInfo.FileName = Process.GetCurrentProcess().MainModule.FileName;
 #endif
 
         process.StartInfo.UseShellExecute = false;

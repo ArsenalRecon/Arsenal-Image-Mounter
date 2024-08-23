@@ -53,7 +53,13 @@ public class DevioProviderWithOffset : IDevioProvider
             throw new ArgumentOutOfRangeException(nameof(size));
         }
 
-        BaseProvider = baseProvider.NullCheck(nameof(baseProvider));
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(BaseProvider);
+        BaseProvider = baseProvider;
+#else
+        BaseProvider = baseProvider
+            ?? throw new ArgumentNullException(nameof(baseProvider));
+#endif
 
         Offset = offset;
 

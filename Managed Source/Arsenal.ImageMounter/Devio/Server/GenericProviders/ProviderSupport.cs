@@ -43,7 +43,14 @@ public static class ProviderSupport
 
     public static long GetVBRPartitionLength(this IDevioProvider baseProvider)
     {
-        baseProvider.NullCheck(nameof(baseProvider));
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(baseProvider);
+#else
+        if (baseProvider is null)
+        {
+            throw new ArgumentNullException(nameof(baseProvider));
+        }
+#endif
 
         var bytesPerSector = (int)baseProvider.SectorSize;
 

@@ -68,6 +68,7 @@ public class DiskDevice : DeviceObject
         }
     }
 
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     protected internal DiskDevice(KeyValuePair<string, SafeFileHandle> deviceNameAndHandle, FileAccess accessMode)
         : base(deviceNameAndHandle.Value, accessMode)
     {
@@ -82,6 +83,7 @@ public class DiskDevice : DeviceObject
     /// size and similar, but not for reading or writing raw disk data.
     /// </summary>
     /// <param name="devicePath"></param>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public DiskDevice(string devicePath)
         : base(devicePath)
     {
@@ -95,6 +97,7 @@ public class DiskDevice : DeviceObject
     /// </summary>
     /// <param name="DevicePath"></param>
     /// <param name="AccessMode"></param>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public DiskDevice(string DevicePath, FileAccess AccessMode)
         : base(DevicePath, AccessMode)
     {
@@ -344,6 +347,7 @@ public class DiskDevice : DeviceObject
     /// <returns>Number of bytes per cluster for file system on a disk volume represented
     /// by this object. If this object does not represent a disk volume with a file,
     /// system, null is returned</returns>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public FileSystemClusterSizes? GetFileSystemClusterSizes()
         => NativeFileIO.GetDiskFreeSpace($"{DevicePath}\\",
                                          out var sectorsPerCluster,
@@ -359,6 +363,7 @@ public class DiskDevice : DeviceObject
     /// <summary>
     /// Gets allocation bitmap for file system on disk volume represented by this object.
     /// </summary>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public Memory<byte> GetFileSystemAllocationBitmap(out FileSystemClusterSizes clusterSizes)
     {
         var clusterSizesResult = GetFileSystemClusterSizes();

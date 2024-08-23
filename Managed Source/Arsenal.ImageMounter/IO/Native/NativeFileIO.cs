@@ -2066,7 +2066,14 @@ Currently, the following application has files open on this volume:
                                                                                                    IReadOnlyCollection<string>? includeProcessNames,
                                                                                                    IReadOnlyCollection<string>? excludeProcessNames)
     {
-        handleTable.NullCheck(nameof(handleTable));
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(handleTable);
+#else
+        if (handleTable is null)
+        {
+            throw new ArgumentNullException(nameof(handleTable));
+        }
+#endif
 
         if (filterObjectType is not null)
         {
@@ -3723,7 +3730,14 @@ Currently, the following application has files open on this volume:
 
     public static void SetDriveLayoutEx(SafeFileHandle disk, DriveLayoutInformationType layout)
     {
-        layout.NullCheck(nameof(layout));
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(layout);
+#else
+        if (layout is null)
+        {
+            throw new ArgumentNullException(nameof(layout));
+        }
+#endif
 
         var partition_count = Math.Min(layout.Partitions.Count, layout.DriveLayoutInformation.PartitionCount);
 
@@ -4385,6 +4399,15 @@ Currently, the following application has files open on this volume:
 
     public static void RunDLLInstallHinfSection(nint OwnerWindow, string InfPath, ReadOnlySpan<char> InfSection)
     {
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(InfPath);
+#else
+        if (InfPath is null)
+        {
+            throw new ArgumentNullException(nameof(InfPath));
+        }
+#endif
+
 #if NETCOREAPP
         var cmdLine = $"{InfSection} 132 {InfPath}";
 #else
@@ -4392,7 +4415,7 @@ Currently, the following application has files open on this volume:
 #endif
         Trace.WriteLine($"RunDLLInstallFromInfSection: {cmdLine}");
 
-        if (InfPath.NullCheck(nameof(InfPath)).Contains(' ')
+        if (InfPath.Contains(' ')
             || InfSection.Contains(' '))
         {
             throw new ArgumentException("Arguments to this method cannot contain spaces.", nameof(InfSection));
@@ -4754,7 +4777,14 @@ Currently, the following application has files open on this volume:
 
     public static bool AddFilter(Guid devClass, string driver, bool addfirst)
     {
-        driver.NullCheck(nameof(driver));
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(driver);
+#else
+        if (driver is null)
+        {
+            throw new ArgumentNullException(nameof(driver));
+        }
+#endif
 
         var filters = GetRegisteredFilters(devClass);
 

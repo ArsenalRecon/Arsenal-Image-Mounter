@@ -24,7 +24,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0051 // Remove unused private members
 
 namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 

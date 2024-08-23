@@ -45,24 +45,30 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
     internal byte[] SuffixBuffer { get; }
 
-    public DevioProviderWithFakeMBR(IDevioProvider BaseProvider)
-        : this(BaseProvider, BaseProvider.GetVBRPartitionLength())
+    public DevioProviderWithFakeMBR(IDevioProvider baseProvider)
+        : this(baseProvider, baseProvider.GetVBRPartitionLength())
     {
     }
 
-    public DevioProviderWithFakeMBR(IDevioProvider BaseProvider, long PartitionLength)
+    public DevioProviderWithFakeMBR(IDevioProvider baseProvider, long PartitionLength)
     {
-        this.BaseProvider = BaseProvider.NullCheck(nameof(BaseProvider));
+#if NET7_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(baseProvider);
+        BaseProvider = baseProvider;
+#else
+        BaseProvider = baseProvider
+            ?? throw new ArgumentNullException(nameof(baseProvider));
+#endif
 
-        PartitionLength = Math.Max(BaseProvider.Length, PartitionLength);
+        PartitionLength = Math.Max(baseProvider.Length, PartitionLength);
 
-        var suffixLength = PartitionLength - BaseProvider.Length;
+        var suffixLength = PartitionLength - baseProvider.Length;
 
         SuffixBuffer = new byte[suffixLength];
 
         var virtual_length = PrefixLength + PartitionLength;
 
-        var sectorSize = BaseProvider.SectorSize;
+        var sectorSize = baseProvider.SectorSize;
 
         var builder = new BiosPartitionedDiskBuilder(virtual_length, Geometry.FromCapacity(virtual_length, (int)sectorSize));
 
