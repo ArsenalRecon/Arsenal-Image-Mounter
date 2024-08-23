@@ -155,7 +155,8 @@ public class DiskStateView : INotifyPropertyChanged
         => MountPoints is null || MountPoints.Length == 0 ? string.Empty : $"Mount Points: {string.Join(", ", MountPoints)}";
 
     public bool? IsReadOnly
-        => NativePropertyDiskReadOnly ?? (DeviceProperties?.Flags.HasFlag(DeviceFlags.ReadOnly));
+        => DeviceProperties?.Flags.HasFlag(DeviceFlags.ReadOnly)
+        ?? NativePropertyDiskReadOnly;
 
     public string? ReadOnlyString
         => IsReadOnly is { } state
