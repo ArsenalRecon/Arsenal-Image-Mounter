@@ -120,10 +120,10 @@ public class NewAimVirtualDisk : Cmdlet
 
             service.StartServiceThreadAndMount(ScsiAdapter, 0);
 
-            var device_name = $@"\\?\{service.GetDiskDeviceName()}";
-
             if (Online)
             {
+                var device_name = $@"\\?\{service.GetDiskDeviceName()}";
+
                 using (var device = new DiskDevice(device_name, FileAccess.ReadWrite))
                 {
                     if (device.DiskPolicyReadOnly == true

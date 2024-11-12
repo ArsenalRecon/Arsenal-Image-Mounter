@@ -881,9 +881,9 @@ public struct FindStreamData
 
     private unsafe fixed char _streamName[296];
 
-    public ReadOnlySpan<char> NamePart => StreamName.Split(':').ElementAtOrDefault(1);
+    public ReadOnlySpan<char> NamePart => StreamName.TokenEnum(':').ElementAtOrDefault(1);
 
-    public ReadOnlySpan<char> TypePart => StreamName.Split(':').ElementAtOrDefault(2);
+    public ReadOnlySpan<char> TypePart => StreamName.TokenEnum(':').ElementAtOrDefault(2);
 
     public unsafe ReadOnlySpan<char> StreamName => BufferExtensions.CreateReadOnlySpan(_streamName[0], 296).ReadNullTerminatedUnicode();
 }

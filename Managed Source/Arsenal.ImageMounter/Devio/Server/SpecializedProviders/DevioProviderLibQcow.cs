@@ -108,7 +108,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
                     var msgs = msg
                         .AsMemory()
-                        .SplitReverse('\n')
+                        .TokenEnumReverse('\n')
                         .Select(msg => msg.TrimEnd('\r'));
 
                     return string.Join(Environment.NewLine, msgs);

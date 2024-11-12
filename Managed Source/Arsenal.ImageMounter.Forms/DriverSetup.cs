@@ -156,9 +156,9 @@ public static class DriverSetup
     /// <param name="infFile">.inf file used to identify version of driver.</param>
     public static Version GetSetupFileDriverVersion(CachedIniFile infFile) =>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-        Version.Parse(GetInfFileVersionTag(infFile).AsSpan().SplitReverse(',').First());
+        Version.Parse(GetInfFileVersionTag(infFile).AsSpan().TokenEnumReverse(',').First());
 #else
-        Version.Parse(GetInfFileVersionTag(infFile).AsSpan().SplitReverse(',').First().ToString());
+        Version.Parse(GetInfFileVersionTag(infFile).AsSpan().TokenEnumReverse(',').First().ToString());
 #endif
 
     private static string GetInfFileVersionTag(CachedIniFile infFile)
@@ -280,7 +280,7 @@ public static class DriverSetup
 
                 var pending_install_file = (from item in CachedIniFile.EnumerateFileSectionValuePairs(infPath, "PhysicalDiskMounterDevice.Services")
                                             where "AddService".Equals(item.Key, StringComparison.OrdinalIgnoreCase)
-                                            select $"{item.Value.AsMemory().Split(',').First()}.sys").FirstOrDefault(installfile => array.Contains(installfile, StringComparer.OrdinalIgnoreCase));
+                                            select $"{item.Value.AsMemory().TokenEnum(',').First()}.sys").FirstOrDefault(installfile => array.Contains(installfile, StringComparer.OrdinalIgnoreCase));
 
                 if (pending_install_file != null)
                 {

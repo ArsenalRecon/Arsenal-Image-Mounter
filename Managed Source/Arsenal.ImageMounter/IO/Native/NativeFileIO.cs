@@ -344,11 +344,11 @@ public static partial class NativeFileIO
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, ref byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in long lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in long lpInBuffer, uint nInBufferSize, ref byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -356,7 +356,7 @@ public static partial class NativeFileIO
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, int nInBufferSize, out byte lpOutBuffer, int nOutBufferSize, out int lpBytesReturned, nint lpOverlapped);
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, int nInBufferSize, ref byte lpOutBuffer, int nOutBufferSize, out int lpBytesReturned, nint lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -420,7 +420,7 @@ public static partial class NativeFileIO
 
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in STORAGE_PROPERTY_QUERY lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+        internal static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in STORAGE_PROPERTY_QUERY lpInBuffer, uint nInBufferSize, ref byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         internal static partial int GetModuleFileNameW(nint hModule, out char lpFilename, int nSize);
@@ -838,16 +838,16 @@ public static partial class NativeFileIO
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in bool lpInBuffer, uint nInBufferSize, nint lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
-        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, ref byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
-        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in long lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in long lpInBuffer, uint nInBufferSize, ref byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, uint nInBufferSize, nint lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
-        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, int nInBufferSize, out byte lpOutBuffer, int nOutBufferSize, out int lpBytesReturned, nint lpOverlapped);
+        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in byte lpInBuffer, int nInBufferSize, ref byte lpOutBuffer, int nOutBufferSize, out int lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, nint lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
@@ -895,7 +895,7 @@ public static partial class NativeFileIO
         internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in STORAGE_PROPERTY_QUERY lpInBuffer, uint nInBufferSize, out DEVICE_TRIM_DESCRIPTOR lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true)]
-        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in STORAGE_PROPERTY_QUERY lpInBuffer, uint nInBufferSize, out byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+        internal static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, in STORAGE_PROPERTY_QUERY lpInBuffer, uint nInBufferSize, ref byte lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern int GetModuleFileNameW(nint hModule, out char lpFilename, int nSize);
@@ -2333,7 +2333,7 @@ Currently, the following application has files open on this volume:
                                                  NativeConstants.FSCTL_GET_VOLUME_BITMAP,
                                                  startingCluster,
                                                  sizeof(long),
-                                                 out buffer[0],
+                                                 ref buffer[0],
                                                  (uint)buffer.Length,
                                                  out var bytesReturned,
                                                  0))
@@ -2423,7 +2423,7 @@ Currently, the following application has files open on this volume:
                                                      ctrlcode,
                                                      indata.AsRef(),
                                                      indatasize,
-                                                     out data.AsRef(),
+                                                     ref data.AsRef(),
                                                      data.Length,
                                                      out outdatasize,
                                                      0);
@@ -3225,7 +3225,7 @@ Currently, the following application has files open on this volume:
                                                      NativeConstants.IOCTL_STORAGE_QUERY_PROPERTY,
                                                      StoragePropertyQuery,
                                                      (uint)PinnedBuffer<STORAGE_PROPERTY_QUERY>.TypeSize,
-                                                     out buffer[0],
+                                                     ref buffer[0],
                                                      (uint)buffer.Length,
                                                      out _,
                                                      0)
@@ -3362,7 +3362,7 @@ Currently, the following application has files open on this volume:
                                                      NativeConstants.FSCTL_GET_REPARSE_POINT,
                                                      0,
                                                      0U,
-                                                     out buffer[0],
+                                                     ref buffer[0],
                                                      (uint)buffer.Length,
                                                      out var size,
                                                      0))
@@ -3672,7 +3672,7 @@ Currently, the following application has files open on this volume:
                                                          NativeConstants.IOCTL_DISK_GET_DRIVE_LAYOUT_EX,
                                                          0,
                                                          0U,
-                                                         out buffer[0],
+                                                         ref buffer[0],
                                                          (uint)buffer.Length,
                                                          out var arglpBytesReturned,
                                                          0))

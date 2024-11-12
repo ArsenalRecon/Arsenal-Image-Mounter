@@ -17,8 +17,6 @@ using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Threading;
 
-
-
 namespace Arsenal.ImageMounter.IO.Devices;
 
 /// <summary>

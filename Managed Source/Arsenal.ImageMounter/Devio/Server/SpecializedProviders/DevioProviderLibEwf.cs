@@ -110,7 +110,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
 
                     var msgs = msg
                         .AsMemory()
-                        .SplitReverse('\n')
+                        .TokenEnumReverse('\n')
                         .Select(msg => msg.TrimEnd('\r'));
 
                     return string.Join(Environment.NewLine, msgs);
