@@ -623,7 +623,7 @@ public static partial class NativeFileIO
 
         [LibraryImport("advapi32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool AdjustTokenPrivileges(SafeFileHandle TokenHandle, [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges, in byte NewStates, int BufferLength, out byte PreviousState, out int ReturnLength);
+        internal static partial bool AdjustTokenPrivileges(SafeFileHandle TokenHandle, [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges, in byte NewStates, int BufferLength, ref byte PreviousState, out int ReturnLength);
 
         [LibraryImport("ntdll")]
         internal static partial int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
@@ -1072,7 +1072,7 @@ public static partial class NativeFileIO
         internal static extern bool OpenProcessToken(nint hProcess, uint dwAccess, out SafeAccessTokenHandle lpTokenHandle);
 
         [DllImport("advapi32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool AdjustTokenPrivileges(SafeAccessTokenHandle TokenHandle, bool DisableAllPrivileges, in byte NewStates, int BufferLength, out byte PreviousState, out int ReturnLength);
+        internal static extern bool AdjustTokenPrivileges(SafeAccessTokenHandle TokenHandle, bool DisableAllPrivileges, in byte NewStates, int BufferLength, ref byte PreviousState, out int ReturnLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
@@ -1873,7 +1873,7 @@ Currently, the following application has files open on this volume:
                 MemoryMarshal.Write(buffer.Slice(intsize + i * structsize), ref argvalue1);
             }
 
-            var rc = UnsafeNativeMethods.AdjustTokenPrivileges(token, false, buffer[0], bufferSize, out buffer[0], out _);
+            var rc = UnsafeNativeMethods.AdjustTokenPrivileges(token, false, buffer[0], bufferSize, ref buffer[0], out _);
 
             var err = Marshal.GetLastWin32Error();
 
@@ -1884,7 +1884,6 @@ Currently, the following application has files open on this volume:
 
             if (err == NativeConstants.ERROR_NOT_ALL_ASSIGNED)
             {
-
                 var count = MemoryMarshal.Read<int>(buffer);
                 var enabled_luids = new LUID_AND_ATTRIBUTES[count];
                 MemoryMarshal.Cast<byte, LUID_AND_ATTRIBUTES>(buffer.Slice(intsize)).Slice(0, count).CopyTo(enabled_luids);
