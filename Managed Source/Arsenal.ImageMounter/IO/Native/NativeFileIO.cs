@@ -3439,29 +3439,45 @@ Currently, the following application has files open on this volume:
         }
     }
 
+    private static int queryDosDeviceBufferSize = 65536;
+
     public static IEnumerable<string> QueryDosDevice()
     {
-        const int UcchMax = 65536;
-
-        var TargetPath = ArrayPool<char>.Shared.Rent(UcchMax);
-
-        try
+        for (; ; )
         {
-            var length = UnsafeNativeMethods.QueryDosDeviceW(0, out TargetPath[0], UcchMax);
+            var TargetPath = ArrayPool<char>.Shared.Rent(queryDosDeviceBufferSize);
 
-            if (length < 2)
+            try
             {
-                yield break;
+                var length = UnsafeNativeMethods.QueryDosDeviceW(0, out TargetPath[0], TargetPath.Length);
+
+                if (length == 0)
+                {
+                    if (Marshal.GetLastWin32Error() == NativeConstants.ERROR_INSUFFICIENT_BUFFER)
+                    {
+                        queryDosDeviceBufferSize = TargetPath.Length << 1;
+                        continue;
+                    }
+
+                    throw new IOException("QueryDosDevice failed", new Win32Exception());
+                }
+
+                if (length < 2)
+                {
+                    yield break;
+                }
+
+                foreach (var name in TargetPath.AsMemory(0, length).ParseDoubleTerminatedString())
+                {
+                    yield return name.ToString();
+                }
+            }
+            finally
+            {
+                ArrayPool<char>.Shared.Return(TargetPath);
             }
 
-            foreach (var name in TargetPath.AsMemory(0, length).ParseDoubleTerminatedString())
-            {
-                yield return name.ToString();
-            }
-        }
-        finally
-        {
-            ArrayPool<char>.Shared.Return(TargetPath);
+            break;
         }
     }
 
@@ -4144,7 +4160,6 @@ Currently, the following application has files open on this volume:
             yield return $@"{namelink}\";
         }
     }
-
 
     public static IEnumerable<string> EnumerateDiskVolumes(string? DevicePath)
     {

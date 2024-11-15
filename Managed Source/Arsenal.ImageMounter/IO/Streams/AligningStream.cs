@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using DiscUtils.Streams;
 using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Async;
 using System;
@@ -337,7 +338,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
                 result = count;
             }
 
-            Buffer.BlockCopy(newbuffer, prefix, buffer, offset, result);
+            System.Buffer.BlockCopy(newbuffer, prefix, buffer, offset, result);
 
             return result;
         }
@@ -413,7 +414,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
                     SafeBaseRead(new_buffer, new_array_size - Alignment, Alignment);
                 }
 
-                Buffer.BlockCopy(buffer, offset, new_buffer, prefix, count);
+                System.Buffer.BlockCopy(buffer, offset, new_buffer, prefix, count);
 
                 Position = original_position - prefix;
 
@@ -602,14 +603,14 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             {
                 Position = checked(original_position - prefix);
 
-                Read(new_buffer.Slice(0, Alignment));
+                this.ReadExactly(new_buffer.Slice(0, Alignment));
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                Read(new_buffer.Slice(new_buffer.Length - Alignment));
+                this.ReadExactly(new_buffer.Slice(new_buffer.Length - Alignment));
             }
 
             buffer.CopyTo(new_buffer.Slice(prefix));

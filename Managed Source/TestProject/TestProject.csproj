@@ -5,6 +5,7 @@
     <RegisterForComInterop>false</RegisterForComInterop>
     <IsPackable>false</IsPackable>
     <NoWarn>1591</NoWarn>
+    <RootNamespace>Arsenal.ImageMounter.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
