@@ -603,14 +603,14 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             {
                 Position = checked(original_position - prefix);
 
-                this.ReadExactly(new_buffer.Slice(0, Alignment));
+                this.ReadMaximum(new_buffer.Slice(0, Alignment));
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                this.ReadExactly(new_buffer.Slice(new_buffer.Length - Alignment));
+                this.ReadMaximum(new_buffer.Slice(new_buffer.Length - Alignment));
             }
 
             buffer.CopyTo(new_buffer.Slice(prefix));
