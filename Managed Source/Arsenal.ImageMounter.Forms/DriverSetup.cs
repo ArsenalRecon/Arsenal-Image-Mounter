@@ -17,6 +17,7 @@ using LTRData.Extensions.Split;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -194,10 +195,10 @@ public static class DriverSetup
         StartInstalledServices();
     }
 
+    private static readonly ImmutableArray<string> services = ["vhdaccess", "deviodrv", "awealloc", "dokan2"];
+
     private static void StartInstalledServices()
     {
-        var services = new[] { "vhdaccess", "deviodrv", "awealloc", "dokan2" };
-
         foreach (var service_name in services)
         {
             try

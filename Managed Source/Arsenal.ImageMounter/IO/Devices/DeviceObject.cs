@@ -18,8 +18,6 @@ using System.Linq.Expressions;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 
-
-
 namespace Arsenal.ImageMounter.IO.Devices;
 
 /// <summary>
@@ -48,7 +46,6 @@ public abstract class DeviceObject : IDisposable
     /// </summary>
     /// <param name="Path">Path to pass to CreateFile API</param>
     /// <param name="AccessMode">Access mode for opening and for underlying FileStream</param>
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     protected DeviceObject(string Path, FileAccess AccessMode)
         : this(NativeStruct.OpenFileHandle(Path, AccessMode, FileShare.ReadWrite, FileMode.Open, Overlapped: false), AccessMode)
     {
@@ -59,13 +56,12 @@ public abstract class DeviceObject : IDisposable
     /// </summary>
     /// <param name="Handle">Existing handle to use</param>
     /// <param name="Access">Access mode for underlying FileStream</param>
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     protected DeviceObject(SafeFileHandle Handle, FileAccess Access)
     {
         SafeFileHandle = Handle;
         AccessMode = Access;
 
-        if (NativeFileIO.GetDiskSize(Handle) is { } length)
+        if (NativeStruct.GetDiskSize(Handle) is { } length)
         {
             SetCachedLength?.Invoke(Handle, length);
             SetLengthCanBeCached?.Invoke(Handle, true);

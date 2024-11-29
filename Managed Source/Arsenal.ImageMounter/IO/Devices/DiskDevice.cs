@@ -97,7 +97,6 @@ public class DiskDevice : DeviceObject
     /// </summary>
     /// <param name="DevicePath"></param>
     /// <param name="AccessMode"></param>
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public DiskDevice(string DevicePath, FileAccess AccessMode)
         : base(DevicePath, AccessMode)
     {
