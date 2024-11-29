@@ -21,6 +21,14 @@ public enum VirtualDiskType
 #endif
 public class NewAimVirtualDisk : Cmdlet
 {
+    static NewAimVirtualDisk()
+    {
+        if (!PowerShellGlobals.Initialized)
+        {
+            throw new InvalidOperationException("Error loading Arsenal Image Mounter libraries");
+        }
+    }
+
     private static ScsiAdapter? ScsiAdapter;
 
     [Parameter(Position = 0, HelpMessage = "Path to image file to mount.", Mandatory = true)]
@@ -28,6 +36,9 @@ public class NewAimVirtualDisk : Cmdlet
 
     [Parameter(HelpMessage = "Path to file used for storing changes while original image is kept untouched.")]
     public string? WriteOverlay { get; set; }
+
+    [Parameter(HelpMessage = "Stores changes temporarily in RAM while original image is kept untouched.")]
+    public SwitchParameter WriteOverlayMem { get; set; }
 
     [Parameter(HelpMessage = "Delete file specified by WriteOverlay parameter automatically when image is dismounted.")]
     public SwitchParameter AutoDelete{ get; set; }
@@ -63,6 +74,16 @@ public class NewAimVirtualDisk : Cmdlet
         try
         {
             var access = FileAccess.Read;
+
+            if (WriteOverlayMem)
+            {
+                if (WriteOverlay is not null)
+                {
+                    throw new PSArgumentException("WriteOverlayMem and WriteOverlay cannot be combined", nameof(WriteOverlayMem));
+                }
+
+                WriteOverlay = @"\\?\awealloc";
+            }
 
             if (Writable && WriteOverlay is null)
             {
