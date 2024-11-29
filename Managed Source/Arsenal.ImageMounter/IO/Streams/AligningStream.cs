@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.Extensions;
 using DiscUtils.Streams;
 using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Async;
@@ -54,6 +55,16 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
     public override long Position { get; set; }
 
     public override void Flush() => BaseStream.Flush();
+
+    public override long? GetPositionInBaseStream(Stream baseStream, long virtualPosition)
+    {
+        if (ReferenceEquals(baseStream, this))
+        {
+            return virtualPosition;
+        }
+
+        return baseStream.GetPositionInBaseStream(baseStream, virtualPosition);
+    }
 
     private int SafeBaseRead(byte[] buffer, int offset, int count)
     {

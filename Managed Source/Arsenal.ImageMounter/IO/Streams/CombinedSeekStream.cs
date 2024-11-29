@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.Extensions;
 using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Async;
 using System;
@@ -370,24 +371,23 @@ public class CombinedSeekStream : CompatibilityStream
         set => Seek(value, SeekOrigin.Begin);
     }
 
-    public long? PhysicalPosition
+    public override long? GetPositionInBaseStream(Stream baseStream, long virtualPosition)
     {
-        get
+        if (ReferenceEquals(baseStream, this))
         {
-            var stream = current.Value;
-            if (stream is null)
-            {
-                var last_stream = streams.LastOrDefault();
-                if (last_stream.Value is null)
-                {
-                    return null;
-                }
-
-                stream = last_stream.Value;
-            }
-
-            return stream?.Position;
+            return virtualPosition;
         }
+
+        var stream = streams.FirstOrDefault(s => s.Key > virtualPosition);
+
+        if (stream.Value is null)
+        {
+            throw new EndOfStreamException();
+        }
+
+        var subStreamPosition = virtualPosition - (stream.Key - stream.Value.Length);
+
+        return stream.Value.GetPositionInBaseStream(baseStream, subStreamPosition);
     }
 
     private long _length;

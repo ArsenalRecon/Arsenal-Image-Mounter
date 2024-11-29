@@ -20,6 +20,7 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
+using Arsenal.ImageMounter.Extensions;
 using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Async;
 using System;
@@ -27,7 +28,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
@@ -88,6 +90,16 @@ public class SubStream : CompatibilityStream
                 throw new ArgumentOutOfRangeException(nameof(value), "Attempt to move beyond start or end of stream");
             }
         }
+    }
+
+    public override long? GetPositionInBaseStream(Stream baseStream, long virtualPosition)
+    {
+        if (ReferenceEquals(baseStream, this))
+        {
+            return virtualPosition;
+        }
+
+        return Parent.GetPositionInBaseStream(baseStream, Start + virtualPosition);
     }
 
     public override void Flush() => Parent.Flush();

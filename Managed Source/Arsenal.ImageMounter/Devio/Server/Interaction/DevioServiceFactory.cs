@@ -841,19 +841,19 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     /// <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
     public static IDevioProvider GetProviderLibQcow(string Imagefile, FileAccess DiskAccess)
     {
-        var Flags = default(byte);
+        byte flags = 0;
 
         if (DiskAccess.HasFlag(FileAccess.Read))
         {
-            Flags |= DevioProviderLibQcow.AccessFlagsRead;
+            flags |= DevioProviderLibQcow.AccessFlagsRead;
         }
 
         if (DiskAccess.HasFlag(FileAccess.Write))
         {
-            Flags |= DevioProviderLibQcow.AccessFlagsWrite;
+            flags |= DevioProviderLibQcow.AccessFlagsWrite;
         }
 
-        return new DevioProviderLibQcow(Imagefile, Flags);
+        return new DevioProviderLibQcow(Imagefile, flags);
     }
 
     /// <summary>
@@ -882,7 +882,7 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     /// <param name="DiskAccess">Read or read/write access to image file and virtual disk device.</param>
     public static IDevioProvider GetProviderLibEwf(string Imagefile, FileAccess DiskAccess)
     {
-        var Flags = default(byte);
+        byte Flags = 0;
 
         if (DiskAccess.HasFlag(FileAccess.Read))
         {
