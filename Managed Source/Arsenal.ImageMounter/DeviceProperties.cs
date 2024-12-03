@@ -62,4 +62,9 @@ public sealed class DeviceProperties
 
     /// <summary>Path to differencing file used in write-temporary mode.</summary>
     public string? WriteOverlayImageFile { get; }
+
+    /// <summary>
+    /// Checks whether flags indicate a writable device, either write-overlay or write original.
+    /// </summary>
+    public bool IsWritable => Flags.HasFlag(DeviceFlags.WriteOverlay) || !Flags.HasFlag(DeviceFlags.ReadOnly);
 }
