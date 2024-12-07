@@ -14,7 +14,6 @@
 // 
 
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
-using Arsenal.ImageMounter.Extensions;
 using System;
 using System.IO;
 using System.Threading;

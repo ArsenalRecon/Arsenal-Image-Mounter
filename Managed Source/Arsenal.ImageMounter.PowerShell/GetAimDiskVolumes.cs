@@ -1,16 +1,15 @@
 ﻿using Arsenal.ImageMounter.Devio.Server.Services;
-using Arsenal.ImageMounter.IO.Devices;
-using System.Diagnostics;
+using Arsenal.ImageMounter.IO.Native;
 using System.Management.Automation;
 using System.Runtime.Versioning;
 
 namespace Arsenal.ImageMounter.PowerShell;
 
-[Cmdlet(VerbsCommon.Get, "AimDiskDevice")]
+[Cmdlet(VerbsCommon.Get, "AimDiskVolumes")]
 #if NET5_0_OR_GREATER
 [SupportedOSPlatform("windows")]
 #endif
-public class GetAimDiskDevice : Cmdlet
+public class GetAimDiskVolumes : Cmdlet
 {
     [Parameter(Position = 0, ValueFromPipeline = true, HelpMessage = "Mounted virtual disk to open.")]
     public DevioServiceBase? VirtualDisk { get; set; }
@@ -28,31 +27,20 @@ public class GetAimDiskDevice : Cmdlet
             throw new PSArgumentException("Needs either of VirtualDisk or DevicePath parameters, but not both.");
         }
 
-        var accessMode = FileAccess.Read;
-
-        if (Writable)
+        if (VirtualDisk is not null)
         {
-            accessMode |= FileAccess.Write;
+            var deviceName = VirtualDisk.GetDiskDeviceName();
+
+            if (deviceName is null)
+            {
+                return;
+            }
+
+            DevicePath = $@"\\?\{deviceName}";
         }
 
-        var disk = VirtualDisk is not null
-            ? VirtualDisk.OpenDiskDevice(accessMode)
-            : DevicePath is not null
-            ? new DiskDevice(DevicePath, accessMode)
-#if NET7_0_OR_GREATER
-            : throw new UnreachableException();
-#else
-            : throw new InvalidOperationException();
-#endif
+        var volumes = NativeFileIO.EnumerateDiskVolumes(DevicePath).ToArray();
 
-        try
-        {
-            WriteObject(disk);
-        }
-        catch
-        {
-            disk?.Dispose();
-            throw;
-        }
+        WriteObject(volumes);
     }
 }

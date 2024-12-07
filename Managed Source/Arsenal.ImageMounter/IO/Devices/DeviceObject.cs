@@ -16,7 +16,6 @@ using System;
 using System.IO;
 using System.Linq.Expressions;
 using System.Runtime.Versioning;
-using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.IO.Devices;
 

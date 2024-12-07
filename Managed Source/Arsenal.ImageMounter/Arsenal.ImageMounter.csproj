@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Win32.Registry" Version="*" />
+    <PackageReference Include="System.Collections.Immutable" Version="*" />
     <PackageReference Include="System.IO.FileSystem.AccessControl" Version="*" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="*" />
     <PackageReference Include="LTRData.DiscUtils.Core" Version="*" />

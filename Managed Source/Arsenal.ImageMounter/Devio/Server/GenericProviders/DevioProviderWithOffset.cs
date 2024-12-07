@@ -9,7 +9,6 @@
 //  Questions, comments, or requests for clarification: https://ArsenalRecon.com/contact/
 // 
 
-using Arsenal.ImageMounter.Extensions;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
