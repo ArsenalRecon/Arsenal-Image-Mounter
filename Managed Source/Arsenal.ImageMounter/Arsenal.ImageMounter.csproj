@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Win32.Registry" Version="*" />
-    <PackageReference Include="System.Collections.Immutable" Version="*" />
     <PackageReference Include="System.IO.FileSystem.AccessControl" Version="*" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="*" />
     <PackageReference Include="LTRData.DiscUtils.Core" Version="*" />
@@ -31,22 +30,38 @@
     <PackageReference Include="LTRData.Extensions.Native" Version="*" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net8`))' &gt;= 0 And !$(TargetFramework.StartsWith(`netstandard`))">
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="*" />
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Collections.Immutable" Version="8.*" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.*" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
     <PackageReference Include="System.Buffers" Version="*" />
-    <PackageReference Include="System.Memory" Version="*" />
+    <PackageReference Include="System.Memory" Version="4.5.*" />
+
+    <Reference Include="System.ServiceProcess" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net8`))' &lt; 0 Or $(TargetFramework.StartsWith(`netstandard`))">
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="System.Collections.Immutable" Version="8.*" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.*" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
     <PackageReference Include="System.Buffers" Version="*" />
     <PackageReference Include="System.Memory" Version="4.5.*" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.StartsWith(`net4`))'">
-    <Reference Include="System.ServiceProcess" />
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="System.Collections.Immutable" Version="8.*" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="*" />
+    <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
+    <PackageReference Include="System.Buffers" Version="*" />
+    <PackageReference Include="System.Memory" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="System.Collections.Immutable" Version="9.*" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="*" />
+    <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
+    <PackageReference Include="System.Buffers" Version="*" />
+    <PackageReference Include="System.Memory" Version="*" />
   </ItemGroup>
 
 </Project>

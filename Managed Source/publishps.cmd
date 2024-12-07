@@ -1,0 +1,1 @@
+for %%a in (net48 net8.0 net9.0) do dotnet publish -c Release -f %%a -o bin\PowerShell\%%a Arsenal.ImageMounter.PowerShell

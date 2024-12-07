@@ -21,14 +21,6 @@ public enum VirtualDiskType
 #endif
 public class NewAimVirtualDisk : Cmdlet
 {
-    static NewAimVirtualDisk()
-    {
-        if (!PowerShellGlobals.Initialized)
-        {
-            throw new InvalidOperationException("Error loading Arsenal Image Mounter libraries");
-        }
-    }
-
     private static ScsiAdapter? ScsiAdapter;
 
     [Parameter(Position = 0, HelpMessage = "Path to image file to mount.", Mandatory = true)]
