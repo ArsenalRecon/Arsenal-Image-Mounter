@@ -6,7 +6,7 @@
 /// from original source. A completion routine and reference counters cause the original
 /// IRP to be automatically completed when the last partial IRP is completed.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///

@@ -1,0 +1,54 @@
+
+; DUMMY.INF
+; Dummy inf file.
+
+[Version]
+signature = "$Windows NT$"
+Class = SCSIAdapter
+ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
+Provider = "LTR Data"
+DriverVer = 10/23/2023,2.1.2.00073
+CatalogFile = awealloc.cat
+
+
+[SourceDisksNames]
+1 = "AWE Allocation Driver"
+
+
+[SourceDisksFiles.x86]
+awealloc.sys = 1, i386
+
+[SourceDisksFiles.ia64]
+awealloc.sys = 1, ia64
+
+[SourceDisksFiles.amd64]
+awealloc.sys = 1, amd64
+
+[SourceDisksFiles.arm]
+awealloc.sys = 1, arm
+
+[SourceDisksFiles.arm64]
+awealloc.sys = 1, arm64
+
+[DestinationDirs]
+AWEAllocSysFiles = 12
+ 
+
+[DefaultInstall.ntx86]
+CopyFiles = AWEAllocSysFiles
+
+
+[AWEAllocSysFiles]
+awealloc.sys
+
+
+[DefaultInstall.ntx86.Services]
+AddService = AWEAlloc, , AWEAllocDrv
+
+
+[AWEAllocDrv]
+DisplayName = "AWE Allocation Driver"
+StartType = 2
+ServiceType = 1
+ErrorControl = 0
+ServiceBinary = %12%\AWEAlloc.sys

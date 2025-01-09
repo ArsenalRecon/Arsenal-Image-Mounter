@@ -5,7 +5,7 @@
 /// queuing work items for requests that need to be carried out at
 /// PASSIVE_LEVEL.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -253,7 +253,6 @@ __in PKIRQL               LowestAssumedIrql
         break;
 
     default:
-        //StorPortLogError(pHBAExt, pSrb, pSrb->PathId, pSrb->TargetId, pSrb->Lun, SP_PROTOCOL_ERROR, 0x0100 | pSrb->Cdb[0]);
         KdPrint(("PhDskMnt::ScsiExecute: Unknown opcode %s (0x%X)\n", DbgGetScsiOpStr(pSrb), (int)pSrb->Cdb[0]));
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
         break;

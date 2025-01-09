@@ -2,7 +2,7 @@
 /// aimapi.cpp
 /// Implementation of public API routines.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -18,9 +18,8 @@
 
 #include "..\phdskmnt\inc\ntumapi.h"
 #include "..\phdskmnt\inc\phdskmntver.h"
-
-#include <imdisk.h>
-#include <imdproxy.h>
+#include "..\phdskmnt\inc\imdproxy.h"
+#include "imdisk.h"
 
 #include "aimapi.h"
 
@@ -1086,7 +1085,7 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
 
                 ImScsiDebugMsgBox(hWnd,
                     L"The AWEAlloc driver is not installed. Please "
-                    L"install ImDisk Virtual Disk Driver.",
+                    L"reinstall Arsenal Image Mounter.",
                     L"Arsenal Image Mounter", MB_ICONSTOP);
                 break;
 
@@ -1095,7 +1094,7 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
 
                 ImScsiDebugMsgBox(hWnd,
                     L"Cannot load the AWEAlloc driver. Please "
-                    L"install ImDisk Virtual Disk Driver.",
+                    L"reinstall Arsenal Image Mounter.",
                     L"Arsenal Image Mounter", MB_ICONSTOP);
                 break;
 
@@ -1132,7 +1131,7 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
 
                 ImScsiSetStatusMsg
                 (hWnd,
-                    L"ImDisk Virtual Disk Driver Helper Service started.");
+                    L"DevIoSvc service started.");
             }
             else
             {
@@ -1141,9 +1140,9 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
                 case ERROR_SERVICE_DOES_NOT_EXIST:
 
                     ImScsiDebugMsgBox(hWnd,
-                        L"The ImDisk Virtual Disk Driver Helper "
-                        L"Service is not installed. Please install "
-                        L"ImDisk Virtual Disk Driver.",
+                        L"The DevIoSvc "
+                        L"service is not installed. Please reinstall "
+                        L"Arsenal Image Mounter.",
                         L"Arsenal Image Mounter", MB_ICONSTOP);
                     break;
 
@@ -1151,16 +1150,16 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
                 case ERROR_FILE_NOT_FOUND:
 
                     ImScsiDebugMsgBox(hWnd,
-                        L"Cannot start the ImDisk Virtual Disk Driver "
-                        L"Helper Service. Please install ImDisk Virtual Disk Driver.",
+                        L"Cannot start the DevIoSvc "
+                        L"service. Please reinstall Arsenal Image Mounter.",
                         L"Arsenal Image Mounter", MB_ICONSTOP);
                     break;
 
                 case ERROR_SERVICE_DISABLED:
 
                     ImScsiDebugMsgBox(hWnd,
-                        L"The ImDisk Virtual Disk Driver Helper "
-                        L"Service is disabled.",
+                        L"The DevIoSvc "
+                        L"service is disabled.",
                         L"Arsenal Image Mounter", MB_ICONSTOP);
                     break;
 
@@ -1168,8 +1167,8 @@ ImScsiCreateDeviceEx(IN HWND hWnd OPTIONAL,
 
                     ImScsiMsgBoxLastError
                     (hWnd,
-                        L"Error starting ImDisk Virtual Disk Driver Helper "
-                        L"Service:");
+                        L"Error starting DevIoSvc "
+                        L"service:");
                 }
 
                 return FALSE;

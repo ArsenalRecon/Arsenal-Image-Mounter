@@ -29,7 +29,7 @@ char *DbgGetScsiOpStr(PSCSI_REQUEST_BLOCK Srb)
 {
     PCDB pCdb = (PCDB)Srb->Cdb;
     UCHAR scsiOp = pCdb->CDB6GENERIC.OperationCode;
-    char *scsiOpStr = "?";
+    char* scsiOpStr = "(UNKNOWN)";
 
     switch (scsiOp) {
 
@@ -114,7 +114,6 @@ char *DbgGetScsiOpStr(PSCSI_REQUEST_BLOCK Srb)
             MAKE_CASE(SCSIOP_LOAD_UNLOAD_SLOT)  // aka SCSIOP_EXCHANGE_MEDIUM
             MAKE_CASE(SCSIOP_SET_READ_AHEAD)
             MAKE_CASE(SCSIOP_READ_DVD_STRUCTURE)
-            MAKE_CASE(SCSIOP_REQUEST_VOL_ELEMENT)
             MAKE_CASE(SCSIOP_SEND_VOLUME_TAG)
             MAKE_CASE(SCSIOP_READ_ELEMENT_STATUS)
             MAKE_CASE(SCSIOP_READ_CD_MSF)
@@ -125,6 +124,12 @@ char *DbgGetScsiOpStr(PSCSI_REQUEST_BLOCK Srb)
             MAKE_CASE(SCSIOP_READ_CD)
             MAKE_CASE(SCSIOP_SEND_DVD_STRUCTURE)
             MAKE_CASE(SCSIOP_INIT_ELEMENT_RANGE)
+#ifdef SCSIOP_SECURITY_PROTOCOL_IN
+            MAKE_CASE(SCSIOP_SECURITY_PROTOCOL_IN)
+#endif
+#ifdef SCSIOP_SECURITY_PROTOCOL_OUT
+            MAKE_CASE(SCSIOP_SECURITY_PROTOCOL_OUT)
+#endif
     }
 
     return scsiOpStr;

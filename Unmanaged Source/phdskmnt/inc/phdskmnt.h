@@ -3,7 +3,7 @@
 /// Definitions for functions and global constants for use in kernel mode
 /// components.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -77,6 +77,43 @@ extern "C" {
 
 #pragma warning(disable: 28719)
 #pragma warning(disable: 4201)
+
+#ifndef __drv_maxIRQL
+#define __drv_maxIRQL(i)
+#endif
+#ifndef __drv_requiresIRQL
+#define __drv_requiresIRQL(i)
+#endif
+#ifndef __drv_savesIRQLGlobal
+#define __drv_savesIRQLGlobal(i,n)
+#endif
+#ifndef __drv_setsIRQL
+#define __drv_setsIRQL(i)
+#endif
+#ifndef __drv_restoresIRQLGlobal
+#define __drv_restoresIRQLGlobal(i,n)
+#endif
+#ifndef __drv_when
+#define __drv_when(c,s)
+#endif
+#ifndef __drv_acquiresExclusiveResource
+#define __drv_acquiresExclusiveResource(t)
+#endif
+#ifndef __drv_releasesExclusiveResource
+#define __drv_releasesExclusiveResource(t)
+#endif
+#ifndef __in
+#define __in
+#endif
+#ifndef __out
+#define __out
+#endif
+#ifndef __inout
+#define __inout
+#endif
+#ifndef __deref
+#define __deref
+#endif
 
 #include "common.h"
 #include "imdproxy.h"
@@ -615,42 +652,6 @@ extern "C" {
 
 #define PsDereferencePrimaryToken(T) (ObDereferenceObject((T)))
 
-#ifndef __drv_maxIRQL
-#define __drv_maxIRQL(i)
-#endif
-#ifndef __drv_requiresIRQL
-#define __drv_requiresIRQL(i)
-#endif
-#ifndef __drv_savesIRQLGlobal
-#define __drv_savesIRQLGlobal(i,n)
-#endif
-#ifndef __drv_setsIRQL
-#define __drv_setsIRQL(i)
-#endif
-#ifndef __drv_restoresIRQLGlobal
-#define __drv_restoresIRQLGlobal(i,n)
-#endif
-#ifndef __drv_when
-#define __drv_when(c,s)
-#endif
-#ifndef __drv_acquiresExclusiveResource
-#define __drv_acquiresExclusiveResource(t)
-#endif
-#ifndef __drv_releasesExclusiveResource
-#define __drv_releasesExclusiveResource(t)
-#endif
-#ifndef __in
-#define __in
-#endif
-#ifndef __out
-#define __out
-#endif
-#ifndef __inout
-#define __inout
-#endif
-#ifndef __deref
-#define __deref
-#endif
 #endif
 
     UCHAR MpFindRemovedDevice(
@@ -1045,120 +1046,6 @@ extern "C" {
 
         IoFreeIrp(Irp);
     }
-
-#if _NT_TARGET_VERSION >= 0x501
-
-    FORCEINLINE
-        VOID
-        __drv_maxIRQL(DISPATCH_LEVEL)
-        __drv_savesIRQLGlobal(QueuedSpinLock, LockHandle)
-        __drv_setsIRQL(DISPATCH_LEVEL)
-        ImScsiAcquireLock_x64(__inout __deref PKSPIN_LOCK SpinLock,
-            __out __deref __drv_acquiresExclusiveResource(KeQueuedSpinLockType)
-            PKLOCK_QUEUE_HANDLE LockHandle,
-            __in KIRQL LowestAssumedIrql)
-    {
-        if (LowestAssumedIrql >= DISPATCH_LEVEL)
-        {
-            ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
-
-            KeAcquireInStackQueuedSpinLockAtDpcLevel(SpinLock, LockHandle);
-        }
-        else
-        {
-            KeAcquireInStackQueuedSpinLock(SpinLock, LockHandle);
-        }
-    }
-
-    FORCEINLINE
-        VOID
-        __drv_requiresIRQL(DISPATCH_LEVEL)
-        __drv_restoresIRQLGlobal(QueuedSpinLock, LockHandle)
-        ImScsiReleaseLock_x64(
-            __in __deref __drv_releasesExclusiveResource(KeQueuedSpinLockType)
-            PKLOCK_QUEUE_HANDLE LockHandle,
-            __inout __deref PKIRQL LowestAssumedIrql)
-    {
-        ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
-
-        if (*LowestAssumedIrql >= DISPATCH_LEVEL)
-        {
-            KeReleaseInStackQueuedSpinLockFromDpcLevel(LockHandle);
-        }
-        else
-        {
-            KeReleaseInStackQueuedSpinLock(LockHandle);
-            *LowestAssumedIrql = LockHandle->OldIrql;
-        }
-    }
-
-#endif >= XP
-
-    FORCEINLINE
-        VOID
-        __drv_maxIRQL(DISPATCH_LEVEL)
-        __drv_savesIRQLGlobal(SpinLock, OldIrql)
-        __drv_setsIRQL(DISPATCH_LEVEL)
-        ImScsiAcquireLock_x86(__inout __deref __drv_acquiresExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
-            __out __deref __drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_savesIRQL) PKIRQL OldIrql,
-            __in KIRQL LowestAssumedIrql)
-    {
-        if (LowestAssumedIrql >= DISPATCH_LEVEL)
-        {
-            ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
-
-            *OldIrql = DISPATCH_LEVEL;
-
-            KeAcquireSpinLockAtDpcLevel(SpinLock);
-        }
-        else
-        {
-            KeAcquireSpinLock(SpinLock, OldIrql);
-        }
-    }
-
-    FORCEINLINE
-        VOID
-        __drv_requiresIRQL(DISPATCH_LEVEL)
-        __drv_restoresIRQLGlobal(SpinLock, OldIrql)
-        ImScsiReleaseLock_x86(
-            __inout __deref __drv_releasesExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
-            __in KIRQL OldIrql,
-            __inout __deref PKIRQL LowestAssumedIrql)
-    {
-        ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
-
-        if (*LowestAssumedIrql >= DISPATCH_LEVEL)
-        {
-            KeReleaseSpinLockFromDpcLevel(SpinLock);
-        }
-        else
-        {
-            KeReleaseSpinLock(SpinLock, OldIrql);
-            *LowestAssumedIrql = OldIrql;
-        }
-    }
-
-#ifdef _AMD64_
-
-#define ImScsiAcquireLock ImScsiAcquireLock_x64
-
-#define ImScsiReleaseLock ImScsiReleaseLock_x64
-
-#else
-
-#define ImScsiAcquireLock(SpinLock, LockHandle, LowestAssumedIrql) \
-    { \
-        (LockHandle)->LockQueue.Lock = (SpinLock); \
-        ImScsiAcquireLock_x86((LockHandle)->LockQueue.Lock, &(LockHandle)->OldIrql, (LowestAssumedIrql)); \
-    }
-
-#define ImScsiReleaseLock(LockHandle, LowestAssumedIrql) \
-    { \
-        ImScsiReleaseLock_x86((LockHandle)->LockQueue.Lock, (LockHandle)->OldIrql, (LowestAssumedIrql)); \
-    }
-
-#endif
 
 #endif    //   #if !defined(_MP_User_Mode_Only)
 

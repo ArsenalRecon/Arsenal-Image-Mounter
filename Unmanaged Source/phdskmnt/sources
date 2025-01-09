@@ -63,8 +63,7 @@ TARGETLIBS=$(TARGETLIBS)                                                        
            $(DDK_LIB_PATH)\wdm.lib
 
 INCLUDES=.\inc;                 \
-	   $(PUBLIC_ROOT)\ddk\inc; \
-	   ..\..\..\imdisk\inc
+	   $(PUBLIC_ROOT)\ddk\inc;
 
 
 DRIVERTYPE=WDM

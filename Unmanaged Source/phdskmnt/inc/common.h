@@ -3,7 +3,7 @@
 /// Definitions for global constants for use both in kernel mode and user mode
 /// components.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -379,6 +379,182 @@ ULONG Timeout)
     SrbIoControl->Length = Size - sizeof(*SrbIoControl);
     SrbIoControl->Timeout = Timeout;
     SrbIoControl->ReturnCode = 0;
+}
+
+#endif
+
+#ifdef _NTDDK_
+
+#if _NT_TARGET_VERSION >= 0x501
+
+FORCEINLINE
+VOID
+__drv_maxIRQL(DISPATCH_LEVEL)
+__drv_savesIRQLGlobal(QueuedSpinLock, LockHandle)
+__drv_setsIRQL(DISPATCH_LEVEL)
+ImScsiAcquireLock_x64(__inout __deref PKSPIN_LOCK SpinLock,
+    __out __deref __drv_acquiresExclusiveResource(KeQueuedSpinLockType)
+    PKLOCK_QUEUE_HANDLE LockHandle,
+    __in KIRQL LowestAssumedIrql)
+{
+    if (LowestAssumedIrql >= DISPATCH_LEVEL)
+    {
+        ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+        KeAcquireInStackQueuedSpinLockAtDpcLevel(SpinLock, LockHandle);
+    }
+    else
+    {
+        KeAcquireInStackQueuedSpinLock(SpinLock, LockHandle);
+    }
+}
+
+FORCEINLINE
+VOID
+__drv_requiresIRQL(DISPATCH_LEVEL)
+__drv_restoresIRQLGlobal(QueuedSpinLock, LockHandle)
+ImScsiReleaseLock_x64(
+    __in __deref __drv_releasesExclusiveResource(KeQueuedSpinLockType)
+    PKLOCK_QUEUE_HANDLE LockHandle,
+    __inout __deref PKIRQL LowestAssumedIrql)
+{
+    ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+    if (*LowestAssumedIrql >= DISPATCH_LEVEL)
+    {
+        KeReleaseInStackQueuedSpinLockFromDpcLevel(LockHandle);
+    }
+    else
+    {
+        KeReleaseInStackQueuedSpinLock(LockHandle);
+        *LowestAssumedIrql = LockHandle->OldIrql;
+    }
+}
+
+#endif >= XP
+
+FORCEINLINE
+VOID
+__drv_maxIRQL(DISPATCH_LEVEL)
+__drv_savesIRQLGlobal(SpinLock, OldIrql)
+__drv_setsIRQL(DISPATCH_LEVEL)
+ImScsiAcquireLock_x86(__inout __deref __drv_acquiresExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
+    __out __deref __drv_when(LowestAssumedIrql < DISPATCH_LEVEL, __drv_savesIRQL) PKIRQL OldIrql,
+    __in KIRQL LowestAssumedIrql)
+{
+    if (LowestAssumedIrql >= DISPATCH_LEVEL)
+    {
+        ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+        *OldIrql = DISPATCH_LEVEL;
+
+        KeAcquireSpinLockAtDpcLevel(SpinLock);
+    }
+    else
+    {
+        KeAcquireSpinLock(SpinLock, OldIrql);
+    }
+}
+
+FORCEINLINE
+VOID
+__drv_requiresIRQL(DISPATCH_LEVEL)
+__drv_restoresIRQLGlobal(SpinLock, OldIrql)
+ImScsiReleaseLock_x86(
+    __inout __deref __drv_releasesExclusiveResource(KeSpinLockType) PKSPIN_LOCK SpinLock,
+    __in KIRQL OldIrql,
+    __inout __deref PKIRQL LowestAssumedIrql)
+{
+    ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+    if (*LowestAssumedIrql >= DISPATCH_LEVEL)
+    {
+        KeReleaseSpinLockFromDpcLevel(SpinLock);
+    }
+    else
+    {
+        KeReleaseSpinLock(SpinLock, OldIrql);
+        *LowestAssumedIrql = OldIrql;
+    }
+}
+
+#ifdef _AMD64_
+
+#define ImScsiAcquireLock ImScsiAcquireLock_x64
+
+#define ImScsiReleaseLock ImScsiReleaseLock_x64
+
+#else
+
+#define ImScsiAcquireLock(SpinLock, LockHandle, LowestAssumedIrql) \
+    { \
+        (LockHandle)->LockQueue.Lock = (SpinLock); \
+        ImScsiAcquireLock_x86((LockHandle)->LockQueue.Lock, &(LockHandle)->OldIrql, (LowestAssumedIrql)); \
+    }
+
+#define ImScsiReleaseLock(LockHandle, LowestAssumedIrql) \
+    { \
+        ImScsiReleaseLock_x86((LockHandle)->LockQueue.Lock, (LockHandle)->OldIrql, (LowestAssumedIrql)); \
+    }
+
+#endif
+
+FORCEINLINE
+VOID
+ImScsiInterlockedInsertTailList(
+    PLIST_ENTRY ListHead,
+    PLIST_ENTRY ListEntry,
+    PKSPIN_LOCK SpinLock,
+    PKIRQL LowestAssumedIrql)
+{
+    KLOCK_QUEUE_HANDLE lock_handle;
+
+    ImScsiAcquireLock(SpinLock, &lock_handle, *LowestAssumedIrql);
+
+    InsertTailList(ListHead, ListEntry);
+
+    ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
+}
+
+FORCEINLINE
+VOID
+ImScsiInterlockedInsertHeadList(
+    PLIST_ENTRY ListHead,
+    PLIST_ENTRY ListEntry,
+    PKSPIN_LOCK SpinLock,
+    PKIRQL LowestAssumedIrql)
+{
+    KLOCK_QUEUE_HANDLE lock_handle;
+
+    ImScsiAcquireLock(SpinLock, &lock_handle, *LowestAssumedIrql);
+
+    InsertHeadList(ListHead, ListEntry);
+
+    ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
+}
+
+FORCEINLINE
+PLIST_ENTRY
+ImScsiInterlockedRemoveHeadList(
+    PLIST_ENTRY ListHead,
+    PKSPIN_LOCK SpinLock,
+    PKIRQL LowestAssumedIrql)
+{
+    KLOCK_QUEUE_HANDLE lock_handle;
+    PLIST_ENTRY item;
+
+    ImScsiAcquireLock(SpinLock, &lock_handle, *LowestAssumedIrql);
+
+    item = RemoveHeadList(ListHead);
+
+    if (item == ListHead)
+    {
+        item = NULL;
+    }
+
+    ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
+
+    return item;
 }
 
 #endif

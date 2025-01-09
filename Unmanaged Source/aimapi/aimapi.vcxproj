@@ -102,7 +102,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\\wdk7.props" />
     <Import Project="..\\wdk7_w2k_x86.props" />
-    <Import Project="..\..\..\imdisk\imdiskimp.props" />
+    
     <Import Project="pecompat.props" />
     <Import Project="..\vs2013_sse.props" />
     <Import Project="..\aim_um.props" />
@@ -110,20 +110,20 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\\wdk7_secondary.props" />
-    <Import Project="..\..\..\imdisk\imdiskimp.props" />
+    
     <Import Project="pecompat.props" />
     <Import Project="..\aim_um.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\imdisk\imdiskimp.props" />
+    
     <Import Project="pecompat.props" />
     <Import Project="..\aim_um.props" />
     <Import Project="..\CoreBuild.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\imdisk\imdiskimp.props" />
+    
     <Import Project="pecompat.props" />
     <Import Project="..\aim_um.props" />
   </ImportGroup>
@@ -131,7 +131,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\\wdk7.props" />
     <Import Project="..\\wdk7_w2k_x86.props" />
-    <Import Project="..\..\..\imdisk\imdiskimp.props" />
+    
     <Import Project="..\\signltr.props" />
     <Import Project="..\vs2013_sse.props" />
     <Import Project="pecompat.props" />
@@ -141,14 +141,14 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\\wdk7.props" />
     <Import Project="..\\wdk7_wnet_x64.props" />
-    <Import Project="..\..\..\imdisk\imdiskimp.props" />
+    
     <Import Project="..\\signltr.props" />
     <Import Project="pecompat.props" />
     <Import Project="..\aim_um.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\imdisk\imdiskimp.props" />
+    
     <Import Project="..\\signltr.props" />
     <Import Project="pecompat.props" />
     <Import Project="..\aim_um.props" />
@@ -156,7 +156,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\imdisk\imdiskimp.props" />
+    
     <Import Project="..\\signltr.props" />
     <Import Project="pecompat.props" />
     <Import Project="..\aim_um.props" />

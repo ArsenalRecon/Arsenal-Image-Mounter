@@ -3,7 +3,7 @@
 /// Client components for ImDisk/devio proxy services, for use with kernel level
 /// components.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -12,13 +12,11 @@
 /// Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 ///
 
-#include "phdskmnt.h"
+#include <phdskmnt.h>
 
-#include "legacycompat.h"
+#include <legacycompat.h>
 
-#include "imdproxy.h"
-
-#include "imdisk.h"
+#include <imdproxy.h>
 
 #pragma warning(disable : 4204)
 #pragma warning(disable : 4221)
@@ -40,8 +38,8 @@ ImScsiCloseProxy(__in __deref PPROXY_CONNECTION Proxy)
         break;
 
     case PROXY_CONNECTION::PROXY_CONNECTION_SHM:
-        if ((Proxy->request_event != NULL) &
-            (Proxy->response_event != NULL) &
+        if ((Proxy->request_event != NULL) &&
+            (Proxy->response_event != NULL) &&
             (Proxy->shared_memory != NULL))
         {
             *(ULONGLONG*)Proxy->shared_memory = IMDPROXY_REQ_CLOSE;
@@ -298,7 +296,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
         // Some parameter sanity checks
         if ((RequestHeaderSize > IMDPROXY_HEADER_SIZE) ||
             (ResponseHeaderSize > IMDPROXY_HEADER_SIZE) ||
-            ((RequestDataSize + IMDPROXY_HEADER_SIZE) >
+            (((ULONG_PTR)RequestDataSize + IMDPROXY_HEADER_SIZE) >
                 Proxy->shared_memory_size))
         {
             KdPrint(("ImScsi Proxy Client: "
@@ -353,7 +351,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
             // treat that as an unrecoverable device error and exit.
 
             if ((*ResponseDataSize > ResponseDataBufferSize) ||
-                ((*ResponseDataSize + IMDPROXY_HEADER_SIZE) >
+                (((ULONG_PTR)*ResponseDataSize + IMDPROXY_HEADER_SIZE) >
                     Proxy->shared_memory_size))
             {
                 DbgPrint("ImScsi Proxy Client: Invalid response size %u expected at most %u.\n.",
@@ -376,7 +374,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
         }
 
         IoStatusBlock->Status = STATUS_SUCCESS;
-        if ((RequestDataSize > 0) & (IoStatusBlock->Information == 0))
+        if ((RequestDataSize > 0) && (IoStatusBlock->Information == 0))
             IoStatusBlock->Information = RequestDataSize;
         return IoStatusBlock->Status;
     }
@@ -400,8 +398,8 @@ __in ULONG Flags,
 __in __deref PWSTR ConnectionString,
 __in USHORT ConnectionStringLength)
 {
-    IMDPROXY_CONNECT_REQ connect_req;
-    IMDPROXY_CONNECT_RESP connect_resp;
+    IMDPROXY_CONNECT_REQ connect_req = { 0 };
+    IMDPROXY_CONNECT_RESP connect_resp = { 0 };
     NTSTATUS status;
 
     //PAGED_CODE();
@@ -412,7 +410,7 @@ __in USHORT ConnectionStringLength)
 
     if (IMSCSI_PROXY_TYPE(Flags) == IMSCSI_PROXY_TYPE_SHM)
     {
-        OBJECT_ATTRIBUTES object_attributes;
+        OBJECT_ATTRIBUTES object_attributes = { 0 };
 
         UNICODE_STRING base_name = { 0 };
         base_name.Buffer = ConnectionString;
@@ -553,14 +551,14 @@ __in USHORT ConnectionStringLength)
         PDEVICE_OBJECT dev_object;
         UNICODE_STRING imdisk_ctl_dev_name;
 
-        RtlInitUnicodeString(&imdisk_ctl_dev_name, IMDISK_CTL_DEVICE_NAME);
+        RtlInitUnicodeString(&imdisk_ctl_dev_name, DEVIODRV_DEVICE_NATIVE_NAME);
 
         status = IoGetDeviceObjectPointer(&imdisk_ctl_dev_name, 0,
             &file_object, &dev_object);
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("ImScsi Proxy Client: Cannot find '%wZ': %#x. ImDisk not installed?\n",
+            DbgPrint("ImScsi Proxy Client: Cannot find '%wZ': %#x. DevIoSvc service not installed?\n",
                 &imdisk_ctl_dev_name, status);
 
             IoStatusBlock->Status = status;
@@ -571,7 +569,7 @@ __in USHORT ConnectionStringLength)
         KeInitializeEvent(&event, NotificationEvent, FALSE);
 
         irp = IoBuildDeviceIoControlRequest(
-            IOCTL_IMDISK_GET_REFERENCED_HANDLE,
+            IOCTL_DEVIODRV_GET_REFERENCED_HANDLE,
             dev_object,
             &connect_resp.object_ptr,
             sizeof(PFILE_OBJECT),
@@ -602,7 +600,7 @@ __in USHORT ConnectionStringLength)
         if (!NT_SUCCESS(status))
         {
             DbgPrint("ImScsi Proxy Client: Failed claiming referenced object %p: %#x "
-                "Please upgrade ImDisk to version 2.0.0 to resolve this problem!\n",
+                "Please upgrade Arsenal Image Mounter driver components to version 1.2.17 to resolve this problem!\n",
                 (PVOID)(ULONG_PTR)connect_resp.object_ptr, status);
 
             IoStatusBlock->Status = status;
@@ -693,8 +691,8 @@ PVOID Buffer,
 __in ULONG Length,
 __in __deref PLARGE_INTEGER ByteOffset)
 {
-    IMDPROXY_READ_REQ read_req;
-    IMDPROXY_READ_RESP read_resp;
+    IMDPROXY_READ_REQ read_req = { 0 };
+    IMDPROXY_READ_RESP read_resp = { 0 };
     NTSTATUS status;
     ULONG_PTR max_transfer_size;
     ULONG length_done;
@@ -786,8 +784,8 @@ PVOID Buffer,
 __in ULONG Length,
 __in __deref PLARGE_INTEGER ByteOffset)
 {
-    IMDPROXY_WRITE_REQ write_req;
-    IMDPROXY_WRITE_RESP write_resp;
+    IMDPROXY_WRITE_REQ write_req = { 0 };
+    IMDPROXY_WRITE_RESP write_resp = { 0 };
     NTSTATUS status;
     ULONG_PTR max_transfer_size;
     ULONG length_done;
@@ -903,8 +901,8 @@ ImScsiUnmapOrZeroProxy(
     __in ULONG Items,
     __in __deref PDEVICE_DATA_SET_RANGE Ranges)
 {
-    IMDPROXY_UNMAP_REQ unmap_req;
-    IMDPROXY_UNMAP_RESP unmap_resp;
+    IMDPROXY_UNMAP_REQ unmap_req = { 0 };
+    IMDPROXY_UNMAP_RESP unmap_resp = { 0 };
     NTSTATUS status;
     ULONG byte_size = (ULONG)(Items * sizeof(DEVICE_DATA_SET_RANGE));
 
@@ -928,7 +926,7 @@ ImScsiUnmapOrZeroProxy(
 
 #pragma warning(suppress: 6064)
 #pragma warning(suppress: 6328)
-    KdPrint(("ImDisk Proxy Client: Unmap/Zero 0x%.8x%.8x\n", RequestCode));
+    KdPrint(("ImScsi Proxy Client: Unmap/Zero 0x%.8x%.8x\n", RequestCode));
 
     status = ImScsiCallProxy(Proxy,
         IoStatusBlock,
@@ -954,14 +952,14 @@ ImScsiUnmapOrZeroProxy(
     {
 #pragma warning(suppress: 6064)
 #pragma warning(suppress: 6328)
-        KdPrint(("ImDisk Proxy Client: Server returned error 0x%.8x%.8x.\n",
+        KdPrint(("ImScsi Proxy Client: Server returned error 0x%.8x%.8x.\n",
             unmap_resp.errorno));
         IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
         IoStatusBlock->Information = 0;
         return IoStatusBlock->Status;
     }
 
-    KdPrint(("ImDisk Proxy Client: Server replied OK.\n"));
+    KdPrint(("ImScsi Proxy Client: Server replied OK.\n"));
 
     IoStatusBlock->Status = STATUS_SUCCESS;
     IoStatusBlock->Information = 0;

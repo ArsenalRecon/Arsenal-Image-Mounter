@@ -1,0 +1,54 @@
+
+; DUMMY.INF
+; Dummy inf file.
+
+[Version]
+signature = "$Windows NT$"
+Class = SCSIAdapter
+ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
+Provider = "LTR Data"
+DriverVer = 10/23/2023,2.1.2.00073
+CatalogFile = deviodrv.cat
+
+
+[SourceDisksNames]
+1 = "DevIO Client Driver"
+
+
+[SourceDisksFiles.x86]
+deviodrv.sys = 1, i386
+
+[SourceDisksFiles.ia64]
+deviodrv.sys = 1, ia64
+
+[SourceDisksFiles.amd64]
+deviodrv.sys = 1, amd64
+
+[SourceDisksFiles.arm]
+deviodrv.sys = 1, arm
+
+[SourceDisksFiles.arm64]
+deviodrv.sys = 1, arm64
+
+[DestinationDirs]
+DevIoDrvSysFiles = 12
+ 
+
+[DefaultInstall.ntx86]
+CopyFiles = DevIoDrvSysFiles
+
+
+[DevIoDrvSysFiles]
+deviodrv.sys
+
+
+[DefaultInstall.ntx86.Services]
+AddService = DevIoDrv, , DevIoDrvDrv
+
+
+[DevIoDrvDrv]
+DisplayName = "DevIO Client Driver"
+StartType = 2
+ServiceType = 1
+ErrorControl = 0
+ServiceBinary = %12%\DevIoDrv.sys

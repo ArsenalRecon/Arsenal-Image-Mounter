@@ -2,7 +2,7 @@
 /// aimcmd.cpp
 /// Command line access to Arsenal Image Mounter features.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -34,8 +34,8 @@
 
 #include "aimcmd.h"
 
-#include <imdisk.h>
-#include <imdproxy.h>
+#include "..\aimapi\imdisk.h"
+#include "..\phdskmnt\inc\imdproxy.h"
 
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "imdisk.lib")
@@ -292,8 +292,7 @@ ImScsiSyntaxHelp()
         "        written to image file. If this option is used in combination with  no\n"
         "        image file name, a physical memory block will be used without loading\n"
         "        an image file onto it. In that case, -s parameter is needed to specify\n"
-        "        size of memory block. This option requires awealloc driver, which\n"
-        "        is installed with ImDisk Virtual Disk Driver.\n"
+        "        size of memory block.\n"
         "\n"
         "bswap   Instructs driver to swap each pair of bytes read from or written to\n"
         "        image file. Useful when examining images from some embedded systems\n"
@@ -582,13 +581,13 @@ LPWSTR FormatOptions)
             {
             case ERROR_SERVICE_DOES_NOT_EXIST:
                 fputs("The AWEAlloc driver is not installed.\n"
-                    "Please install ImDisk Virtual Disk Driver.\n", stderr);
+                    "Please reinstall Arsenal Image Mounter.\n", stderr);
                 break;
 
             case ERROR_PATH_NOT_FOUND:
             case ERROR_FILE_NOT_FOUND:
                 fputs("Cannot load AWEAlloc driver.\n"
-                    "Please install ImDisk Virtual Disk Driver.\n", stderr);
+                    "Please reinstall Arsenal Image Mounter.\n", stderr);
                 break;
 
             case ERROR_SERVICE_DISABLED:
@@ -626,27 +625,27 @@ LPWSTR FormatOptions)
                     switch (GetLastError())
                     {
                     case ERROR_SERVICE_DOES_NOT_EXIST:
-                        fputs("The ImDisk Virtual Disk Driver Helper Service is not \n"
+                        fputs("The DevIoSvc service is not \n"
                             "installed.\n"
-                            "Please install ImDisk Virtual Disk Driver.\n", stderr);
+                            "Please reinstall Arsenal Image Mounter.\n", stderr);
                         break;
 
                     case ERROR_PATH_NOT_FOUND:
                     case ERROR_FILE_NOT_FOUND:
-                        fputs("Cannot ImDisk Virtual Disk Driver Helper \n"
-                            "Service.\n"
-                            "Please install ImDisk Virtual Disk Driver.\n", stderr);
+                        fputs("Cannot find DevIoSvc \n"
+                            "service.\n"
+                            "Please reinstall Arsenal Image Mounter.\n", stderr);
                         break;
 
                     case ERROR_SERVICE_DISABLED:
-                        fputs("The ImDisk Virtual Disk Driver Helper Service is \n"
+                        fputs("The DevIoSvc service is \n"
                             "disabled.\n", stderr);
                         break;
 
                     default:
                         PrintLastError
-                            (L"Error starting ImDisk Virtual Disk Driver Helper \n"
-                            L"Service:");
+                            (L"Error starting DevIoSvc \n"
+                            L"service:");
                     }
 
                     CloseHandle(driver);
@@ -1998,7 +1997,7 @@ wmain(int argc, LPWSTR argv[])
             "\n"
             "Version " PHDSKMNT_RC_VERSION_STR " - (Compiled " __DATE__ ")\n"
             "\n"
-            "Copyright (C) 2012-2023 Arsenal Recon.\n"
+            "Copyright (C) 2012-2025 Arsenal Recon.\n"
             "\n"
             "\n"
             "http://www.ArsenalRecon.com\n"

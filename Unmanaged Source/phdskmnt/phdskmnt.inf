@@ -26,7 +26,7 @@ aimwrfltr.sys = 1, x86
 vhdaccess.sys = 1, x86
 awealloc.sys = 1, x86
 deviodrv.sys = 1, x86
-dokan2.sys = 1, x86
+deviosvc.exe = 1, x86
 
 [SourceDisksFiles.amd64]
 phdskmnt.sys = 1, x64
@@ -34,7 +34,7 @@ aimwrfltr.sys = 1, x64
 vhdaccess.sys = 1, x64
 awealloc.sys = 1, x64
 deviodrv.sys = 1, x64
-dokan2.sys = 1, x64
+deviosvc.exe = 1, x64
 
 [SourceDisksFiles.arm]
 phdskmnt.sys = 1, arm
@@ -42,7 +42,7 @@ aimwrfltr.sys = 1, arm
 vhdaccess.sys = 1, arm
 awealloc.sys = 1, arm
 deviodrv.sys = 1, arm
-dokan2.sys = 1, arm
+deviosvc.exe = 1, arm
 
 [SourceDisksFiles.arm64]
 phdskmnt.sys = 1, arm64
@@ -50,10 +50,11 @@ aimwrfltr.sys = 1, arm64
 vhdaccess.sys = 1, arm64
 awealloc.sys = 1, arm64
 deviodrv.sys = 1, arm64
-dokan2.sys = 1, arm64
+deviosvc.exe = 1, arm64
 
 [DestinationDirs]
-DefaultDestDir = 12
+PhysicalDiskMounterSysFiles = 12
+SvcFiles = 11
 
 [Manufacturer]
 %ARSENALRECON%=ARSENALRECON, NTx86, NTamd64, NTARM, NTARM64
@@ -78,7 +79,7 @@ DefaultDestDir = 12
 
 [PhysicalDiskMounterDevice]
 CopyFiles = PhysicalDiskMounterSysFiles
-CopyFiles = DokanSysFiles
+CopyFiles = SvcFiles
 
 [PhysicalDiskMounterSysFiles]
 phdskmnt.sys
@@ -87,8 +88,8 @@ vhdaccess.sys
 awealloc.sys
 deviodrv.sys
 
-[DokanSysFiles]
-dokan2.sys
+[SvcFiles]
+deviosvc.exe
 
 [PhysicalDiskMounterDevice.HW]
 AddReg = PhDskMnt_ScsiPort_AddReg
@@ -99,7 +100,7 @@ AddService = aimwrfltr, , AIMWrFltr_Service_Inst
 AddService = vhdaccess, , VhdAccess_Service_Inst
 AddService = awealloc, , AWEAlloc_Service_Inst
 AddService = deviodrv, , DevIoDrv_Service_Inst
-AddService = dokan2, , Dokan2_Service_Inst
+AddService = deviosvc, , DevIoSvc_Service_Inst
 
 [PhDskMnt_ScsiPort_AddReg]
 HKR, "ScsiPort", "NeedsSystemShutdownNotification", 0x00010001, 1
@@ -160,13 +161,13 @@ StartType      = %SERVICE_AUTO_START%
 ErrorControl   = %SERVICE_ERROR_IGNORE%
 ServiceBinary  = %12%\deviodrv.sys
 
-[Dokan2_Service_Inst]
-DisplayName    = "dokan2"
-Description    = "dokan2 virtual file system driver"
-ServiceType    = %SERVICE_FILESYS_DRIVER%
+[DevIoSvc_Service_Inst]
+DisplayName    = "DevIO server service"
+Description    = "DevIO protocol server-side service"
+ServiceType    = %SERVICE_WIN32_OWN%
 StartType      = %SERVICE_AUTO_START%
 ErrorControl   = %SERVICE_ERROR_IGNORE%
-ServiceBinary  = %12%\dokan2.sys
+ServiceBinary  = %11%\deviosvc.exe
 
 [Strings]
 ARSENALRECON     = "Arsenal Recon"
@@ -180,6 +181,7 @@ SPSVCINST_ASSOCSERVICE = 0x00000002
 
 SERVICE_KERNEL_DRIVER  = 1
 SERVICE_FILESYS_DRIVER = 2
+SERVICE_WIN32_OWN      = 16
 
 SERVICE_BOOT_START     = 0
 SERVICE_SYSTEM_START   = 1

@@ -12,7 +12,7 @@ typedef struct _UNICODE_STRING {
     PWSTR  Buffer;
 } UNICODE_STRING;
 typedef UNICODE_STRING *PUNICODE_STRING;
-typedef const UNICODE_STRING *PCUNICODE_STRING;
+typedef const UNICODE_STRING* PCUNICODE_STRING;
 #define UNICODE_NULL ((WCHAR)0)
 
 typedef LONG NTSTATUS;
@@ -135,6 +135,62 @@ NTSYSAPI
 NTSTATUS
 NTAPI
 RtlGetVersion(PRTL_OSVERSIONINFOW lpVersionInformation);
+
+#ifndef _DBGNT_
+
+
+ULONG
+__cdecl
+DbgPrint(
+    IN PCSTR Format,
+    ...
+);
+
+
+
+#if (NTDDI_VERSION >= NTDDI_WINXP)
+NTSYSAPI
+ULONG
+__cdecl
+DbgPrintEx(
+    IN ULONG ComponentId,
+    IN ULONG Level,
+    IN PCSTR Format,
+    ...
+);
+#endif
+
+
+
+#ifdef _VA_LIST_DEFINED
+
+#if (NTDDI_VERSION >= NTDDI_WINXP)
+NTSYSAPI
+ULONG
+NTAPI
+vDbgPrintEx(
+    IN ULONG ComponentId,
+    IN ULONG Level,
+    IN PCCH Format,
+    IN va_list arglist
+);
+
+NTSYSAPI
+ULONG
+NTAPI
+vDbgPrintExWithPrefix(
+    IN PCCH Prefix,
+    IN ULONG ComponentId,
+    IN ULONG Level,
+    IN PCCH Format,
+    IN va_list arglist
+);
+
+#endif
+
+#endif
+
+#endif
 
 #ifdef __cplusplus
 }

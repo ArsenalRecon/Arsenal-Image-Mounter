@@ -1,0 +1,1 @@
+@bld.cmd chk Debug

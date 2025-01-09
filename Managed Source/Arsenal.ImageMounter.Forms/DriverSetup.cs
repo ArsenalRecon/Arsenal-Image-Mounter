@@ -195,11 +195,11 @@ public static class DriverSetup
         StartInstalledServices();
     }
 
-    private static readonly ImmutableArray<string> services = ["vhdaccess", "deviodrv", "awealloc", "dokan2"];
+    private static readonly ImmutableArray<string> startServices = ["vhdaccess", "deviodrv", "deviosvc", "awealloc"];
 
     private static void StartInstalledServices()
     {
-        foreach (var service_name in services)
+        foreach (var service_name in startServices)
         {
             try
             {
@@ -364,6 +364,10 @@ public static class DriverSetup
         thread.Join();
     }
 
+    private static readonly ImmutableArray<string> removeDrivers = ["phdskmnt", "aimwrfltr", "awealloc", "deviodrv", "VhdAccess"];
+    private static readonly ImmutableArray<string> removeServices = ["deviosvc"];
+    private static readonly string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System, Environment.SpecialFolderOption.DoNotVerify);
+
     /// <summary>
     /// Removes Arsenal Image Mounter driver components.
     /// </summary>
@@ -376,10 +380,22 @@ public static class DriverSetup
                 throw new Win32Exception("OpenSCManager");
             }
 
-            var array = new[] { "phdskmnt", "aimwrfltr" };
-            for (var i = 0; i < array.Length; i++)
+            for (var i = 0; i < removeDrivers.Length; i++)
             {
-                using var svc = NativeFileIO.UnsafeNativeMethods.OpenServiceW(scm, array[i].AsRef(), 983103);
+                using var svc = NativeFileIO.UnsafeNativeMethods.OpenServiceW(scm, removeDrivers[i].AsRef(), 983103);
+
+                if (svc.IsInvalid)
+                {
+                    throw new Exception("OpenService", new Win32Exception());
+                }
+
+                NativeFileIO.UnsafeNativeMethods.DeleteService(svc);
+            }
+
+            for (var i = 0; i < removeServices.Length; i++)
+            {
+                using var svc = NativeFileIO.UnsafeNativeMethods.OpenServiceW(scm, removeServices[i].AsRef(), 983103);
+
                 if (svc.IsInvalid)
                 {
                     throw new Exception("OpenService", new Win32Exception());
@@ -389,14 +405,23 @@ public static class DriverSetup
             }
         }
 
-        var array2 = new[] { "phdskmnt", "aimwrfltr" };
-
-        for (var j = 0; j < array2.Length; j++)
+        for (var j = 0; j < removeDrivers.Length; j++)
         {
-            var driverSysFile = Path.Combine(path2: $@"drivers\{array2[j]}.sys", path1: Environment.GetFolderPath(Environment.SpecialFolder.System, Environment.SpecialFolderOption.DoNotVerify));
+            var driverSysFile = Path.Combine(sysDir, "drivers", $"{removeDrivers[j]}.sys");
+
             if (File.Exists(driverSysFile))
             {
                 File.Delete(driverSysFile);
+            }
+        }
+
+        for (var j = 0; j < removeServices.Length; j++)
+        {
+            var serviceExeFile = Path.Combine(sysDir, $@"{removeServices[j]}.exe");
+
+            if (File.Exists(serviceExeFile))
+            {
+                File.Delete(serviceExeFile);
             }
         }
     }
@@ -412,7 +437,9 @@ public static class DriverSetup
 
             if (ownerWindow != null)
             {
-                MessageBox.Show(ownerWindow, "This is a 32 bit process running on a 64 bit version of Windows. There are known problems with installing drivers in this case. If driver setup fails, please retry from a 64 bit application!", "Compatibility warning", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show(ownerWindow,
+                    "This is a 32 bit process running on a 64 bit version of Windows. There are known problems with installing drivers in this case. If driver setup fails, please retry from a 64 bit application!",
+                    "Compatibility warning", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
         }
     }

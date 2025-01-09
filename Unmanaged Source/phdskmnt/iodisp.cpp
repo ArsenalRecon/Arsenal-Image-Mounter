@@ -3,7 +3,7 @@
 /// Routines called from worker thread at PASSIVE_LEVEL to complete work items
 /// queued form miniport dispatch routines.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -1294,7 +1294,7 @@ __in __deref PETHREAD ClientThread)
 
             if (real_file_name.Buffer == NULL)
             {
-                KdPrint(("ImDisk: Out of memory while allocating %#x bytes\n",
+                KdPrint(("PhDskMnt: Out of memory while allocating %#x bytes\n",
                     real_file_name.MaximumLength));
 
                 if (file_name.Buffer != NULL)
@@ -1316,7 +1316,7 @@ __in __deref PETHREAD ClientThread)
 
             if (!NT_SUCCESS(status))
             {
-                KdPrint(("ImDisk: Internal error: "
+                KdPrint(("PhDskMnt: Internal error: "
                     "RtlAppendUnicodeStringToString failed with "
                     "pre-allocated buffers.\n"));
 

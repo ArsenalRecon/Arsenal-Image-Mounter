@@ -3,7 +3,7 @@
 /// Driver setup routines. Usually ImScsiInstsallDriver() or ImScsiUninstallDriver() are
 /// called from applications.
 /// 
-/// Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+/// Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
 /// This source code and API are available under the terms of the Affero General Public
 /// License v3.
 ///
@@ -23,8 +23,9 @@
 #include "..\phdskmnt\inc\ntumapi.h"
 #include "..\phdskmnt\inc\phdskmntver.h"
 
-#include <imdisk.h>
-#include <imdproxy.h>
+#include "imdisk.h"
+
+#include "..\phdskmnt\inc\imdproxy.h"
 
 #include "aimapi.h"
 

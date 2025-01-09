@@ -8,12 +8,9 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>_NT_TARGET_VERSION=$(WIN32_WINNT_VERSION);_MSC_PLATFORM_TOOLSET=$(PlatformToolsetVersion);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
-    <Link>
-      <EntryPointSymbol>DriverEntry</EntryPointSymbol>
-    </Link>
+    <Link />
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

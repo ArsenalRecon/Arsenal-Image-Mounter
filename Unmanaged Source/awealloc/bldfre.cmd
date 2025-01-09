@@ -1,0 +1,1 @@
+@bld.cmd fre Release

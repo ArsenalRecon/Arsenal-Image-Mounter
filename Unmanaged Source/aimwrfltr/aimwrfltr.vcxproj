@@ -110,6 +110,7 @@
     <SccAuxPath>SAK</SccAuxPath>
     <SccLocalPath>SAK</SccLocalPath>
     <SccProvider>SAK</SccProvider>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'" Label="Configuration">
@@ -297,6 +298,7 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|ARM'">
     <Import Project="aimwrfltr.props" />
+    <Import Project="..\phdskmnt\ARMGS.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|ARM64'" Label="PropertySheets">
     <Import Project="aimwrfltr.props" />
@@ -330,6 +332,7 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|ARM'">
     <Import Project="aimwrfltr.props" />
+    <Import Project="..\phdskmnt\ARMGS.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|ARM64'" Label="PropertySheets">
     <Import Project="aimwrfltr.props" />
@@ -339,6 +342,7 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Win8 Release|ARM'">
     <Import Project="aimwrfltr.props" />
+    <Import Project="..\phdskmnt\ARMGS.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|ARM64'" Label="PropertySheets">
     <Import Project="aimwrfltr.props" />
@@ -354,183 +358,227 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|ARM'">
     <Import Project="aimwrfltr.props" />
+    <Import Project="..\phdskmnt\ARMGS.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|ARM64'" Label="PropertySheets">
     <Import Project="aimwrfltr.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup>
+    <BUILD_ALT_DIR>$(Configuration.Replace(' ',''))</BUILD_ALT_DIR>
+    <IntDir Condition="'$(Platform)'!='Win32'">$(BUILD_ALT_DIR)\$(PlatformShortName)\</IntDir>
+    <IntDir Condition="'$(Platform)'=='Win32'">$(BUILD_ALT_DIR)\$(PlatformShortName)\</IntDir>
+    <OutDir>$(IntDir)</OutDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|ARM'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|ARM64'">
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|ARM'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|ARM64'">
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|ARM'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|ARM64'">
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|ARM'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|ARM64'">
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|ARM'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|ARM64'">
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|ARM'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|ARM64'">
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
     <TimeStampServer>
     </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
-    <OutDir>$(ConfigurationName)\$(PlatformShortName)\</OutDir>
-    <IntDir>$(ConfigurationName)\$(PlatformShortName)\</IntDir>
-    <TimeStampServer />
+    <TimeStampServer>
+    </TimeStampServer>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|ARM'">
     <ClCompile />
+    <ClCompile />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|x64'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'">
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|ARM'">
     <ClCompile />
   </ItemDefinitionGroup>
   <ItemGroup>

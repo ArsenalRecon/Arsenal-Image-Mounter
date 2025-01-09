@@ -1,0 +1,32 @@
+TARGETNAME=deviosvc
+TARGETTYPE=PROGRAM
+SOURCES=deviosvc.cpp deviosvc.rc
+
+MSC_WARNING_LEVEL=/W4 /WX /wd4201
+UMTYPE=windows
+USE_MSVCRT=1
+MSC_OPTIMIZATION=/Ox /GF
+
+C_DEFINES = $(C_DEFINES) /DUNICODE /D_UNICODE
+
+INCLUDES=.\inc;                 \
+           $(PUBLIC_ROOT)\ddk\inc;      \
+           ..\inc;                      \
+           ..\phdskmnt\inc
+
+!IF "$(_BUILDARCH)" == "x86"
+
+LINKER_FLAGS=/LARGEADDRESSAWARE
+BUFFER_OVERFLOW_CHECKS=0
+UMENTRYABS=wWinMainCRTStartup
+
+!ELSE
+
+UMENTRYABS=wWinMainCRTStartup /subsystem:windows,5.02
+
+!ENDIF
+
+TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
+           $(SDK_LIB_PATH)\advapi32.lib \
+           $(SDK_LIB_PATH)\user32.lib \
+           $(SDK_LIB_PATH)\wsock32.lib

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TARGETNAME Condition="'$(OVERRIDE_TARGETNAME)'!='true'">deviosvc</TARGETNAME>
+    <TARGETTYPE Condition="'$(OVERRIDE_TARGETTYPE)'!='true'">PROGRAM</TARGETTYPE>
+    <SOURCES Condition="'$(OVERRIDE_SOURCES)'!='true'">deviosvc.cpp deviosvc.rc</SOURCES>
+    <MSC_WARNING_LEVEL Condition="'$(OVERRIDE_MSC_WARNING_LEVEL)'!='true'">/W4 /WX /wd4201</MSC_WARNING_LEVEL>
+    <UMTYPE Condition="'$(OVERRIDE_UMTYPE)'!='true'">windows</UMTYPE>
+    <USE_MSVCRT Condition="'$(OVERRIDE_USE_MSVCRT)'!='true'">1</USE_MSVCRT>
+    <MSC_OPTIMIZATION Condition="'$(OVERRIDE_MSC_OPTIMIZATION)'!='true'">/Ox /GF</MSC_OPTIMIZATION>
+    <C_DEFINES Condition="'$(OVERRIDE_C_DEFINES)'!='true'">$(C_DEFINES) /DUNICODE /D_UNICODE</C_DEFINES>
+  </PropertyGroup>
+  <Choose>
+    <When Condition="'$(_BUILDARCH)'=='x86'">
+      <PropertyGroup>
+        <LINKER_FLAGS Condition="'$(OVERRIDE_LINKER_FLAGS)'!='true'">/osversion:4.00 /LARGEADDRESSAWARE</LINKER_FLAGS>
+        <UMENTRYABS Condition="'$(OVERRIDE_UMENTRYABS)'!='true'">Entry /subsystem:console,4.00</UMENTRYABS>
+        <BUFFER_OVERFLOW_CHECKS Condition="'$(OVERRIDE_BUFFER_OVERFLOW_CHECKS)'!='true'">0</BUFFER_OVERFLOW_CHECKS>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <UMENTRYABS Condition="'$(OVERRIDE_UMENTRYABS)'!='true'">Entry /subsystem:console</UMENTRYABS>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+  <PropertyGroup>
+    <TARGETLIBS Condition="'$(OVERRIDE_TARGETLIBS)'!='true'">$(SDK_LIB_PATH)\kernel32.lib             $(SDK_LIB_PATH)\advapi32.lib             $(SDK_LIB_PATH)\user32.lib             $(SDK_LIB_PATH)\wsock32.lib</TARGETLIBS>
+  </PropertyGroup>
+</Project>
