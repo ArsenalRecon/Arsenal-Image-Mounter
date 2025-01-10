@@ -595,11 +595,11 @@ public static partial class NativeFileIO
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool SetupDiCallClassInstaller(uint InstallFunction, SafeDeviceInfoSetHandle hDevInfo, in SP_DEVINFO_DATA DeviceInfoData);
 
-        [LibraryImport("newdev", StringMarshalling = StringMarshalling.Utf16)]
+        [LibraryImport("newdev", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool UpdateDriverForPlugAndPlayDevicesW(nint owner, in char HardwareId, in char InfPath, uint InstallFlags, [MarshalAs(UnmanagedType.Bool)] out bool RebootRequired);
 
-        [LibraryImport("user32")]
+        [LibraryImport("user32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
 
@@ -1050,10 +1050,10 @@ public static partial class NativeFileIO
         [DllImport("setupapi", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool SetupDiCallClassInstaller(uint InstallFunction, SafeDeviceInfoSetHandle hDevInfo, in SP_DEVINFO_DATA DeviceInfoData);
 
-        [DllImport("newdev", CharSet = CharSet.Unicode)]
+        [DllImport("newdev", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool UpdateDriverForPlugAndPlayDevicesW(nint owner, in char HardwareId, in char InfPath, uint InstallFlags, [MarshalAs(UnmanagedType.Bool)] out bool RebootRequired);
 
-        [DllImport("user32", CharSet = CharSet.Unicode)]
+        [DllImport("user32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
