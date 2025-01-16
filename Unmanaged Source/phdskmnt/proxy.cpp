@@ -558,7 +558,7 @@ __in USHORT ConnectionStringLength)
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("ImScsi Proxy Client: Cannot find '%wZ': %#x. DevIoSvc service not installed?\n",
+            DbgPrint("ImScsi Proxy Client: Cannot find '%wZ': %#x. DevIoDrv driver not installed?\n",
                 &imdisk_ctl_dev_name, status);
 
             IoStatusBlock->Status = status;
@@ -600,7 +600,7 @@ __in USHORT ConnectionStringLength)
         if (!NT_SUCCESS(status))
         {
             DbgPrint("ImScsi Proxy Client: Failed claiming referenced object %p: %#x "
-                "Please upgrade Arsenal Image Mounter driver components to version 1.2.17 to resolve this problem!\n",
+                "Please upgrade Arsenal Image Mounter driver components to version 1.2.18 to resolve this problem!\n",
                 (PVOID)(ULONG_PTR)connect_resp.object_ptr, status);
 
             IoStatusBlock->Status = status;
