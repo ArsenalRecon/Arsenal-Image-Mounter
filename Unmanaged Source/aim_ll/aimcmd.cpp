@@ -221,6 +221,9 @@ ImScsiSyntaxHelp()
         "        is, create an NTFS filesystem with quick formatting and without user\n"
         "        interaction.\n"
         "\n"
+        "        If you specify empty format parameters, -p \"\", a partition is created\n"
+        "        but it is not formatted.\n"
+        "\n"
         "-o option\n"
         "        Set or reset options.\n"
         "\n"
@@ -331,19 +334,7 @@ ImScsiSyntaxHelp()
         "\n"
         "        Note that even if you don't specify -m, Windows normally assigns drive\n"
         "        letters to new volumes anyway. This behaviour can be changed using the\n"
-        "        MOUNTVOL command line tool.\n"
-        "\n"
-        "-P      Persistent. Along with -a, saves registry settings for re-creating the\n"
-        "        same virtual disk automatically when driver is loaded, which usually\n"
-        "        occurs during system startup. Along with -d or -D, existing such\n"
-        "        settings for the removed virtual disk are also removed from registry.\n"
-        "        There are some limitations to what settings could be saved in this way.\n"
-        "        Only features directly implemented in the kernel level driver are\n"
-        "        saved, so for example the -p switch to format a virtual disk will not\n"
-        "        be saved.\n"
-        "\n"
-        "        NOTE: Registry settings for auto-loading devices are currently not\n"
-        "        supported by the driver, so this switch has currently no effect.\n",
+        "        MOUNTVOL command line tool.\n",
         stderr);
 
     if (rc > 0)
@@ -986,8 +977,7 @@ LPWSTR FormatOptions)
                 break;
             }
 
-            if (IMSCSI_READONLY(create_data->Fields.Flags) ||
-                (GetLastError() != ERROR_WRITE_PROTECT))
+            if (GetLastError() != ERROR_WRITE_PROTECT)
             {
                 PrintLastError(L"Error creating partition:");
 
@@ -1132,7 +1122,7 @@ LPWSTR FormatOptions)
                 CloseHandle(vol_handle);
             }
 
-            if (FormatOptions != NULL)
+            if (FormatOptions != NULL && FormatOptions[0] != 0)
             {
                 format_done = true;
 
@@ -1193,18 +1183,24 @@ LPWSTR FormatOptions)
                 continue;
             }
 
+            bool auto_drive_letter_requested = false;
+
+            if (MountPoint != NULL &&
+                wcscmp(MountPoint, L"#:\\") == 0)
+            {
+                auto_drive_letter_requested = true;
+            }
+
             bool mount_point_found = false;
             size_t length;
+
             for (LPWSTR mnt = vol_mnt;
                 (length = wcslen(mnt)) != 0;
                 mnt += length + 1)
             {
-                if ((length == 3) &&
-                    (MountPoint != NULL) && (MountPoint[0] != 0) &&
-                    (wcscmp(MountPoint + 1, L":\\") == 0) &&
-                    (MountPoint[0] != L'#') &&
-                    (wcscmp(mnt + 1, L":\\") == 0) &&
-                    (wcsicmp(MountPoint, mnt) != 0))
+                if (!auto_drive_letter_requested &&
+                    MountPoint != NULL &&
+                    wcsicmp(MountPoint, mnt) != 0)
                 {
                     if (!DeleteVolumeMountPoint(mnt))
                     {
@@ -1223,12 +1219,13 @@ LPWSTR FormatOptions)
                 }
             }
 
-            if ((MountPoint != NULL) && (MountPoint[0] != 0) &&
-                ((wcscmp(MountPoint, L"#:\\") != 0) || !mount_point_found))
+            if (!mount_point_found &&
+                (MountPoint != NULL) && (MountPoint[0] != 0))
             {
-                if (wcscmp(MountPoint, L"#:\\") == 0)
+                if (auto_drive_letter_requested)
                 {
                     MountPoint[0] = ImDiskFindFreeDriveLetter();
+
                     if (MountPoint[0] == 0)
                     {
                         fputs("All drive letters are in use.\n", stderr);
@@ -1279,7 +1276,7 @@ LPWSTR FormatOptions)
     return return_code;
 }
 
-// Removes an existing virtual disk device. ForeDismount can be set to TRUE to
+// Removes an existing virtual disk device. ForceDismount can be set to TRUE to
 // continue with dismount even if there are open handles to files or similar on
 // the virtual disk. EmergencyRemove can be set to TRUE to have the device
 // immediately removed, regardless of whether device handler loop in driver is
