@@ -318,15 +318,15 @@ public abstract class DevioServiceBase(IDevioProvider devioProvider, bool ownsPr
 
         try
         {
-            scsiAdapter.CreateDevice(DiskSize,
-                                     SectorSize,
-                                     Offset,
-                                     flags | AdditionalFlags | ProxyModeFlags,
-                                     ProxyObjectName,
-                                     false,
-                                     WriteOverlayImageName,
-                                     false,
-                                     ref diskDeviceNumber);
+            scsiAdapter.CreateDevice(DiskSize: DiskSize,
+                                     BytesPerSector: SectorSize,
+                                     ImageOffset: Offset,
+                                     Flags: flags | AdditionalFlags | ProxyModeFlags,
+                                     Filename: ProxyObjectName,
+                                     NativePath: false,
+                                     WriteOverlayFilename: WriteOverlayImageName,
+                                     WriteOverlayNativePath: false,
+                                     DeviceNumber: ref diskDeviceNumber);
 
             OnDiskDeviceCreated(EventArgs.Empty);
 

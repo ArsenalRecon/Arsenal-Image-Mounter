@@ -79,6 +79,11 @@ public static class NativeConstants
     public const int ERROR_INSUFFICIENT_BUFFER = 122;
     public const int ERROR_IN_WOW64 = unchecked((int)0xE0000235);
 
+    public const int EINTR = 4;
+
+    public const int WSABASEERR = 10000;
+    public const int WSAEINTR = WSABASEERR + EINTR;
+
     public const uint FSCTL_GET_COMPRESSION = 0x9003CU;
     public const uint FSCTL_SET_COMPRESSION = 0x9C040U;
     public const ushort COMPRESSION_FORMAT_NONE = 0;

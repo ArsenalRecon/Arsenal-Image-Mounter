@@ -307,7 +307,8 @@ Please see EULA.txt for license information.";
                     ?? throw new InvalidOperationException($"Invalid offset '{cmd.Value[0]}'");
             }
             else if (arg.Equals("persistent", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
-                && commands.ContainsKey("name") && !commands.ContainsKey("mount"))
+                && (commands.ContainsKey("name") | commands.ContainsKey("port"))
+                && !commands.ContainsKey("mount"))
             {
                 persistent = true;
             }

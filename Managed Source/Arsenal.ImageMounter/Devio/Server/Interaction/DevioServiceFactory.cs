@@ -565,7 +565,7 @@ public static class DevioServiceFactory
         return Service;
     }
 
-    internal static FileAccess GetDirectFileAccessFlags(VirtualDiskAccess DiskAccess) => ((int)DiskAccess & (int)~FileAccess.ReadWrite) != 0
+    public static FileAccess GetDirectFileAccessFlags(VirtualDiskAccess DiskAccess) => ((int)DiskAccess & (int)~FileAccess.ReadWrite) != 0
         ? throw new ArgumentException($"Unsupported VirtualDiskAccess flags For direct file access: {DiskAccess}", nameof(DiskAccess))
         : (FileAccess)DiskAccess;
 

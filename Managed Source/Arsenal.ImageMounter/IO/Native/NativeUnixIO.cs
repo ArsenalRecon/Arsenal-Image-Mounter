@@ -29,7 +29,7 @@ public static partial class NativeUnixIO
 
         [LibraryImport("c")]
         [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-        public static partial int ioctl(SafeFileHandle handle, uint request, int parameter);
+        public static partial int ioctl(SafeFileHandle handle, uint request, nint parameter);
 
         [LibraryImport("c")]
         [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -42,7 +42,7 @@ public static partial class NativeUnixIO
 #else
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int ioctl(SafeFileHandle handle, uint request, int parameter);
+        public static extern int ioctl(SafeFileHandle handle, uint request, nint parameter);
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int ioctl(SafeFileHandle handle, uint request, void* parameter);
@@ -56,7 +56,7 @@ public static partial class NativeUnixIO
     public static unsafe long? GetDiskSize(SafeFileHandle safeFileHandle)
     {
         long size;
-        return UnixAPI.ioctl(safeFileHandle, UnixAPI.BLKGETSIZE64, &size) == 0 &&
+        return UnixAPI.ioctl(safeFileHandle, UnixAPI.BLKGETSIZE64, &size) == 0 ||
             UnixAPI.ioctl(safeFileHandle, UnixAPI.DIOCGMEDIASIZE, &size) == 0
             ? size
             : null;

@@ -40,7 +40,7 @@ namespace Arsenal.ImageMounter.Devio.Client;
 public partial class DevioTcpStream : DevioStream
 {
     private readonly TcpClient client;
-    private readonly Stream stream;
+    private readonly NetworkStream stream;
     private readonly MemoryStream outBuffer;
 
     /// <summary>

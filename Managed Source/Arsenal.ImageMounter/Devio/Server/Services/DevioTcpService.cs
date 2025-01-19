@@ -11,6 +11,7 @@
 
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
+using Arsenal.ImageMounter.IO.Native;
 using DiscUtils.Streams;
 using System;
 using System.Buffers;
@@ -78,12 +79,13 @@ public class DevioTcpService : DevioServiceBase
     public override void RunService()
     {
         byte[]? managedBuffer = null;
+        TcpListener? listener = null;
 
         try
         {
             Trace.WriteLine($"Setting up listener at {ListenEndPoint}");
 
-            var listener = new TcpListener(ListenEndPoint);
+            listener = new TcpListener(ListenEndPoint);
 
             try
             {
@@ -101,79 +103,97 @@ public class DevioTcpService : DevioServiceBase
             Trace.WriteLine("Raising service ready event.");
             OnServiceReady(EventArgs.Empty);
 
-            var stopServiceThreadHandler = new EventHandler((sender, e) => listener.Stop());
-            StopServiceThread += stopServiceThreadHandler;
-            Socket tcpSocket;
-            try
-            {
-                tcpSocket = listener.AcceptSocket();
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"TCP listener failed: {ex}");
-                return;
-            }
-            finally
-            {
-                StopServiceThread -= stopServiceThreadHandler;
-            }
-            
-            listener.Stop();
-
             StopServiceThread += (sender, e) => EmergencyStopServiceThread();
 
-            Trace.WriteLine($"Connection from {tcpSocket.RemoteEndPoint}");
+            var stopServiceThreadHandler = new EventHandler((sender, e) => listener.Stop());
 
-            using var tcpStream = new NetworkStream(tcpSocket, ownsSocket: true);
-            using var outBuffer = new MemoryStream();
+            StopServiceThread += stopServiceThreadHandler;
 
-            internalShutdownRequestAction = () =>
+            do
             {
-                try
-                {
-                    tcpStream.Dispose();
-                }
-                catch { }
-            };
-
-            for (; ; )
-            {
-                IMDPROXY_REQ requestCode;
+                Socket tcpSocket;
 
                 try
                 {
-                    requestCode = tcpStream.Read<IMDPROXY_REQ>();
+                    tcpSocket = listener.AcceptSocket();
                 }
-                catch (EndOfStreamException)
+                catch (SocketException ex)
+                when (ex.ErrorCode is NativeConstants.WSAEINTR or NativeConstants.EINTR)
                 {
-                    break;
+                    Trace.WriteLine($"TCP listener stopped.");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"TCP listener failed: {ex}");
+                    return;
+                }
+                finally
+                {
+                    if (!Persistent)
+                    {
+                        listener.Stop();
+                        listener = null;
+                        StopServiceThread -= stopServiceThreadHandler;
+                    }
                 }
 
-                // Trace.WriteLine("Got client request: " & RequestCode.ToString())
+                Trace.WriteLine($"Connection from {tcpSocket.RemoteEndPoint}");
 
-                switch (requestCode)
+                using var tcpStream = new NetworkStream(tcpSocket, ownsSocket: true);
+                using var outBuffer = new MemoryStream();
+
+                internalShutdownRequestAction = () =>
                 {
-                    case IMDPROXY_REQ.IMDPROXY_REQ_INFO:
-                        SendInfo(tcpStream);
+                    try
+                    {
+                        tcpStream.Dispose();
+                    }
+                    catch { }
+                };
+
+                for (bool closing = false; !closing; )
+                {
+                    IMDPROXY_REQ requestCode;
+
+                    try
+                    {
+                        requestCode = tcpStream.Read<IMDPROXY_REQ>();
+                    }
+                    catch (EndOfStreamException)
+                    {
+                        Trace.WriteLine("Connection closed.");
                         break;
+                    }
 
-                    case IMDPROXY_REQ.IMDPROXY_REQ_READ:
-                        ReadData(tcpStream, outBuffer, ref managedBuffer);
-                        break;
+                    // Trace.WriteLine("Got client request: " & RequestCode.ToString())
 
-                    case IMDPROXY_REQ.IMDPROXY_REQ_WRITE:
-                        WriteData(tcpStream, ref managedBuffer);
-                        break;
+                    switch (requestCode)
+                    {
+                        case IMDPROXY_REQ.IMDPROXY_REQ_INFO:
+                            SendInfo(tcpStream);
+                            break;
 
-                    case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
-                        Trace.WriteLine("Closing connection.");
-                        return;
+                        case IMDPROXY_REQ.IMDPROXY_REQ_READ:
+                            ReadData(tcpStream, outBuffer, ref managedBuffer);
+                            break;
 
-                    default:
-                        Trace.WriteLine($"Unsupported request code: {requestCode}");
-                        return;
+                        case IMDPROXY_REQ.IMDPROXY_REQ_WRITE:
+                            WriteData(tcpStream, ref managedBuffer);
+                            break;
+
+                        case IMDPROXY_REQ.IMDPROXY_REQ_CLOSE:
+                            Trace.WriteLine("Closing connection.");
+                            closing = true;
+                            break;
+
+                        default:
+                            Trace.WriteLine($"Unsupported request code: {requestCode}");
+                            return;
+                    }
                 }
             }
+            while (Persistent && listener?.Server?.LocalEndPoint is not null);
         }
         catch (Exception ex)
         {
@@ -187,21 +207,25 @@ public class DevioTcpService : DevioServiceBase
                 ArrayPool<byte>.Shared.Return(managedBuffer);
             }
 
+            listener?.Stop();
+
             Trace.WriteLine("Client disconnected.");
             OnServiceShutdown(EventArgs.Empty);
         }
     }
 
-    private void SendInfo(Stream writer)
+    private void SendInfo(NetworkStream stream)
     {
         var response = new IMDPROXY_INFO_RESP
         {
             file_size = (ulong)DevioProvider.Length,
             req_alignment = REQUIRED_ALIGNMENT,
-            flags = DevioProvider.CanWrite ? IMDPROXY_FLAGS.IMDPROXY_FLAG_NONE : IMDPROXY_FLAGS.IMDPROXY_FLAG_RO
+            flags = (DevioProvider.CanWrite ? 0 : IMDPROXY_FLAGS.IMDPROXY_FLAG_RO)
+                | (DevioProvider.SupportsShared ? IMDPROXY_FLAGS.IMDPROXY_FLAG_SUPPORTS_SHARED : 0)
+                | (Persistent ? IMDPROXY_FLAGS.IMDPROXY_FLAG_KEEP_OPEN : 0)
         };
 
-        writer.Write(response);
+        stream.Write(response);
     }
 
     private static byte[] EnsureBufferSize(byte[]? data, int readLength)
@@ -219,7 +243,7 @@ public class DevioTcpService : DevioServiceBase
         return data;
     }
 
-    private void ReadData(Stream stream, MemoryStream outBuffer, ref byte[]? data)
+    private void ReadData(NetworkStream stream, MemoryStream outBuffer, ref byte[]? data)
     {
         var offset = stream.Read<long>();
         var readLength = (int)stream.Read<ulong>();
@@ -236,8 +260,7 @@ public class DevioTcpService : DevioServiceBase
         }
         catch (Exception ex)
         {
-            Trace.WriteLine(ex.ToString());
-            Trace.WriteLine($"Read request at {offset:X8} for {readLength} bytes.");
+            Trace.WriteLine($"Read request failed at {offset:X8} for {readLength} bytes: {ex}");
             errorCode = 1UL;
             writeLength = 0UL;
         }
@@ -260,7 +283,7 @@ public class DevioTcpService : DevioServiceBase
         outBuffer.WriteTo(stream);
     }
 
-    private void WriteData(Stream stream, ref byte[]? data)
+    private void WriteData(NetworkStream stream, ref byte[]? data)
     {
         var offset = stream.Read<long>();
         var length = (int)stream.Read<ulong>();
@@ -280,7 +303,7 @@ public class DevioTcpService : DevioServiceBase
         catch (Exception ex)
         {
             Trace.WriteLine(ex.ToString());
-            Trace.WriteLine($"Write request at {offset:X8} for {length} bytes.");
+            Trace.WriteLine($"Write request failed at {offset:X8} for {length} bytes: {ex}");
             errorCode = 1UL;
             writeLength = 0UL;
         }
