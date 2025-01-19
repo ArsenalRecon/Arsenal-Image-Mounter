@@ -82,7 +82,7 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <returns>Returns number of bytes read from device that were stored in byte array.</returns>
     public abstract int Read(Span<byte> buffer, long fileoffset);
 
-    unsafe ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    ValueTask<int> IDevioProvider.ReadAsync(Memory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -103,7 +103,7 @@ public abstract class DevioProviderSpanBase : IDevioProvider
     /// <returns>Returns number of bytes written to device.</returns>
     public abstract int Write(ReadOnlySpan<byte> buffer, long fileoffset);
 
-    unsafe ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
+    ValueTask<int> IDevioProvider.WriteAsync(ReadOnlyMemory<byte> buffer, long fileoffset, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

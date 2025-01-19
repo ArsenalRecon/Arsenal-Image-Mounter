@@ -29,6 +29,11 @@ public abstract partial class DevioStream : CompatibilityStream
     public event EventHandler? Disposed;
 
     /// <summary>
+    /// Modifies an existing connection to be read-only.
+    /// </summary>
+    public void SetReadOnly() => Flags |= IMDPROXY_FLAGS.IMDPROXY_FLAG_RO;
+
+    /// <summary>
     /// Object name used by proxy implementation.
     /// </summary>
     public string? ObjectName { get; }
