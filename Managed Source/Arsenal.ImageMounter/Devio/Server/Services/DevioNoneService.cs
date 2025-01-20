@@ -23,7 +23,6 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// it just passes a disk image file name or RAM disk information for direct mounting
 /// internally in Arsenal Image Mounter SCSI Adapter.
 /// </summary>
-[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public class DevioNoneService : DevioServiceBase
 {
 

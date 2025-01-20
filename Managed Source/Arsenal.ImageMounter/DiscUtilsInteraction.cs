@@ -298,7 +298,6 @@ public static class DiscUtilsInteraction
         }
     }
 
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static DiscUtils.Raw.Disk OpenPhysicalDiskAsDiscUtilsDisk(string devicePath, FileAccess access)
         => OpenPhysicalDiskAsDiscUtilsDisk(new DiskDevice(devicePath, access), Ownership.Dispose);
 }

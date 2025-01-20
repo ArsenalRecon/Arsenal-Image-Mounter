@@ -36,7 +36,6 @@ namespace Arsenal.ImageMounter.Devio.Client;
 /// Derives DevioStream and implements client side of Devio shared memory communication
 /// proxy.
 /// </summary>
-[SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public partial class DevioTcpStream : DevioStream
 {
     private readonly TcpClient client;

@@ -33,7 +33,6 @@ public abstract class DeviceObject : IDisposable
     /// in a new DeviceObject.
     /// </summary>
     /// <param name="Path">Path to pass to CreateFile API</param>
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     protected DeviceObject(string Path)
         : this(NativeStruct.OpenFileHandle(Path, 0, FileShare.ReadWrite, FileMode.Open, Overlapped: false), 0)
     {

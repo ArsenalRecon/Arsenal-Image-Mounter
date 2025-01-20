@@ -83,7 +83,6 @@ public class DiskDevice : DeviceObject
     /// size and similar, but not for reading or writing raw disk data.
     /// </summary>
     /// <param name="devicePath"></param>
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public DiskDevice(string devicePath)
         : base(devicePath)
     {

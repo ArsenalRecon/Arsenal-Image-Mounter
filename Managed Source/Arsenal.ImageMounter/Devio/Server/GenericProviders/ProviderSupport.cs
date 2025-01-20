@@ -334,7 +334,6 @@ public static class ProviderSupport
                                         cancellationToken: cancellationToken);
     }
 
-    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static void WriteToPhysicalDisk(this IDevioProvider provider,
                                            string outputDevice,
                                            CompletionPosition? completionPosition,
