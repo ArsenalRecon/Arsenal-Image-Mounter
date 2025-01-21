@@ -922,6 +922,15 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
         service.Persistent = persistent;
 
+        if (detachEvent is null)
+        {
+            service.ClientConnected += (sender, e)
+                => Console.WriteLine($"Client {service.ClientName} connected.");
+
+            service.ClientDisconnected += (sender, e)
+                => Console.WriteLine($"Client {service.ClientName} disconnected.");
+        }
+
         if (mount || ramDisk)
         {
             Console.WriteLine("Mounting as virtual disk...");
@@ -955,6 +964,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             if (autoDelete)
             {
                 var rc = service.SetWriteOverlayDeleteOnClose();
+
                 if (rc != NativeConstants.NO_ERROR)
                 {
                     Console.WriteLine($"Failed to set auto-delete for write overlay image ({rc}): {new Win32Exception(rc).Message}");

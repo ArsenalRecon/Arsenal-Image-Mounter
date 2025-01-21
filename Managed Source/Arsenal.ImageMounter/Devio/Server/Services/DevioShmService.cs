@@ -242,6 +242,8 @@ public class DevioShmService(string objectName, IDevioProvider devioProvider, bo
                 catch { }
             };
 
+            OnClientConnected(EventArgs.Empty);
+
             for (; ; )
             {
                 if (requestShutdown)
@@ -297,6 +299,7 @@ public class DevioShmService(string objectName, IDevioProvider devioProvider, bo
         finally
         {
             Trace.WriteLine("Client disconnected.");
+            OnClientDisconnected(EventArgs.Empty);
             OnServiceShutdown(EventArgs.Empty);
         }
     }

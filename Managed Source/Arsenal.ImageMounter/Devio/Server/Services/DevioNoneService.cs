@@ -108,6 +108,7 @@ public class DevioNoneService : DevioServiceBase
     /// SCSI Adapter.
     /// </summary>
     /// <param name="diskSize">Size in bytes of RAM disk to create.</param>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public DevioNoneService(long diskSize)
         : base(new DummyProvider(diskSize), ownsProvider: true)
     {
@@ -136,6 +137,7 @@ public class DevioNoneService : DevioServiceBase
     /// a dynamically expanding RAM disk based on the contents of the supplied VHD image.
     /// </summary>
     /// <param name="imageFile">Path to VHD image file to use as template for the RAM disk.</param>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public DevioNoneService(string imageFile)
         : base(new DummyProvider(GetVhdSize(imageFile)), ownsProvider: true)
     {
@@ -166,12 +168,14 @@ public class DevioNoneService : DevioServiceBase
     public override void RunService()
         => OnServiceReady(EventArgs.Empty);
 
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public override void DismountAndStopServiceThread()
     {
         base.DismountAndStopServiceThread();
         OnServiceShutdown(EventArgs.Empty);
     }
 
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public override bool DismountAndStopServiceThread(TimeSpan timeout)
     {
         var rc = base.DismountAndStopServiceThread(timeout);

@@ -40,6 +40,10 @@ public class DevioTcpService : DevioServiceBase
 
     private Action? internalShutdownRequestAction;
 
+    private string? clientName;
+
+    public override string? ClientName => clientName;
+
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
     /// TCP/IP based communication.
@@ -116,6 +120,7 @@ public class DevioTcpService : DevioServiceBase
                 try
                 {
                     tcpSocket = listener.AcceptSocket();
+                    tcpSocket.NoDelay = true;
                 }
                 catch (SocketException ex)
                 when (ex.ErrorCode is NativeConstants.WSAEINTR or NativeConstants.EINTR)
@@ -138,7 +143,11 @@ public class DevioTcpService : DevioServiceBase
                     }
                 }
 
-                Trace.WriteLine($"Connection from {tcpSocket.RemoteEndPoint}");
+                var remoteEndPoint = tcpSocket.RemoteEndPoint;
+
+                clientName = remoteEndPoint?.ToString();
+
+                Trace.WriteLine($"Connection from {clientName}");
 
                 using var tcpStream = new NetworkStream(tcpSocket, ownsSocket: true);
                 using var outBuffer = new MemoryStream();
@@ -151,6 +160,8 @@ public class DevioTcpService : DevioServiceBase
                     }
                     catch { }
                 };
+
+                OnClientConnected(EventArgs.Empty);
 
                 for (bool closing = false; !closing; )
                 {
@@ -192,6 +203,8 @@ public class DevioTcpService : DevioServiceBase
                             return;
                     }
                 }
+
+                OnClientDisconnected(EventArgs.Empty);
             }
             while (Persistent && listener?.Server?.LocalEndPoint is not null);
         }

@@ -74,8 +74,10 @@ public partial class DevioTcpStream : DevioStream
         : base(client.Client.RemoteEndPoint?.ToString(), read_only)
     {
         this.client = client;
+
         try
         {
+            client.NoDelay = true;
             stream = client.GetStream();
             outBuffer = new();
 

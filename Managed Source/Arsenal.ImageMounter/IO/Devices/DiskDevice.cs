@@ -62,7 +62,6 @@ public class DiskDevice : DeviceObject
             var errcode = Marshal.GetLastWin32Error();
             if (errcode is not NativeConstants.ERROR_INVALID_PARAMETER and not NativeConstants.ERROR_INVALID_FUNCTION)
             {
-
                 Trace.WriteLine($"FSCTL_ALLOW_EXTENDED_DASD_IO failed for '{DevicePath}': {errcode}");
             }
         }

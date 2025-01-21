@@ -79,6 +79,8 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
     /// </summary>
     public int ParallelIoLimit { get; set; } = Environment.ProcessorCount * 3 / 4;
 
+    private bool isConnected;
+
     private static Guid GetNextRandomValue() => NativeCalls.GenRandomGuid();
 
     private readonly CancellationTokenSource cancellation = new();
@@ -461,6 +463,12 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
                     if (err == NativeConstants.NO_ERROR)
                     {
+                        if (!isConnected)
+                        {
+                            isConnected = true;
+                            OnClientConnected(EventArgs.Empty);
+                        }
+
                         var requestCode = MemoryMarshal.Read<IMDPROXY_REQ>(mapMemory.Span.Slice(headerOffset));
 
                         // Trace.WriteLine("Got client request: " & RequestCode.ToString())
@@ -605,6 +613,12 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
             mapView = null!;
             memoryOverlappedMem = null!;
             requestOverlappedMem = null!;
+
+            if (isConnected)
+            {
+                isConnected = false;
+                OnClientDisconnected(EventArgs.Empty);
+            }
         }
     }
 

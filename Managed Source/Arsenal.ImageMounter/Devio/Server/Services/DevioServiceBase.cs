@@ -93,9 +93,13 @@ public abstract class DevioServiceBase(IDevioProvider devioProvider, bool ownsPr
     /// <summary>
     /// Description of service.
     /// </summary>
-    /// <value>Description of service.</value>
-    /// <returns>Description of service.</returns>
     public virtual string? Description { get; set; }
+
+    /// <summary>
+    /// When overridden in an implementing class, returns name of or path to a client connected
+    /// to this server instance. For example, a computer name and port, IP address or pipe path.
+    /// </summary>
+    public virtual string? ClientName => ProxyObjectName;
 
     /// <summary>
     /// Event raised when service thread is ready to start accepting connection from a client.
@@ -112,6 +116,22 @@ public abstract class DevioServiceBase(IDevioProvider devioProvider, bool ownsPr
 
     protected virtual void OnServiceInitFailed(EventArgs e)
         => ServiceInitFailed?.Invoke(this, e);
+
+    /// <summary>
+    /// Event raised when client is connected to this server object.
+    /// </summary>
+    public EventHandler? ClientConnected;
+
+    protected virtual void OnClientConnected(EventArgs e)
+        => ClientConnected?.Invoke(this, e);
+
+    /// <summary>
+    /// Event raised when client is disconnected from this server object.
+    /// </summary>
+    public EventHandler? ClientDisconnected;
+
+    protected virtual void OnClientDisconnected(EventArgs e)
+        => ClientDisconnected?.Invoke(this, e);
 
     /// <summary>
     /// Event raised when an Arsenal Image Mounter Disk Device is created by with this instance.
