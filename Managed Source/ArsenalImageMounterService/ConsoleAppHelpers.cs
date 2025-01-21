@@ -196,7 +196,7 @@ Process CPU architecture:       {RuntimeInformation.ProcessArchitecture}
 Arsenal Image Mounter version:  {ConsoleApp.AssemblyFileVersion}
 Driver version:                 {driver_ver}
 
-Copyright (c) 2012-2024 Arsenal Recon.
+Copyright (c) 2012-2025 Arsenal Recon.
 
 http://www.ArsenalRecon.com
 
