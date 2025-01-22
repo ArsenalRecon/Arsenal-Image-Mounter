@@ -109,7 +109,7 @@
 /// Extracts the IMSCSI_PROXY_TYPE_xxx from flags
 #define IMSCSI_FILE_TYPE(x)             ((ULONG)(x) & 0x0000F000)
 
-/// Extracts the IMSCSI_PROXY_TYPE_xxx from flags
+/// Indicates that virtual disk contents have changed since created or since flag was last cleared
 #define IMSCSI_IMAGE_MODIFIED           0x00010000
 
 /// Report a fake disk signature instead of existing one
