@@ -79,7 +79,17 @@ public static class NativeConstants
     public const int ERROR_INSUFFICIENT_BUFFER = 122;
     public const int ERROR_IN_WOW64 = unchecked((int)0xE0000235);
 
+    public const int EPERM = 1;
+    public const int ENOENT = 2;
     public const int EINTR = 4;
+    public const int EIO = 5;
+    public const int E2BIG = 7;
+    public const int EBADF = 9;
+    public const int ENOMEM = 12;
+    public const int EACCES = 13;
+    public const int EFAULT = 14;
+    public const int EBUSY = 16;
+    public const int EEXIST = 17;
 
     public const int WSABASEERR = 10000;
     public const int WSAEINTR = WSABASEERR + EINTR;
