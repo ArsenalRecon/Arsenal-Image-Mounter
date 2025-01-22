@@ -171,6 +171,12 @@ public class DevioTcpService : DevioServiceBase
                     {
                         requestCode = tcpStream.Read<IMDPROXY_REQ>();
                     }
+                    catch (SocketException ex)
+                    when (ex.ErrorCode is NativeConstants.WSAECONNRESET or NativeConstants.ECONNRESET)
+                    {
+                        Trace.WriteLine("Connection reset by client.");
+                        break;
+                    }
                     catch (EndOfStreamException)
                     {
                         Trace.WriteLine("Connection closed.");

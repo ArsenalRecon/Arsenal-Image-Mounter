@@ -90,9 +90,12 @@ public static class NativeConstants
     public const int EFAULT = 14;
     public const int EBUSY = 16;
     public const int EEXIST = 17;
+    public const int EISDIR = 21;
+    public const int ECONNRESET = 54;
 
     public const int WSABASEERR = 10000;
     public const int WSAEINTR = WSABASEERR + EINTR;
+    public const int WSAECONNRESET = WSABASEERR + ECONNRESET;
 
     public const uint FSCTL_GET_COMPRESSION = 0x9003CU;
     public const uint FSCTL_SET_COMPRESSION = 0x9C040U;

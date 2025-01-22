@@ -60,10 +60,10 @@ public static class ConsoleApp
 
             if (commands.ContainsKey("background"))
             {
-                return ConsoleAppHelpers.StartBackgroundProcess();
+                return ConsoleAppImplementation.StartBackgroundProcess();
             }
 
-            return ConsoleAppHelpers.UnsafeMain(commands);
+            return ConsoleAppImplementation.UnsafeMain(commands);
         }
         catch (AbandonedMutexException ex)
         {

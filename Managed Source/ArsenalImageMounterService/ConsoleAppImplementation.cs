@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.Devio.Client;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
 using Arsenal.ImageMounter.Devio.Server.Services;
@@ -37,7 +38,10 @@ using System.Threading;
 
 namespace Arsenal.ImageMounter;
 
-public static class ConsoleAppHelpers
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0057 // Use range operator
+
+public static class ConsoleAppImplementation
 {
     private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
 
@@ -245,6 +249,7 @@ Please see EULA.txt for license information.";
         SafeWaitHandle? detachEvent = null;
         var fakeMbr = false;
         var ramDisk = false;
+        var proxyconnect = false;
         var autoDelete = false;
         var listDevices = false;
         var autoOnline = false;
@@ -312,9 +317,15 @@ Please see EULA.txt for license information.";
             {
                 persistent = true;
             }
-            else if (arg.Equals("filename", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
-                || arg.Equals("device", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            else if ((arg.Equals("filename", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1 && !commands.ContainsKey("device")
+                || arg.Equals("device", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1 && !commands.ContainsKey("filename"))
+                && !commands.ContainsKey("connect"))
             {
+                fileName = cmd.Value[0];
+            }
+            else if (arg.Equals("connect", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            {
+                proxyconnect = true;
                 fileName = cmd.Value[0];
             }
             else if (arg.Equals("create", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
@@ -508,18 +519,6 @@ Please see EULA.txt for license information.";
             return 0;
         }
 
-        if (ioCommunication == IOCommunication.Auto)
-        {
-            if (listenPort != 0)
-            {
-                ioCommunication = IOCommunication.Tcp;
-            }
-            else
-            {
-                ioCommunication = IOCommunication.Drv;
-            }
-        }
-
         if (showHelp || (string.IsNullOrWhiteSpace(fileName) && string.IsNullOrWhiteSpace(dismount) && !ramDisk))
         {
             var asmname = Assembly.GetExecutingAssembly().GetName().Name;
@@ -667,7 +666,75 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
         IDevioProvider provider;
         DevioServiceBase service;
 
-        if (ramDisk)
+        if (proxyconnect)
+        {
+            if (fileName is null)
+            {
+                return 0;
+            }
+
+            DeviceFlags proxy = ioCommunication switch
+            {
+                IOCommunication.Tcp => DeviceFlags.ProxyTypeTCP,
+                IOCommunication.Shm => DeviceFlags.ProxyTypeSharedMemory,
+                IOCommunication.Drv => DeviceFlags.FileTypeParallel,
+                _ => DeviceFlags.ProxyTypeTCP
+            };
+
+            if (mount)
+            {
+                if (ioCommunication == IOCommunication.Drv)
+                {
+                    service = new ProxyClientService($@"\\?\DevIoDrv\{fileName}", proxy, $"Connection to {fileName}", diskSize ?? 0);
+                }
+                else
+                {
+                    service = new ProxyClientService(fileName, proxy, $"Connection to {fileName}", diskSize ?? 0);
+                    service.AdditionalFlags |= DeviceFlags.TypeProxy;
+                }
+
+                provider = service.DevioProvider;
+            }
+            else
+            {
+                var portIndex = fileName.LastIndexOf(':');
+
+                var host = fileName;
+                var port = 9000;
+
+                if (portIndex > 0)
+                {
+                    port = short.Parse(fileName.Substring(portIndex + 1));
+                    host = fileName.Remove(portIndex);
+                }
+
+                provider = new DevioProviderFromStream(new DevioTcpStream(host, port, read_only: !diskAccess.HasFlag(FileAccess.Write)), ownsStream: true);
+
+                if (outputImage is not null) // Convert to new image file format
+                {
+                    provider.ConvertToImage(fileName, outputImage, outputImageVariant, detachEvent);
+                    provider.Dispose();
+
+                    return 0;
+                }
+                else if (checksum is not null) // Calculate checksum over image
+                {
+                    provider.Checksum(checksum);
+                    provider.Dispose();
+
+                    return 0;
+                }
+                else
+                {
+                    provider.Dispose();
+
+                    Console.WriteLine("None of --mount, --checksum or --convert switches specified, nothing to do.");
+
+                    return 1;
+                }
+            }
+        }
+        else if (ramDisk)
         {
             if ((fileName is null
                 || string.IsNullOrWhiteSpace(fileName))
@@ -861,6 +928,18 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             Console.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}");
 
+            if (ioCommunication == IOCommunication.Auto)
+            {
+                if (listenPort != 0)
+                {
+                    ioCommunication = IOCommunication.Tcp;
+                }
+                else
+                {
+                    ioCommunication = IOCommunication.Drv;
+                }
+            }
+
             if (ioCommunication == IOCommunication.Tcp
                 && listenPort != 0) // Listen on TCP/IP socket
             {
@@ -888,7 +967,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             {
                 service = new DevioDrvService(provider, ownsProvider: true, initialBufferSize: bufferSize ?? DevioDrvService.DefaultInitialBufferSize);
             }
-            else if (outputImage is not null && fileName is not null) // Convert to new image file format
+            else if (outputImage is not null) // Convert to new image file format
             {
                 provider.ConvertToImage(fileName, outputImage, outputImageVariant, detachEvent);
                 provider.Dispose();
@@ -1070,7 +1149,14 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             CloseConsole(detachEvent);
         }
-        else if (!ramDisk)
+        else if (ramDisk || service is DevioNoneService)
+        {
+            if (mount)
+            {
+                Console.WriteLine($"Virtual disk created. To dismount, type aim_cli --dismount={service.DiskDeviceNumber:X6}");
+            }
+        }
+        else
         {
             if (mount)
             {

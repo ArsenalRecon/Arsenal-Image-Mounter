@@ -54,10 +54,10 @@ public class DevioNoneService : DevioServiceBase
     /// SCSI Adapter.
     /// </summary>
     /// <param name="imageFile">Name and path of image file mounted by Arsenal Image Mounter.</param>
-    /// <param name="length">Disk size to initialize dummy provider instance</param>
+    /// <param name="diskSize">Disk size to initialize dummy provider instance</param>
     /// <param name="diskAccess"></param>
-    protected DevioNoneService(string imageFile, long length, FileAccess diskAccess)
-        : base(new DummyProvider(length), ownsProvider: true)
+    protected DevioNoneService(string imageFile, long diskSize, FileAccess diskAccess)
+        : base(new DummyProvider(diskSize), ownsProvider: true)
     {
         Offset = NativeStruct.GetOffsetByFileExt(imageFile);
 
@@ -122,6 +122,18 @@ public class DevioNoneService : DevioServiceBase
         {
             AdditionalFlags = DeviceFlags.TypeVM;
         }
+    }
+
+    /// <summary>
+    /// Creates a dummy service client-side wrapper around an existing provider,
+    /// without any logic for how to mount it as a virtual disk.
+    /// </summary>
+    /// <param name="provider"></param>
+    /// <param name="ownsProvider"></param>
+    public DevioNoneService(IDevioProvider provider, bool ownsProvider)
+        : base(provider, ownsProvider)
+    {
+        DiskAccess = FileAccess.Read | (provider.CanWrite ? FileAccess.Write : 0);
     }
 
     private static long GetVhdSize(string imageFile)

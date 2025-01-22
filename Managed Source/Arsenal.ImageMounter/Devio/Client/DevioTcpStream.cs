@@ -43,8 +43,7 @@ public partial class DevioTcpStream : DevioStream
     private readonly MemoryStream outBuffer;
 
     /// <summary>
-    /// Creates a new instance by opening an existing Devio shared memory object and starts
-    /// communication with a Devio service using this shared memory object.
+    /// Creates a new instance by connecting to a remote Devio service across network.
     /// </summary>
     /// <param name="hostname"></param>
     /// <param name="port"></param>
@@ -54,6 +53,8 @@ public partial class DevioTcpStream : DevioStream
     public static async Task<DevioTcpStream> ConnectAsync(string hostname, int port, bool read_only, CancellationToken cancellationToken)
     {
         var client = new TcpClient();
+
+        cancellationToken.ThrowIfCancellationRequested();
 
 #if NET5_0_OR_GREATER
         await client.ConnectAsync(hostname, port, cancellationToken).ConfigureAwait(false);
@@ -65,8 +66,19 @@ public partial class DevioTcpStream : DevioStream
     }
 
     /// <summary>
-    /// Creates a new instance by opening an existing Devio shared memory object and starts
-    /// communication with a Devio service using this shared memory object.
+    /// Creates a new instance by connecting to a remote Devio service across network.
+    /// </summary>
+    /// <param name="hostname"></param>
+    /// <param name="port"></param>
+    /// <param name="read_only">Specifies if communication should be read-only.</param>
+    /// <returns>Returns new instance of DevioTcpStream.</returns>
+    public DevioTcpStream(string hostname, int port, bool read_only)
+        : this(new TcpClient(hostname, port), read_only)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance using an existing network connection to a remote Devio service.
     /// </summary>
     /// <param name="client"></param>
     /// <param name="read_only">Specifies if communication should be read-only.</param>

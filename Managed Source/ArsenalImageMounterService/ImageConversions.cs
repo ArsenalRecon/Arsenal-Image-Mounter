@@ -56,6 +56,7 @@ internal static class ImageConversions
 
             var t = Task.Run(() =>
             {
+                Console.WriteLine($"Image virtual size: {SizeFormatting.FormatBytes(provider.Length)}");
                 Console.WriteLine($"Bytes per sector: {provider.SectorSize}");
                 Console.WriteLine();
                 Console.WriteLine($"Start time: {DateTime.Now}");
@@ -127,7 +128,7 @@ internal static class ImageConversions
 
             if (detachEvent is not null)
             {
-                ConsoleAppHelpers.CloseConsole(detachEvent);
+                ConsoleAppImplementation.CloseConsole(detachEvent);
             }
             else
             {
