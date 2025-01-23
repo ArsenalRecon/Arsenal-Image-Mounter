@@ -38,9 +38,6 @@ using System.Threading;
 
 namespace Arsenal.ImageMounter;
 
-#pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
-
 public static class ConsoleAppImplementation
 {
     private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
@@ -323,7 +320,8 @@ Please see EULA.txt for license information.";
             {
                 fileName = cmd.Value[0];
             }
-            else if (arg.Equals("connect", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
+            else if (arg.Equals("connect", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1
+                && !commands.ContainsKey("port") && !commands.ContainsKey("ipaddress") && !commands.ContainsKey("create") && !commands.ContainsKey("provider"))
             {
                 proxyconnect = true;
                 fileName = cmd.Value[0];
@@ -567,6 +565,9 @@ Syntax to save a physical disk as an image file:
 Syntax to dismount a mounted device:
 {asmname} --dismount[=devicenumber] [--force]
 
+Syntax to mount a disk at remote machine:
+{asmname} --mount [--buffersize=bytes] [--readonly|--writable] [--fakesig] [--fakembr] [--online] --connnect=ipaddress[:port] [--writeoverlay=differencingimagefile [--autodelete]]
+
 Syntax to display a list of mounted devices:
 {asmname} --list
 
@@ -681,6 +682,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 _ => DeviceFlags.ProxyTypeTCP
             };
 
+            Console.WriteLine($"Connecting to '{fileName}'...");
+
             if (mount)
             {
                 if (ioCommunication == IOCommunication.Drv)
@@ -704,7 +707,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
                 if (portIndex > 0)
                 {
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+                    port = short.Parse(fileName.AsSpan(portIndex + 1));
+#else
                     port = short.Parse(fileName.Substring(portIndex + 1));
+#endif
                     host = fileName.Remove(portIndex);
                 }
 
@@ -882,7 +889,14 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 diskAccess = FileAccess.ReadWrite;
             }
 
-            Console.WriteLine($"Opening image file '{fileName}' with format provider '{providerName}'...");
+            if (providerName != "None")
+            {
+                Console.WriteLine($"Opening image file '{fileName}' with format provider '{providerName}'...");
+            }
+            else
+            {
+                Console.WriteLine($"Opening '{fileName}'...");
+            }
 
             provider = DevioServiceFactory.GetProvider(fileName, diskAccess, providerName)
                 ?? throw new NotSupportedException("Unknown image file format. Try with another format provider!");
