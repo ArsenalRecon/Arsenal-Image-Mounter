@@ -4289,10 +4289,13 @@ Currently, the following application has files open on this volume:
     }
 
     public static uint? GetDevInst(string devinstName)
+        => GetDevInst(devinstName.AsMemory());
+
+    public static uint? GetDevInst(ReadOnlyMemory<char> devinstName)
     {
         var devInst = 0u;
 
-        var status = UnsafeNativeMethods.CM_Locate_DevNodeW(devInst, devinstName.AsRef(), 0);
+        var status = UnsafeNativeMethods.CM_Locate_DevNodeW(devInst, devinstName.MakeNullTerminated(), 0);
 
         if (status != 0)
         {
@@ -4307,57 +4310,77 @@ Currently, the following application has files open on this volume:
         return devInst;
     }
 
-    public static uint EnumerateDeviceInstancesForService(string service, out IEnumerable<ReadOnlyMemory<char>>? instances)
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+    public static bool EnumerateDeviceInstancesForService(string service, [NotNullWhen(true)] out IEnumerable<ReadOnlyMemory<char>>? instances, out uint errorCode)
+#else
+    public static bool EnumerateDeviceInstancesForService(string service, out IEnumerable<ReadOnlyMemory<char>>? instances, out uint errorCode)
+#endif
     {
         instances = null;
-        var status = UnsafeNativeMethods.CM_Get_Device_ID_List_SizeW(out var length, service.AsRef(), NativeConstants.CM_GETIDLIST_FILTER_SERVICE);
+        errorCode = UnsafeNativeMethods.CM_Get_Device_ID_List_SizeW(out var length,
+                                                                    service.AsRef(),
+                                                                    NativeConstants.CM_GETIDLIST_FILTER_SERVICE);
 
-        if (status != 0)
+        if (errorCode != 0)
         {
-            return status;
+            return false;
         }
 
         var Buffer = new char[length];
-        status = UnsafeNativeMethods.CM_Get_Device_ID_ListW(service.AsRef(),
-                                                            out Buffer[0],
-                                                            (uint)Buffer.Length,
-                                                            NativeConstants.CM_GETIDLIST_FILTER_SERVICE);
+        errorCode = UnsafeNativeMethods.CM_Get_Device_ID_ListW(service.AsRef(),
+                                                               out Buffer[0],
+                                                               (uint)Buffer.Length,
+                                                               NativeConstants.CM_GETIDLIST_FILTER_SERVICE);
 
-        if (status != 0)
+        if (errorCode != 0)
         {
-            return status;
+            return false;
         }
 
         instances = Buffer.AsMemory(0, length).ParseDoubleTerminatedString();
 
-        return status;
+        return true;
     }
 
-    public static uint EnumerateDeviceInstancesForSetupClass(string service, out IEnumerable<ReadOnlyMemory<char>>? instances)
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+    public static bool EnumerateDeviceInstancesForSetupClass(Guid setupClass, [NotNullWhen(true)] out IEnumerable<ReadOnlyMemory<char>>? instances, out uint errorCode)
+#else
+    public static bool EnumerateDeviceInstancesForSetupClass(Guid setupClass, out IEnumerable<ReadOnlyMemory<char>>? instances, out uint errorCode)
+#endif
     {
         instances = null;
 
-        var status = UnsafeNativeMethods.CM_Get_Device_ID_List_SizeW(out var length, service.AsRef(), NativeConstants.CM_GETIDLIST_FILTER_SERVICE);
+        var setupClassStr = setupClass.ToString("B");
 
-        if (status != 0)
+        errorCode = UnsafeNativeMethods.CM_Get_Device_ID_List_SizeW(out var length,
+                                                                    setupClassStr.AsRef(),
+                                                                    NativeConstants.CM_GETIDLIST_FILTER_CLASS | NativeConstants.CM_GETIDLIST_FILTER_PRESENT);
+
+        if (errorCode != 0)
         {
-            return status;
+            return false;
+        }
+
+        if (length <= 2)
+        {
+            instances = [];
+            return true;
         }
 
         var Buffer = new char[length];
-        status = UnsafeNativeMethods.CM_Get_Device_ID_ListW(service.AsRef(),
-                                                            out Buffer[0],
-                                                            (uint)Buffer.Length,
-                                                            NativeConstants.CM_GETIDLIST_FILTER_SERVICE);
+        errorCode = UnsafeNativeMethods.CM_Get_Device_ID_ListW(setupClassStr.AsRef(),
+                                                               out Buffer[0],
+                                                               (uint)Buffer.Length,
+                                                               NativeConstants.CM_GETIDLIST_FILTER_CLASS | NativeConstants.CM_GETIDLIST_FILTER_PRESENT);
 
-        if (status != 0)
+        if (errorCode != 0)
         {
-            return status;
+            return false;
         }
 
         instances = Buffer.AsMemory(0, length).ParseDoubleTerminatedString();
 
-        return status;
+        return true;
     }
 
     public static void RestartDevice(Guid devclass, uint devinst)
@@ -4591,6 +4614,9 @@ Currently, the following application has files open on this volume:
     }
 
     public static string? GetPhysicalDeviceObjectNtPath(string devInstName)
+        => GetPhysicalDeviceObjectNtPath(devInstName.AsMemory());
+
+    public static string? GetPhysicalDeviceObjectNtPath(ReadOnlyMemory<char> devInstName)
     {
         var devinst = GetDevInst(devInstName);
 

@@ -135,7 +135,7 @@ public class ScsiAdapter : DeviceObject
             ?? throw new FileNotFoundException("No Arsenal Image Mounter adapter found.");
 
         var found = (from devInstName in devinstNames
-                     let devinst = NativeFileIO.GetDevInst(devInstName.ToString())
+                     let devinst = NativeFileIO.GetDevInst(devInstName)
                      where devinst.HasValue
                      let path = NativeFileIO.GetPhysicalDeviceObjectNtPath(devinst.Value)
                      where path is not null

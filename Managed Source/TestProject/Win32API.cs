@@ -18,4 +18,17 @@ public class Win32API
         Assert.NotNull(target);
     }
 
+    [Fact]
+    public void EnumeratePhysicalDisks()
+    {
+        var rc = NativeFileIO.EnumerateDeviceInstancesForSetupClass(NativeConstants.DiskDriveGuid, out var disks, out var errorCode);
+
+        Assert.True(rc, $"CR error code: {errorCode}");
+        Assert.NotNull(disks);
+
+        var array = disks.ToArray();
+
+        Assert.NotEmpty(array);
+    }
+
 }

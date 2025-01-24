@@ -173,7 +173,9 @@ public static class NativeConstants
     public const uint DRIVER_PACKAGE_FORCE = 0x4U;
     public const uint DRIVER_PACKAGE_SILENT = 0x2U;
 
-    public const uint CM_GETIDLIST_FILTER_SERVICE = 0x2U;
+    public const uint CM_GETIDLIST_FILTER_SERVICE = 0x00000002;
+    public const uint CM_GETIDLIST_FILTER_CLASS = 0x00000200;
+    public const uint CM_GETIDLIST_FILTER_PRESENT = 0x00000100;
 
     public const uint DIF_PROPERTYCHANGE = 0x12U;
     public const uint DICS_FLAG_CONFIGSPECIFIC = 0x2U;  // make change in specified profile only

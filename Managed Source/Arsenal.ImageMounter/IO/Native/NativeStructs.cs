@@ -15,6 +15,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text;
 using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
@@ -1816,3 +1817,81 @@ public enum NtFileCreated
     DoesNotExist
 
 }
+
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
+[SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "Native structure")]
+public struct freebsd_statfs
+{
+    public const int MFSNAMELEN = 16;              /* length of type name including null */
+    public const int MNAMELEN = 1024;              /* size of on/from name bufs */
+    public const int STATFS_VERSION = 0x20140518;  /* current version number */
+
+    public uint f_version { get; }             /* structure version number */
+    public uint f_type { get; }                /* type of filesystem */
+    public ulong f_flags { get; }               /* copy of mount exported flags */
+    public ulong f_bsize { get; }               /* filesystem fragment size */
+    public ulong f_iosize { get; }              /* optimal transfer block size */
+    public ulong f_blocks { get; }              /* total data blocks in filesystem */
+    public ulong f_bfree { get; }               /* free blocks in filesystem */
+    public long f_bavail { get; }              /* free blocks avail to non-superuser */
+    public ulong f_files { get; }               /* total file nodes in filesystem */
+    public long f_ffree { get; }               /* free nodes avail to non-superuser */
+    public ulong f_syncwrites { get; }          /* count of sync writes since mount */
+    public ulong f_asyncwrites { get; }         /* count of async writes since mount */
+    public ulong f_syncreads { get; }           /* count of sync reads since mount */
+    public ulong f_asyncreads { get; }          /* count of async reads since mount */
+    public uint f_nvnodelistsize { get; }      /* # of vnodes */
+    public uint f_spare0 { get; }              /* unused spare */
+    public unsafe fixed ulong f_spare[9];     /* unused spare */
+    public uint f_namemax { get; }             /* maximum filename length */
+    public int f_owner { get; }              /* user that mounted the filesystem */
+    public unsafe fixed int f_fsid[2];               /* filesystem id */
+    public unsafe fixed byte f_charspare[80];          /* spare string space */
+    public unsafe fixed byte f_fstypename[MFSNAMELEN]; /* filesystem type name */
+    public unsafe string FsTypeName
+    {
+        get
+        {
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+            return MemoryMarshal.CreateReadOnlySpan(ref f_fstypename[0], MFSNAMELEN).ReadNullTerminatedMultiByteString(Encoding.UTF8);
+#else
+                fixed (byte* ptr = f_fstypename)
+                {
+                    return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MFSNAMELEN).IndexOfTerminator());
+                }
+#endif
+        }
+    }
+
+    public unsafe fixed byte f_mntfromname[MNAMELEN];  /* mounted filesystem */
+    public unsafe string MntFromName
+    {
+        get
+        {
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+            return MemoryMarshal.CreateReadOnlySpan(ref f_mntfromname[0], MNAMELEN).ReadNullTerminatedMultiByteString(Encoding.UTF8);
+#else
+                fixed (byte* ptr = f_mntfromname)
+                {
+                    return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MNAMELEN).IndexOfTerminator());
+                }
+#endif
+        }
+    }
+
+    public unsafe fixed byte f_mntonname[MNAMELEN];    /* directory on which mounted */
+    public unsafe string MntToName
+    {
+        get
+        {
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+            return MemoryMarshal.CreateReadOnlySpan(ref f_mntonname[0], MNAMELEN).ReadNullTerminatedMultiByteString(Encoding.UTF8);
+#else
+                fixed (byte* ptr = f_mntonname)
+                {
+                    return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MNAMELEN).IndexOfTerminator());
+                }
+#endif
+        }
+    }
+};

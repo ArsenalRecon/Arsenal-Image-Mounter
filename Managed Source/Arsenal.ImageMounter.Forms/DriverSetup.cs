@@ -318,7 +318,7 @@ public static class DriverSetup
     /// console window.</param>
     internal static void RemoveDevices(IWin32Window ownerWindow)
     {
-        if (NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var hwinstances) != 0
+        if (!NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var hwinstances, out _)
             || hwinstances is null)
         {
             return;

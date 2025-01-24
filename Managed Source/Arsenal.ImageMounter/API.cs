@@ -157,9 +157,8 @@ public static partial class API
     /// </summary>
     public static IEnumerable<string> EnumerateAdapterDevicePaths(nint HwndParent)
     {
-        var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var devinstances);
-
-        if (status != 0 || devinstances is null)
+        if (!NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var devinstances, out var status)
+            || devinstances is null)
         {
             Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}");
             yield break;
@@ -242,7 +241,7 @@ public static partial class API
 #if DEBUG
             Trace.WriteLine($"Found adapter instance '{devinstname}'");
 #endif
-            var devInst = NativeFileIO.GetDevInst(devinstname.ToString());
+            var devInst = NativeFileIO.GetDevInst(devinstname);
 
             if (!devInst.HasValue)
             {
@@ -259,9 +258,8 @@ public static partial class API
     /// </summary>
     public static IEnumerable<ReadOnlyMemory<char>>? EnumerateAdapterDeviceInstanceNames()
     {
-        var status = NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var devinstances);
-
-        if (status != 0 || devinstances is null)
+        if (!NativeFileIO.EnumerateDeviceInstancesForService("phdskmnt", out var devinstances, out var status)
+            || devinstances is null)
         {
 
             Trace.WriteLine($"No devices found serviced by 'phdskmnt'. status=0x{status:X}");

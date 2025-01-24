@@ -91,7 +91,7 @@ public static class ConsoleAppImplementation
 
         foreach (var devinstNameAdapter in adapters)
         {
-            var devinstAdapter = NativeFileIO.GetDevInst(devinstNameAdapter.ToString());
+            var devinstAdapter = NativeFileIO.GetDevInst(devinstNameAdapter);
 
             if (!devinstAdapter.HasValue)
             {
@@ -390,6 +390,7 @@ Please see EULA.txt for license information.";
                         return -1;
                     }
                 }
+
             }
             else if (arg.Equals("convert", StringComparison.OrdinalIgnoreCase)
                 || arg.Equals("saveas", StringComparison.OrdinalIgnoreCase))
@@ -940,7 +941,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 provider = new DevioProviderWithFakeMBR(provider);
             }
 
-            Console.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}");
+            Trace.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}");
 
             if (ioCommunication == IOCommunication.Auto)
             {
@@ -1154,11 +1155,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
         {
             if (mount)
             {
-                Console.WriteLine($"Virtual disk created. To dismount, type aim_cli --dismount={service.DiskDeviceNumber:X6}");
+                Console.WriteLine($"Virtual disk mounted. To dismount, type aim_cli --dismount={service.DiskDeviceNumber:X6}");
             }
             else
             {
-                Console.WriteLine("Image file opened, ready for incoming connections.");
+                Console.WriteLine("Ready for incoming connections.");
             }
 
             CloseConsole(detachEvent);
@@ -1167,18 +1168,18 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
         {
             if (mount)
             {
-                Console.WriteLine($"Virtual disk created. To dismount, type aim_cli --dismount={service.DiskDeviceNumber:X6}");
+                Console.WriteLine($"Virtual disk mounted. To dismount, type aim_cli --dismount={service.DiskDeviceNumber:X6}");
             }
         }
         else
         {
             if (mount)
             {
-                Console.WriteLine("Virtual disk created. Press Ctrl+C to remove virtual disk and exit.");
+                Console.WriteLine("Virtual disk mounted. Press Ctrl+C to dismount virtual disk and exit.");
             }
             else
             {
-                Console.WriteLine("Image file opened, waiting for incoming connections. Press Ctrl+C to exit.");
+                Console.WriteLine("Waiting for incoming connection from Arsenal Image Mounter. Press Ctrl+C to exit.");
             }
 
             Console.CancelKeyPress += (sender, e) =>
