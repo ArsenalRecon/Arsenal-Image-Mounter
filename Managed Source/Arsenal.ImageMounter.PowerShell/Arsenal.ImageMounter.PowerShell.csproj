@@ -8,7 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="*" Condition="'$(TargetFramework)' == 'net48'" />
-    <PackageReference Include="System.Management.Automation" Version="*" Condition="'$(TargetFramework.CompareTo(`net8`))' &gt;= 0" />
+    <PackageReference Include="System.Management.Automation" Version="7.4.*" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageReference Include="System.Management.Automation" Version="7.5.*" Condition="'$(TargetFramework)' == 'net9.0'" />
   </ItemGroup>
 
   <ItemGroup>
