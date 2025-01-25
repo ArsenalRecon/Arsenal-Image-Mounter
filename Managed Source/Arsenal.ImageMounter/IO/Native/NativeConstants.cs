@@ -130,6 +130,8 @@ public static class NativeConstants
     public const uint IOCTL_DISK_GROW_PARTITION = 0x7C0D0U;
     public const uint IOCTL_DISK_UPDATE_PROPERTIES = 0x70140U;
     public const uint IOCTL_DISK_IS_WRITABLE = 0x70024U;
+    public const uint IOCTL_STORAGE_CHECK_VERIFY = 0x2D4800;
+    public const uint IOCTL_STORAGE_CHECK_VERIFY2 = 0x2D0800;
     public const uint IOCTL_SCSI_RESCAN_BUS = 0x4101CU;
 
     public const uint IOCTL_DISK_GET_DISK_ATTRIBUTES = 0x700F0U;

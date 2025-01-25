@@ -2911,6 +2911,20 @@ Currently, the following application has files open on this volume:
         }
     }
 
+    public static bool CheckVerify(SafeFileHandle SafeFileHandle)
+    {
+        var rc = UnsafeNativeMethods.DeviceIoControl(SafeFileHandle,
+                                                     NativeConstants.IOCTL_STORAGE_CHECK_VERIFY2,
+                                                     0,
+                                                     0U,
+                                                     0,
+                                                     0U,
+                                                     out _,
+                                                     0);
+
+        return rc;
+    }
+
     public static void GrowPartition(SafeFileHandle DiskHandle, int PartitionNumber, long BytesToGrow)
     {
         var DiskGrowPartition = new DISK_GROW_PARTITION(PartitionNumber, BytesToGrow);

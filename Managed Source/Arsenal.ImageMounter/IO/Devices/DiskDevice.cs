@@ -756,6 +756,12 @@ public class DiskDevice : DeviceObject
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public bool IsDiskWritable => NativeFileIO.IsDiskWritable(SafeFileHandle);
 
+    /// <summary>
+    /// Determines whether media are accessible for a device.
+    /// </summary>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public bool CheckVerify => NativeFileIO.CheckVerify(SafeFileHandle);
+
     private DISK_GEOMETRY? geometry;
 
     /// <summary>

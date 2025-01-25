@@ -1,4 +1,5 @@
-﻿using Arsenal.ImageMounter.IO.Native;
+﻿using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Native;
 using System.Linq;
 using Xunit;
 
@@ -31,4 +32,13 @@ public class Win32API
         Assert.NotEmpty(array);
     }
 
+    [Fact]
+    public void CheckVerifyDisk()
+    {
+        using var disk = new DiskDevice(@"\\?\PhysicalDrive0", 0);
+
+        var result = disk.CheckVerify;
+
+        Assert.True(result);
+    }
 }
