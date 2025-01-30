@@ -18,6 +18,9 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Update="Arsenal.ImageMounter.psd1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="README.md">
       <PackagePath>\</PackagePath>
       <Pack>true</Pack>
