@@ -1,6 +1,7 @@
 // Arsenal.ImageMounter.IO.PinnedBuffer
 using System;
 using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Arsenal.ImageMounter.IO.Native;
@@ -197,14 +198,9 @@ public class PinnedBuffer<T> : PinnedBuffer, IMemoryOwner<T> where T : unmanaged
     /// </summary>
     /// <param name="count">Number of items in new array.</param>
     public PinnedBuffer(int count)
-        : base(new T[count], TypeSize * count)
+        : base(new T[count], Unsafe.SizeOf<T>() * count)
     {
     }
-
-    /// <summary>
-    /// Returns unmanaged byte size of type <typeparamref name="T"/>
-    /// </summary>
-    public static unsafe int TypeSize { get; } = sizeof(T);
 
     /// <summary>
     /// Initializes a new instance with an existing type T array and pins memory

@@ -14,6 +14,7 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
@@ -197,7 +198,7 @@ public readonly struct ObjectAttributes
                             SafeBuffer? securityDescriptor,
                             SafeBuffer? securityQualityOfService)
     {
-        Length = PinnedBuffer<ObjectAttributes>.TypeSize;
+        Length = Unsafe.SizeOf<ObjectAttributes>();
         RootDirectory = rootDirectory?.DangerousGetHandle() ?? IntPtr.Zero;
         ObjectName = objectName?.DangerousGetHandle() ?? IntPtr.Zero;
         Attributes = objectAttributes;
@@ -316,22 +317,16 @@ public readonly struct IMSCSI_EXTEND_SIZE
     public long ExtendSize { get; }
 }
 
-/// <summary>
-/// 
-/// </summary>
-public readonly struct REPARSE_DATA_BUFFER
+[StructLayout(LayoutKind.Sequential, Pack = 2)]
+public readonly struct REPARSE_DATA_MOUNT_POINT
 {
-    /// 
-    public const uint IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003;
-
-    /// 
-    public REPARSE_DATA_BUFFER(ushort reparseDataLength,
-                               ushort substituteNameOffset,
-                               ushort substituteNameLength,
-                               ushort printNameOffset,
-                               ushort printNameLength)
+    public REPARSE_DATA_MOUNT_POINT(ushort reparseDataLength,
+                                    ushort substituteNameOffset,
+                                    ushort substituteNameLength,
+                                    ushort printNameOffset,
+                                    ushort printNameLength)
     {
-        ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
+        ReparseTag = NativeConstants.IO_REPARSE_TAG_MOUNT_POINT;
         ReparseDataLength = reparseDataLength;
         SubstituteNameOffset = substituteNameOffset;
         SubstituteNameLength = substituteNameLength;
@@ -340,20 +335,33 @@ public readonly struct REPARSE_DATA_BUFFER
         Reserved = 0;
     }
 
-    /// 
     public uint ReparseTag { get; }
-    /// 
     public ushort ReparseDataLength { get; }
-    /// 
     public ushort Reserved { get; }
-    /// 
     public ushort SubstituteNameOffset { get; }
-    /// 
     public ushort SubstituteNameLength { get; }
-    /// 
     public ushort PrintNameOffset { get; }
-    /// 
     public ushort PrintNameLength { get; }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 2)]
+public readonly struct REPARSE_DATA_SYMLINK
+{
+    public uint ReparseTag { get; }
+    public ushort ReparseDataLength { get; }
+    public ushort Reserved { get; }
+    public ushort SubstituteNameOffset { get; }
+    public ushort SubstituteNameLength { get; }
+    public ushort PrintNameOffset { get; }
+    public ushort PrintNameLength { get; }
+    public SymlinkFlags Flags { get; }
+}
+
+[Flags]
+public enum SymlinkFlags
+{
+    FullPath = 0x0,
+    Relative = 0x1
 }
 
 public enum FsInformationClass : uint
@@ -1308,7 +1316,7 @@ public readonly struct StorageStandardProperties
             var RawProperties = new byte[DeviceDescriptor.RawPropertiesLength];
 
             buffer
-                .Slice(PinnedBuffer<STORAGE_DEVICE_DESCRIPTOR>.TypeSize, DeviceDescriptor.RawPropertiesLength)
+                .Slice(Unsafe.SizeOf<STORAGE_DEVICE_DESCRIPTOR>(), DeviceDescriptor.RawPropertiesLength)
                 .CopyTo(RawProperties);
             this.RawProperties = RawProperties;
         }
@@ -1612,7 +1620,7 @@ public readonly struct SET_DISK_ATTRIBUTES
 {
     public SET_DISK_ATTRIBUTES(DiskAttributesFlags flags, DiskAttributes attributes, DiskAttributes attributesMask)
     {
-        Version = PinnedBuffer<SET_DISK_ATTRIBUTES>.TypeSize;
+        Version = Unsafe.SizeOf<SET_DISK_ATTRIBUTES>();
         Flags = flags;
         Attributes = attributes;
         AttributesMask = attributesMask;

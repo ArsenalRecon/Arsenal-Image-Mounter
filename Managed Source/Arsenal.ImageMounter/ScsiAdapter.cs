@@ -13,6 +13,7 @@
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
+using DiscUtils.Streams;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
@@ -23,6 +24,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
@@ -401,7 +403,7 @@ public class ScsiAdapter : DeviceObject
                                                                fileNameLength: (ushort)MemoryMarshal.AsBytes(Filename.AsSpan()).Length,
                                                                writeOverlayFileNameLength: (ushort)MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan()).Length);
 
-            var buffer = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize
+            var buffer = ArrayPool<byte>.Shared.Rent(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>()
                 + deviceConfig.FileNameLength
                 + deviceConfig.WriteOverlayFileNameLength);
 
@@ -410,13 +412,13 @@ public class ScsiAdapter : DeviceObject
             if (!string.IsNullOrWhiteSpace(Filename))
             {
                 MemoryMarshal.AsBytes(Filename.AsSpan())
-                    .CopyTo(buffer.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize));
+                    .CopyTo(buffer.AsSpan(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>()));
             }
 
             if (!string.IsNullOrWhiteSpace(WriteOverlayFilename))
             {
                 MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan())
-                    .CopyTo(buffer.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength));
+                    .CopyTo(buffer.AsSpan(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>() + deviceConfig.FileNameLength));
             }
 
             var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
@@ -641,41 +643,36 @@ public class ScsiAdapter : DeviceObject
                                                                fileNameLength: (ushort)MemoryMarshal.AsBytes(Filename.AsSpan()).Length,
                                                                writeOverlayFileNameLength: (ushort)MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan()).Length);
 
-            var Request = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize
+            var requestBuffer = ArrayPool<byte>.Shared.Rent(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>()
                 + deviceConfig.FileNameLength
                 + deviceConfig.WriteOverlayFileNameLength);
 
-            MemoryMarshal.Write(Request, ref deviceConfig);
+            MemoryMarshal.Write(requestBuffer, ref deviceConfig);
 
             if (!string.IsNullOrWhiteSpace(Filename))
             {
                 MemoryMarshal.AsBytes(Filename.AsSpan())
-                    .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize));
+                    .CopyTo(requestBuffer.AsSpan(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>()));
             }
 
             if (!string.IsNullOrWhiteSpace(WriteOverlayFilename))
             {
                 MemoryMarshal.AsBytes(WriteOverlayFilename.AsSpan())
-                    .CopyTo(Request.AsSpan(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength));
+                    .CopyTo(requestBuffer.AsSpan(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>() + deviceConfig.FileNameLength));
             }
 
-            static IMSCSI_DEVICE_CONFIGURATION CreateDevice(SafeFileHandle SafeFileHandle, Span<byte> buffer)
+            var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
+                                                                            NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
+                                                                            0U,
+                                                                            requestBuffer,
+                                                                            out var returnCode);
+
+            if (returnCode != 0)
             {
-                var responseLength = NativeFileIO.PhDiskMntCtl.SendSrbIoControl(SafeFileHandle,
-                                                                                NativeFileIO.PhDiskMntCtl.SMP_IMSCSI_CREATE_DEVICE,
-                                                                                0U,
-                                                                                buffer,
-                                                                                out var returnCode);
-
-                if (returnCode != 0)
-                {
-                    throw NativeFileIO.GetExceptionForNtStatus(returnCode);
-                }
-
-                return MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(buffer.Slice(0, responseLength));
+                throw NativeFileIO.GetExceptionForNtStatus(returnCode);
             }
 
-            deviceConfig = CreateDevice(SafeFileHandle, Request);
+            deviceConfig = MemoryMarshal.Read<IMSCSI_DEVICE_CONFIGURATION>(requestBuffer.AsSpan(0, responseLength));
 
             DeviceNumber = deviceConfig.DeviceNumber;
             DiskSize = deviceConfig.DiskSize;
@@ -920,7 +917,7 @@ public class ScsiAdapter : DeviceObject
         Filename = null;
         WriteOverlayImagefile = null;
 
-        var buffer = ArrayPool<byte>.Shared.Rent(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + 65535);
+        var buffer = ArrayPool<byte>.Shared.Rent(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>() + 65535);
 
         try
         {
@@ -954,23 +951,21 @@ public class ScsiAdapter : DeviceObject
             }
             else
             {
-                Filename = MemoryMarshal.Cast<byte, char>(response.Slice(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize,
+                Filename = MemoryMarshal.Cast<byte, char>(response.Slice(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>(),
                                                                          deviceConfig.FileNameLength))
                     .ToString();
             }
 
             if (Flags.HasFlag(DeviceFlags.WriteOverlay))
             {
-                WriteOverlayImagefile = MemoryMarshal.Cast<byte, char>(response.Slice(PinnedBuffer<IMSCSI_DEVICE_CONFIGURATION>.TypeSize + deviceConfig.FileNameLength,
+                WriteOverlayImagefile = MemoryMarshal.Cast<byte, char>(response.Slice(Unsafe.SizeOf<IMSCSI_DEVICE_CONFIGURATION>() + deviceConfig.FileNameLength,
                                                                                       deviceConfig.WriteOverlayFileNameLength))
                     .ToString();
             }
         }
-
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
-
         }
     }
 
@@ -988,8 +983,7 @@ public class ScsiAdapter : DeviceObject
     /// <param name="FlagValues">New flag values.</param>
     public void ChangeFlags(uint DeviceNumber, DeviceFlags FlagsToChange, DeviceFlags FlagValues)
     {
-
-        Span<byte> Request = stackalloc byte[PinnedBuffer<IMSCSI_SET_DEVICE_FLAGS>.TypeSize];
+        Span<byte> Request = stackalloc byte[Unsafe.SizeOf<IMSCSI_SET_DEVICE_FLAGS>()];
 
         var changeFlags = new IMSCSI_SET_DEVICE_FLAGS(DeviceNumber, (uint)FlagsToChange, (uint)FlagValues);
 
@@ -1010,8 +1004,7 @@ public class ScsiAdapter : DeviceObject
     /// <param name="ExtendSize">Number of bytes to extend.</param>
     public void ExtendSize(uint DeviceNumber, long ExtendSize)
     {
-
-        Span<byte> Request = stackalloc byte[PinnedBuffer<IMSCSI_EXTEND_SIZE>.TypeSize];
+        Span<byte> Request = stackalloc byte[Unsafe.SizeOf<IMSCSI_EXTEND_SIZE>()];
 
         var changeFlags = new IMSCSI_EXTEND_SIZE(DeviceNumber, ExtendSize);
 

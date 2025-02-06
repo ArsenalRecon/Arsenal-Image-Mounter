@@ -32,6 +32,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 #if NET5_0_OR_GREATER
 using System.Runtime.Intrinsics.X86;
@@ -1840,8 +1841,7 @@ Currently, the following application has files open on this volume:
 
         using (token)
         {
-            var intsize = PinnedBuffer<int>.TypeSize;
-            var structsize = PinnedBuffer<LUID_AND_ATTRIBUTES>.TypeSize;
+            var structsize = Unsafe.SizeOf<LUID_AND_ATTRIBUTES>();
 
             var luid_and_attribs_list = new Dictionary<string, LUID_AND_ATTRIBUTES>(privileges.Length);
 
@@ -1860,7 +1860,7 @@ Currently, the following application has files open on this volume:
                 return null;
             }
 
-            var bufferSize = intsize + privileges.Length * structsize;
+            var bufferSize = sizeof(int) + privileges.Length * structsize;
 
             Span<byte> buffer = stackalloc byte[bufferSize];
 
@@ -1870,7 +1870,7 @@ Currently, the following application has files open on this volume:
             for (int i = 0, loopTo = luid_and_attribs_list.Count - 1; i <= loopTo; i++)
             {
                 var argvalue1 = luid_and_attribs_list.Values.ElementAtOrDefault(i);
-                MemoryMarshal.Write(buffer.Slice(intsize + i * structsize), ref argvalue1);
+                MemoryMarshal.Write(buffer.Slice(sizeof(int) + i * structsize), ref argvalue1);
             }
 
             var rc = UnsafeNativeMethods.AdjustTokenPrivileges(token, false, buffer[0], bufferSize, ref buffer[0], out _);
@@ -1886,7 +1886,7 @@ Currently, the following application has files open on this volume:
             {
                 var count = MemoryMarshal.Read<int>(buffer);
                 var enabled_luids = new LUID_AND_ATTRIBUTES[count];
-                MemoryMarshal.Cast<byte, LUID_AND_ATTRIBUTES>(buffer.Slice(intsize)).Slice(0, count).CopyTo(enabled_luids);
+                MemoryMarshal.Cast<byte, LUID_AND_ATTRIBUTES>(buffer.Slice(sizeof(int))).Slice(0, count).CopyTo(enabled_luids);
 
                 var enabled_privileges = (from enabled_luid in enabled_luids
                                           join privilege_name in luid_and_attribs_list on enabled_luid.LUID equals privilege_name.Value.LUID
@@ -2929,7 +2929,7 @@ Currently, the following application has files open on this volume:
     {
         var DiskGrowPartition = new DISK_GROW_PARTITION(PartitionNumber, BytesToGrow);
 
-        Win32Try(UnsafeNativeMethods.DeviceIoControl(DiskHandle, NativeConstants.IOCTL_DISK_GROW_PARTITION, DiskGrowPartition, (uint)PinnedBuffer<DISK_GROW_PARTITION>.TypeSize, 0, 0U, out _, 0));
+        Win32Try(UnsafeNativeMethods.DeviceIoControl(DiskHandle, NativeConstants.IOCTL_DISK_GROW_PARTITION, DiskGrowPartition, (uint)Unsafe.SizeOf<DISK_GROW_PARTITION>(), 0, 0U, out _, 0));
     }
 
     public static void CompressFile(SafeFileHandle SafeFileHandle)
@@ -3143,7 +3143,7 @@ Currently, the following application has files open on this volume:
                                                0,
                                                0U,
                                                out DISK_GEOMETRY DiskGeometry,
-                                               (uint)PinnedBuffer<DISK_GEOMETRY>.TypeSize,
+                                               (uint)Unsafe.SizeOf<DISK_GEOMETRY>(),
                                                out _,
                                                default)
             ? DiskGeometry
@@ -3159,7 +3159,7 @@ Currently, the following application has files open on this volume:
                                                0,
                                                0U,
                                                out SCSI_ADDRESS ScsiAddress,
-                                               (uint)PinnedBuffer<SCSI_ADDRESS>.TypeSize,
+                                               (uint)Unsafe.SizeOf<SCSI_ADDRESS>(),
                                                out _,
                                                default)
             ? ScsiAddress
@@ -3217,9 +3217,9 @@ Currently, the following application has files open on this volume:
         if (!UnsafeNativeMethods.DeviceIoControl(hDevice,
                                                  NativeConstants.IOCTL_STORAGE_QUERY_PROPERTY,
                                                  StoragePropertyQuery,
-                                                 (uint)PinnedBuffer<STORAGE_PROPERTY_QUERY>.TypeSize,
+                                                 (uint)Unsafe.SizeOf<STORAGE_PROPERTY_QUERY>(),
                                                  out STORAGE_DESCRIPTOR_HEADER StorageDescriptorHeader,
-                                                 (uint)PinnedBuffer<STORAGE_DESCRIPTOR_HEADER>.TypeSize,
+                                                 (uint)Unsafe.SizeOf<STORAGE_DESCRIPTOR_HEADER>(),
                                                  out _,
                                                  0))
         {
@@ -3237,7 +3237,7 @@ Currently, the following application has files open on this volume:
             return !UnsafeNativeMethods.DeviceIoControl(hDevice,
                                                      NativeConstants.IOCTL_STORAGE_QUERY_PROPERTY,
                                                      StoragePropertyQuery,
-                                                     (uint)PinnedBuffer<STORAGE_PROPERTY_QUERY>.TypeSize,
+                                                     (uint)Unsafe.SizeOf<STORAGE_PROPERTY_QUERY>(),
                                                      ref buffer[0],
                                                      (uint)buffer.Length,
                                                      out _,
@@ -3265,9 +3265,9 @@ Currently, the following application has files open on this volume:
         return !UnsafeNativeMethods.DeviceIoControl(hDevice,
                                                     NativeConstants.IOCTL_STORAGE_QUERY_PROPERTY,
                                                     StoragePropertyQuery,
-                                                    (uint)PinnedBuffer<STORAGE_PROPERTY_QUERY>.TypeSize,
+                                                    (uint)Unsafe.SizeOf<STORAGE_PROPERTY_QUERY>(),
                                                     out DEVICE_TRIM_DESCRIPTOR DeviceTrimDescriptor,
-                                                    (uint)PinnedBuffer<DEVICE_TRIM_DESCRIPTOR>.TypeSize,
+                                                    (uint)Unsafe.SizeOf<DEVICE_TRIM_DESCRIPTOR>(),
                                                     out _,
                                                     0)
             ? default
@@ -3284,7 +3284,7 @@ Currently, the following application has files open on this volume:
                                                0,
                                                0U,
                                                out STORAGE_DEVICE_NUMBER StorageDeviceNumber,
-                                               (uint)PinnedBuffer<STORAGE_DEVICE_NUMBER>.TypeSize,
+                                               (uint)Unsafe.SizeOf<STORAGE_DEVICE_NUMBER>(),
                                                out _,
                                                default)
             ? StorageDeviceNumber
@@ -3319,7 +3319,7 @@ Currently, the following application has files open on this volume:
     /// </summary>
     /// <param name="source">Location of directory that is a junction.</param>
 
-    public static string? QueryDirectoryJunction(string source)
+    public static (string TargetPath, string DisplayName, SymlinkFlags Flags) QueryDirectoryJunction(string source)
     {
         using var hdir = OpenFileHandle(source,
                                         FileAccess.Write,
@@ -3365,7 +3365,7 @@ Currently, the following application has files open on this volume:
     /// Get directory junction target path
     /// </summary>
     /// <param name="source">Handle to directory.</param>
-    public static string? QueryDirectoryJunction(SafeFileHandle source)
+    public static (string TargetPath, string DisplayName, SymlinkFlags Flags) QueryDirectoryJunction(SafeFileHandle source)
     {
         var buffer = ArrayPool<byte>.Shared.Rent(65533);
 
@@ -3380,28 +3380,31 @@ Currently, the following application has files open on this volume:
                                                      out var size,
                                                      0))
             {
-                return null;
+                throw new Win32Exception();
             }
 
-            if (BitConverter.ToUInt32(buffer, 0) != NativeConstants.IO_REPARSE_TAG_MOUNT_POINT)
+            var data = buffer.AsSpan(0, (int)size);
+
+            if (size >= Unsafe.SizeOf<REPARSE_DATA_MOUNT_POINT>()
+                && MemoryMarshal.Read<uint>(data) == NativeConstants.IO_REPARSE_TAG_MOUNT_POINT)
+            {
+                var header = MemoryMarshal.Read<REPARSE_DATA_MOUNT_POINT>(data);
+                var target = data.Slice(Unsafe.SizeOf<REPARSE_DATA_MOUNT_POINT>() + header.SubstituteNameOffset, header.SubstituteNameLength).ReadNullTerminatedUnicodeString();
+                var display = data.Slice(Unsafe.SizeOf<REPARSE_DATA_MOUNT_POINT>() + header.PrintNameOffset, header.PrintNameLength).ReadNullTerminatedUnicodeString();
+                return (TargetPath: target, DisplayName: display, Flags: 0);
+            }
+            else if (size >= Unsafe.SizeOf<REPARSE_DATA_SYMLINK>()
+                && MemoryMarshal.Read<uint>(data) == NativeConstants.IO_REPARSE_TAG_SYMLINK)
+            {
+                var header = MemoryMarshal.Read<REPARSE_DATA_SYMLINK>(data);
+                var target = data.Slice(Unsafe.SizeOf<REPARSE_DATA_SYMLINK>() + header.SubstituteNameOffset, header.SubstituteNameLength).ReadNullTerminatedUnicodeString();
+                var display = data.Slice(Unsafe.SizeOf<REPARSE_DATA_SYMLINK>() + header.PrintNameOffset, header.PrintNameLength).ReadNullTerminatedUnicodeString();
+                return (TargetPath: target, DisplayName: display, header.Flags);
+            }
+            else
             {
                 throw new InvalidDataException("Not a mount point or junction");
             }
-
-            // DWORD ReparseTag
-            // WORD ReparseDataLength
-            // WORD Reserved
-            // WORD NameOffset
-            var name_length = BitConverter.ToUInt16(buffer, 10) - 2; // WORD NameLength
-            // WORD DisplayNameOffset
-            // WORD DisplayNameLength
-
-            if (name_length > buffer.Length - 16)
-            {
-                throw new InvalidDataException("Invalid mount point or junction data");
-            }
-
-            return Encoding.Unicode.GetString(buffer, 16, name_length);
         }
         finally
         {
@@ -3419,21 +3422,21 @@ Currently, the following application has files open on this volume:
         var namebytes = MemoryMarshal.AsBytes(target);
         var namelength = (ushort)namebytes.Length;
 
-        var data = new REPARSE_DATA_BUFFER(reparseDataLength: (ushort)(8 + namelength + 2 + namelength + 2),
-                                           substituteNameOffset: 0,
-                                           substituteNameLength: namelength,
-                                           printNameOffset: (ushort)(namelength + 2),
-                                           printNameLength: namelength);
+        var data = new REPARSE_DATA_MOUNT_POINT(reparseDataLength: (ushort)(8 + namelength + 2 + namelength + 2),
+                                                substituteNameOffset: 0,
+                                                substituteNameLength: namelength,
+                                                printNameOffset: (ushort)(namelength + 2),
+                                                printNameLength: namelength);
 
-        var bufferSize = PinnedBuffer<REPARSE_DATA_BUFFER>.TypeSize + namelength + 2 + namelength + 2;
+        var bufferSize = Unsafe.SizeOf<REPARSE_DATA_MOUNT_POINT>() + namelength + 2 + namelength + 2;
 
         var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
 
         try
         {
             MemoryMarshal.Write(buffer, ref data);
-            namebytes.CopyTo(buffer.AsSpan(PinnedBuffer<REPARSE_DATA_BUFFER>.TypeSize));
-            namebytes.CopyTo(buffer.AsSpan(PinnedBuffer<REPARSE_DATA_BUFFER>.TypeSize + namelength + 2));
+            namebytes.CopyTo(buffer.AsSpan(Unsafe.SizeOf<REPARSE_DATA_MOUNT_POINT>()));
+            namebytes.CopyTo(buffer.AsSpan(Unsafe.SizeOf<REPARSE_DATA_MOUNT_POINT>() + namelength + 2));
 
             if (!UnsafeNativeMethods.DeviceIoControl(source,
                                                      NativeConstants.FSCTL_SET_REPARSE_POINT,
@@ -3689,9 +3692,9 @@ Currently, the following application has files open on this volume:
 
         for (; ; )
         {
-            var buffer_size = PinnedBuffer<DRIVE_LAYOUT_INFORMATION_EX>.TypeSize
-                + PinnedBuffer<DRIVE_LAYOUT_INFORMATION_GPT>.TypeSize
-                + max_partitions * PinnedBuffer<PARTITION_INFORMATION_EX>.TypeSize;
+            var buffer_size = Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()
+                + Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_GPT>()
+                + max_partitions * Unsafe.SizeOf<PARTITION_INFORMATION_EX>();
 
             var buffer = ArrayPool<byte>.Shared.Rent(buffer_size);
 
@@ -3728,21 +3731,21 @@ Currently, the following application has files open on this volume:
                 for (int i = 0, loopTo = layout.PartitionCount - 1; i <= loopTo; i++)
                 {
                     var source = buffer
-                        .AsSpan(PinnedBuffer<DRIVE_LAYOUT_INFORMATION_EX>.TypeSize
-                        + PinnedBuffer<DRIVE_LAYOUT_INFORMATION_GPT>.TypeSize
-                        + i * PinnedBuffer<PARTITION_INFORMATION_EX>.TypeSize);
+                        .AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()
+                        + Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_GPT>()
+                        + i * Unsafe.SizeOf<PARTITION_INFORMATION_EX>());
 
                     partitions[i] = MemoryMarshal.Read<PARTITION_INFORMATION_EX>(source);
                 }
 
                 if (layout.PartitionStyle == PARTITION_STYLE.MBR)
                 {
-                    var mbr = MemoryMarshal.Read<DRIVE_LAYOUT_INFORMATION_MBR>(buffer.AsSpan(PinnedBuffer<DRIVE_LAYOUT_INFORMATION_EX>.TypeSize));
+                    var mbr = MemoryMarshal.Read<DRIVE_LAYOUT_INFORMATION_MBR>(buffer.AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()));
                     return new DriveLayoutInformationMBR(layout, partitions, mbr);
                 }
                 else if (layout.PartitionStyle == PARTITION_STYLE.GPT)
                 {
-                    var gpt = MemoryMarshal.Read<DRIVE_LAYOUT_INFORMATION_GPT>(buffer.AsSpan(PinnedBuffer<DRIVE_LAYOUT_INFORMATION_EX>.TypeSize));
+                    var gpt = MemoryMarshal.Read<DRIVE_LAYOUT_INFORMATION_GPT>(buffer.AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()));
                     return new DriveLayoutInformationGPT(layout, partitions, gpt);
                 }
                 else
@@ -3770,9 +3773,9 @@ Currently, the following application has files open on this volume:
 
         var partition_count = Math.Min(layout.Partitions.Count, layout.DriveLayoutInformation.PartitionCount);
 
-        var size_needed = PinnedBuffer<DRIVE_LAYOUT_INFORMATION_EX>.TypeSize
-            + PinnedBuffer<DRIVE_LAYOUT_INFORMATION_GPT>.TypeSize
-            + partition_count * PinnedBuffer<PARTITION_INFORMATION_EX>.TypeSize;
+        var size_needed = Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()
+            + Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_GPT>()
+            + partition_count * Unsafe.SizeOf<PARTITION_INFORMATION_EX>();
 
         var pos = 0;
 
@@ -3783,7 +3786,7 @@ Currently, the following application has files open on this volume:
             var argvalue = layout.DriveLayoutInformation;
             MemoryMarshal.Write(buffer.AsSpan(pos), ref argvalue);
 
-            pos += PinnedBuffer<DRIVE_LAYOUT_INFORMATION_EX>.TypeSize;
+            pos += Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>();
 
             switch (layout.DriveLayoutInformation.PartitionStyle)
             {
@@ -3802,13 +3805,13 @@ Currently, the following application has files open on this volume:
                     }
             }
 
-            pos += PinnedBuffer<DRIVE_LAYOUT_INFORMATION_GPT>.TypeSize;
+            pos += Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_GPT>();
 
             for (int i = 0, loopTo = partition_count - 1; i <= loopTo; i++)
             {
                 var tmp = layout.Partitions;
                 var argvalue3 = tmp[i];
-                MemoryMarshal.Write(buffer.AsSpan(pos + i * PinnedBuffer<PARTITION_INFORMATION_EX>.TypeSize), ref argvalue3);
+                MemoryMarshal.Write(buffer.AsSpan(pos + i * Unsafe.SizeOf<PARTITION_INFORMATION_EX>()), ref argvalue3);
             }
 
             Win32Try(UnsafeNativeMethods.DeviceIoControl(disk,
@@ -3835,7 +3838,7 @@ Currently, the following application has files open on this volume:
                                                0,
                                                0,
                                                out GET_DISK_ATTRIBUTES attribs,
-                                               PinnedBuffer<GET_DISK_ATTRIBUTES>.TypeSize,
+                                               Unsafe.SizeOf<GET_DISK_ATTRIBUTES>(),
                                                out _,
                                                0)
             ? attribs.Attributes.HasFlag(DiskAttributes.Offline)
@@ -3866,7 +3869,7 @@ Currently, the following application has files open on this volume:
                                                0,
                                                0,
                                                out GET_DISK_ATTRIBUTES attribs,
-                                               PinnedBuffer<GET_DISK_ATTRIBUTES>.TypeSize,
+                                               Unsafe.SizeOf<GET_DISK_ATTRIBUTES>(),
                                                out _,
                                                0)
             ? attribs.Attributes.HasFlag(DiskAttributes.ReadOnly)
@@ -4027,9 +4030,6 @@ Currently, the following application has files open on this volume:
         }
     }
 
-    private static readonly uint GetScsiAddressAndLength_SizeOfLong = (uint)PinnedBuffer<long>.TypeSize;
-    private static readonly uint GetScsiAddressAndLength_SizeOfScsiAddress = (uint)PinnedBuffer<SCSI_ADDRESS>.TypeSize;
-
     public static ScsiAddressAndLength? GetScsiAddressAndLength(string drv)
     {
         try
@@ -4041,20 +4041,20 @@ Currently, the following application has files open on this volume:
                                                          0,
                                                          0U,
                                                          out SCSI_ADDRESS ScsiAddress,
-                                                         GetScsiAddressAndLength_SizeOfScsiAddress,
-                                                         out var arglpBytesReturned,
+                                                         (uint)Unsafe.SizeOf<SCSI_ADDRESS>(),
+                                                         out var bytesReturned,
                                                          default);
 
-            if (!rc)
+            if (!rc || bytesReturned < Unsafe.SizeOf<SCSI_ADDRESS>())
             {
                 Trace.WriteLine($"IOCTL_SCSI_GET_ADDRESS failed for device {drv}: Error 0x{Marshal.GetLastWin32Error():X}");
                 return default;
             }
 
             rc = UnsafeNativeMethods.DeviceIoControl(disk.SafeFileHandle, NativeConstants.IOCTL_DISK_GET_LENGTH_INFO, 0, 0U, out
-            long Length, GetScsiAddressAndLength_SizeOfLong, out var arglpBytesReturned1, default);
+            long Length, sizeof(long), out bytesReturned, default);
 
-            if (!rc)
+            if (!rc || bytesReturned < sizeof(long))
             {
                 Trace.WriteLine($"IOCTL_DISK_GET_LENGTH_INFO failed for device {drv}: Error 0x{Marshal.GetLastWin32Error():X}");
                 return default;
@@ -4428,7 +4428,7 @@ Currently, the following application has files open on this volume:
                                                    scope: NativeConstants.DICS_FLAG_CONFIGSPECIFIC,
                                                    stateChange: NativeConstants.DICS_PROPCHANGE);
 
-                if (UnsafeNativeMethods.SetupDiSetClassInstallParamsW(devinfo, devInfoData, pcp, PinnedBuffer<SP_PROPCHANGE_PARAMS>.TypeSize) &&
+                if (UnsafeNativeMethods.SetupDiSetClassInstallParamsW(devinfo, devInfoData, pcp, Unsafe.SizeOf<SP_PROPCHANGE_PARAMS>()) &&
                     UnsafeNativeMethods.SetupDiCallClassInstaller(NativeConstants.DIF_PROPERTYCHANGE, devinfo, devInfoData))
                 {
                     return;
@@ -4527,7 +4527,6 @@ Currently, the following application has files open on this volume:
 
     public static void CreateRootPnPDevice(nint OwnerWindow, string infPath, string hwid, bool ForceReplaceExistingDrivers, out bool RebootRequired)
     {
-
         Trace.WriteLine($"CreateOrUpdateRootPnPDevice: InfPath=\"{infPath}\", hwid=\"{hwid}\"");
 
         //
@@ -4612,7 +4611,6 @@ Currently, the following application has files open on this volume:
 
     public static IEnumerable<uint> EnumerateChildDevices(uint devInst)
     {
-
         var rc = UnsafeNativeMethods.CM_Get_Child(out var child, devInst, 0U);
 
         while (rc == 0)

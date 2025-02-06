@@ -41,4 +41,20 @@ public class Win32API
 
         Assert.True(result);
     }
+
+    [Fact]
+    public void QueryDefaultReparsePoints()
+    {
+        var (TargetPath, DisplayName, Flags) = NativeFileIO.QueryDirectoryJunction(@"C:\Users\All Users");
+
+        Assert.Equal(@"\??\C:\ProgramData", TargetPath);
+        Assert.Equal(@"C:\ProgramData", DisplayName);
+        Assert.Equal(SymlinkFlags.FullPath, Flags);
+
+        (TargetPath, DisplayName, Flags) = NativeFileIO.QueryDirectoryJunction(@"C:\Users\Default User");
+
+        Assert.Equal(@"\??\C:\Users\Default", TargetPath);
+        Assert.Equal(@"C:\Users\Default", DisplayName);
+        Assert.Equal(SymlinkFlags.FullPath, Flags);
+    }
 }

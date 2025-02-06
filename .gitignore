@@ -17,6 +17,8 @@
 *[Rr]eleases/
 x64/
 x86/
+arm/
+arm64/
 build/
 bld/
 [Bb]in/

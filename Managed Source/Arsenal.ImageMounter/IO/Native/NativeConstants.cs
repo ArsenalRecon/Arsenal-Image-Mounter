@@ -113,6 +113,7 @@ public static class NativeConstants
     public const uint FSCTL_GET_REPARSE_POINT = 0x900A8U;
     public const uint FSCTL_DELETE_REPARSE_POINT = 0x900ACU;
     public const uint IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003U;
+    public const uint IO_REPARSE_TAG_SYMLINK = 0xA000000C;
 
     public const uint IOCTL_SCSI_MINIPORT = 0x4D008U;
     public const uint IOCTL_SCSI_GET_ADDRESS = 0x41018U;
