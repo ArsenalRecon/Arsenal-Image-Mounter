@@ -35,6 +35,10 @@
 
 #pragma once
 
+#include <ntkmapi.h>
+
+#include <imdproxy.h>
+
 typedef struct _OBJECT_CONTEXT
 {
     LIST_ENTRY ListEntry;

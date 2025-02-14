@@ -33,6 +33,8 @@
 
 #include "inc\fltstats.h"
 
+#include <ntkmapi.h>
+
 //
 // Tags used for kernel mode allocations and locks.
 // Useful with tools like poolmon etc.
@@ -726,12 +728,7 @@ typedef struct PARTIAL_IRP
 // Legacy compatibility
 //
 #ifndef _In_
-
 #define _In_
-#define _Inout_
-#define _In_reads_opt_(x)
-#define _Dispatch_type_(n)
-#define _IRQL_requires_max_(n)
 
 typedef
 NTSTATUS
@@ -742,6 +739,18 @@ DRIVER_DISPATCH(
 
 typedef DRIVER_DISPATCH *PDRIVER_DISPATCH;
 
+#endif
+#ifndef _Inout_
+#define _Inout_
+#endif
+#ifndef _In_reads_opt_
+#define _In_reads_opt_(x)
+#endif
+#ifndef _Dispatch_type_
+#define _Dispatch_type_(n)
+#endif
+#ifndef _IRQL_requires_max_
+#define _IRQL_requires_max_(n)
 #endif
 
 //

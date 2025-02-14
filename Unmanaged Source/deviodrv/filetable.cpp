@@ -37,8 +37,6 @@
 #include <wdm.h>
 #include <ntdddisk.h>
 
-#include <imdproxy.h>
-
 #include "deviodrv.h"
 
 #pragma code_seg("PAGE")

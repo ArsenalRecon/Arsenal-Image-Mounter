@@ -404,6 +404,9 @@ KSTART_ROUTINE(IN PVOID StartContext);
 #ifndef __drv_savesIRQLGlobal
 #define __drv_savesIRQLGlobal(t,o)
 #endif
+#ifndef __drv_restoresIRQLGlobal
+#define __drv_restoresIRQLGlobal(t,o)
+#endif
 #ifndef __drv_setsIRQL
 #define __drv_setsIRQL(i)
 #endif

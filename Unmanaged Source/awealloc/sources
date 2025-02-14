@@ -1,6 +1,7 @@
 TARGETNAME=awealloc
 TARGETTYPE=DRIVER
 SOURCES=awealloc.c awealloc.rc
+INCLUDES=..\phdskmnt\inc
 MSC_WARNING_LEVEL=/W4 /WX /wd4100
 !IF "$(NTDEBUG)" != "ntsd"
 MSC_OPTIMIZATION=/Ox /GF

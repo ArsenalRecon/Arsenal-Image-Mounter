@@ -37,11 +37,9 @@
 #include <wdm.h>
 #include <ntdddisk.h>
 
-#include <imdproxy.h>
-#include <common.h>
-#include <ntkmapi.h>
-
 #include "deviodrv.h"
+
+#include <common.h>
 
 NTSTATUS
 DevIoDrvCancelAll(PFILE_OBJECT FileObject,

@@ -10,7 +10,7 @@ if "%STAMPINF_DATE%"    == "" set STAMPINF_DATE=*
 if "%STAMPINF_VERSION%" == "" set STAMPINF_VERSION=*
 set STAMPINF=stampinf -d %STAMPINF_DATE% -v %STAMPINF_VERSION%
 
-set PATH=C:\Program Files (x86)\Windows Kits\10\bin\x86;%PATH%
+set PATH=C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x86;%PATH%
 
 where stampinf || goto :eof
 where inf2cat || goto :eof

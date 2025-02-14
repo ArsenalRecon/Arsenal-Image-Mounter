@@ -36,11 +36,9 @@
 #include <ntifs.h>
 #include <ntdddisk.h>
 
-#include <common.h>
-#include <imdproxy.h>
-#include <ntkmapi.h>
-
 #include "deviodrv.h"
+
+#include <common.h>
 
 #pragma warning(disable: 4201)
 

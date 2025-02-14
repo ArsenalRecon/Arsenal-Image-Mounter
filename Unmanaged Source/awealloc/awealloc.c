@@ -32,6 +32,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <ntintsafe.h>
 #include <ntverp.h>
 
+#include "..\phdskmnt\inc\ntkmapi.h"
+
 ///
 /// Definitions and imports are now in the "sources" file and managed by the
 /// build utility.

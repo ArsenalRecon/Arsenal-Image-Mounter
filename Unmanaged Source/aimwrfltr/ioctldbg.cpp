@@ -42,7 +42,10 @@
 
 #define FILE_DEVICE_IMDISK              0x00008372
 
+#ifndef MOUNTDEVCONTROLTYPE
 #define MOUNTDEVCONTROLTYPE             0x0000004D // 'M'
+#endif
+
 #define FTTYPE                          ((ULONG)'f')
 
 PCSTR
