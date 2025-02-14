@@ -38,6 +38,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
+#pragma warning disable IDE0305 // Simplify collection initialization
+
 namespace Arsenal.ImageMounter.Devio.Server.Interaction;
 
 /// <summary>

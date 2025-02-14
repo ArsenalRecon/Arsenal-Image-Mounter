@@ -109,17 +109,13 @@ public class DevioProviderFromStream : IDevioProvider
     public long Length => BaseStream.Length;
 
     /// <summary>
-    /// Returns a fixed value of 512.
+    /// Default value is 512.
     /// </summary>
-    /// <value>512</value>
-    /// <returns>512</returns>
     public uint CustomSectorSize { get; set; } = 512U;
 
     /// <summary>
-    /// Returns a fixed value of 512.
+    /// Returns value of <see cref="CustomSectorSize"/> property.
     /// </summary>
-    /// <value>512</value>
-    /// <returns>512</returns>
     public uint SectorSize => CustomSectorSize;
 
     bool IDevioProvider.SupportsShared => false;

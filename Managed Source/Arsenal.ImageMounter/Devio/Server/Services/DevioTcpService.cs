@@ -238,7 +238,7 @@ public class DevioTcpService : DevioServiceBase
         var response = new IMDPROXY_INFO_RESP
         {
             file_size = (ulong)DevioProvider.Length,
-            req_alignment = REQUIRED_ALIGNMENT,
+            req_alignment = DevioProvider.SectorSize,
             flags = (DevioProvider.CanWrite ? 0 : IMDPROXY_FLAGS.IMDPROXY_FLAG_RO)
                 | (DevioProvider.SupportsShared ? IMDPROXY_FLAGS.IMDPROXY_FLAG_SUPPORTS_SHARED : 0)
                 | (Persistent ? IMDPROXY_FLAGS.IMDPROXY_FLAG_KEEP_OPEN : 0)

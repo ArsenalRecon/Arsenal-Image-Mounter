@@ -1947,6 +1947,7 @@ __in __deref PETHREAD ClientThread)
             if (CreateData->Fields.DiskSize.QuadPart == 0)
                 CreateData->Fields.DiskSize.QuadPart = proxy_info.file_size;
 
+#ifdef MAX_512_BYTE_SECTOR_SIZE_PROXY
             if ((proxy_info.req_alignment - 1 > FILE_512_BYTE_ALIGNMENT) ||
                 (CreateData->Fields.DiskSize.QuadPart == 0))
             {
@@ -1977,6 +1978,7 @@ __in __deref PETHREAD ClientThread)
 
                 return STATUS_INVALID_PARAMETER;
             }
+#endif
 
             alignment_requirement = (ULONG)proxy_info.req_alignment - 1;
 
@@ -2157,9 +2159,15 @@ __in __deref PETHREAD ClientThread)
     pLUExt->DiskSize = CreateData->Fields.DiskSize;
 
     while (CreateData->Fields.BytesPerSector >>= 1)
+    {
         pLUExt->BlockPower++;
+    }
+
     if (pLUExt->BlockPower == 0)
+    {
         pLUExt->BlockPower = DEFAULT_BLOCK_POWER;
+    }
+
     CreateData->Fields.BytesPerSector = 1UL << pLUExt->BlockPower;
 
     pLUExt->ImageOffset = CreateData->Fields.ImageOffset;

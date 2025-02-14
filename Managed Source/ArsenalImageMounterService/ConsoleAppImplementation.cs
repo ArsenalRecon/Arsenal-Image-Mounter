@@ -710,10 +710,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 {
 #if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
                     port = short.Parse(fileName.AsSpan(portIndex + 1));
+                    host = fileName[..portIndex];
 #else
                     port = short.Parse(fileName.Substring(portIndex + 1));
-#endif
                     host = fileName.Remove(portIndex);
+#endif
                 }
 
                 provider = new DevioProviderFromStream(new DevioTcpStream(host, port, read_only: !diskAccess.HasFlag(FileAccess.Write)), ownsStream: true);
@@ -941,7 +942,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 provider = new DevioProviderWithFakeMBR(provider);
             }
 
-            Trace.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}");
+            Trace.WriteLine($"Image virtual size is {SizeFormatting.FormatBytes(provider.Length)}, sector size {provider.SectorSize} bytes.");
 
             if (ioCommunication == IOCommunication.Auto)
             {

@@ -666,6 +666,7 @@ __in ULONG ProxyInfoResponseLength)
 
     KdPrint(("ImScsi Proxy Client: Got ok response IMDPROXY_INFO_RESP.\n"));
 
+#ifdef MAX_512_BYTE_SECTOR_SIZE_PROXY
     if (ProxyInfoResponse->req_alignment - 1 > FILE_512_BYTE_ALIGNMENT)
     {
         KdPrint(("ImScsi IMDPROXY_INFO_RESP: Unsupported sizes. "
@@ -677,6 +678,7 @@ __in ULONG ProxyInfoResponseLength)
         IoStatusBlock->Information = 0;
         return IoStatusBlock->Status;
     }
+#endif
 
     IoStatusBlock->Status = STATUS_SUCCESS;
     IoStatusBlock->Information = 0;
