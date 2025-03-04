@@ -38,7 +38,6 @@
 #include "..\phdskmnt\inc\imdproxy.h"
 
 #pragma comment(lib, "shell32.lib")
-#pragma comment(lib, "imdisk.lib")
 #pragma comment(lib, "ntdll.lib")
 
 enum
@@ -105,7 +104,8 @@ ImScsiSyntaxHelp()
         "        Uninstalls Arsenal Image Mounter driver.\n"
         "\n"
         "aim_ll --rescan\n"
-        "        Rescans SCSI bus on installed adapter.\n"
+        "        Rescans SCSI bus on installed adapter Useful to cleanup virtual disks\n"
+        "        where connection to backend storage service is lost.\n"
         "\n"
         "Manage virtual disks:\n"
         "aim_ll -a -t type [-n] [-o opt1[,opt2 ...]] [-f|-F file] [-s size] [-b offset]\n"
@@ -544,13 +544,10 @@ LPWSTR FormatOptions)
         (IMSCSI_FILE_TYPE(Flags) == IMSCSI_FILE_TYPE_AWEALLOC))
     {
         HANDLE awealloc;
-        UNICODE_STRING file_name;
-
-        RtlInitUnicodeString(&file_name, AWEALLOC_DEVICE_NAME);
 
         for (;;)
         {
-            awealloc = ImDiskOpenDeviceByName(&file_name,
+            awealloc = ImScsiOpenDeviceByName(AWEALLOC_DEVICE_NAME,
                 GENERIC_READ | GENERIC_WRITE);
 
             if (awealloc != INVALID_HANDLE_VALUE)
@@ -562,7 +559,7 @@ LPWSTR FormatOptions)
             if (GetLastError() != ERROR_FILE_NOT_FOUND)
                 break;
 
-            if (ImDiskStartService(AWEALLOC_DRIVER_NAME))
+            if (ImScsiStartService(AWEALLOC_DRIVER_NAME))
             {
                 puts("AWEAlloc driver was loaded into the kernel.");
                 continue;
@@ -600,7 +597,7 @@ LPWSTR FormatOptions)
     {
         if (!WaitNamedPipe(IMDPROXY_SVC_PIPE_DOSDEV_NAME, 0))
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                if (ImDiskStartService(IMDPROXY_SVC))
+                if (ImScsiStartService(IMDPROXY_SVC))
                 {
                     while (!WaitNamedPipe(IMDPROXY_SVC_PIPE_DOSDEV_NAME, 0))
                         if (GetLastError() == ERROR_FILE_NOT_FOUND)
@@ -775,8 +772,6 @@ LPWSTR FormatOptions)
         return IMSCSI_CLI_ERROR_CREATE_DEVICE;
     }
 
-    NtClose(driver);
-
     *DeviceNumber = create_data->Fields.DeviceNumber;
 
     if (NumericPrint)
@@ -822,6 +817,8 @@ LPWSTR FormatOptions)
 
     Sleep(400);
 
+    WHeapMem<DEVICE_NUMBER> device_list;
+
     for (;;)
     {
         disk = ImScsiOpenDiskByDeviceNumberEx(
@@ -853,8 +850,48 @@ LPWSTR FormatOptions)
             }
 
             CloseHandle(event);
+
+            DWORD number_of_devices;
+            BOOL rc = ImScsiGetDeviceList((DWORD)device_list.Count(), driver, device_list, &number_of_devices);
+            
+            while (!rc && GetLastError() == ERROR_MORE_DATA)
+            {
+                device_list.ReAlloc(number_of_devices * sizeof(*device_list), HEAP_GENERATE_EXCEPTIONS);
+                rc = ImScsiGetDeviceList((DWORD)device_list.Count(), driver, device_list, &number_of_devices);
+            }
+
+            if (!rc)
+            {
+                NtClose(driver);
+
+                PrintLastError(L"Failed to scan for new disks:");
+
+                return IMSCSI_CLI_ERROR_CREATE_DEVICE;
+            }
+
+            bool found = false;
+
+            for (DWORD i = 0; i < number_of_devices; i++)
+            {
+                if (device_list[i].LongNumber == create_data->Fields.DeviceNumber.LongNumber)
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                NtClose(driver);
+
+                fprintf(stderr, "Disk initialization failed.\n");
+
+                return IMSCSI_CLI_ERROR_CREATE_DEVICE;
+            }
         }
     }
+
+    NtClose(driver);
 
     CloseHandle(disk);
 
@@ -863,12 +900,12 @@ LPWSTR FormatOptions)
     switch (disk_number.DeviceType)
     {
     case FILE_DEVICE_DISK:
-        dev_path = ImDiskAllocPrintF(L"\\\\?\\PhysicalDrive%1!u!",
+        dev_path = ImScsiAllocPrintF(L"\\\\?\\PhysicalDrive%1!u!",
             disk_number.DeviceNumber);
         break;
 
     case FILE_DEVICE_CD_ROM:
-        dev_path = ImDiskAllocPrintF(L"\\\\?\\CdRom%1!u!",
+        dev_path = ImScsiAllocPrintF(L"\\\\?\\CdRom%1!u!",
             disk_number.DeviceNumber);
         break;
 
@@ -1026,7 +1063,7 @@ LPWSTR FormatOptions)
         (MountPoint[wcslen(MountPoint) - 1] != L'\\'))
     {
         mount_point_buffer =
-            ImDiskAllocPrintF(L"%1!ws!\\", MountPoint);
+            ImScsiAllocPrintF(L"%1!ws!\\", MountPoint);
 
         if (mount_point_buffer)
         {
@@ -1128,7 +1165,7 @@ LPWSTR FormatOptions)
 
                 printf("Formatting disk volume %ws...\n", (LPCWSTR)vol_name);
 
-                WMem<WCHAR> format_cmd(ImDiskAllocPrintF(
+                WMem<WCHAR> format_cmd(ImScsiAllocPrintF(
                     L"format.com %1!ws! %2!ws!",
                     (LPCWSTR)vol_name, FormatOptions));
 
@@ -1224,7 +1261,7 @@ LPWSTR FormatOptions)
             {
                 if (auto_drive_letter_requested)
                 {
-                    MountPoint[0] = ImDiskFindFreeDriveLetter();
+                    MountPoint[0] = ImScsiFindFreeDriveLetter();
 
                     if (MountPoint[0] == 0)
                     {
@@ -1372,7 +1409,7 @@ BOOL RemoveSettings)
         return IMSCSI_CLI_SUCCESS;
     }
 
-    HANDLE device = ImDiskOpenDeviceByMountPoint(MountPoint,
+    HANDLE device = ImScsiOpenDeviceByMountPoint(MountPoint,
         FILE_READ_ATTRIBUTES);
 
     if (device == INVALID_HANDLE_VALUE)
@@ -1524,7 +1561,7 @@ ImScsiCliQueryStatusDevice(DEVICE_NUMBER DeviceNumber,
 
     if (MountPoint != NULL)
     {
-        HANDLE device = ImDiskOpenDeviceByMountPoint(MountPoint,
+        HANDLE device = ImScsiOpenDeviceByMountPoint(MountPoint,
             GENERIC_READ | GENERIC_WRITE);
 
         if (device == INVALID_HANDLE_VALUE)
@@ -2055,13 +2092,6 @@ wmain(int argc, LPWSTR argv[])
             PrintLastError(L"Error checking driver version:");
         }
 
-        rc = ImDiskGetVersion(&library_version, NULL);
-
-        printf("Using library functions from ImDisk Virtual Disk Driver version: %u.%u.%u\n",
-            library_version >> 8,
-            (library_version >> 4) & 0xf,
-            library_version & 0xf);
-
         return 0;
     }
 
@@ -2570,10 +2600,16 @@ wmain(int argc, LPWSTR argv[])
     case OP_MODE_CREATE:
     {
         if (auto_find_offset)
+        {
             if (file_name == NULL)
+            {
                 ImScsiSyntaxHelp();
+            }
             else
-                ImDiskGetOffsetByFileExt(file_name, &image_offset);
+            {
+                ImScsiGetOffsetByFileExt(file_name, &image_offset);
+            }
+        }
 
         ret = ImScsiCliCreateDevice(&device_number,
             &disk_geometry,

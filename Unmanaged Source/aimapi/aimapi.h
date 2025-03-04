@@ -919,6 +919,135 @@ extern "C" {
         CDECL
         ImScsiDebugMessage(LPCWSTR FormatString, ...);
 
+    /**
+    Synchronously flush Windows message queue to make GUI components responsive.
+    */
+    AIMAPI_API VOID
+        WINAPI
+        ImScsiFlushWindowMessages(HWND hWnd);
+
+    /**
+    Opens a device object in the kernel object namespace.
+
+    FileName     Full kernel object namespace path to the object to open, e.g.
+    \Device\ImDisk2 or similar.
+
+    AccessMode   Access mode to request.
+    */
+    AIMAPI_API HANDLE
+        WINAPI
+        ImScsiOpenDeviceByName(__in LPCWSTR FileName,
+            IN DWORD AccessMode);
+
+    /**
+    Opens the device a junction/mount-point type reparse point is pointing to.
+
+    MountPoint   Path to the reparse point on an NTFS volume.
+
+    AccessMode   Access mode to request to the target device.
+    */
+    AIMAPI_API HANDLE
+        WINAPI
+        ImScsiOpenDeviceByMountPoint(__in LPCWSTR MountPoint,
+            IN DWORD AccessMode);
+
+    /**
+    Starts a Win32 service or loads a kernel module or driver.
+
+    ServiceName  Key name of the service or driver.
+    */
+    AIMAPI_API BOOL
+        WINAPI
+        ImScsiStartService(LPWSTR ServiceName);
+
+    /**
+    Returns the first free drive letter in the range D-Z.
+    */
+    AIMAPI_API WCHAR
+        WINAPI
+        ImScsiFindFreeDriveLetter();
+
+    /*
+    Notify Explorer and other shell components that a drive is about to be
+    removed.
+
+    DriveLetter
+    Drive letter.
+    */
+    AIMAPI_API BOOL
+        WINAPI
+        ImScsiNotifyRemovePending(WCHAR DriveLetter);
+
+    AIMAPI_API LPWSTR
+        CDECL
+        ImScsiAllocPrintF(LPCWSTR lpMessage, ...);
+
+    AIMAPI_API LPSTR
+        CDECL
+        ImScsiAllocPrintFA(LPCSTR lpMessage, ...);
+
+    AIMAPI_API int
+        WINAPI
+        ImScsiConsoleMessageA(
+            HWND hWnd,
+            LPCSTR lpText,
+            LPCSTR lpCaption,
+            UINT uType);
+
+    AIMAPI_API int
+        WINAPI
+        ImScsiConsoleMessageW(
+            HWND hWnd,
+            LPCWSTR lpText,
+            LPCWSTR lpCaption,
+            UINT uType);
+
+    /**
+    Returns the offset in bytes to actual disk image data for some known
+    "non-raw" image file formats with headers. Returns TRUE if file extension
+    is recognized and the known offset has been stored in the variable pointed
+    to by the Offset parameter. Otherwise the function returns FALSE and the
+    value pointed to by the Offset parameter is not changed.
+
+    ImageFile    Name of raw disk image file. This does not need to be a valid
+    path or filename, just the extension is used by this function.
+
+    Offset       Returned offset in bytes if function returns TRUE.
+    */
+    AIMAPI_API BOOL
+        WINAPI
+        ImScsiGetOffsetByFileExt(IN LPCWSTR ImageFile,
+            IN OUT PLARGE_INTEGER Offset);
+
+#ifdef CORE_BUILD
+
+#ifdef CharToOemA
+#undef CharToOemA
+#endif
+
+#define CharToOemA(s,t)
+
+#ifdef MessageBoxA
+#undef MessageBoxA
+#endif
+#ifdef MessageBoxW
+#undef MessageBoxW
+#endif
+#ifdef SetWindowTextA
+#undef SetWindowTextA
+#endif
+#ifdef SetWindowTextW
+#undef SetWindowTextW
+#endif
+
+#define MessageBoxA ImScsiConsoleMessageA
+#define MessageBoxW ImScsiConsoleMessageW
+
+#define SetWindowTextA(h,t) ImScsiConsoleMessageA(h,t,"",0)
+#define SetWindowTextW(h,t) ImScsiConsoleMessageW(h,t,L"",0)
+
+#endif
+
 #pragma endregion
 
 #ifdef __cplusplus

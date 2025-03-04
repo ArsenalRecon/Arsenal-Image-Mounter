@@ -194,7 +194,7 @@ __out  PDWORD  lpcchReturnLength)
         {
             WMem<WCHAR> mnt_path;
             
-            mnt_path = ImDiskAllocPrintF(L"%1!ws!%2!ws!", vol_name, dosdevs);
+            mnt_path = ImScsiAllocPrintF(L"%1!ws!%2!ws!", vol_name, dosdevs);
 
             if (!mnt_path)
             {
@@ -213,7 +213,7 @@ __out  PDWORD  lpcchReturnLength)
                 if (ImScsiLegacyGetVolumePathNamesForVolumeName(vol_name,
                     vol_target, _countof(vol_target), &dw))
                 {
-                    mnt_path = ImDiskAllocPrintF(L"%1!ws!%2!ws!", vol_target,
+                    mnt_path = ImScsiAllocPrintF(L"%1!ws!%2!ws!", vol_target,
                         dosdevs);
 
                 }
@@ -556,7 +556,7 @@ ImScsiRemoveDriver(LPBOOL RebootRequired)
         return FALSE;
     }
 
-    WMem<WCHAR> drv_file_path(ImDiskAllocPrintF(
+    WMem<WCHAR> drv_file_path(ImScsiAllocPrintF(
         L"%1!ws!\\drivers\\phdskmnt.sys", sys_dir));
 
     if ((!DeleteFile(drv_file_path)) &&
@@ -831,7 +831,7 @@ LPBOOL RebootRequired)
 
         if (OwnerWindow != NULL)
         {
-            ImDiskMsgBoxPrintF(OwnerWindow,
+            ImScsiMsgBoxPrintF(OwnerWindow,
                 MB_ICONEXCLAMATION,
                 L"Arsenal Image Mounter",
                 L"Invalid directory path '%1!ws!': Paths that contain spaces are not supported.",
@@ -843,7 +843,7 @@ LPBOOL RebootRequired)
         return FALSE;
     }
 
-    WMem<WCHAR> ctlunit_inf(ImDiskAllocPrintF(L"%1!ws!\\CtlUnit\\ctlunit.inf",
+    WMem<WCHAR> ctlunit_inf(ImScsiAllocPrintF(L"%1!ws!\\CtlUnit\\ctlunit.inf",
         SetupSource));
 
     if (!ctlunit_inf)
@@ -865,7 +865,7 @@ LPBOOL RebootRequired)
 
         if (OwnerWindow != NULL)
         {
-            ImDiskMsgBoxPrintF(OwnerWindow,
+            ImScsiMsgBoxPrintF(OwnerWindow,
                 MB_ICONEXCLAMATION,
                 L"Arsenal Image Mounter",
                 L"Error installing '%1!ws!': %2!ws!",
@@ -887,7 +887,7 @@ LPBOOL RebootRequired)
 
         if (OwnerWindow != NULL)
         {
-            ImDiskMsgBoxPrintF(OwnerWindow,
+            ImScsiMsgBoxPrintF(OwnerWindow,
                 MB_ICONEXCLAMATION,
                 L"Arsenal Image Mounter",
                 L"Error changing current directory to '%1!ws!': %2!ws!",
@@ -899,7 +899,7 @@ LPBOOL RebootRequired)
 
     ImScsiSetupSetNonInteractiveMode(FALSE);
 
-    WMem<WCHAR> install_cmd(ImDiskAllocPrintF(
+    WMem<WCHAR> install_cmd(ImScsiAllocPrintF(
         L"DefaultInstall 132 .\\%1!ws!\\phdskmnt.inf", kernel));
 
     if (!install_cmd)
@@ -980,7 +980,7 @@ LPBOOL RebootRequired)
         while (MsgWaitForMultipleObjects(1, &event, FALSE, INFINITE,
             QS_ALLEVENTS) == WAIT_OBJECT_0 + 1)
         {
-            ImDiskFlushWindowMessages(NULL);
+            ImScsiFlushWindowMessages(NULL);
         }
 
         CloseHandle(event);
@@ -1113,7 +1113,7 @@ LPBOOL RebootRequired)
             (LPCWSTR)errmsg);
     }
 
-    WMem<WCHAR> infPath(ImDiskAllocPrintF(L"%1!ws!\\%2!ws!\\phdskmnt.inf",
+    WMem<WCHAR> infPath(ImScsiAllocPrintF(L"%1!ws!\\%2!ws!\\phdskmnt.inf",
         SetupSource, kernel));
 
     if (!infPath)

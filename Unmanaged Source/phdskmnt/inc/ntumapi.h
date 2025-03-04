@@ -53,6 +53,32 @@ typedef struct _IO_STATUS_BLOCK {
 #define FILE_SYNCHRONOUS_IO_NONALERT            0x00000020
 #define FILE_NON_DIRECTORY_FILE                 0x00000040
 
+typedef struct _REPARSE_DATA_BUFFER {
+    ULONG  ReparseTag;
+    USHORT ReparseDataLength;
+    USHORT Reserved;
+    union {
+        struct {
+            USHORT SubstituteNameOffset;
+            USHORT SubstituteNameLength;
+            USHORT PrintNameOffset;
+            USHORT PrintNameLength;
+            ULONG Flags;
+            WCHAR PathBuffer[1];
+        } SymbolicLinkReparseBuffer;
+        struct {
+            USHORT SubstituteNameOffset;
+            USHORT SubstituteNameLength;
+            USHORT PrintNameOffset;
+            USHORT PrintNameLength;
+            WCHAR PathBuffer[1];
+        } MountPointReparseBuffer;
+        struct {
+            UCHAR  DataBuffer[1];
+        } GenericReparseBuffer;
+    } DUMMYUNIONNAME;
+} REPARSE_DATA_BUFFER, * PREPARSE_DATA_BUFFER;
+
 typedef struct _REPARSE_DATA_JUNCTION
 {
   DWORD ReparseTag;

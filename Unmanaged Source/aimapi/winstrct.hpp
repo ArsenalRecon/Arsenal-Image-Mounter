@@ -498,7 +498,7 @@ public:
                 (T*)HeapAlloc(GetProcessHeap(), dwFlags, AllocSize);
         }
 
-        T *newblock = HeapReAlloc(GetProcessHeap(), dwFlags, ptr, AllocSize);
+        T *newblock = (T*)HeapReAlloc(GetProcessHeap(), dwFlags, ptr, AllocSize);
 
         if (newblock != NULL)
             return ptr = newblock;

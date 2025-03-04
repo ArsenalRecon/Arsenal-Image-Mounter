@@ -2413,10 +2413,35 @@ ImScsiFillMemoryDisk(pHW_LU_EXTENSION pLUExt)
     IO_STATUS_BLOCK io_status;
     NTSTATUS status;
 #ifdef _WIN64
-    SIZE_T disk_size = pLUExt->DiskSize.QuadPart;
+    SIZE_T image_load_size = pLUExt->DiskSize.QuadPart;
 #else
-    SIZE_T disk_size = pLUExt->DiskSize.LowPart;
+    SIZE_T image_load_size = pLUExt->DiskSize.LowPart;
 #endif
+
+    FILE_STANDARD_INFORMATION standardInfo;
+
+    status = ZwQueryInformationFile(
+        pLUExt->ImageFile,
+        &io_status,
+        &standardInfo,
+        sizeof(FILE_STANDARD_INFORMATION),
+        FileStandardInformation
+    );
+
+    // In case regular file and that file is smaller than requested
+    // virtual disk size, fill only start of the new virtual memory
+    // with image file contents.
+    if (NT_SUCCESS(status))
+    {
+        if ((ULONGLONG)standardInfo.EndOfFile.QuadPart < image_load_size)
+        {
+#ifdef _WIN64
+            image_load_size = standardInfo.EndOfFile.QuadPart;
+#else
+            image_load_size = standardInfo.EndOfFile.LowPart;
+#endif
+        }
+    }
 
     KdPrint(("PhDskMnt: Reading image file into vm disk buffer.\n"));
 
@@ -2425,7 +2450,7 @@ ImScsiFillMemoryDisk(pHW_LU_EXTENSION pLUExt)
         pLUExt->ImageFile,
         &io_status,
         pLUExt->ImageBuffer,
-        disk_size,
+        image_load_size,
         &byte_offset);
 
     ZwClose(pLUExt->ImageFile);
