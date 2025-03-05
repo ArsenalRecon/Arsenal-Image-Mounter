@@ -225,7 +225,7 @@ Please see EULA.txt for license information.";
         var listenPort = 0;
         var ioCommunication = IOCommunication.Auto;
         var forceSingleThread = false;
-        long? bufferSize = null;
+        int? bufferSize = null;
         long? diskSize = null;
         long? imageOffset = null;
         var persistent = false;
@@ -300,7 +300,7 @@ Please see EULA.txt for license information.";
             }
             else if (arg.Equals("buffersize", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
-                bufferSize = SizeFormatting.ParseSuffixedSize(cmd.Value[0])
+                bufferSize = (int?)SizeFormatting.ParseSuffixedSize(cmd.Value[0])
                     ?? throw new InvalidOperationException($"Invalid buffer size '{cmd.Value[0]}'");
             }
             else if (arg.Equals("offset", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
@@ -721,14 +721,14 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
                 if (outputImage is not null) // Convert to new image file format
                 {
-                    provider.ConvertToImage(fileName, outputImage, outputImageVariant, detachEvent);
+                    provider.ConvertToImage(fileName, outputImage, outputImageVariant, bufferSize, detachEvent);
                     provider.Dispose();
 
                     return 0;
                 }
                 else if (checksum is not null) // Calculate checksum over image
                 {
-                    provider.Checksum(checksum);
+                    provider.Checksum(bufferSize, checksum);
                     provider.Dispose();
 
                     return 0;
@@ -985,14 +985,14 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
             else if (outputImage is not null) // Convert to new image file format
             {
-                provider.ConvertToImage(fileName, outputImage, outputImageVariant, detachEvent);
+                provider.ConvertToImage(fileName, outputImage, outputImageVariant, bufferSize, detachEvent);
                 provider.Dispose();
 
                 return 0;
             }
             else if (checksum is not null) // Calculate checksum over image
             {
-                provider.Checksum(checksum);
+                provider.Checksum(bufferSize, checksum);
                 provider.Dispose();
 
                 return 0;

@@ -27,7 +27,7 @@ namespace Arsenal.ImageMounter;
 internal static class ImageConversions
 {
 
-    public static void Checksum(this IDevioProvider provider, string[] checksums)
+    public static void Checksum(this IDevioProvider provider, int? bufferSize, string[] checksums)
     {
         using (provider)
         using (var cancel = new CancellationTokenSource())
@@ -67,7 +67,7 @@ internal static class ImageConversions
                 }
 
                 provider.WriteToSkipEmptyBlocks(null,
-                                                ProviderSupport.ImageConversionIoBufferSize,
+                                                bufferSize ?? ProviderSupport.ImageConversionIoBufferSize,
                                                 skipWriteZeroBlocks: true,
                                                 adjustTargetSize: false,
                                                 hashResults,
@@ -115,7 +115,12 @@ internal static class ImageConversions
         }
     }
 
-    public static void ConvertToImage(this IDevioProvider provider, string sourcePath, string outputImage, string OutputImageVariant, SafeWaitHandle? detachEvent)
+    public static void ConvertToImage(this IDevioProvider provider,
+                                      string sourcePath,
+                                      string outputImage,
+                                      string OutputImageVariant,
+                                      int? bufferSize,
+                                      SafeWaitHandle? detachEvent)
     {
         using (provider)
         using (var cancel = new CancellationTokenSource())
@@ -168,7 +173,7 @@ internal static class ImageConversions
                     (outputImage.StartsWith(@"\\?\", StringComparison.Ordinal) ||
                     outputImage.StartsWith(@"\\.\", StringComparison.Ordinal)))
                 {
-                    provider.WriteToPhysicalDisk(outputImage, completionPosition, cancellationToken);
+                    provider.WriteToPhysicalDisk(outputImage, bufferSize, completionPosition, cancellationToken);
 
                     return;
                 }
@@ -201,17 +206,17 @@ internal static class ImageConversions
                     case "ISO":
                     case "BIN":
                     case "001":
-                        provider.ConvertToRawImage(outputImage, OutputImageVariant, hashResults, completionPosition, cancellationToken);
+                        provider.ConvertToRawImage(outputImage, OutputImageVariant, bufferSize, hashResults, completionPosition, cancellationToken);
                         break;
 
                     case "E01":
                     case "EX01":
                     case "S01":
-                        provider.ConvertToLibEwfImage(outputImage, image_type, hashResults, completionPosition, cancellationToken);
+                        provider.ConvertToLibEwfImage(outputImage, image_type, bufferSize, hashResults, completionPosition, cancellationToken);
                         break;
 
                     default:
-                        provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, hashResults, completionPosition, cancellationToken);
+                        provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, bufferSize, hashResults, completionPosition, cancellationToken);
                         break;
                 }
             }, cancellationToken);

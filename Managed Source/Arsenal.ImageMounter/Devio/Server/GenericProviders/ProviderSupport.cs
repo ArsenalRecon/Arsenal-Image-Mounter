@@ -274,6 +274,7 @@ public static class ProviderSupport
                                                string outputImage,
                                                string type,
                                                string OutputImageVariant,
+                                               int? bufferSize,
                                                Dictionary<string, byte[]?>? hashResults,
                                                CompletionPosition? completionPosition,
                                                CancellationToken cancellationToken)
@@ -286,7 +287,7 @@ public static class ProviderSupport
         using var builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, (int)provider.SectorSize), null);
 
         provider.WriteToSkipEmptyBlocks(builder.Content,
-                                        ImageConversionIoBufferSize,
+                                        bufferSize ?? ImageConversionIoBufferSize,
                                         skipWriteZeroBlocks: true,
                                         adjustTargetSize: false,
                                         hashResults,
@@ -297,11 +298,16 @@ public static class ProviderSupport
     public static void ConvertToRawImage(this IDevioProvider provider,
                                          string outputImage,
                                          string OutputImageVariant,
+                                         int? bufferSize,
                                          Dictionary<string, byte[]?>? hashResults,
                                          CompletionPosition? completionPosition,
                                          CancellationToken cancellationToken)
     {
-        using var target = new FileStream(outputImage, FileMode.Create, FileAccess.Write, FileShare.Delete, ImageConversionIoBufferSize);
+        using var target = new FileStream(outputImage,
+                                          FileMode.Create,
+                                          FileAccess.Write,
+                                          FileShare.Delete,
+                                          bufferSize ?? ImageConversionIoBufferSize);
 
         if ("fixed".Equals(OutputImageVariant, StringComparison.OrdinalIgnoreCase))
         {
@@ -336,13 +342,14 @@ public static class ProviderSupport
 
     public static void WriteToPhysicalDisk(this IDevioProvider provider,
                                            string outputDevice,
+                                           int? bufferSize,
                                            CompletionPosition? completionPosition,
                                            CancellationToken cancellationToken)
     {
         using var disk = new DiskDevice(outputDevice, FileAccess.ReadWrite);
 
         provider.WriteToSkipEmptyBlocks(disk.GetRawDiskStream(),
-                                        ImageConversionIoBufferSize,
+                                        bufferSize ?? ImageConversionIoBufferSize,
                                         skipWriteZeroBlocks: false,
                                         hashResults: null,
                                         adjustTargetSize: false,
@@ -353,6 +360,7 @@ public static class ProviderSupport
     public static void ConvertToLibEwfImage(this IDevioProvider provider,
                                             string outputImage,
                                             string image_type,
+                                            int? bufferSize,
                                             Dictionary<string, byte[]?>? hashResults,
                                             CompletionPosition? completionPosition, CancellationToken cancellationToken)
     {
@@ -402,7 +410,7 @@ public static class ProviderSupport
         using (var stream = new Client.DevioDirectStream(target, ownsProvider: false))
         {
             provider.WriteToSkipEmptyBlocks(stream,
-                                            ImageConversionIoBufferSize,
+                                            bufferSize ?? 64 * (int)imaging_parameters.BytesPerSector,
                                             skipWriteZeroBlocks: false,
                                             hashResults: hashResults,
                                             adjustTargetSize: false,
