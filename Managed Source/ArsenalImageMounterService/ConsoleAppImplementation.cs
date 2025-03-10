@@ -250,6 +250,7 @@ Please see EULA.txt for license information.";
         var autoDelete = false;
         var listDevices = false;
         var autoOnline = false;
+        var rescanAdapter = false;
 
         foreach (var cmd in commands)
         {
@@ -483,6 +484,11 @@ Please see EULA.txt for license information.";
             {
                 forceSingleThread = true;
             }
+            else if (arg.Equals("rescan", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
+                && !commands.TryGetValue("filename", out _) && !commands.TryGetValue("device", out _))
+            {
+                rescanAdapter = true;
+            }
             else if (arg.Length == 0)
             {
                 Console.WriteLine($"Unsupported command line argument: {string.Join(" ", cmd.Value)}");
@@ -503,7 +509,26 @@ Please see EULA.txt for license information.";
             }
         }
 
-        if (listDevices)
+        if (rescanAdapter)
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.Error.WriteLine("The --rescan switch is only supported on Windows");
+                Console.ResetColor();
+                return -1;
+            }
+
+            foreach (var devInst in API.EnumerateAdapterDeviceInstances())
+            {
+                Console.WriteLine($"Rescanning adapter {devInst}...");
+                API.RescanScsiAdapter(devInst);
+            }
+
+            Thread.Sleep(1000);
+        }
+
+        if (rescanAdapter || listDevices)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -571,6 +596,10 @@ Syntax to mount a disk at remote machine:
 
 Syntax to display a list of mounted devices:
 {asmname} --list
+
+Syntax to rescan SCSI adapter:
+{asmname} --rescan
+Useful when there is a dead mounted disk left behind after it has lost connection to storage backend, such as after issues with underlying image file device or loss of network connection.
 
 ";
 
