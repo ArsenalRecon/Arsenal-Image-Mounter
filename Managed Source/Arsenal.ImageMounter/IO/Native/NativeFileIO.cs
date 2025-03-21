@@ -64,6 +64,16 @@ public static partial class NativeFileIO
     public static partial class SafeNativeMethods
     {
 #if NET7_0_OR_GREATER
+        [LibraryImport("ntdll")]
+        public static partial int RtlNtStatusToDosError(int NtStatus);
+
+        [LibraryImport("ntdll")]
+        public static partial int RtlNtStatusToDosError(uint NtStatus);
+
+        [LibraryImport("user32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
+
         [LibraryImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool AllocConsole();
@@ -103,6 +113,15 @@ public static partial class NativeFileIO
         [LibraryImport("kernel32", SetLastError = true), Obsolete]
         public static partial long GetTickCount64();
 #else
+        [DllImport("ntdll")]
+        public static extern int RtlNtStatusToDosError(int NtStatus);
+
+        [DllImport("ntdll")]
+        public static extern int RtlNtStatusToDosError(uint NtStatus);
+
+        [DllImport("user32", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
+
         [DllImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool AllocConsole();
@@ -440,12 +459,6 @@ public static partial class NativeFileIO
         [LibraryImport("ntdll")]
         internal static partial void RtlFreeUnicodeString(ref UNICODE_STRING UnicodeString);
 
-        [LibraryImport("ntdll")]
-        internal static partial int RtlNtStatusToDosError(int NtStatus);
-
-        [LibraryImport("ntdll")]
-        internal static partial int RtlNtStatusToDosError(uint NtStatus);
-
         [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         internal static partial int GetPrivateProfileSectionNamesW(out char Names, int NamesSize, in char FileName);
 
@@ -599,10 +612,6 @@ public static partial class NativeFileIO
         [LibraryImport("newdev", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool UpdateDriverForPlugAndPlayDevicesW(nint owner, in char HardwareId, in char InfPath, uint InstallFlags, [MarshalAs(UnmanagedType.Bool)] out bool RebootRequired);
-
-        [LibraryImport("user32", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
 
         [LibraryImport("ntdll")]
         internal static partial int RtlGetVersion(ref OSVERSIONINFO os_version);
@@ -914,12 +923,6 @@ public static partial class NativeFileIO
         [DllImport("ntdll")]
         internal static extern void RtlFreeUnicodeString(ref UNICODE_STRING UnicodeString);
 
-        [DllImport("ntdll")]
-        internal static extern int RtlNtStatusToDosError(int NtStatus);
-
-        [DllImport("ntdll")]
-        internal static extern int RtlNtStatusToDosError(uint NtStatus);
-
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern int GetPrivateProfileSectionNamesW(out char Names, int NamesSize, in char FileName);
 
@@ -1053,9 +1056,6 @@ public static partial class NativeFileIO
 
         [DllImport("newdev", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool UpdateDriverForPlugAndPlayDevicesW(nint owner, in char HardwareId, in char InfPath, uint InstallFlags, [MarshalAs(UnmanagedType.Bool)] out bool RebootRequired);
-
-        [DllImport("user32", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern int RtlGetVersion(ref OSVERSIONINFO os_version);
@@ -1341,7 +1341,7 @@ public static partial class NativeFileIO
 
     public static int NtDllTry(int result)
         => result < 0
-        ? throw new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(result))
+        ? throw new Win32Exception(SafeNativeMethods.RtlNtStatusToDosError(result))
         : result;
 
     public static List<string> ExcludeProcessesFromHandleSearch { get; } =
@@ -1828,7 +1828,7 @@ Currently, the following application has files open on this volume:
     {
         EnablePrivileges(NativeConstants.SE_SHUTDOWN_NAME);
 
-        Win32Try(UnsafeNativeMethods.ExitWindowsEx(Flags, Reason));
+        Win32Try(SafeNativeMethods.ExitWindowsEx(Flags, Reason));
     }
 
 
@@ -3920,10 +3920,10 @@ Currently, the following application has files open on this volume:
         => Win32Try(SafeNativeMethods.RemoveDllDirectory(cookie));
 
     public static Exception GetExceptionForNtStatus(int NtStatus)
-        => new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(NtStatus));
+        => new Win32Exception(SafeNativeMethods.RtlNtStatusToDosError(NtStatus));
 
     public static Exception GetExceptionForNtStatus(uint NtStatus)
-        => new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(NtStatus));
+        => new Win32Exception(SafeNativeMethods.RtlNtStatusToDosError(NtStatus));
 
     public static string GetModuleFullPath(nint hModule)
     {
@@ -5355,7 +5355,7 @@ Currently, the following application has files open on this volume:
         var status = UnsafeNativeMethods.RtlGetVersion(ref os_version);
 
         return status < 0
-            ? throw new Win32Exception(UnsafeNativeMethods.RtlNtStatusToDosError(status))
+            ? throw new Win32Exception(SafeNativeMethods.RtlNtStatusToDosError(status))
             : new OperatingSystem(os_version.PlatformId,
                                   new Version(os_version.MajorVersion,
                                               os_version.MinorVersion,
