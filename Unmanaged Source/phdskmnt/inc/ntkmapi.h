@@ -22,6 +22,12 @@
 
 #pragma warning(disable: 4996)
 
+#if (NTDDI_VERSION >= NTDDI_WS03)
+#define KD_REFRESH_DEBUGGER_NOT_PRESENT KdRefreshDebuggerNotPresent()
+#else
+#define KD_REFRESH_DEBUGGER_NOT_PRESENT *KdDebuggerNotPresent
+#endif
+
 //
 // We include some stuff from newer DDK:s here so that one
 // version of the driver for all versions of Windows can

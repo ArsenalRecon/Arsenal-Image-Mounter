@@ -86,10 +86,8 @@ STATUS_SUCCESS if successful
     AIMWrFltrDriverObject = DriverObject;
 
 #if DBG
-    if (!KdRefreshDebuggerNotPresent())
-    {
+    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
         DbgBreakPoint();
-    }
 #endif
 
     //
@@ -153,7 +151,10 @@ STATUS_SUCCESS if successful
         DbgPrint("AIMWrFltr:DriverEntry: Cannot create diff full event '%wZ': %#x\n",
             event_obj_attrs.ObjectName, status);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
     }
     else
     {
@@ -189,7 +190,10 @@ STATUS_SUCCESS if successful
     {
         KdPrint(("AIMWrFltr::DriverEntry: Memory allocation error.\n"));
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -214,7 +218,10 @@ STATUS_SUCCESS if successful
         DbgPrint("AIMWrFltr::DriverEntry: Error opening key '%wZ': %#x\n",
             param_key_obj_attrs.ObjectName, status);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_SUCCESS;
     }
@@ -262,7 +269,10 @@ STATUS_SUCCESS if successful
         DbgPrint("AIMWrFltr:DriverEntry: Cannot open event '%wZ': %#x\n",
             event_obj_attrs.ObjectName, status);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
     }
     else
     {
@@ -525,7 +535,10 @@ AIMWrFltrSynchronousDeviceControl(
 
     if (ioctl_irp == NULL)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -595,7 +608,10 @@ AIMWrFltrSynchronousReadWrite(
 
     if (lower_irp == NULL)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -683,7 +699,10 @@ AIMWrFltrReadDiffDeviceVbr(IN PDEVICE_EXTENSION DeviceExtension)
             DbgPrint("AIMWrFltrReadDiffDeviceVbr: Error reading diff device for %p: 0x%X\n",
                 DeviceExtension->DeviceObject, status);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             DeviceExtension->Statistics.LastErrorCode = status;
 
@@ -716,7 +735,10 @@ AIMWrFltrReadDiffDeviceVbr(IN PDEVICE_EXTENSION DeviceExtension)
             DbgPrint("AIMWrFltrReadDiffDeviceVbr: Diff device VBR for %p is invalid.\n",
                 DeviceExtension->DeviceObject);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             DeviceExtension->Statistics.LastErrorCode = STATUS_WRONG_VOLUME;
 
@@ -847,7 +869,10 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
                 DiffDevicePath,
                 status);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             DeviceExtension->Statistics.LastErrorCode = status;
 
@@ -926,7 +951,10 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
                 DiffDeviceHandle,
                 status);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             DeviceExtension->Statistics.LastErrorCode = status;
 
@@ -1113,7 +1141,10 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
                 DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.Size.QuadPart,
                 ((LONGLONG)MAXLONG - 1) << DIFF_BLOCK_BITS);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             status = STATUS_NOT_SUPPORTED;
 
@@ -1130,7 +1161,10 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
             DbgPrint(
                 "AIMWrFltrInitializeDiffDevice: Memory allocation error.\n");
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             status = STATUS_INSUFFICIENT_RESOURCES;
 
@@ -1159,7 +1193,10 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
                 "AIMWrFltrInitializeDiffDevice: Error reading diff device for %p: 0x%X\n",
                 DeviceExtension->DeviceObject, status);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             DeviceExtension->Statistics.LastErrorCode = status;
 
@@ -1286,7 +1323,11 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (!ph_obj_name)
         {
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
+
             return STATUS_INSUFFICIENT_RESOURCES;
         }
 
@@ -1325,7 +1366,11 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
     if (!obj_name_info)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
+
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
@@ -1351,7 +1396,11 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
     if (!buffer)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
+
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
@@ -1497,7 +1546,10 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
             "AIMWrFltrAddDevice: Cannot create filter_device_object. Status 0x%X\n",
             status);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return status;
     }
@@ -1603,7 +1655,10 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
             "AIMWrFltrAddDevice: Unable to attach 0x%p to target 0x%p\n",
             filter_device_object, PhysicalDeviceObject));
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_DEVICE_CONFIGURATION_ERROR;
     }
@@ -1649,7 +1704,10 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
             AIMWrFltrCleanupDevice(device_extension);
             IoDeleteDevice(filter_device_object);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             return status;
         }
@@ -1719,7 +1777,10 @@ NTSTATUS
         Irp->IoStatus.Status = status;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return status;
     }
@@ -2099,7 +2160,10 @@ AIMWrFltrDeviceUsageNotification(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     }
     else
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         //
         // cleanup the changes done above

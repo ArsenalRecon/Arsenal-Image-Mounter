@@ -601,7 +601,10 @@ DevIoDrvDispatchServerIORequest(PIRP Irp,
     {
         DbgPrint("IRP=%p Bad server request.\n", Irp);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         if (client_item != NULL)
         {

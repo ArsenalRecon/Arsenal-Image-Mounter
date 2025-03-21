@@ -610,6 +610,7 @@
     <ClInclude Include="cd.h" />
     <ClInclude Include="inc\common.h" />
     <ClInclude Include="inc\legacycompat.h" />
+    <ClInclude Include="inc\ntkmapi.h" />
     <ClInclude Include="inc\phdskmnt.h" />
     <ClInclude Include="inc\phdskmntver.h" />
   </ItemGroup>

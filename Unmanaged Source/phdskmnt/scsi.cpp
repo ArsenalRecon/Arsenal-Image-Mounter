@@ -2006,7 +2006,11 @@ ScsiOpUnmap(
 
     if (length > pSrb->DataTransferLength)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
+
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
     }
@@ -2016,7 +2020,11 @@ ScsiOpUnmap(
     if ((ULONG)datalength + sizeof(list->DataLength) >
         pSrb->DataTransferLength)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
+
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
     }
@@ -2026,7 +2034,11 @@ ScsiOpUnmap(
     if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) >
         pSrb->DataTransferLength)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
+
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
     }

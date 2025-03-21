@@ -183,19 +183,6 @@ typedef struct _UNMAP {
     UCHAR Control;
 } UNMAP, *PUNMAP;
 
-#if _NT_TARGET_VERSION < 0x0501
-
-//
-//  Structure used to describe the list of ranges to process
-//
-
-typedef struct _DEVICE_DATA_SET_RANGE {
-    LONGLONG    StartingOffset;        //in bytes,  must align to sector
-    ULONGLONG   LengthInBytes;         // multiple of sector size.
-} DEVICE_DATA_SET_RANGE, *PDEVICE_DATA_SET_RANGE;
-
-#endif
-
 #else
 
 typedef _CDB::_UNMAP UNMAP, *PUNMAP;

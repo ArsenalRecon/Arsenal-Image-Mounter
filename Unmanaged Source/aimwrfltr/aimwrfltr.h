@@ -634,7 +634,10 @@ typedef class SCATTERED_IRP
             KdPrint(("AIMWrFltr::Complete: Lower level I/O failed: 0x%X\n",
                 LastFailedStatus));
 
-            //KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             OriginalIrp->IoStatus.Information = 0;
 

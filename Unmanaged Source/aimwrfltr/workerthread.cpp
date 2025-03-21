@@ -126,7 +126,10 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
                 if (!NT_SUCCESS(status) &&
                     cached_irp->Irp == NULL)
                 {
-                    KdBreakPoint();
+#if DBG
+                    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                        DbgBreakPoint();
+#endif
 
                     device_extension->Statistics.DelayWriteFailed = TRUE;
 
@@ -164,7 +167,12 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
                 default:
                     status = STATUS_INTERNAL_ERROR;
                     KdPrint(("AimWrFltrDeviceWorkerThread: Internal error.\n"));
-                    KdBreakPoint();
+
+#if DBG
+                    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                        DbgBreakPoint();
+#endif
+
 #pragma warning(suppress: 4065)
                 }
 
@@ -173,7 +181,11 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
             default:
                 status = STATUS_INTERNAL_ERROR;
                 KdPrint(("AimWrFltrDeviceWorkerThread: Internal error.\n"));
-                KdBreakPoint();
+
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
             }
 
             if (cached_irp->Irp != NULL)

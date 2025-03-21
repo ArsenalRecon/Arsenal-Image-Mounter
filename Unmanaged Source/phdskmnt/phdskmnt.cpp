@@ -51,7 +51,10 @@ ImScsiGetControllerObject()
         return STATUS_SUCCESS;
     }
 
-    KdBreakPoint();
+#if DBG
+    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+        DbgBreakPoint();
+#endif
 
     for (dev_obj = pMPDrvInfoGlobal->pDriverObj->DeviceObject;
         dev_obj != NULL;
@@ -197,14 +200,9 @@ __in PUNICODE_STRING pRegistryPath
     LARGE_INTEGER                  liTickCount;
 
     KdPrint(("PhDskMnt::DriverEntry: Begin '%wZ'.\n", pRegistryPath));
-    
+
 #if DBG
-
-#if (NTDDI_VERSION >= NTDDI_WS03)
-    KdRefreshDebuggerNotPresent();
-#endif
-
-    if (!KD_DEBUGGER_NOT_PRESENT)
+    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
         DbgBreakPoint();
 #endif
 
@@ -463,9 +461,9 @@ __out      PBOOLEAN                        pBAgain
         pConfigInfo,
         KeGetCurrentIrql()));
 
-#if VERBOSE_DEBUG_TRACE > 0
+#if VERBOSE_DEBUG_TRACE > 1
 
-    if (!KD_DEBUGGER_NOT_PRESENT)
+    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
         DbgBreakPoint();
 
 #endif

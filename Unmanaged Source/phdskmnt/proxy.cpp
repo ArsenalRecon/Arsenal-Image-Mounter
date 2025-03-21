@@ -357,7 +357,10 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
                 DbgPrint("ImScsi Proxy Client: Invalid response size %u expected at most %u.\n.",
                     *ResponseDataSize, ResponseDataBufferSize);
 
-                KdBreakPoint();
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
 
                 IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
                 IoStatusBlock->Information = 0;

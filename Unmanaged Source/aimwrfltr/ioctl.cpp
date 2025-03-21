@@ -653,7 +653,10 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                 Irp->IoStatus.Status = status;
                 IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-                KdBreakPoint();
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
 
                 return status;
             }
@@ -763,9 +766,9 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 #if DBG
             static bool break_here = true;
 
-            if (break_here && !KD_DEBUGGER_NOT_PRESENT)
+            if (break_here && !KD_REFRESH_DEBUGGER_NOT_PRESENT)
             {
-                KdBreakPoint();
+                DbgBreakPoint();
             }
 #endif
         }

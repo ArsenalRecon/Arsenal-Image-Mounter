@@ -48,12 +48,7 @@ DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING)
     KdPrint(("DevIoDrv loading.\n"));
 
 #if DBG
-
-#if (NTDDI_VERSION >= NTDDI_WS03)
-    KdRefreshDebuggerNotPresent();
-#endif
-
-    if (!KD_DEBUGGER_NOT_PRESENT)
+    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
         DbgBreakPoint();
 #endif
 

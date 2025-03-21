@@ -92,7 +92,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         if (cached_irp == NULL)
         {
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
             IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -117,7 +120,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
                 "AIMWrFltrRead: Remove lock failed read type Irp: 0x%X\n",
                 status);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             delete cached_irp;
 
@@ -158,7 +164,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -172,7 +181,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -328,7 +340,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     if (cached_irp == NULL)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -353,7 +368,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             "AIMWrFltrRead: Remove lock failed read type Irp: 0x%X\n",
             status);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         delete cached_irp;
 
@@ -397,7 +415,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         Irp->IoStatus.Status = status;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return status;
     }
@@ -531,7 +552,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
                 if (cached_irp == NULL)
                 {
-                    KdBreakPoint();
+#if DBG
+                    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                        DbgBreakPoint();
+#endif
 
                     AIMWrFltrFreeIrpWithMdls(lower_irp);
                     break;
@@ -555,7 +579,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
                         "AIMWrFltrWrite: Remove lock failed read type Irp: 0x%X\n",
                         status);
 
-                    KdBreakPoint();
+#if DBG
+                    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                        DbgBreakPoint();
+#endif
 
                     AIMWrFltrFreeIrpWithMdls(lower_irp);
                     break;
@@ -682,7 +709,10 @@ AIMWrFltrDeferredRead(
 
             if (target_irp == NULL)
             {
-                KdBreakPoint();
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
 
                 return STATUS_INSUFFICIENT_RESOURCES;
             }
@@ -705,7 +735,10 @@ AIMWrFltrDeferredRead(
                 KdPrint(("AIMWrFltrDeferredRead: Read request 0x%X bytes, done 0x%IX.\n",
                     bytes_this_iter, io_status.Information));
 
-                KdBreakPoint();
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
             }
 
             if (!NT_SUCCESS(status))
@@ -713,7 +746,10 @@ AIMWrFltrDeferredRead(
                 KdPrint(("AIMWrFltrDeferredRead: Read from target device failed: 0x%X\n",
                     status));
 
-                KdBreakPoint();
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
 
                 return io_status.Status;
             }
@@ -741,7 +777,10 @@ AIMWrFltrDeferredRead(
                 KdPrint(("AIMWrFltrDeferredRead: Read request 0x%X bytes, done 0x%IX.\n",
                     bytes_this_iter, io_status.Information));
 
-                KdBreakPoint();
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
             }
 
             if (!NT_SUCCESS(status))
@@ -749,7 +788,10 @@ AIMWrFltrDeferredRead(
                 KdPrint(("AIMWrFltrDeferredRead: Read from diff device failed: 0x%X\n",
                     status));
 
-                KdBreakPoint();
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
 
                 return io_status.Status;
             }

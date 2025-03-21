@@ -73,6 +73,8 @@ extern "C" {
 #include <ntddscsi.h>
 #include <scsiwmi.h>
 
+#include <ntkmapi.h>
+
 #endif
 
 #pragma warning(disable: 28719)

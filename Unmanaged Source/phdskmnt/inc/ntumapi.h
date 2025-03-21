@@ -99,7 +99,7 @@ RtlDosPathNameToNtPathName_U(IN PCWSTR DosName,
 			     OUT PCWSTR *DosFilePath OPTIONAL,
 			     OUT PUNICODE_STRING NtFilePath OPTIONAL);
 
-NTSYSAPI 
+NTSYSAPI
 BOOLEAN 
 NTAPI 
 RtlCreateUnicodeString(OUT PUNICODE_STRING DestinationString,
@@ -161,6 +161,13 @@ NTSYSAPI
 NTSTATUS
 NTAPI
 RtlGetVersion(PRTL_OSVERSIONINFOW lpVersionInformation);
+
+#define NtCurrentProcess() ( (HANDLE)(LONG_PTR) -1 )  
+#define ZwCurrentProcess() NtCurrentProcess()         
+#define NtCurrentThread() ( (HANDLE)(LONG_PTR) -2 )   
+#define ZwCurrentThread() NtCurrentThread()           
+#define NtCurrentSession() ( (HANDLE)(LONG_PTR) -3 )  
+#define ZwCurrentSession() NtCurrentSession()         
 
 #ifndef _DBGNT_
 

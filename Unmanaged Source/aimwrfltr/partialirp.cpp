@@ -219,7 +219,10 @@ PVOID Context
     {
         if (partial->BytesThisIrp != Irp->IoStatus.Information)
         {
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             KdPrint(("AIMWrFltr::Complete: Scattered IRP resulted in 0x%IX bytes, requested 0x%X\n",
                 Irp->IoStatus.Information, partial->BytesThisIrp));
@@ -239,7 +242,10 @@ PVOID Context
         KdPrint(("AIMWrFltr::IrpCompletionRoutine: Lower level I/O 0x%X bytes at 0x%I64X failed: 0x%X\n",
             partial->BytesThisIrp, partial->LowerDeviceOffset, Irp->IoStatus.Status));
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         InterlockedExchange(&scatter->LastFailedStatus, Irp->IoStatus.Status);
     }

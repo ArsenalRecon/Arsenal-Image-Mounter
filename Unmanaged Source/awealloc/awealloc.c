@@ -343,7 +343,10 @@ IN PUNICODE_STRING RegistryPath)
     UNICODE_STRING ctl_device_name;
     UNICODE_STRING sym_link;
 
-    KdBreakPoint();
+#if DBG
+    if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+        DbgBreakPoint();
+#endif
 
     AWEAllocDriverObject = DriverObject;
 
@@ -440,7 +443,12 @@ IN OUT PKIRQL LowestAssumedIrql)
             if (Context->ActiveWriters <= 0)
             {
                 DbgPrint("AWEAlloc: I/O synchronization state corrupt.\n");
-                KdBreakPoint();
+
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
+
                 status = STATUS_DRIVER_INTERNAL_ERROR;
             }
             else
@@ -469,7 +477,12 @@ IN OUT PKIRQL LowestAssumedIrql)
             if (Context->ActiveReaders <= 0)
             {
                 DbgPrint("AWEAlloc: I/O synchronization state corrupt.\n");
-                KdBreakPoint();
+
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
+
                 status = STATUS_DRIVER_INTERNAL_ERROR;
             }
             else
@@ -505,7 +518,11 @@ IN OUT PKIRQL LowestAssumedIrql)
         if (Context->ActiveWriters < 0)
         {
             DbgPrint("AWEAlloc: I/O synchronization state corrupt.\n");
-            KdBreakPoint();
+
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
         }
     }
     if (ForReadOperation)
@@ -519,7 +536,11 @@ IN OUT PKIRQL LowestAssumedIrql)
         if (Context->ActiveReaders < 0)
         {
             DbgPrint("AWEAlloc: I/O synchronization state corrupt.\n");
-            KdBreakPoint();
+
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
         }
     }
     AWEAllocReleaseLock(&lock_handle, LowestAssumedIrql);
@@ -604,7 +625,11 @@ IN OUT PKIRQL LowestAssumedIrql)
     {
         DbgPrint("AWEAlloc: MapPage: Cannot find block for BaseAddress=%#I64x.\n",
             page_base);
-        KdBreakPoint();
+
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_DRIVER_INTERNAL_ERROR;
     }
@@ -618,7 +643,11 @@ IN OUT PKIRQL LowestAssumedIrql)
     {
         DbgPrint("AWEAlloc: MapPage: Bad sized block BaseAddress=%#I64x.\n",
             page_base);
-        KdBreakPoint();
+
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_DRIVER_INTERNAL_ERROR;
     }
@@ -629,7 +658,12 @@ IN OUT PKIRQL LowestAssumedIrql)
     if (CurrentPageContext->Mdl == NULL)
     {
         DbgPrint("AWEAlloc: IoAllocateMdl() FAILED.\n");
-        KdBreakPoint();
+
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
+
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
@@ -651,7 +685,11 @@ IN OUT PKIRQL LowestAssumedIrql)
     if (CurrentPageContext->Ptr == NULL)
     {
         DbgPrint("AWEAlloc: MmGetSystemAddressForMdlSafe() FAILED.\n");
-        KdBreakPoint();
+
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         AWEAllocLogError(AWEAllocDriverObject,
             0,
@@ -858,7 +896,11 @@ IN PIRP Irp)
     if (system_buffer == NULL)
     {
         DbgPrint("AWEAlloc: Failed mapping system buffer.\n");
-        KdBreakPoint();
+
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
         Irp->IoStatus.Information = 0;
