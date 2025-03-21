@@ -121,7 +121,10 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         if (cached_irp == NULL)
         {
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
             IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -146,7 +149,10 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
                 "AIMWrFltrRead: Remove lock failed read type Irp: 0x%X\n",
                 status);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             delete cached_irp;
 
@@ -175,7 +181,10 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         if (cached_irp == NULL)
         {
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
             IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -203,7 +212,10 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             Irp->IoStatus.Status = status;
             IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             return status;
         }
@@ -258,7 +270,11 @@ PUCHAR BlockBuffer)
 
     if (buffer == NULL)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
+
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
@@ -292,18 +308,92 @@ PUCHAR BlockBuffer)
         ULONG bytes_this_iter = io_stack->Parameters.Write.Length -
             length_done;
 
+        NTSTATUS status;
+
+        LONG block_address = DeviceExtension->AllocationTable[i];
+
         if ((page_offset_this_iter + bytes_this_iter) > (ULONG)DIFF_BLOCK_SIZE)
         {
             bytes_this_iter = DIFF_BLOCK_SIZE - page_offset_this_iter;
         }
 
-        RtlCopyMemory(BlockBuffer + page_offset_this_iter,
-            buffer + length_done, bytes_this_iter);
+        // If requested I/O position or length are not aligned to sector
+        // size of diff device, we need to fill parts of buffer before and
+        // after new data with old data from existing diff block
+        if (block_address != DIFF_BLOCK_UNALLOCATED &&
+            ((page_offset_this_iter & (DeviceExtension->DiffDeviceObject->SectorSize - 1)) != 0 ||
+                ((bytes_this_iter & (DeviceExtension->DiffDeviceObject->SectorSize - 1)) != 0)))
+        {
+            KdPrint(("AIMWrFltrDeferredWrite: Requested writing 0x%X bytes at 0x%I64X requires alignment.\n",
+                bytes_this_iter, ((LONGLONG)block_address <<
+                    DIFF_BLOCK_BITS) + page_offset_this_iter));
 
-        length_done += bytes_this_iter;
+            ULONG sector_mask = (ULONG)(DeviceExtension->DiffDeviceObject->SectorSize - 1);
+            ULONG new_page_offset_this_iter = page_offset_this_iter & ~sector_mask;
+            ULONG new_bytes_this_iter = ((page_offset_this_iter - new_page_offset_this_iter) +
+                bytes_this_iter + sector_mask) & ~sector_mask;
 
-        NTSTATUS status;
-        LONG block_address = DeviceExtension->AllocationTable[i];
+            LARGE_INTEGER offset = { 0 };
+
+            offset.QuadPart = ((LONGLONG)block_address <<
+                DIFF_BLOCK_BITS) + new_page_offset_this_iter;
+
+            KdPrint(("AIMWrFltrDeferredWrite: Alignment read 0x%X bytes from 0x%I64X.\n",
+                new_bytes_this_iter, offset));
+
+            status = AIMWrFltrSynchronousReadWrite(
+                DeviceExtension->DiffDeviceObject,
+                DeviceExtension->DiffFileObject,
+                IRP_MJ_READ,
+                BlockBuffer + new_page_offset_this_iter,
+                new_bytes_this_iter,
+                &offset,
+                NULL,
+                &io_status);
+
+            if (NT_SUCCESS(status) &&
+                io_status.Information != new_bytes_this_iter)
+            {
+                DbgPrint("AIMWrFltrDeferredWrite: Alignment block read request 0x%X bytes, done 0x%IX.\n",
+                    new_bytes_this_iter, io_status.Information);
+
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
+
+                status = STATUS_DISK_CORRUPT_ERROR;
+            }
+
+            if (!NT_SUCCESS(status))
+            {
+                DbgPrint("AIMWrFltrDeferredWrite: IRQL=%i Alignmenet block read 0x%X bytes at 0x%I64X from diff device failed: 0x%X\n",
+                    (int)KeGetCurrentIrql(), new_bytes_this_iter, offset.QuadPart, status);
+
+#if DBG
+                if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    DbgBreakPoint();
+#endif
+
+                return status;
+            }
+
+            RtlCopyMemory(BlockBuffer + page_offset_this_iter,
+                buffer + length_done, bytes_this_iter);
+
+            length_done += bytes_this_iter;
+
+            page_offset_this_iter = new_page_offset_this_iter;
+            bytes_this_iter = new_bytes_this_iter;
+        }
+        else
+        {
+            RtlCopyMemory(BlockBuffer + page_offset_this_iter,
+                buffer + length_done, bytes_this_iter);
+
+            length_done += bytes_this_iter;
+        }
+
         if (block_address == DIFF_BLOCK_UNALLOCATED)
         {
             block_address = ++DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.LastAllocatedBlock;
@@ -439,7 +529,12 @@ PUCHAR BlockBuffer)
             DbgPrint("AIMWrFltrDeferredWrite: Write request 0x%X bytes, done 0x%IX.\n",
                 bytes_this_iter, io_status.Information);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
+
+            status = STATUS_DISK_CORRUPT_ERROR;
         }
 
         if (!NT_SUCCESS(status))
@@ -447,7 +542,10 @@ PUCHAR BlockBuffer)
             DbgPrint("AIMWrFltrDeferredWrite: IRQL=%i Write 0x%X bytes at 0x%I64X to diff device failed: 0x%X\n",
                 (int)KeGetCurrentIrql(), bytes_this_iter, lower_offset.QuadPart, status);
 
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             return status;
         }
@@ -534,7 +632,10 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     if (cached_irp == NULL)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -556,7 +657,10 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             "AIMWrFltrFlushBuffers: Remove lock failed flush type Irp: 0x%X\n",
             status);
 
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         delete cached_irp;
 
@@ -639,11 +743,13 @@ PUCHAR BlockBuffer)
     
     int allocated = 0;
 
+#if DBG
     static bool break_flag = false;
     if (break_flag)
     {
-        KdBreakPoint();
+        DbgBreakPoint();
     }
+#endif
 
     ULONG splits = 0;
 
@@ -664,7 +770,10 @@ PUCHAR BlockBuffer)
             (highest_byte <= 0) ||
             (highest_byte > DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.Size.QuadPart))
         {
-            KdBreakPoint();
+#if DBG
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
+#endif
 
             return STATUS_END_OF_MEDIA;
         }
@@ -746,7 +855,10 @@ PUCHAR BlockBuffer)
 
     if (lower_mdsa_size > DIFF_BLOCK_SIZE)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_INVALID_PARAMETER;
     }
@@ -842,7 +954,10 @@ PUCHAR BlockBuffer)
 
     if (lower_irp == NULL)
     {
-        KdBreakPoint();
+#if DBG
+        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+            DbgBreakPoint();
+#endif
 
         return STATUS_INSUFFICIENT_RESOURCES;
     }
