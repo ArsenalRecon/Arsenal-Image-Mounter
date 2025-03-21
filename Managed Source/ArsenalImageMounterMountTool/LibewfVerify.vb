@@ -16,7 +16,9 @@ Public MustInherit Class LibewfVerify
 
         Catch ex As TypeInitializationException When TypeOf ex.GetBaseException() Is BadImageFormatException
             MessageBox.Show(owner,
-                            $"Incompatible architecture versions of libewf.dll, zlib.dll or msvcr100.dll detected. Please copy {NativeFileIO.ProcessArchitecture} versions of these files to same directory as this exe file.",
+                            $"Incompatible architecture versions of libewf.dll or dependencies.
+
+Please copy {NativeFileIO.ProcessArchitecture} versions of these files to {API.DllPath} directory and try again.",
                             ex.GetBaseException().GetType().Name,
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error)
@@ -25,7 +27,9 @@ Public MustInherit Class LibewfVerify
 
         Catch ex As Exception
             MessageBox.Show(owner,
-                            $"Cannot find or load libewf.dll, zlib.dll or msvcr100.dll. Please copy {NativeFileIO.ProcessArchitecture} versions of these files to same directory as this exe file.",
+                            $"{ex.GetBaseException().Message}.
+
+Please copy {NativeFileIO.ProcessArchitecture} versions of these files to {API.DllPath} directory and try again.",
                             ex.GetBaseException().GetType().Name,
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error)
