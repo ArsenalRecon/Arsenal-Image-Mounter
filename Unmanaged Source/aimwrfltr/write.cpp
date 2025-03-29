@@ -324,8 +324,8 @@ PUCHAR BlockBuffer)
 
         if (block_address != DIFF_BLOCK_UNALLOCATED &&
             DeviceExtension->DiffDeviceObject->SectorSize != 0 &&
-            ((page_offset_this_iter & block_address) != 0 ||
-                ((bytes_this_iter & block_address) != 0)))
+            ((page_offset_this_iter & sector_mask) != 0 ||
+                ((bytes_this_iter & sector_mask) != 0)))
         {
             KdPrint(("AIMWrFltrDeferredWrite: Requested writing 0x%X bytes at 0x%I64X requires alignment.\n",
                 bytes_this_iter, ((LONGLONG)block_address <<
