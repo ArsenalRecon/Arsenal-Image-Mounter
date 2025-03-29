@@ -67,4 +67,4 @@ for %%d in (Win8.1) do if exist "..\dist\%1\%%d" (
 
 endlocal
 
-cd ..\dist\%1
+pushd ..\dist\%1
