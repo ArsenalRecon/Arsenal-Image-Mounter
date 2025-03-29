@@ -320,15 +320,17 @@ PUCHAR BlockBuffer)
         // If requested I/O position or length are not aligned to sector
         // size of diff device, we need to fill parts of buffer before and
         // after new data with old data from existing diff block
+        ULONG sector_mask = (ULONG)(DeviceExtension->DiffDeviceObject->SectorSize - 1);
+
         if (block_address != DIFF_BLOCK_UNALLOCATED &&
-            ((page_offset_this_iter & (DeviceExtension->DiffDeviceObject->SectorSize - 1)) != 0 ||
-                ((bytes_this_iter & (DeviceExtension->DiffDeviceObject->SectorSize - 1)) != 0)))
+            DeviceExtension->DiffDeviceObject->SectorSize != 0 &&
+            ((page_offset_this_iter & block_address) != 0 ||
+                ((bytes_this_iter & block_address) != 0)))
         {
             KdPrint(("AIMWrFltrDeferredWrite: Requested writing 0x%X bytes at 0x%I64X requires alignment.\n",
                 bytes_this_iter, ((LONGLONG)block_address <<
                     DIFF_BLOCK_BITS) + page_offset_this_iter));
 
-            ULONG sector_mask = (ULONG)(DeviceExtension->DiffDeviceObject->SectorSize - 1);
             ULONG new_page_offset_this_iter = page_offset_this_iter & ~sector_mask;
             ULONG new_bytes_this_iter = ((page_offset_this_iter - new_page_offset_this_iter) +
                 bytes_this_iter + sector_mask) & ~sector_mask;

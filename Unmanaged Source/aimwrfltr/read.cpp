@@ -545,7 +545,8 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             {
                 if (current_irql > PASSIVE_LEVEL)
                 {
-                    KdPrint(("AIMWrFltrRead: Read from diff at IRQL=%i. Deferring to worker thread.\n", current_irql));
+                    KdPrint(("AIMWrFltrRead: Read from diff at IRQL=%i. Deferring to worker thread. %u items in queue.\n",
+                        current_irql, items_in_queue));
                 }
 
                 PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedForwardIrp(lower_device, lower_irp);
