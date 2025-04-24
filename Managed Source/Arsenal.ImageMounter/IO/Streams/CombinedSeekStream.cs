@@ -360,7 +360,7 @@ public class CombinedSeekStream : CompatibilityStream
     public override void Flush() => current.Value?.Flush();
 
     public override Task FlushAsync(CancellationToken cancellationToken)
-        => current.Value?.FlushAsync(cancellationToken) ?? Task.FromResult(0);
+        => current.Value?.FlushAsync(cancellationToken) ?? Task.CompletedTask;
 
     private long position;
 

@@ -1410,7 +1410,7 @@ public static partial class NativeFileIO
 
         for (var i = 1; i <= 15; i++)
         {
-            volumes = EnumerateDiskVolumes(devicepath).ToArray();
+            volumes = [.. EnumerateDiskVolumes(devicepath)];
 
             Trace.WriteLine($"Found {volumes.Length} partitions detected by Mount Manager out of {partitioncount}.");
 
@@ -1508,7 +1508,7 @@ public static partial class NativeFileIO
 
         for (var i = 1; i <= 15; i++)
         {
-            volumes = EnumerateDiskVolumes(devicepath).ToArray();
+            volumes = [.. EnumerateDiskVolumes(devicepath)];
 
             Trace.WriteLine($"Found {volumes.Length} partitions detected by Mount Manager out of {partitioncount}.");
 
@@ -1784,9 +1784,7 @@ Currently, the following application has files open on this volume:
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            in_use_apps = EnumerateProcessesHoldingFileHandle(includeProcessNames: null, ExcludeProcessesFromHandleSearch, dev_paths)
-                .Take(10)
-                .ToArray();
+            in_use_apps = [.. EnumerateProcessesHoldingFileHandle(includeProcessNames: null, ExcludeProcessesFromHandleSearch, dev_paths).Take(10)];
 
             if (in_use_apps.Length == 0)
             {

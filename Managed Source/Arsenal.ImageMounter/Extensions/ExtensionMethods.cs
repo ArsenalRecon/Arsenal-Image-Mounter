@@ -89,27 +89,4 @@ public static class ExtensionMethods
                 Trace.WriteLine($"Exception in {instance.GetType().FullName}.QueueDispose: {ex}");
             }
         });
-
-    /// <summary>
-    /// Creates a string with formatted values of all members of an object.
-    /// </summary>
-    /// <param name="o">Object</param>
-    /// <returns>Formatted string</returns>
-    public static string ToMembersString(this object? o)
-        => o is null
-        ? "{null}"
-        : typeof(Reflection.MembersStringParser<>)
-            .MakeGenericType(o.GetType())
-            .GetMethod("ToString", BindingFlags.Public | BindingFlags.Static)?
-            .Invoke(null, [o]) as string ?? "(null)";
-
-    /// <summary>
-    /// Creates a string with formatted values of all members of an object.
-    /// </summary>
-    /// <typeparam name="T">Type of object to check for members</typeparam>
-    /// <param name="o">Object</param>
-    /// <returns>Formatted string</returns>
-    public static string ToMembersString<T>(this T o) where T : struct
-        => Reflection.MembersStringParser<T>.ToString(o);
-
 }
