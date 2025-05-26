@@ -1046,7 +1046,7 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION pLUExt)
             status));
 
         LARGE_INTEGER interval;
-        interval.QuadPart = -10000L * 20;    // 20 ms
+        interval.QuadPart = -10000LL * 20;    // 20 ms
         
         KeDelayExecutionThread(KernelMode, FALSE, &interval);
     }
@@ -1161,7 +1161,7 @@ __in __deref PETHREAD ClientThread)
 
     // Cannot create >= 2 GB VM disk in 32 bit version.
 #ifndef _WIN64
-    if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM) &
+    if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM) &&
         ((CreateData->Fields.DiskSize.QuadPart & 0xFFFFFFFF80000000) !=
         0))
     {
@@ -1581,27 +1581,31 @@ __in __deref PETHREAD ClientThread)
         if (IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_PROXY)
         {
             if (IMSCSI_PROXY_TYPE(CreateData->Fields.Flags) == IMSCSI_PROXY_TYPE_SHM)
+            {
                 status =
-                ZwMapViewOfSection(file_handle,
-                NtCurrentProcess(),
-                (PVOID*)&proxy.shared_memory,
-                0,
-                0,
-                NULL,
-                &proxy.shared_memory_size,
-                ViewUnmap,
-                0,
-                PAGE_READWRITE);
+                    ZwMapViewOfSection(file_handle,
+                        NtCurrentProcess(),
+                        (PVOID*)&proxy.shared_memory,
+                        0,
+                        0,
+                        NULL,
+                        &proxy.shared_memory_size,
+                        ViewUnmap,
+                        0,
+                        PAGE_READWRITE);
+            }
             else
+            {
                 status =
-                ObReferenceObjectByHandle(file_handle,
-                FILE_READ_ATTRIBUTES |
-                FILE_READ_DATA |
-                FILE_WRITE_DATA,
-                *IoFileObjectType,
-                KernelMode,
-                (PVOID*)&proxy.device,
-                NULL);
+                    ObReferenceObjectByHandle(file_handle,
+                        FILE_READ_ATTRIBUTES |
+                        FILE_READ_DATA |
+                        FILE_WRITE_DATA,
+                        *IoFileObjectType,
+                        KernelMode,
+                        (PVOID*)&proxy.device,
+                        NULL);
+            }
 
             if (!NT_SUCCESS(status))
             {
@@ -2181,9 +2185,13 @@ __in __deref PETHREAD ClientThread)
     // AWEAlloc disk.
     if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &&
         (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_AWEALLOC))
+    {
         pLUExt->AWEAllocDisk = TRUE;
+    }
     else
+    {
         pLUExt->AWEAllocDisk = FALSE;
+    }
 
     pLUExt->ImageBuffer = image_buffer;
     pLUExt->ImageFile = file_handle;
@@ -2195,7 +2203,9 @@ __in __deref PETHREAD ClientThread)
         pLUExt->UseProxy = TRUE;
     }
     else
+    {
         pLUExt->UseProxy = FALSE;
+    }
 
     // If we are going to fake a disk signature, prepare that fake
     // disk sig here.
@@ -2212,8 +2222,7 @@ __in __deref PETHREAD ClientThread)
         pLUExt->ProvisioningType = PROVISIONING_TYPE_THIN;
     }
 
-    if ((pLUExt->FileObject == NULL) &&
-        (!pLUExt->AWEAllocDisk) &&
+    if ((!pLUExt->AWEAllocDisk) &&
         (!pLUExt->VMDisk) &&
         ((!pLUExt->UseProxy) ||
             proxy_supports_unmap))
@@ -2221,8 +2230,7 @@ __in __deref PETHREAD ClientThread)
         pLUExt->SupportsUnmap = TRUE;
     }
 
-    if ((pLUExt->FileObject == NULL) &&
-        (!pLUExt->AWEAllocDisk) &&
+    if ((!pLUExt->AWEAllocDisk) &&
         (!pLUExt->VMDisk) &&
         ((!pLUExt->UseProxy) ||
             proxy_supports_zero))
