@@ -708,7 +708,7 @@ __inout __deref PKIRQL LowestAssumedIrql
 
         if (request == NULL)
         {
-            LONG was_pending = _InterlockedExchangeAdd((volatile LONG*)&pHBAExt->WorkItems, -done);
+            LONG was_pending = InterlockedExchangeAdd((volatile LONG*)&pHBAExt->WorkItems, -done);
             KdPrint2(("PhDskMnt::ImScsiCompletePendingSrbs finished.\n"));
             return was_pending - done;
         }
@@ -780,7 +780,7 @@ __inout __deref     PSCSI_REQUEST_BLOCK  pSrb
 
     ImScsiCompletePendingSrbs(pHBAExt, &lowest_assumed_irql);
 
-    _InterlockedExchangeAdd((volatile LONG *)&pHBAExt->SRBsSeen, 1);   // Bump count of SRBs encountered.
+    InterlockedIncrement((volatile LONG *)&pHBAExt->SRBsSeen);   // Bump count of SRBs encountered.
 
     // Next, if true, will cause port driver to remove the associated LUNs if, for example, devmgmt.msc is asked "scan for hardware changes."
     //if (pHBAExt->bDontReport)
@@ -866,7 +866,7 @@ __inout __deref     PSCSI_REQUEST_BLOCK  pSrb
     else
     {
 #ifdef USE_SCSIPORT
-        _InterlockedExchangeAdd((volatile LONG*)&pHBAExt->WorkItems, 1);
+        InterlockedIncrement((volatile LONG*)&pHBAExt->WorkItems);
 
         KdPrint2(("PhDskMnt::MpHwStartIo sending 'RequestTimerCall' and 'NextLuRequest' to ScsiPort.\n"));
         ScsiPortNotification(RequestTimerCall, pHBAExt, MpHwTimer, (ULONG)1);

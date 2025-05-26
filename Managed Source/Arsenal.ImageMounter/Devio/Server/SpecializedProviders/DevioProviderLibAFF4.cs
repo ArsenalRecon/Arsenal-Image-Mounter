@@ -26,7 +26,7 @@ public unsafe partial class DevioProviderLibAFF4(string filename)
         dllopen,
         filename,
         readOnly: true,
-        () => new IOException(geterrormessage(getlasterrorcode())))
+        get_last_error: () => new IOException(geterrormessage(getlasterrorcode())))
 {
 #if NET7_0_OR_GREATER
     [LibraryImport("libaff4_devio")]

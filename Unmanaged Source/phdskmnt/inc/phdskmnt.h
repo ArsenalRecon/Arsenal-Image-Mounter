@@ -68,6 +68,7 @@ extern "C" {
 #ifdef USE_STORPORT
 #include <storport.h>
 #endif
+
 #include <ntdddisk.h>
 #include <devioctl.h>
 #include <ntddscsi.h>

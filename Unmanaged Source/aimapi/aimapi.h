@@ -33,21 +33,29 @@ extern "C" {
 
 #pragma region Manage behaviour of this API
 
+    typedef ULONGLONG
+        WINAPI
+        fImScsiGetAPIFlags();
+
     /**
     Get behaviour flags for API.
     */
-    AIMAPI_API ULONGLONG
+    AIMAPI_API fImScsiGetAPIFlags ImScsiGetAPIFlags;
+
+    typedef ULONGLONG
         WINAPI
-        ImScsiGetAPIFlags();
+        fImScsiSetAPIFlags(ULONGLONG Flags);
 
     /**
     Set behaviour flags for API. Returns previously defined flag field.
 
     Flags        New flags value to set.
     */
-    AIMAPI_API ULONGLONG
+    AIMAPI_API fImScsiSetAPIFlags ImScsiSetAPIFlags;
+
+    typedef BOOL
         WINAPI
-        ImScsiSetAPIFlags(ULONGLONG Flags);
+        fImScsiCheckDriverVersion(IN HANDLE DeviceHandle);
 
     /**
     Check that the user-mode library and miniport driver version matches for
@@ -55,22 +63,29 @@ extern "C" {
 
     DeviceHandle Handle to an open virtual disk or SCSI adapter.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiCheckDriverVersion ImScsiCheckDriverVersion;
+
+    typedef BOOL
         WINAPI
-        ImScsiCheckDriverVersion(IN HANDLE DeviceHandle);
+        fImScsiGetVersion(IN OUT PULONG LibraryVersion OPTIONAL,
+            IN OUT PULONG DriverVersion OPTIONAL);
 
     /**
     Retrieves the version numbers of the user-mode API library and the kernel-
     mode driver.
     */
-    AIMAPI_API BOOL
-        WINAPI
-        ImScsiGetVersion(IN OUT PULONG LibraryVersion OPTIONAL CPP_DEF_ZERO,
-        IN OUT PULONG DriverVersion OPTIONAL CPP_DEF_ZERO);
+    AIMAPI_API fImScsiGetVersion ImScsiGetVersion;
 
 #pragma endregion
 
 #pragma region Manage virtual disks
+
+    typedef BOOL
+        WINAPI
+        fImScsiGetDeviceList(IN ULONG ListLength,
+            IN HANDLE Adapter,
+            OUT PDEVICE_NUMBER DeviceList,
+            OUT PULONG NumberOfDevices);
 
     /**
     Builds a list of currently existing virtual disks.
@@ -101,12 +116,13 @@ extern "C" {
     parameter. That value indicates how large the buffer needs to be to
     successfully store all items.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiGetDeviceList ImScsiGetDeviceList;
+
+    typedef BOOL
         WINAPI
-        ImScsiGetDeviceList(IN ULONG ListLength,
-        IN HANDLE Adapter,
-        OUT PDEVICE_NUMBER DeviceList,
-        OUT PULONG NumberOfDevices);
+        fImScsiQueryDevice(IN HANDLE Adapter,
+            IN OUT PIMSCSI_DEVICE_CONFIGURATION Config,
+            IN ULONG ConfigSize);
 
     /**
     This function sends an SMP_IMSCSI_QUERY_DEVICE control code to an existing
@@ -123,11 +139,21 @@ extern "C" {
     large enough to hold the entire IMSCSI_DEVICE_CONFIGURATION
     structure.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiQueryDevice ImScsiQueryDevice;
+
+    typedef BOOL
         WINAPI
-        ImScsiQueryDevice(IN HANDLE Adapter,
-        IN OUT PIMSCSI_DEVICE_CONFIGURATION Config,
-        IN ULONG ConfigSize);
+        fImScsiCreateDevice(IN HWND hWndStatusText OPTIONAL,
+            IN HANDLE Adapter OPTIONAL,
+            IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
+            IN OUT PLARGE_INTEGER DiskSize OPTIONAL,
+            IN OUT LPDWORD BytesPerSector OPTIONAL,
+            IN PLARGE_INTEGER ImageOffset OPTIONAL,
+            IN OUT LPDWORD Flags OPTIONAL,
+            IN LPCWSTR FileName OPTIONAL,
+            IN BOOL NativePath,
+            IN LPWSTR MountPoint OPTIONAL,
+            IN BOOL CreatePartition);
 
     /**
     This function creates a new virtual disk device.
@@ -199,6 +225,21 @@ extern "C" {
         IN BOOL NativePath CPP_DEF_ZERO,
         IN LPWSTR MountPoint OPTIONAL CPP_DEF_ZERO,
         IN BOOL CreatePartition CPP_DEF_ZERO);
+
+    typedef BOOL
+        WINAPI
+        fImScsiCreateDeviceEx(IN HWND hWndStatusText OPTIONAL,
+            IN HANDLE Adapter OPTIONAL,
+            IN OUT PDEVICE_NUMBER DeviceNumber OPTIONAL,
+            IN OUT PLARGE_INTEGER DiskSize OPTIONAL,
+            IN OUT LPDWORD BytesPerSector OPTIONAL,
+            IN PLARGE_INTEGER ImageOffset OPTIONAL,
+            IN OUT LPDWORD Flags OPTIONAL,
+            IN LPCWSTR FileName OPTIONAL,
+            IN LPCWSTR WriteOverlayFileName OPTIONAL,
+            IN BOOL NativePath,
+            IN LPWSTR MountPoint OPTIONAL,
+            IN BOOL CreatePartition);
 
     /**
     This function creates a new virtual disk device.
@@ -288,6 +329,12 @@ extern "C" {
             IN LPWSTR MountPoint OPTIONAL CPP_DEF_ZERO,
             IN BOOL CreatePartition CPP_DEF_ZERO);
 
+    typedef BOOL
+        WINAPI
+        fImScsiRemoveDeviceByNumber(IN HWND hWndStatusText OPTIONAL,
+            IN HANDLE Adapter,
+            IN DEVICE_NUMBER DeviceNumber);
+
     /**
     This function removes (unmounts) an existing virtual disk device.
 
@@ -298,11 +345,12 @@ extern "C" {
 
     DeviceNumber    Number of the device to remove.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiRemoveDeviceByNumber ImScsiRemoveDeviceByNumber;
+
+    typedef BOOL
         WINAPI
-        ImScsiRemoveDeviceByNumber(IN HWND hWndStatusText OPTIONAL,
-        IN HANDLE Adapter,
-        IN DEVICE_NUMBER DeviceNumber);
+        fImScsiRemoveDeviceByMountPoint(IN HWND hWndStatusText OPTIONAL,
+            IN LPCWSTR MountPoint);
 
     /**
     This function removes (unmounts) an existing virtual disk device.
@@ -315,10 +363,15 @@ extern "C" {
     MountPoint      Drive letter of the device to remove. It can be specified
     on the form F: or F:\.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiRemoveDeviceByMountPoint ImScsiRemoveDeviceByMountPoint;
+
+    typedef BOOL
         WINAPI
-        ImScsiRemoveDeviceByMountPoint(IN HWND hWndStatusText OPTIONAL,
-        IN LPCWSTR MountPoint);
+        fImScsiChangeFlags(IN HWND hWndStatusText OPTIONAL,
+            IN HANDLE Adapter,
+            IN DEVICE_NUMBER DeviceNumber OPTIONAL,
+            IN DWORD FlagsToChange,
+            IN DWORD Flags);
 
     /**
     This function changes the device characteristics of an existing
@@ -348,6 +401,13 @@ extern "C" {
         IN DWORD FlagsToChange CPP_DEF_ZERO,
         IN DWORD Flags CPP_DEF_ZERO);
 
+    typedef BOOL
+        WINAPI
+        fImScsiExtendDevice(IN HWND hWndStatusText OPTIONAL,
+            IN HANDLE Adapter,
+            IN DEVICE_NUMBER DeviceNumber,
+            IN CONST PLARGE_INTEGER ExtendSize);
+
     /**
     This function extends the size of an existing virtual disk device.
 
@@ -361,12 +421,11 @@ extern "C" {
     ExtendSize      A pointer to a LARGE_INTEGER structure that specifies the
     number of bytes to extend the device.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiExtendDevice ImScsiExtendDevice;
+
+    typedef BOOL
         WINAPI
-        ImScsiExtendDevice(IN HWND hWndStatusText OPTIONAL,
-        IN HANDLE Adapter,
-        IN DEVICE_NUMBER DeviceNumber,
-        IN CONST PLARGE_INTEGER ExtendSize);
+        fImScsiSaveRegistrySettings(PIMSCSI_DEVICE_CONFIGURATION Config);
 
     /**
     Adds registry settings for creating a virtual disk at system startup (or
@@ -379,9 +438,11 @@ extern "C" {
     contains device creation settings to save.
 
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiSaveRegistrySettings ImScsiSaveRegistrySettings;
+
+    typedef BOOL
         WINAPI
-        ImScsiSaveRegistrySettings(PIMSCSI_DEVICE_CONFIGURATION Config);
+        fImScsiRemoveRegistrySettings(DEVICE_NUMBER DeviceNumber);
 
     /**
     Remove registry settings for creating a virtual disk at system startup (or
@@ -392,9 +453,11 @@ extern "C" {
 
     DeviceNumber    Device number specified in registry settings.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiRemoveRegistrySettings ImScsiRemoveRegistrySettings;
+
+    typedef BOOL
         WINAPI
-        ImScsiRemoveRegistrySettings(DEVICE_NUMBER DeviceNumber);
+        fImScsiGetRegistryAutoLoadDevices(OUT LPDWORD LoadDevicesValue);
 
     /**
     Retrieves number of auto-loading devices at system startup, or when driver
@@ -407,31 +470,22 @@ extern "C" {
     LoadDevicesValue
     Pointer to variable that receives the value.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiGetRegistryAutoLoadDevices ImScsiGetRegistryAutoLoadDevices;
+
+    typedef BOOL
         WINAPI
-        ImScsiGetRegistryAutoLoadDevices(OUT LPDWORD LoadDevicesValue);
+        fImScsiVolumeUsesDisk(IN HANDLE Volume,
+            IN DWORD DiskNumber);
 
     /**
     Checks whether a disk volume has any extents on the disk with specified
     physical disk number.
     */
-    AIMAPI_API
-        BOOL
-        WINAPI
-        ImScsiVolumeUsesDisk(IN HANDLE Volume,
-            IN DWORD DiskNumber);
+    AIMAPI_API fImScsiVolumeUsesDisk ImScsiVolumeUsesDisk;
 
-    /**
-    Returns a list of Arsenal Image Mounter DEVICE_NUMBER items that
-    correspond to each disk in the set of extents for a given disk volume.
-
-    This function now only returns devices that correspond to devices mounted
-    by an Arsenal Image Mounter virtual SCSI adapter.
-    */
-    AIMAPI_API
-        BOOL
+    typedef BOOL
         WINAPI
-        ImScsiGetDeviceNumbersForVolume(IN HANDLE Volume,
+        fImScsiGetDeviceNumbersForVolume(IN HANDLE Volume,
             IN DWORD PortNumber,
             OUT PDEVICE_NUMBER DeviceNumbers,
             IN DWORD NumberOfItems,
@@ -444,14 +498,30 @@ extern "C" {
     This function now only returns devices that correspond to devices mounted
     by an Arsenal Image Mounter virtual SCSI adapter.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiGetDeviceNumbersForVolume ImScsiGetDeviceNumbersForVolume;
+
+    typedef BOOL
         WINAPI
-        ImScsiGetDeviceNumbersForVolumeEx(IN HANDLE Volume,
+        fImScsiGetDeviceNumbersForVolumeEx(IN HANDLE Volume,
             OUT PDEVICE_NUMBER DeviceNumbers,
             OUT LPBYTE PortNumbers,
             IN DWORD NumberOfItems,
             OUT LPDWORD NeededNumberOfItems);
+
+    /**
+    Returns a list of Arsenal Image Mounter DEVICE_NUMBER items that
+    correspond to each disk in the set of extents for a given disk volume.
+
+    This function now only returns devices that correspond to devices mounted
+    by an Arsenal Image Mounter virtual SCSI adapter.
+    */
+    AIMAPI_API fImScsiGetDeviceNumbersForVolumeEx ImScsiGetDeviceNumbersForVolumeEx;
+
+    typedef HANDLE
+        WINAPI
+        fImScsiOpenDiskByDeviceNumber(IN DEVICE_NUMBER DeviceNumber,
+            IN DWORD PortNumber,
+            OUT LPDWORD DiskNumber OPTIONAL);
 
     /**
     Opens the PhysicalDrive disk object that corresponds to a given
@@ -473,6 +543,12 @@ extern "C" {
             IN DWORD PortNumber,
             OUT LPDWORD DiskNumber OPTIONAL CPP_DEF_ZERO);
 
+    typedef HANDLE
+        WINAPI
+        fImScsiOpenDiskByDeviceNumberEx(IN DEVICE_NUMBER DeviceNumber,
+            IN OUT LPBYTE PortNumber,
+            OUT PSTORAGE_DEVICE_NUMBER DiskNumber OPTIONAL);
+
     /**
     Opens the PhysicalDrive disk object that corresponds to a given
     DEVICE_NUMBER connected to specified Arsenal Image Mounter virtual
@@ -493,18 +569,9 @@ extern "C" {
             IN OUT LPBYTE PortNumber,
             OUT PSTORAGE_DEVICE_NUMBER DiskNumber OPTIONAL CPP_DEF_ZERO);
 
-    /**
-    Returns Arsenal Image Mounter DEVICE_NUMBER and SCSI port number
-    for an open physical disk ("PhysicalDrive" object).
-
-    This function now checks that the opened disk really belongs to an
-    Arsenal Image Mounter virtual SCSI adapter by internally calling
-    ImScsiOpenDiskByDeviceNumber.
-    */
-    AIMAPI_API
-        BOOL
+    typedef BOOL
         WINAPI
-        ImScsiGetDeviceNumberForDisk(HANDLE Device,
+        fImScsiGetDeviceNumberForDisk(HANDLE Device,
             PDEVICE_NUMBER DeviceNumber,
             LPDWORD PortNumber);
 
@@ -516,16 +583,31 @@ extern "C" {
     Arsenal Image Mounter virtual SCSI adapter by internally calling
     ImScsiOpenDiskByDeviceNumber.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiGetDeviceNumberForDisk ImScsiGetDeviceNumberForDisk;
+
+    typedef BOOL
         WINAPI
-        ImScsiGetDeviceNumberForDiskEx(HANDLE Device,
+        fImScsiGetDeviceNumberForDiskEx(HANDLE Device,
             PDEVICE_NUMBER DeviceNumber,
             LPBYTE PortNumber);
+
+    /**
+    Returns Arsenal Image Mounter DEVICE_NUMBER and SCSI port number
+    for an open physical disk ("PhysicalDrive" object).
+
+    This function now checks that the opened disk really belongs to an
+    Arsenal Image Mounter virtual SCSI adapter by internally calling
+    ImScsiOpenDiskByDeviceNumber.
+    */
+    AIMAPI_API fImScsiGetDeviceNumberForDiskEx ImScsiGetDeviceNumberForDiskEx;
 
 #pragma endregion
 
 #pragma region Manage virtual SCSI adapter
+
+    typedef HANDLE
+        WINAPI
+        fImScsiOpenScsiAdapter(OUT LPBYTE PortNumber OPTIONAL);
 
     /**
     Finds Arsenal Image Mounter virtual SCSI adapter and opens it.
@@ -540,6 +622,10 @@ extern "C" {
         WINAPI
         ImScsiOpenScsiAdapter(OUT LPBYTE PortNumber OPTIONAL CPP_DEF_ZERO);
 
+    typedef HANDLE
+        WINAPI
+        fImScsiOpenScsiAdapterByScsiPortNumber(IN BYTE PortNumber);
+
     /**
     Opens an Arsenal Image Mounter virtual SCSI adapter with specified SCSI
     port number.
@@ -549,9 +635,7 @@ extern "C" {
 
     PortNumber      SCSI port number of virtual SCSI adapter to open.
     */
-    AIMAPI_API HANDLE
-        WINAPI
-        ImScsiOpenScsiAdapterByScsiPortNumber(IN BYTE PortNumber);
+    AIMAPI_API fImScsiOpenScsiAdapterByScsiPortNumber ImScsiOpenScsiAdapterByScsiPortNumber;
 
 #pragma endregion
 
@@ -559,17 +643,24 @@ extern "C" {
 
 #ifdef _NTDDSCSIH_
 
+    typedef BOOL
+        WINAPI
+        fImScsiGetScsiAddressForDisk(IN HANDLE Disk,
+            OUT PSCSI_ADDRESS ScsiAddress);
+
     /**
     Returns a SCSI_ADDRESS structure for an open physical disk object.
 
     This function does not check whether the disk is created by an
     Arsenal Image Mounter virtual SCSI adapter.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiGetScsiAddressForDisk ImScsiGetScsiAddressForDisk;
+
+    typedef BOOL
         WINAPI
-        ImScsiGetScsiAddressForDisk(IN HANDLE Disk,
-            OUT PSCSI_ADDRESS ScsiAddress);
+        fImScsiGetScsiAddressForDiskEx(IN HANDLE Disk,
+            OUT PSCSI_ADDRESS ScsiAddress,
+            OUT PSTORAGE_DEVICE_NUMBER DeviceNumber);
 
     /**
     Returns SCSI_ADDRESS and STORAGE_DEVICE_NUMBER structures for an open
@@ -578,12 +669,14 @@ extern "C" {
     This function does not check whether the disk is created by an
     Arsenal Image Mounter virtual SCSI adapter.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiGetScsiAddressForDiskEx ImScsiGetScsiAddressForDiskEx;
+
+    typedef BOOL
         WINAPI
-        ImScsiGetScsiAddressForDiskEx(IN HANDLE Disk,
-            OUT PSCSI_ADDRESS ScsiAddress,
-            OUT PSTORAGE_DEVICE_NUMBER DeviceNumber);
+        fImScsiGetScsiAddressesForVolume(IN HANDLE Volume,
+            OUT PSCSI_ADDRESS ScsiAddresses,
+            IN DWORD NumberOfItems,
+            OUT LPDWORD NeededNumberOfItems);
 
     /**
     Returns a list of SCSI_ADDRESS items that correspond to each disk in the
@@ -592,11 +685,13 @@ extern "C" {
     This function does not check whether the involved disks are created by an
     Arsenal Image Mounter virtual SCSI adapter.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiGetScsiAddressesForVolume ImScsiGetScsiAddressesForVolume;
+
+    typedef BOOL
         WINAPI
-        ImScsiGetScsiAddressesForVolume(IN HANDLE Volume,
+        fImScsiGetScsiAddressesForVolumeEx(IN HANDLE Volume,
             OUT PSCSI_ADDRESS ScsiAddresses,
+            OUT LPDWORD DiskNumbers,
             IN DWORD NumberOfItems,
             OUT LPDWORD NeededNumberOfItems);
 
@@ -608,14 +703,12 @@ extern "C" {
     This function does not check whether the involved disks are created by an
     Arsenal Image Mounter virtual SCSI adapter.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiGetScsiAddressesForVolumeEx ImScsiGetScsiAddressesForVolumeEx;
+
+    typedef HANDLE
         WINAPI
-        ImScsiGetScsiAddressesForVolumeEx(IN HANDLE Volume,
-            OUT PSCSI_ADDRESS ScsiAddresses,
-            OUT LPDWORD DiskNumbers,
-            IN DWORD NumberOfItems,
-            OUT LPDWORD NeededNumberOfItems);
+        fImScsiOpenDiskByScsiAddress(IN SCSI_ADDRESS ScsiAddress,
+            OUT LPDWORD DiskNumber OPTIONAL);
 
     /**
     Opens the PhysicalDrive disk object that corresponds to a given
@@ -630,6 +723,15 @@ extern "C" {
         WINAPI
         ImScsiOpenDiskByScsiAddress(IN SCSI_ADDRESS ScsiAddress,
         OUT LPDWORD DiskNumber OPTIONAL CPP_DEF_ZERO);
+
+    typedef BOOL
+        WINAPI
+        fImScsiDeviceIoControl(HANDLE Device,
+            DWORD ControlCode,
+            PSRB_IO_CONTROL SrbIoControl,
+            DWORD Size,
+            DWORD Timeout,
+            LPDWORD ReturnLength);
 
     /**
     Sends an SRB_IO_CONTROL to a SCSI miniport or SCSI miniport connected
@@ -654,14 +756,7 @@ extern "C" {
     many bytes of data are valid in the structure upon return form this
     function.
     */
-    AIMAPI_API BOOL
-        WINAPI
-        ImScsiDeviceIoControl(HANDLE Device,
-        DWORD ControlCode,
-        PSRB_IO_CONTROL SrbIoControl,
-        DWORD Size,
-        DWORD Timeout,
-        LPDWORD ReturnLength);
+    AIMAPI_API fImScsiDeviceIoControl ImScsiDeviceIoControl;
 
 #endif
 
@@ -669,37 +764,48 @@ extern "C" {
 
 #pragma region Driver setup API
 
+    typedef BOOL
+        WINAPI
+        fImScsiInstallDriver(IN LPWSTR SetupSource,
+            IN HWND OwnerWindow,
+            OUT LPBOOL RebootRequired OPTIONAL);
+
     /**
     This routine installs driver package from a specified directory with
     the driver setup files. Directory needs to contain the same directory tree
     as in official DriverSetup.zip file.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API BOOL
         WINAPI
         ImScsiInstallDriver(IN LPWSTR SetupSource,
         IN HWND OwnerWindow,
         OUT LPBOOL RebootRequired OPTIONAL CPP_DEF_ZERO);
+
+    typedef BOOL
+        WINAPI
+        fImScsiRemoveDevices(IN HWND OwnerWindow);
 
     /**
     This routine removes all device objects created by Arsenal Image Mounter
     driver. This should be called as part of uninstall process before calling
     ImScsiRemoveDriver.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiRemoveDevices ImScsiRemoveDevices;
+
+    typedef BOOL
         WINAPI
-        ImScsiRemoveDevices(IN HWND OwnerWindow);
+        fImScsiRemoveDriver(OUT LPBOOL RebootRequired OPTIONAL);
 
     /**
     This routine removes Arsenal Image Mounter driver and related files from
     current system. Always call ImScsiRemoveDevices first to prepare plug-and-
     play system for unloading the driver.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiRemoveDriver ImScsiRemoveDriver;
+
+    typedef BOOL
         WINAPI
-        ImScsiRemoveDriver(OUT LPBOOL RebootRequired OPTIONAL CPP_DEF_ZERO);
+        fImScsiRescanScsiAdapter();
 
     /**
     Rescans SCSI bus on currently installed Arsenal Image Mounter virtual SCSI
@@ -709,10 +815,11 @@ extern "C" {
     resume forwarding messages down to the Arsenal Image Mounter driver, in
     calls to open the adapter object fails.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API fImScsiRescanScsiAdapter ImScsiRescanScsiAdapter;
+
+    typedef HANDLE
         WINAPI
-        ImScsiRescanScsiAdapter();
+        fImScsiRescanScsiAdapterAsync(BOOL AsyncFlag);
 
     /**
     Same function as ImScsiRescanScsiAdapter but optionally works in
@@ -720,20 +827,25 @@ extern "C" {
     waited upon to find out when operation is complete. After wait finished,
     the returned event object needs to be closed by calling CloseHandle.
     */
-    AIMAPI_API
-        HANDLE
+    AIMAPI_API fImScsiRescanScsiAdapterAsync ImScsiRescanScsiAdapterAsync;
+
+    typedef DWORD
         WINAPI
-        ImScsiRescanScsiAdapterAsync(BOOL AsyncFlag);
+        fImScsiScanForHardwareChanges(IN LPWSTR rootid OPTIONAL,
+            IN DWORD flags OPTIONAL);
 
     /**
     Instructs plug-and-play system to re-enumerate devices under the specified
     rootid, or if rootid is NULL, the entire plug-and-play system.
     */
-    AIMAPI_API
-        DWORD
+    AIMAPI_API DWORD
         WINAPI
         ImScsiScanForHardwareChanges(IN LPWSTR rootid OPTIONAL CPP_DEF_ZERO,
         IN DWORD flags OPTIONAL CPP_DEF_ZERO);
+
+    typedef HANDLE
+        WINAPI
+        fImScsiScanForHardwareChangesAsync(BOOL AsyncFlag);
 
     /**
     Same function as ImScsiScanForHardwareChanges but optionally works in
@@ -741,10 +853,15 @@ extern "C" {
     waited upon to find out when operation is complete. After wait finished,
     the returned event object needs to be closed by calling CloseHandle.
     */
-    AIMAPI_API
-        HANDLE
+    AIMAPI_API HANDLE
         WINAPI
         ImScsiScanForHardwareChangesAsync(BOOL AsyncFlag);
+
+    typedef LPCWSTR
+        WINAPI
+        fImScsiGetKernelPlatformCode(
+            OUT LPBOOL SupportsStorPort OPTIONAL,
+            OUT LPBOOL RunningInWow64 OPTIONAL);
 
     /**
     Returns the platform identification string such as "Win8.1" that
@@ -753,12 +870,16 @@ extern "C" {
     current platform supports storport.sys drivers and if current process is
     running in WOW64 subsystem, that is a 32 bit process in 64 bit Windows.
     */
-    AIMAPI_API
-        LPCWSTR
+    AIMAPI_API LPCWSTR
         WINAPI
         ImScsiGetKernelPlatformCode(
         OUT LPBOOL SupportsStorPort OPTIONAL CPP_DEF_ZERO,
         OUT LPBOOL RunningInWow64 OPTIONAL CPP_DEF_ZERO);
+
+    typedef DWORD
+        WINAPI
+        fImScsiAllocateDeviceInstanceListForService(IN LPCWSTR service,
+            OUT LPWSTR* instances);
 
     /**
     Allocates a null character separated list of device ids created by
@@ -767,23 +888,20 @@ extern "C" {
     The allocated list can be freed by calling LocalFree when no longer
     needed.
     */
-    AIMAPI_API
-        DWORD
-        WINAPI
-        ImScsiAllocateDeviceInstanceListForService(IN LPCWSTR service,
-        OUT LPWSTR *instances);
+    AIMAPI_API fImScsiAllocateDeviceInstanceListForService ImScsiAllocateDeviceInstanceListForService;
 
 #ifdef _M_IX86
+
+    typedef BOOL
+        WINAPI
+        fImScsiSetupSetNonInteractiveMode(IN BOOL NotInteractiveFlag);
 
     /**
     Calls SetupSetNonInteractiveMode in setupapi.dll, if that function is
     available on the current platform. Otherwise, calls to this function are
     ignored.
     */
-    AIMAPI_API
-        BOOL
-        WINAPI
-        ImScsiSetupSetNonInteractiveMode(IN BOOL NotInteractiveFlag);
+    AIMAPI_API fImScsiSetupSetNonInteractiveMode ImScsiSetupSetNonInteractiveMode;
 
 #else
 
@@ -791,23 +909,33 @@ extern "C" {
 
 #endif
 
+    typedef BOOL
+        WINAPI
+        fImScsiInstallStorPortDriver(IN LPWSTR SetupSource,
+            IN HWND OwnerWindow,
+            OUT LPBOOL RebootRequired OPTIONAL);
+
     /**
     Installs driver on OS versions with storport.sys. Internally used by
     ImScsiInstallDriver. Call ImScsiInstallDriver from applications.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API BOOL
         WINAPI
         ImScsiInstallStorPortDriver(IN LPWSTR SetupSource,
         IN HWND OwnerWindow,
         OUT LPBOOL RebootRequired OPTIONAL CPP_DEF_ZERO);
 
+    typedef BOOL
+        WINAPI
+        fImScsiInstallScsiPortDriver(IN LPWSTR SetupSource,
+            IN HWND OwnerWindow,
+            OUT LPBOOL RebootRequired OPTIONAL);
+
     /**
     Installs driver on OS versions without storport.sys. Internally used by
     ImScsiInstallDriver. Call ImScsiInstallDriver from applications.
     */
-    AIMAPI_API
-        BOOL
+    AIMAPI_API BOOL
         WINAPI
         ImScsiInstallScsiPortDriver(IN LPWSTR SetupSource,
         IN HWND OwnerWindow,
@@ -818,40 +946,25 @@ extern "C" {
 #pragma region Misc
 
     typedef
-        BOOL WINAPI fGetVolumePathNamesForVolumeNameW(
-        __in   LPCWSTR lpszVolumeName,
-        __out  LPWSTR  lpszVolumePathNames,
-        __in   DWORD   cchBufferLength,
-        __out  PDWORD  lpcchReturnLength);
-
-    typedef fGetVolumePathNamesForVolumeNameW *
-        pfGetVolumePathNamesForVolumeNameW;
-
-    typedef
-        BOOL WINAPI fGetVolumePathNamesForVolumeNameA(
-        __in   LPCWSTR lpszVolumeName,
-        __out  LPWSTR  lpszVolumePathNames,
-        __in   DWORD   cchBufferLength,
-        __out  PDWORD  lpcchReturnLength);
-
-    typedef fGetVolumePathNamesForVolumeNameA *
-        pfGetVolumePathNamesForVolumeNameA;
-
-    typedef
         BOOL WINAPI fIsWow64Process(
         __in  HANDLE hProcess,
         __out PBOOL Wow64Process);
 
     typedef fIsWow64Process *pfIsWow64Process;
 
+    typedef SIZE_T
+        WINAPI
+        fImScsiGetMultiStringByteLength(LPCWSTR MultiString);
+
     /**
     Returns number of bytes used by a specified null character separated
     string where last string is terminated by double null characters.
     */
-    AIMAPI_API
-        SIZE_T
+    AIMAPI_API fImScsiGetMultiStringByteLength ImScsiGetMultiStringByteLength;
+
+    typedef BOOL
         WINAPI
-        ImScsiGetMultiStringByteLength(LPCWSTR MultiString);
+        fImScsiGetOSVersion(__inout __deref POSVERSIONINFOW lpVersionInformation);
 
     /**
     Works like GetVersionEx Win32 API function, but returns true Windows
@@ -860,9 +973,25 @@ extern "C" {
     See documentation for Win32 GetVersionEx for more information about
     parameters and return values.
     */
-    AIMAPI_API BOOL
-        WINAPI
-        ImScsiGetOSVersion(__inout __deref POSVERSIONINFOW lpVersionInformation);
+    AIMAPI_API fImScsiGetOSVersion ImScsiGetOSVersion;
+
+    typedef
+        BOOL WINAPI fGetVolumePathNamesForVolumeNameW(
+            __in   LPCWSTR lpszVolumeName,
+            __out  LPWSTR  lpszVolumePathNames,
+            __in   DWORD   cchBufferLength,
+            __out  PDWORD  lpcchReturnLength);
+
+    typedef fGetVolumePathNamesForVolumeNameW* pfGetVolumePathNamesForVolumeNameW;
+
+    typedef
+        BOOL WINAPI fGetVolumePathNamesForVolumeNameA(
+            __in   LPCWSTR lpszVolumeName,
+            __out  LPWSTR  lpszVolumePathNames,
+            __in   DWORD   cchBufferLength,
+            __out  PDWORD  lpcchReturnLength);
+
+    typedef fGetVolumePathNamesForVolumeNameA* pfGetVolumePathNamesForVolumeNameA;
 
 #ifdef _M_IX86
 
@@ -871,9 +1000,7 @@ extern "C" {
     function is available on the current platform. Otherwise an internal
     implementation of this routine is called to provide similar functionality.
     */
-    AIMAPI_API
-        fGetVolumePathNamesForVolumeNameW
-        ImScsiGetVolumePathNamesForVolumeName;
+    AIMAPI_API fGetVolumePathNamesForVolumeNameW ImScsiGetVolumePathNamesForVolumeName;
 
 #else
 
@@ -889,23 +1016,27 @@ extern "C" {
     Callback function defined by application to receive debug messages from
     functions in aimapi.dll.
     */
-    typedef
-        VOID
+    typedef VOID
         WINAPI
         fImScsiDebugMessageCallback(LPVOID Context,
-        LPWSTR DebugMessage);
+            LPWSTR DebugMessage);
     
     typedef fImScsiDebugMessageCallback *pfImScsiDebugMessageCallback;
+
+    typedef VOID
+        WINAPI
+        fImScsiSetDebugMessageCallback(LPVOID Context,
+            pfImScsiDebugMessageCallback DebugMessageCallback);
 
     /**
     Registers an application provided callback function for receiving debug
     messages from functions in aimapi.dll.
     */
-    AIMAPI_API
-        VOID
-        WINAPI
-        ImScsiSetDebugMessageCallback(LPVOID Context,
-        pfImScsiDebugMessageCallback DebugMessageCallback);
+    AIMAPI_API fImScsiSetDebugMessageCallback ImScsiSetDebugMessageCallback;
+
+    typedef VOID
+        CDECL
+        fImScsiDebugMessage(LPCWSTR FormatString, ...);
 
     /**
     Sends a debug message to function specified in an earlier call to
@@ -914,17 +1045,21 @@ extern "C" {
     This function internally calls FormatMessage Win32 API, so FormatString
     parameter must follow specification for that API function.
     */
-    AIMAPI_API
-        VOID
-        CDECL
-        ImScsiDebugMessage(LPCWSTR FormatString, ...);
+    AIMAPI_API fImScsiDebugMessage ImScsiDebugMessage;
+
+    typedef VOID
+        WINAPI
+        fImScsiFlushWindowMessages(HWND hWnd);
 
     /**
     Synchronously flush Windows message queue to make GUI components responsive.
     */
-    AIMAPI_API VOID
+    AIMAPI_API fImScsiFlushWindowMessages ImScsiFlushWindowMessages;
+
+    typedef HANDLE
         WINAPI
-        ImScsiFlushWindowMessages(HWND hWnd);
+        fImScsiOpenDeviceByName(__in LPCWSTR FileName,
+            IN DWORD AccessMode);
 
     /**
     Opens a device object in the kernel object namespace.
@@ -934,9 +1069,11 @@ extern "C" {
 
     AccessMode   Access mode to request.
     */
-    AIMAPI_API HANDLE
+    AIMAPI_API fImScsiOpenDeviceByName ImScsiOpenDeviceByName;
+
+    typedef HANDLE
         WINAPI
-        ImScsiOpenDeviceByName(__in LPCWSTR FileName,
+        fImScsiOpenDeviceByMountPoint(__in LPCWSTR MountPoint,
             IN DWORD AccessMode);
 
     /**
@@ -946,26 +1083,31 @@ extern "C" {
 
     AccessMode   Access mode to request to the target device.
     */
-    AIMAPI_API HANDLE
+    AIMAPI_API fImScsiOpenDeviceByMountPoint ImScsiOpenDeviceByMountPoint;
+
+    typedef BOOL
         WINAPI
-        ImScsiOpenDeviceByMountPoint(__in LPCWSTR MountPoint,
-            IN DWORD AccessMode);
+        fImScsiStartService(LPWSTR ServiceName);
 
     /**
     Starts a Win32 service or loads a kernel module or driver.
 
     ServiceName  Key name of the service or driver.
     */
-    AIMAPI_API BOOL
+    AIMAPI_API fImScsiStartService ImScsiStartService;
+
+    typedef WCHAR
         WINAPI
-        ImScsiStartService(LPWSTR ServiceName);
+        fImScsiFindFreeDriveLetter();
 
     /**
     Returns the first free drive letter in the range D-Z.
     */
-    AIMAPI_API WCHAR
+    AIMAPI_API fImScsiFindFreeDriveLetter ImScsiFindFreeDriveLetter;
+
+    typedef BOOL
         WINAPI
-        ImScsiFindFreeDriveLetter();
+        fImScsiNotifyRemovePending(WCHAR DriveLetter);
 
     /*
     Notify Explorer and other shell components that a drive is about to be
@@ -974,33 +1116,44 @@ extern "C" {
     DriveLetter
     Drive letter.
     */
-    AIMAPI_API BOOL
-        WINAPI
-        ImScsiNotifyRemovePending(WCHAR DriveLetter);
+    AIMAPI_API fImScsiNotifyRemovePending ImScsiNotifyRemovePending;
 
-    AIMAPI_API LPWSTR
+    typedef LPWSTR
         CDECL
-        ImScsiAllocPrintF(LPCWSTR lpMessage, ...);
+        fImScsiAllocPrintF(LPCWSTR lpMessage, ...);
 
-    AIMAPI_API LPSTR
+    AIMAPI_API fImScsiAllocPrintF ImScsiAllocPrintF;
+
+    typedef LPSTR
         CDECL
-        ImScsiAllocPrintFA(LPCSTR lpMessage, ...);
+        fImScsiAllocPrintFA(LPCSTR lpMessage, ...);
 
-    AIMAPI_API int
+    AIMAPI_API fImScsiAllocPrintFA ImScsiAllocPrintFA;
+
+    typedef int
         WINAPI
-        ImScsiConsoleMessageA(
+        fImScsiConsoleMessageA(
             HWND hWnd,
             LPCSTR lpText,
             LPCSTR lpCaption,
             UINT uType);
 
-    AIMAPI_API int
+    AIMAPI_API fImScsiConsoleMessageA ImScsiConsoleMessageA;
+
+    typedef int
         WINAPI
-        ImScsiConsoleMessageW(
+        fImScsiConsoleMessageW(
             HWND hWnd,
             LPCWSTR lpText,
             LPCWSTR lpCaption,
             UINT uType);
+
+    AIMAPI_API fImScsiConsoleMessageW ImScsiConsoleMessageW;
+
+    typedef BOOL
+        WINAPI
+        fImScsiGetOffsetByFileExt(IN LPCWSTR ImageFile,
+            IN OUT PLARGE_INTEGER Offset);
 
     /**
     Returns the offset in bytes to actual disk image data for some known
@@ -1014,10 +1167,7 @@ extern "C" {
 
     Offset       Returned offset in bytes if function returns TRUE.
     */
-    AIMAPI_API BOOL
-        WINAPI
-        ImScsiGetOffsetByFileExt(IN LPCWSTR ImageFile,
-            IN OUT PLARGE_INTEGER Offset);
+    AIMAPI_API fImScsiGetOffsetByFileExt ImScsiGetOffsetByFileExt;
 
 #ifdef CORE_BUILD
 

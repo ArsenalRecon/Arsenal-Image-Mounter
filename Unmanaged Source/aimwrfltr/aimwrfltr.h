@@ -83,8 +83,12 @@
 #endif
 
 #ifdef _WIN64
+#define InterlockedIncrementPtr InterlockedIncrement64
+#define InterlockedAddPtr InterlockedAdd64
 #define InterlockedExchangeAddPtr InterlockedExchangeAdd64
 #else
+#define InterlockedIncrementPtr InterlockedIncrement
+#define InterlockedAddPtr InterlockedAdd
 #define InterlockedExchangeAddPtr InterlockedExchangeAdd
 #endif
 
