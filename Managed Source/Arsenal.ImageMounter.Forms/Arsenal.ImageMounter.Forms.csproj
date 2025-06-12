@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.CompareTo(`net8`))' &lt; 0 Or $(TargetFramework.StartsWith(`netstandard`))">
-    <PackageReference Include="System.Memory" Version="4.5.*" />
+    <PackageReference Include="System.Memory" Version="*" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.StartsWith(`net4`))'">

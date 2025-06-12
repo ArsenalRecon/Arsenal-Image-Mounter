@@ -11,44 +11,44 @@
     <PackageReference Include="Microsoft.Win32.Registry" Version="*" />
     <PackageReference Include="System.IO.FileSystem.AccessControl" Version="*" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="*" />
-    <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Dmg" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.OpticalDisk" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Streams" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Vdi" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Vmdk" Version="1.0.49" />
-    <PackageReference Include="LTRData.DiscUtils.Xva" Version="1.0.49" />
+    <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Dmg" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.OpticalDisk" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Streams" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Vdi" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Vmdk" Version="1.0.58" />
+    <PackageReference Include="LTRData.DiscUtils.Xva" Version="1.0.58" />
     <PackageReference Include="LTRData.Extensions" Version="*" />
     <PackageReference Include="LTRData.Extensions.Native" Version="*" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-    <PackageReference Include="System.Collections.Immutable" Version="8.*" />
+    <PackageReference Include="System.Collections.Immutable" Version="*" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.*" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
     <PackageReference Include="System.Buffers" Version="*" />
-    <PackageReference Include="System.Memory" Version="4.5.*" />
+    <PackageReference Include="System.Memory" Version="*" />
     <Reference Include="System.ServiceProcess" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-    <PackageReference Include="System.Collections.Immutable" Version="8.*" />
+    <PackageReference Include="System.Collections.Immutable" Version="*" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.*" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
     <PackageReference Include="System.Buffers" Version="*" />
-    <PackageReference Include="System.Memory" Version="4.5.*" />
+    <PackageReference Include="System.Memory" Version="*" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="System.Collections.Immutable" Version="8.*" />
+    <PackageReference Include="System.Collections.Immutable" Version="*" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="*" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
     <PackageReference Include="System.Buffers" Version="*" />
     <PackageReference Include="System.Memory" Version="*" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <PackageReference Include="System.Collections.Immutable" Version="9.*" />
+    <PackageReference Include="System.Collections.Immutable" Version="*" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="*" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="*" />
     <PackageReference Include="System.Buffers" Version="*" />
