@@ -33,6 +33,7 @@ using LTRData.Extensions.Formatting;
 using System.Text;
 using LTRData.Extensions.Native;
 using DiscUtils.Streams.Compatibility;
+using DiscUtils.Streams;
 #if NET5_0_OR_GREATER
 using System.Runtime.Intrinsics.X86;
 using System.Diagnostics.CodeAnalysis;
@@ -68,11 +69,7 @@ public static class NativeStruct
                                                        65536,
                                                        NativeConstants.FILE_FLAG_BACKUP_SEMANTICS);
 
-        var buffer = new byte[stream.Length];
-
-        return stream.Read(buffer, 0, buffer.Length) != stream.Length
-            ? throw new IOException($"Incomplete read from '{path}'")
-            : buffer;
+        return stream.ReadExactly((int)stream.Length);
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP

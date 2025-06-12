@@ -141,7 +141,7 @@ public static class DiscUtilsInteraction
         {
             volume.Position = 0;
 
-            volume.Read(vbr);
+            volume.ReadExactly(vbr);
 
             NativeConstants.DefaultBootCode.Span.CopyTo(vbr);
 

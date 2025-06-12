@@ -655,7 +655,7 @@ public partial class DevioProviderLibEwf : DevioProviderUnmanagedBase
     }
 
     public DevioProviderLibEwf(string firstfilename, byte Flags)
-        : this(ProviderSupport.EnumerateMultiSegmentFiles(firstfilename).ToArray(), Flags)
+        : this([.. ProviderSupport.EnumerateMultiSegmentFiles(firstfilename)], Flags)
     {
     }
 

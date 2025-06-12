@@ -1313,12 +1313,10 @@ public readonly struct StorageStandardProperties
 
         if (DeviceDescriptor.RawPropertiesLength != 0)
         {
-            var RawProperties = new byte[DeviceDescriptor.RawPropertiesLength];
-
-            buffer
+            RawProperties = buffer
                 .Slice(Unsafe.SizeOf<STORAGE_DEVICE_DESCRIPTOR>(), DeviceDescriptor.RawPropertiesLength)
-                .CopyTo(RawProperties);
-            this.RawProperties = RawProperties;
+                .ToArray();
+
         }
     }
 }

@@ -13,6 +13,7 @@ using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Native;
 using DiscUtils;
 using DiscUtils.Partitions;
+using DiscUtils.Streams;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -87,7 +88,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
         MemoryMarshal.Write(PrefixBuffer.AsSpan(DiskSignatureOffset), ref signature);
 
         stream.Position = PartitionTableOffset;
-        stream.Read(PrefixBuffer, PartitionTableOffset, 16);
+        stream.ReadExactly(PrefixBuffer, PartitionTableOffset, 16);
 
         PrefixBuffer[510] = 0x55;
         PrefixBuffer[511] = 0xAA;
