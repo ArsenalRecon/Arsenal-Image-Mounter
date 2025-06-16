@@ -614,6 +614,7 @@
   </ItemGroup>
   <!-- Necessary to pick up propper files from local directory when in the IDE-->
   <ItemGroup>
+    <None Include="sources" />
     <None Include="todo.txt" />
     <None Exclude="@(None)" Include="*.ico;*.cur;*.bmp;*.dlg;*.rct;*.gif;*.jpg;*.jpeg;*.wav;*.jpe;*.tiff;*.tif;*.png;*.rc2" />
     <None Exclude="@(None)" Include="*.def;*.bat;*.hpj;*.asmx" />

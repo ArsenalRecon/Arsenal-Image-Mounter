@@ -42,4 +42,7 @@
       <Filter>Source Files</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="sources" />
+  </ItemGroup>
 </Project>

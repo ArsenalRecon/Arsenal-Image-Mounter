@@ -19,6 +19,7 @@ ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
 Provider = %ARSENALRECON%
 DriverVer = 03/21/2020,1.22.0049.00049
 CatalogFile = phdskmnt.cat
+PnpLockdown=1
 
 [SourceDisksFiles.x86]
 phdskmnt.sys = 1, x86
