@@ -512,14 +512,14 @@ public class DiskDevice : DeviceObject
             try
             {
                 return ReadBootSector(bootsect) >= 512
-                && bootsect[0] != 0 &&
-                !bootsect.Slice(0, NativeConstants.DefaultBootCode.Length)
-                    .SequenceEqual(NativeConstants.DefaultBootCode.Span)
-                && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
-                && (bootsect[0x1BE] & 0x7F) == 0
-                && (bootsect[0x1CE] & 0x7F) == 0
-                && (bootsect[0x1DE] & 0x7F) == 0
-                && (bootsect[0x1EE] & 0x7F) == 0;
+                    && bootsect[0] != 0 &&
+                    !bootsect.Slice(0, NativeConstants.DefaultBootCode.Length)
+                        .SequenceEqual(NativeConstants.DefaultBootCode.Span)
+                    && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
+                    && (bootsect[0x1BE] & 0x7F) == 0
+                    && (bootsect[0x1CE] & 0x7F) == 0
+                    && (bootsect[0x1DE] & 0x7F) == 0
+                    && (bootsect[0x1EE] & 0x7F) == 0;
             }
             finally
             {

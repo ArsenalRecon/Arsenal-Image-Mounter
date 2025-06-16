@@ -8,14 +8,20 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.IO.Native;
+using DiscUtils;
 using DiscUtils.Streams;
 using DiscUtils.Streams.Compatibility;
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Extensions;
 
@@ -89,4 +95,27 @@ public static class ExtensionMethods
                 Trace.WriteLine($"Exception in {instance.GetType().FullName}.QueueDispose: {ex}");
             }
         });
+
+    /// <summary>
+    /// Return a value indicating whether present sector 0 data indicates a valid MBR
+    /// with a partition table and not blank or fake boot code.
+    /// </summary>
+    public static bool HasValidBootCode(this VirtualDisk disk)
+    {
+        Span<byte> bootsect = stackalloc byte[512];
+
+        var stream = disk.Content;
+
+        stream.Position = 0;
+
+        return stream.Read(bootsect) >= 512
+            && bootsect[0] != 0 &&
+            !bootsect.Slice(0, NativeConstants.DefaultBootCode.Length)
+                .SequenceEqual(NativeConstants.DefaultBootCode.Span)
+            && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
+            && (bootsect[0x1BE] & 0x7F) == 0
+            && (bootsect[0x1CE] & 0x7F) == 0
+            && (bootsect[0x1DE] & 0x7F) == 0
+            && (bootsect[0x1EE] & 0x7F) == 0;
+    }
 }
