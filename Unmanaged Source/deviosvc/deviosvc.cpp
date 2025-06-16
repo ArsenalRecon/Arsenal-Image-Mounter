@@ -33,7 +33,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include <ntumapi.h>
 
+#if defined(NTDDI_WIN6) && (NTDDI_VERSION >= NTDDI_WIN6)
+#include <ws2tcpip.h>
+#include <in6addr.h>
+#include <ip2string.h>
+#else
 #include <winsock.h>
+#endif
 
 #include <stdlib.h>
 #include <malloc.h>
@@ -41,8 +47,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include <common.h>
 #include <imdproxy.h>
-#include <wio.hpp>
 #include <wmem.hpp>
+#include <wio.hpp>
 
 #pragma comment(lib, "ntdll.lib")
 #pragma comment(lib, "advapi32.lib")
@@ -227,11 +233,19 @@ class ImDiskSvcServerSession
 
         case IMSCSI_PROXY_TYPE_TCP:
         {
-            LPWSTR ServerName = wcstok(ConnectionString, L":");
-            LPWSTR PortName = wcstok(NULL, L"");
+            LPWSTR ServerName = ConnectionString;
+            
+            LPWSTR PortName = wcsrchr(ConnectionString, L':');
 
-            if (PortName == NULL)
+            if (PortName != NULL)
+            {
+                *PortName = 0;
+                PortName++;
+            }
+            else
+            {
                 PortName = L"9000";
+            }
 
             KdPrint(("DevIoSvc: Connecting to '%ws:%ws'.\n",
                 ServerName, PortName));
