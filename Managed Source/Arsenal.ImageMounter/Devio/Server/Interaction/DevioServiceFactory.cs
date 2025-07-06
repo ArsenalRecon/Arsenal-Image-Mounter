@@ -376,7 +376,7 @@ public static class DevioServiceFactory
             return GetProviderPhysical(Imagefile, DiskAccess);
         }
 
-        var stream = new FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: true);
+        var stream = new FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: false);
 
         return new DevioProviderFromStream(stream, ownsStream: true)
         {
