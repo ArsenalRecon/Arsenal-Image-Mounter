@@ -473,10 +473,6 @@ public static class NativePE
     {
         for (var i = 0; i < section_table.Length; i++)
         {
-#if DEBUG
-            Trace.WriteLine($"Found section '{section_table[i].Name.ReadNullTerminatedAsciiString()}'");
-#endif
-
             if (section_table[i].Name.SequenceEqual(RsrcId))
             {
                 return ref section_table[i];
