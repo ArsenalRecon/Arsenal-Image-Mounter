@@ -36,7 +36,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb,
 __in pResultType          pResult
 )
 {
-    KdPrint2(("PhDskMnt::ScsiExecuteRaidControllerUnit: pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
+    KdPrint2((__FUNCTION__ ": pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
         pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
     *pResult = ResultDone;
@@ -55,7 +55,7 @@ __in pResultType          pResult
         break;
 
     default:
-        KdPrint(("PhDskMnt::ScsiExecuteRaidControllerUnit: Unknown opcode=0x%X\n", (int)pSrb->Cdb[0]));
+        KdPrint((__FUNCTION__ ": Unknown opcode=0x%X\n", (int)pSrb->Cdb[0]));
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
         break;
     }
@@ -70,13 +70,13 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     PINQUIRYDATA          pInqData = (PINQUIRYDATA)pSrb->DataBuffer;// Point to Inquiry buffer.
     PCDB                  pCdb;
 
-    KdPrint2(("PhDskMnt::ScsiOpInquiryRaidControllerUnit:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
+    KdPrint2((__FUNCTION__ ":  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     pCdb = (PCDB)pSrb->Cdb;
 
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
-        KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%X\n", pCdb->CDB6INQUIRY.PageCode));
+        KdPrint((__FUNCTION__ ": Received VPD request for page 0x%X\n", pCdb->CDB6INQUIRY.PageCode));
 
         ScsiOpVPDRaidControllerUnit(pHBAExt, pSrb);
 
@@ -112,7 +112,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     ScsiSetSuccess(pSrb, sizeof(INQUIRYDATA));
 
 done:
-    KdPrint2(("PhDskMnt::ScsiOpInquiry: End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint2((__FUNCTION__ ": End: status=0x%X\n", (int)pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiOpInquiry.
@@ -132,7 +132,7 @@ __in PKIRQL               LowestAssumedIrql
     pHW_LU_EXTENSION  pLUExt = NULL;
     UCHAR             status;
 
-    KdPrint2(("PhDskMnt::ScsiExecute: pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
+    KdPrint2((__FUNCTION__ ": pSrb = 0x%p, CDB = 0x%X Path: %x TID: %x Lun: %x\n",
         pSrb, pSrb->Cdb[0], pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
 #ifdef USE_SCSIPORT
@@ -157,7 +157,7 @@ __in PKIRQL               LowestAssumedIrql
     {
         ScsiSetError(pSrb, status);
 
-        KdPrint(("PhDskMnt::ScsiExecute: No LUN object yet for device %d:%d:%d\n", pSrb->PathId, pSrb->TargetId, pSrb->Lun));
+        KdPrint((__FUNCTION__ ": No LUN object yet for device %d:%d:%d\n", pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
         goto Done;
     }
@@ -173,7 +173,7 @@ __in PKIRQL               LowestAssumedIrql
             SCSI_SENSEQ_BECOMING_READY
             );
 
-        KdPrint(("PhDskMnt::ScsiExecute: Device %d:%d:%d not yet ready.\n", pSrb->PathId, pSrb->TargetId, pSrb->Lun));
+        KdPrint((__FUNCTION__ ": Device %d:%d:%d not yet ready.\n", pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
         goto Done;
     }
@@ -253,14 +253,14 @@ __in PKIRQL               LowestAssumedIrql
         break;
 
     default:
-        KdPrint(("PhDskMnt::ScsiExecute: Unknown opcode %s (0x%X)\n", DbgGetScsiOpStr(pSrb), (int)pSrb->Cdb[0]));
+        KdPrint((__FUNCTION__ ": Unknown opcode %s (0x%X)\n", DbgGetScsiOpStr(pSrb), (int)pSrb->Cdb[0]));
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
         break;
 
     } // switch (pSrb->Cdb[0])
 
 Done:
-    KdPrint2(("PhDskMnt::ScsiExecute: End: status=0x%X, *pResult=%i\n", (int)pSrb->SrbStatus, (INT)*pResult));
+    KdPrint2((__FUNCTION__ ": End: status=0x%X, *pResult=%i\n", (int)pSrb->SrbStatus, (INT)*pResult));
 
     return;
 }                                                     // End ScsiExecute.
@@ -616,7 +616,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
     if (pLUExt->DeviceType != READ_ONLY_DIRECT_ACCESS_DEVICE)
     {
-        KdPrint(("PhDskMnt::ScsiOpReadTOC not supported for device %i:%i:%i.\n",
+        KdPrint((__FUNCTION__ ": Not supported for device %i:%i:%i.\n",
             (int)pLUExt->DeviceNumber.PathId,
             (int)pLUExt->DeviceNumber.TargetId,
             (int)pLUExt->DeviceNumber.Lun));
@@ -633,13 +633,13 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     #define READ_TOC_FORMAT_ATIP        0x04
     */
     
-    KdPrint2(("PhDskMnt::ScsiOpReadTOC: Msf = %d\n", cdb->READ_TOC.Msf));
-    KdPrint2(("PhDskMnt::ScsiOpReadTOC: LogicalUnitNumber = %d\n", cdb->READ_TOC.LogicalUnitNumber));
-    KdPrint2(("PhDskMnt::ScsiOpReadTOC: Format2 = %d\n", cdb->READ_TOC.Format2));
-    KdPrint2(("PhDskMnt::ScsiOpReadTOC: StartingTrack = %d\n", cdb->READ_TOC.StartingTrack));
-    KdPrint2(("PhDskMnt::ScsiOpReadTOC: AllocationLength = %d\n", (cdb->READ_TOC.AllocationLength[0] << 8) | cdb->READ_TOC.AllocationLength[1]));
-    KdPrint2(("PhDskMnt::ScsiOpReadTOC: Control = %d\n", cdb->READ_TOC.Control));
-    KdPrint2(("PhDskMnt::ScsiOpReadTOC: Format = %d\n", cdb->READ_TOC.Format));
+    KdPrint2((__FUNCTION__ ": Msf = %d\n", cdb->READ_TOC.Msf));
+    KdPrint2((__FUNCTION__ ": LogicalUnitNumber = %d\n", cdb->READ_TOC.LogicalUnitNumber));
+    KdPrint2((__FUNCTION__ ": Format2 = %d\n", cdb->READ_TOC.Format2));
+    KdPrint2((__FUNCTION__ ": StartingTrack = %d\n", cdb->READ_TOC.StartingTrack));
+    KdPrint2((__FUNCTION__ ": AllocationLength = %d\n", (cdb->READ_TOC.AllocationLength[0] << 8) | cdb->READ_TOC.AllocationLength[1]));
+    KdPrint2((__FUNCTION__ ": Control = %d\n", cdb->READ_TOC.Control));
+    KdPrint2((__FUNCTION__ ": Format = %d\n", cdb->READ_TOC.Format));
 
     RtlZeroMemory(pSrb->DataBuffer, pSrb->DataTransferLength);
 
@@ -753,11 +753,11 @@ __in PSCSI_REQUEST_BLOCK  pSrb
     PINQUIRYDATA          pInqData = (PINQUIRYDATA)pSrb->DataBuffer;
     PCDB                  pCdb = (PCDB)pSrb->Cdb;
 
-    KdPrint(("PhDskMnt::ScsiOpInquiry:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
+    KdPrint((__FUNCTION__ ":  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
     if (!KeReadStateEvent(&pLUExt->Initialized))
     {
-        KdPrint(("PhDskMnt::ScsiOpInquiry: Rejected. Device not initialized.\n"));
+        KdPrint((__FUNCTION__ ": Rejected. Device not initialized.\n"));
 
         ScsiSetCheckCondition(
             pSrb,
@@ -776,7 +776,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
     if (pCdb->CDB6INQUIRY3.EnableVitalProductData == 1)
     {
-        KdPrint(("PhDskMnt::ScsiOpInquiry: Received VPD request for page 0x%X\n", pCdb->CDB6INQUIRY.PageCode));
+        KdPrint((__FUNCTION__ ": Received VPD request for page 0x%X\n", pCdb->CDB6INQUIRY.PageCode));
 
         switch (pLUExt->DeviceType)
         {
@@ -845,7 +845,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         ScsiSetSuccess(pSrb, min(pSrb->DataTransferLength, sizeof(INQUIRYDATA)));
     }
 
-    KdPrint(("PhDskMnt::ScsiOpInquiry: End: status=0x%X length=0x%X\n",
+    KdPrint((__FUNCTION__ ": End: status=0x%X length=0x%X\n",
         (int)pSrb->SrbStatus, (int)pSrb->DataTransferLength));
 
     return;
@@ -871,7 +871,7 @@ __in PKIRQL                                 LowestAssumedIrql
 
     *ppLUExt = NULL;
 
-    KdPrint2(("PhDskMnt::ScsiGetLUExtension: %d:%d:%d\n", PathId, TargetId, Lun));
+    KdPrint2((__FUNCTION__ ": %d:%d:%d\n", PathId, TargetId, Lun));
 
     ImScsiAcquireLock(                   // Serialize the linked list of LUN extensions.              
         &pHBAExt->LUListLock, &LockHandle, *LowestAssumedIrql);
@@ -880,7 +880,7 @@ __in PKIRQL                                 LowestAssumedIrql
 
     if (pPortLunExt == NULL)
     {
-        KdPrint(("PhDskMnt::ScsiGetLUExtension: StoragePortGetLogicalUnit failed for %d:%d:%d\n",
+        KdPrint((__FUNCTION__ ": StoragePortGetLogicalUnit failed for %d:%d:%d\n",
             PathId,
             TargetId,
             Lun));
@@ -897,7 +897,7 @@ __in PKIRQL                                 LowestAssumedIrql
             (pLUExt->DeviceNumber.TargetId != TargetId) ||
             (pLUExt->DeviceNumber.Lun != Lun))
         {
-            DbgPrint("PhDskMnt::ScsiGetLUExtension: LUExt %p for device %i:%i:%i returned for device %i:%i:%i!\n",
+            DbgPrint(__FUNCTION__ ": LUExt %p for device %i:%i:%i returned for device %i:%i:%i!\n",
                 pLUExt,
                 (int)pLUExt->DeviceNumber.PathId,
                 (int)pLUExt->DeviceNumber.TargetId,
@@ -908,7 +908,7 @@ __in PKIRQL                                 LowestAssumedIrql
         }
         else if (KeReadStateEvent(&pLUExt->StopThread))
         {
-            DbgPrint("PhDskMnt::ScsiGetLUExtension: Device %i:%i:%i is stopping. MP reports missing to port driver.\n",
+            DbgPrint(__FUNCTION__ ": Device %i:%i:%i is stopping. MP reports missing to port driver.\n",
                 (int)pLUExt->DeviceNumber.PathId,
                 (int)pLUExt->DeviceNumber.TargetId,
                 (int)pLUExt->DeviceNumber.Lun);
@@ -923,12 +923,12 @@ __in PKIRQL                                 LowestAssumedIrql
         {
             if (!KeReadStateEvent(&pLUExt->Initialized))
             {
-                DbgPrint("PhDskMnt::ScsiGetLUExtension: Warning: Device is not yet initialized!\n");
+                DbgPrint(__FUNCTION__ ": Warning: Device is not yet initialized!\n");
             }
 
             *ppLUExt = pLUExt;
 
-            KdPrint2(("PhDskMnt::ScsiGetLUExtension: Device %d:%d:%d has pLUExt=0x%p\n",
+            KdPrint2((__FUNCTION__ ": Device %d:%d:%d has pLUExt=0x%p\n",
                 PathId, TargetId, Lun, *ppLUExt));
 
             status = SRB_STATUS_SUCCESS;
@@ -957,7 +957,7 @@ __in PKIRQL                                 LowestAssumedIrql
 
     if (*ppLUExt == NULL)
     {
-        KdPrint2(("PhDskMnt::ScsiGetLUExtension: No saved data for Lun.\n"));
+        KdPrint2((__FUNCTION__ ": No saved data for Lun.\n"));
 
         status = SRB_STATUS_NO_DEVICE;
 
@@ -968,14 +968,14 @@ __in PKIRQL                                 LowestAssumedIrql
 
     status = SRB_STATUS_SUCCESS;
 
-    KdPrint(("PhDskMnt::ScsiGetLUExtension: Device %d:%d:%d get pLUExt=0x%p\n",
+    KdPrint((__FUNCTION__ ": Device %d:%d:%d get pLUExt=0x%p\n",
         PathId, TargetId, Lun, *ppLUExt));
 
 done:
 
     ImScsiReleaseLock(&LockHandle, LowestAssumedIrql);
 
-    KdPrint2(("PhDskMnt::ScsiGetLUExtension: End: status=0x%X\n", (int)status));
+    KdPrint2((__FUNCTION__ ": End: status=0x%X\n", (int)status));
 
     return status;
 }                                                     // End ScsiOpInquiry.
@@ -996,7 +996,7 @@ ScsiOpVPDCdRomUnit(
 
     ASSERT(pSrb->DataTransferLength>0);
 
-    KdPrint(("PhDskMnt::ScsiOpVPDCdRomUnit:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
+    KdPrint((__FUNCTION__ ":  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     switch (pVpdInquiry->PageCode)
     {
@@ -1030,7 +1030,7 @@ ScsiOpVPDCdRomUnit(
         break;
     }
 
-    KdPrint2(("PhDskMnt::ScsiOpVPDCdRomUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint2((__FUNCTION__ ":  End: status=0x%X\n", (int)pSrb->SrbStatus));
 }
 
 #else
@@ -1051,7 +1051,7 @@ ScsiOpVPDCdRomUnit(
 
     ASSERT(pSrb->DataTransferLength>0);
 
-    KdPrint(("PhDskMnt::ScsiOpVPDCdRomUnit:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
+    KdPrint((__FUNCTION__ ":  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     switch (pVpdInquiry->PageCode)
     {
@@ -1105,7 +1105,7 @@ ScsiOpVPDCdRomUnit(
         pVpd->PageLength = guid_length;
         RtlCopyMemory(pVpd->SerialNumber, pLUExt->GuidString, guid_length);
 
-        KdPrint(("ScsiOpVPDDiskUnit: Reporting device serial number %.*s for device %i:%i:%i\n",
+        KdPrint((__FUNCTION__ ": Reporting device serial number %.*s for device %i:%i:%i\n",
             pVpd->PageLength, pVpd->SerialNumber, pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
         ScsiSetSuccess(pSrb, len);
@@ -1141,7 +1141,7 @@ ScsiOpVPDCdRomUnit(
             RtlCopyMemory(pIdDescriptor->Identifier, pLUExt->UniqueId,
                 sizeof(pLUExt->UniqueId));
 
-            KdPrint(("ScsiOpVPDDiskUnit: Reporting device id %s for device %d:%d:%d\n",
+            KdPrint((__FUNCTION__ ": Reporting device id %s for device %d:%d:%d\n",
                 pLUExt->GuidString, pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
             ScsiSetSuccess(pSrb, sizeof(VPD_IDENTIFICATION_PAGE) +
@@ -1155,7 +1155,7 @@ ScsiOpVPDCdRomUnit(
         break;
     }
 
-    KdPrint(("PhDskMnt::ScsiOpVPDCdRomUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint((__FUNCTION__ ":  End: status=0x%X\n", (int)pSrb->SrbStatus));
 }
 
 #endif
@@ -1176,7 +1176,7 @@ ScsiOpVPDDiskUnit(
 
     ASSERT(pSrb->DataTransferLength>0);
 
-    KdPrint(("PhDskMnt::ScsiOpVPDDiskUnit:  pHBAExt = 0x%p, pSrb=0x%p, PageCode=%X\n",
+    KdPrint((__FUNCTION__ ":  pHBAExt = 0x%p, pSrb=0x%p, PageCode=%X\n",
         pHBAExt, pSrb, (int)pVpdInquiry->PageCode));
 
     switch (pVpdInquiry->PageCode)
@@ -1252,7 +1252,7 @@ ScsiOpVPDDiskUnit(
         pVpd->PageLength = guid_length;
         RtlCopyMemory(pVpd->SerialNumber, pLUExt->GuidString, guid_length);
 
-        KdPrint(("ScsiOpVPDDiskUnit: Reporting device serial number %.*s for device %i:%i:%i\n",
+        KdPrint((__FUNCTION__ ": Reporting device serial number %.*s for device %i:%i:%i\n",
             pVpd->PageLength, pVpd->SerialNumber, pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
         ScsiSetSuccess(pSrb, len);
@@ -1413,7 +1413,7 @@ ScsiOpVPDDiskUnit(
             RtlCopyMemory(pIdDescriptor->Identifier, pLUExt->UniqueId,
                 sizeof(pLUExt->UniqueId));
 
-            KdPrint(("ScsiOpVPDDiskUnit: Reporting device id %s for device %d:%d:%d\n",
+            KdPrint((__FUNCTION__ ": Reporting device id %s for device %d:%d:%d\n",
                 pLUExt->GuidString, pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
             ScsiSetSuccess(pSrb, required_size);
@@ -1425,7 +1425,7 @@ ScsiOpVPDDiskUnit(
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
     }
 
-    KdPrint(("PhDskMnt::ScsiOpVPDDiskUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint((__FUNCTION__ ":  End: status=0x%X\n", (int)pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiOpVPDDiskUnit().
@@ -1446,7 +1446,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
 
     ASSERT(pSrb->DataTransferLength>0);
 
-    KdPrint(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
+    KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     switch (pVpdInquiry->PageCode)
     {
@@ -1501,7 +1501,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         sprintf((char *)pVpd->SerialNumber, "%03d%02d%02d%03d0123456789abcdefghijABCDEFGH\n", 
             pMPDrvInfoGlobal->DrvInfoNbrMPHBAObj, 0, 0, 0);
 
-        KdPrint(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  VPD Page: %X Serial No.: %s",
+        KdPrint((__FUNCTION__ ":  VPD Page: %X Serial No.: %s",
             (int)pVpd->PageCode, (const char *)pVpd->SerialNumber));
 
         ScsiSetSuccess(pSrb, len);
@@ -1551,7 +1551,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
             FIELD_OFFSET(VPD_IDENTIFICATION_DESCRIPTOR, Identifier) +
             pVpidDesc->IdentifierLength);
 
-        KdPrint(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  VPD Page 0x83. Identifier=%.*s\n",
+        KdPrint((__FUNCTION__ ":  VPD Page 0x83. Identifier=%.*s\n",
             pVpidDesc->IdentifierLength, pVpidDesc->Identifier));
 
         ScsiSetSuccess(pSrb, len);
@@ -1562,7 +1562,7 @@ __in PSCSI_REQUEST_BLOCK  pSrb
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_INVALID_CDB, 0);
     }
 
-    KdPrint2(("PhDskMnt::ScsiOpVPDRaidControllerUnit:  End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint2((__FUNCTION__ ":  End: status=0x%X\n", (int)pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiOpVPDRaidControllerUnit().
@@ -1584,13 +1584,13 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
     ULARGE_INTEGER          maxBlocks = { 0 };
     ULONG                   blockSize;
 
-    KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p, Action=0x%X\n", pHBAExt, pLUExt, pSrb, (int)pSrb->Cdb[0]));
+    KdPrint2((__FUNCTION__ ":  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p, Action=0x%X\n", pHBAExt, pLUExt, pSrb, (int)pSrb->Cdb[0]));
 
     RtlZeroMemory((PUCHAR)readCapacity, pSrb->DataTransferLength);
 
     blockSize = 1UL << pLUExt->BlockPower;
 
-    KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Block Size: 0x%X\n", blockSize));
+    KdPrint2((__FUNCTION__ ": Block Size: 0x%X\n", blockSize));
 
     if (pLUExt->DiskSize.QuadPart > 0)
     {
@@ -1606,7 +1606,7 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
         maxBlocks.QuadPart = MAXULONG;
     }
 
-    KdPrint2(("PhDskMnt::ScsiOpReadCapacity: Max Blocks: 0x%I64X\n", maxBlocks));
+    KdPrint2((__FUNCTION__ ": Max Blocks: 0x%I64X\n", maxBlocks));
 
     if (pSrb->Cdb[0] == SCSIOP_READ_CAPACITY &&
         pSrb->DataTransferLength >= sizeof(READ_CAPACITY_DATA))
@@ -1628,7 +1628,7 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
         }
     }
 
-    KdPrint2(("PhDskMnt::ScsiOpReadCapacity:  End.\n"));
+    KdPrint2((__FUNCTION__ ": End.\n"));
 
     ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
     return;
@@ -1657,7 +1657,7 @@ __in PKIRQL               LowestAssumedIrql
     pMP_WorkRtnParms             pWkRtnParms;
     KLOCK_QUEUE_HANDLE           lock_handle = { 0 };
 
-    KdPrint2(("PhDskMnt::ScsiOpReadWrite:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
+    KdPrint2((__FUNCTION__ ": pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
     *pResult = ResultDone;                            // Assume no queuing.
 
@@ -1674,7 +1674,7 @@ __in PKIRQL               LowestAssumedIrql
 
     if (startingSector & ~(MAXLONGLONG >> pLUExt->BlockPower))
     {      // Check if startingSector << blockPower fits within a LONGLONG.
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Too large sector number: %I64X\n", startingSector));
+        KdPrint((__FUNCTION__ ": Too large sector number: %I64X\n", startingSector));
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_ILLEGAL_BLOCK, 0);
 
@@ -1685,12 +1685,12 @@ __in PKIRQL               LowestAssumedIrql
 
     numBlocks = pSrb->DataTransferLength >> pLUExt->BlockPower;
 
-    KdPrint2(("PhDskMnt::ScsiOpReadWrite action: 0x%X, starting sector: 0x%I64X, number of blocks: 0x%X\n", (int)pSrb->Cdb[0], startingSector, numBlocks));
-    KdPrint2(("PhDskMnt::ScsiOpReadWrite pSrb: 0x%p, pSrb->DataBuffer: 0x%p\n", pSrb, pSrb->DataBuffer));
+    KdPrint2((__FUNCTION__ " action: 0x%X, starting sector: 0x%I64X, number of blocks: 0x%X\n", (int)pSrb->Cdb[0], startingSector, numBlocks));
+    KdPrint2((__FUNCTION__ " pSrb: 0x%p, pSrb->DataBuffer: 0x%p\n", pSrb, pSrb->DataBuffer));
 
     if (!KeReadStateEvent(&pLUExt->Initialized))
     {
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Busy. Device not initialized.\n"));
+        KdPrint((__FUNCTION__ ": Busy. Device not initialized.\n"));
 
         ScsiSetCheckCondition(
             pSrb,
@@ -1705,7 +1705,7 @@ __in PKIRQL               LowestAssumedIrql
     // Check device shutdown condition
     if (KeReadStateEvent(&pLUExt->StopThread))
     {
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Device shutting down.\n"));
+        KdPrint((__FUNCTION__ ": Rejected. Device shutting down.\n"));
 
         ScsiSetError(pSrb, SRB_STATUS_NO_DEVICE);
 
@@ -1717,7 +1717,7 @@ __in PKIRQL               LowestAssumedIrql
         (pSrb->Cdb[0] == SCSIOP_WRITE16)) &&
         pLUExt->ReadOnly)
     {
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Write attempt on read-only device.\n"));
+        KdPrint((__FUNCTION__ ": Rejected. Write attempt on read-only device.\n"));
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_DATA_PROTECT, SCSI_ADSENSE_WRITE_PROTECT, 0);
 
@@ -1727,7 +1727,7 @@ __in PKIRQL               LowestAssumedIrql
     // Check disk bounds
     if ((startingSector + numBlocks) > (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower))
     {      // Starting sector beyond the bounds?
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Out of bounds: sector: %I64X, blocks: %d, max: %I64X\n",
+        KdPrint((__FUNCTION__ ": Out of bounds: sector: %I64X, blocks: %d, max: %I64X\n",
             startingSector, numBlocks, pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower));
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_ILLEGAL_BLOCK, 0);
@@ -1756,7 +1756,7 @@ __in PKIRQL               LowestAssumedIrql
             {
                 ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
 
-                DbgPrint("PhDskMnt::ScsiOpReadWrite: StorPortGetSystemAddress failed: status=0x%X address=0x%p translated=0x%p\n",
+                DbgPrint(__FUNCTION__ ": StorPortGetSystemAddress failed: status=0x%X address=0x%p translated=0x%p\n",
                     storage_status,
                     pSrb->DataBuffer,
                     sysaddress);
@@ -1765,7 +1765,7 @@ __in PKIRQL               LowestAssumedIrql
             }
             else
             {
-                KdPrint(("PhDskMnt::ScsiOpReadWrite: Intermediate cache hit.\n"));
+                KdPrint((__FUNCTION__ ": Intermediate cache hit.\n"));
 
                 RtlMoveMemory(
                     sysaddress,
@@ -1809,7 +1809,7 @@ __in PKIRQL               LowestAssumedIrql
         *pResult = ResultQueued;                          // Indicate queuing.
     }
 
-    KdPrint2(("PhDskMnt::ScsiOpReadWrite:  End. *Result=%i\n", (INT)*pResult));
+    KdPrint2((__FUNCTION__ ":  End. *Result=%i\n", (INT)*pResult));
 }                                                     // End ScsiReadWriteSetup.
 
 /**************************************************************************************************/
@@ -1826,13 +1826,13 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
 
     PMODE_PARAMETER_HEADER mph = (PMODE_PARAMETER_HEADER)pSrb->DataBuffer;
     
-    KdPrint2(("PhDskMnt::ScsiOpModeSense:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
+    KdPrint2((__FUNCTION__ ": pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
     RtlZeroMemory((PUCHAR)mph, pSrb->DataTransferLength);
 
     if (pSrb->DataTransferLength < sizeof(MODE_PARAMETER_HEADER))
     {
-        KdPrint(("PhDskMnt::ScsiOpModeSense:  Invalid request length.\n"));
+        KdPrint((__FUNCTION__ ": Invalid request length.\n"));
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
     }
@@ -1861,13 +1861,13 @@ __in __deref PSCSI_REQUEST_BLOCK  pSrb
 
     PMODE_PARAMETER_HEADER10 mph = (PMODE_PARAMETER_HEADER10)pSrb->DataBuffer;
 
-    KdPrint(("PhDskMnt::ScsiOpModeSense10:  pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
+    KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pLUExt=0x%p, pSrb=0x%p\n", pHBAExt, pLUExt, pSrb));
 
     RtlZeroMemory((PUCHAR)mph, pSrb->DataTransferLength);
 
     if (pSrb->DataTransferLength < sizeof(MODE_PARAMETER_HEADER10))
     {
-        KdPrint(("PhDskMnt::ScsiOpModeSense10:  Invalid request length.\n"));
+        KdPrint((__FUNCTION__ ": Invalid request length.\n"));
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
     }
@@ -1897,7 +1897,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
     PLUN_LIST             pLunList = (PLUN_LIST)pSrb->DataBuffer;
     KLOCK_QUEUE_HANDLE    LockHandle = { 0 };
 
-    KdPrint(("PhDskMnt::ScsiOpReportLuns:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
+    KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     // This opcode will be one of the earliest I/O requests for a new HBA (and may be received later, too).
     pHBAExt->bReportAdapterDone = TRUE;
@@ -1906,7 +1906,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
 
     if (pSrb->DataTransferLength < FIELD_OFFSET(LUN_LIST, Lun))
     {
-        KdPrint(("PhDskMnt::ScsiOpReportLuns:  Buffer too small\n"));
+        KdPrint((__FUNCTION__ ": Buffer too small\n"));
 
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
@@ -1937,14 +1937,14 @@ __inout __deref PKIRQL              LowestAssumedIrql
 
     ImScsiReleaseLock(&LockHandle, LowestAssumedIrql);
 
-    KdPrint(("PhDskMnt::ScsiOpReportLuns:  Reported %i LUNs\n", (int)count));
+    KdPrint((__FUNCTION__ ": Reported %i LUNs\n", (int)count));
 
     pLunList->LunListLength[3] =                  // Set length needed for LUNs.
         (UCHAR)(8 * count);
 
     ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
 
-    KdPrint2(("PhDskMnt::ScsiOpReportLuns:  End: status=0x%X\n", (int)pSrb->SrbStatus));
+    KdPrint2((__FUNCTION__ ": End: status=0x%X\n", (int)pSrb->SrbStatus));
 }                                                     // End ScsiOpReportLuns.
 
 VOID
@@ -1962,11 +1962,11 @@ ScsiOpUnmap(
 
     USHORT length = RtlUshortByteSwap(*(PUSHORT)((PUNMAP)pCdb)->AllocationLength);
 
-    KdPrint(("PhDskMnt::ScsiOpUnmap:  pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
+    KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     if (!KeReadStateEvent(&pLUExt->Initialized))
     {
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Busy. Device not initialized.\n"));
+        KdPrint((__FUNCTION__ ": Busy. Device not initialized.\n"));
 
         ScsiSetCheckCondition(
             pSrb,
@@ -1981,7 +1981,7 @@ ScsiOpUnmap(
     // Check device shutdown condition
     if (KeReadStateEvent(&pLUExt->StopThread))
     {
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Device shutting down.\n"));
+        KdPrint((__FUNCTION__ ": Rejected. Device shutting down.\n"));
 
         ScsiSetError(pSrb, SRB_STATUS_NO_DEVICE);
 
@@ -1991,7 +1991,7 @@ ScsiOpUnmap(
     // Check write protection
     if (pLUExt->ReadOnly)
     {
-        KdPrint(("PhDskMnt::ScsiOpReadWrite: Rejected. Write attempt on read-only device.\n"));
+        KdPrint((__FUNCTION__ ": Rejected. Write attempt on read-only device.\n"));
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_DATA_PROTECT, SCSI_ADSENSE_WRITE_PROTECT, 0);
 
@@ -2052,14 +2052,14 @@ ScsiOpUnmap(
 
         if (startingSector & ~(MAXLONGLONG >> pLUExt->BlockPower))
         {      // Check if startingSector << blockPower fits within a LONGLONG.
-            KdPrint(("PhDskMnt::ScsiOpUnmap: Too large sector number: %I64X\n", startingSector));
+            KdPrint((__FUNCTION__ ": Too large sector number: %I64X\n", startingSector));
             return;
         }
 
         // Check disk bounds
         if ((startingSector + numBlocks) > (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower))
         {      // Starting sector beyond the bounds?
-            KdPrint(("PhDskMnt::ScsiOpUnmap: Out of bounds: sector: %I64X, blocks: %d\n", startingSector, numBlocks));
+            KdPrint((__FUNCTION__ ": Out of bounds: sector: %I64X, blocks: %d\n", startingSector, numBlocks));
             return;
         }
     }
@@ -2080,7 +2080,7 @@ ScsiOpUnmap(
 
     *pResult = ResultQueued;                          // Indicate queuing.
 
-    KdPrint2(("PhDskMnt::ScsiOpUnmap:  End. *Result=%i\n", (INT)*pResult));
+    KdPrint2((__FUNCTION__ ": End. *Result=%i\n", (INT)*pResult));
 }
 
 VOID
@@ -2096,7 +2096,7 @@ ScsiOpPersistentReserveInOut(
 
     if (pWkRtnParms == NULL)
     {
-        DbgPrint("PhDskMnt::ScsiOpPersistentReserveInOut: Failed to allocate work parm structure\n");
+        DbgPrint(__FUNCTION__ ": Failed to allocate work parm structure\n");
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
         return;
@@ -2108,7 +2108,7 @@ ScsiOpPersistentReserveInOut(
 
     *pResult = ResultQueued;                          // Indicate queuing.
 
-    KdPrint2(("PhDskMnt::ScsiOpPersistentReserveInOut:  End. *Result=%i\n", (INT)*pResult));
+    KdPrint2((__FUNCTION__ ": End. *Result=%i\n", (INT)*pResult));
 }
 
 VOID
@@ -2130,7 +2130,7 @@ __in UCHAR               AdditionalSenseCodeQualifier OPTIONAL
 
     if (pSrb->SenseInfoBufferLength < sizeof(SENSE_DATA))
     {
-        DbgPrint("PhDskMnt::ScsiSetCheckCondition:  Insufficient sense data buffer.\n");
+        DbgPrint(__FUNCTION__ ": Insufficient sense data buffer.\n");
         return;
     }
 
@@ -2165,7 +2165,7 @@ __inout __deref PKIRQL            LowestAssumedIrql
 {
     DEVICE_NUMBER remove_data = { 0 };
 
-    KdPrint(("PhDskMnt::ScsiPnPRemoveDevice:  pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
+    KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
 
     remove_data.LongNumber = IMSCSI_ALL_DEVICES;
 
@@ -2189,7 +2189,7 @@ __inout __deref PKIRQL               LowestAssumedIrql
     pHW_LU_EXTENSION          pLUExt;
     PSTOR_DEVICE_CAPABILITIES pStorageCapabilities = (PSTOR_DEVICE_CAPABILITIES)pSrb->DataBuffer;
 
-    KdPrint(("PhDskMnt::ScsiPnPQueryCapabilities:  pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
+    KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pSrb = 0x%p\n", pHBAExt, pSrb));
 
     // Get the LU extension from port driver.
     pSrb->SrbStatus = ScsiGetLUExtension(pHBAExt, &pLUExt, pSrb->PathId,
@@ -2199,7 +2199,7 @@ __inout __deref PKIRQL               LowestAssumedIrql
     {
         pSrb->DataTransferLength = 0;
 
-        KdPrint(("PhDskMnt::ScsiPnP: No LUN object yet for device %d:%d:%d\n", pSrb->PathId, pSrb->TargetId, pSrb->Lun));
+        KdPrint((__FUNCTION__ ": No LUN object yet for device %d:%d:%d\n", pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
         return;
     }
@@ -2210,7 +2210,7 @@ __inout __deref PKIRQL               LowestAssumedIrql
         pSrb->DataTransferLength = 0;
         pSrb->SrbStatus = SRB_STATUS_BUSY;
 
-        KdPrint(("PhDskMnt::ScsiPnP: Device %d:%d:%d not yet ready.\n", pSrb->PathId, pSrb->TargetId, pSrb->Lun));
+        KdPrint((__FUNCTION__ ": Device %d:%d:%d not yet ready.\n", pSrb->PathId, pSrb->TargetId, pSrb->Lun));
 
         return;
     }
@@ -2237,7 +2237,7 @@ __in PSCSI_PNP_REQUEST_BLOCK  pSrb,
 __inout __deref PKIRQL             LowestAssumedIrql
 )
 {
-    KdPrint(("PhDskMnt::ScsiPnP for device %d:%d:%d:  pHBAExt = 0x%p, PnPAction = %#x, pSrb = 0x%p\n",
+    KdPrint((__FUNCTION__ " for device %d:%d:%d:  pHBAExt = 0x%p, PnPAction = %#x, pSrb = 0x%p\n",
         pSrb->PathId, pSrb->TargetId, pSrb->Lun, pHBAExt, pSrb->PnPAction, pSrb));
 
     // Handle sufficient opcodes to support a LUN suitable for a file system. Other opcodes are just completed.
@@ -2257,7 +2257,7 @@ __inout __deref PKIRQL             LowestAssumedIrql
         pSrb->SrbStatus = SRB_STATUS_SUCCESS;         // Do nothing.
     }
 
-    KdPrint2(("PhDskMnt::ScsiPnP:  SrbStatus = 0x%X\n", pSrb->SrbStatus));
+    KdPrint2((__FUNCTION__ ": SrbStatus = 0x%X\n", pSrb->SrbStatus));
 
     return;
 }                                                     // End ScsiPnP().

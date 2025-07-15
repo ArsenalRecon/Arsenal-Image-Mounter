@@ -83,7 +83,7 @@ ImScsiGetControllerObject()
 
                     if (NT_SUCCESS(status))
                     {
-                        DbgPrint("PhDskMnt::ImScsiGetControllerObject: Successfully opened '%wZ'.\n",
+                        DbgPrint(__FUNCTION__ ": Successfully opened '%wZ'.\n",
                             &objstr->Name);
                     }
 
@@ -97,7 +97,7 @@ ImScsiGetControllerObject()
     }
     
 
-    DbgPrint("PhDskMnt::ImScsiGetControllerObject: Could not locate SCSI adapter device object by name.\n");
+    DbgPrint(__FUNCTION__ ": Could not locate SCSI adapter device object by name.\n");
 
     return STATUS_DEVICE_DOES_NOT_EXIST;
 }
@@ -138,17 +138,17 @@ ImScsiVirtualDrivesPresent(__inout __deref PKIRQL LowestAssumedIrql)
 VOID
 ImScsiFreeGlobalResources()
 {
-    KdPrint(("PhDskMnt::ImScsiFreeGlobalResources: Unloading.\n"));
+    KdPrint((__FUNCTION__ ": Unloading.\n"));
 
     if (pMPDrvInfoGlobal != NULL)
     {
-        KdPrint(("PhDskMnt::ImScsiFreeGlobalResources: Ready to stop worker threads and free global data.\n"));
+        KdPrint((__FUNCTION__ ": Ready to stop worker threads and free global data.\n"));
 
         if ((pMPDrvInfoGlobal->GlobalsInitialized) &&
             (pMPDrvInfoGlobal->WorkerThread != NULL))
         {
 
-            KdPrint(("PhDskMnt::ImScsiFreeGlobalResources: Waiting for global worker thread %p.\n",
+            KdPrint((__FUNCTION__ ": Waiting for global worker thread %p.\n",
                 pMPDrvInfoGlobal->WorkerThread));
 
 #pragma warning(suppress: 28160)
@@ -402,12 +402,12 @@ ImScsiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 VOID
 ImScsiUnload(PDRIVER_OBJECT pDrvObj)
 {
-    DbgPrint("PhDskMnt::ImScsiUnload.\n");
+    DbgPrint(__FUNCTION__ "\n");
 
     if ((pMPDrvInfoGlobal != NULL) &&
         (pMPDrvInfoGlobal->pChainUnload != NULL))
     {
-        KdPrint(("PhDskMnt::ImScsiUnload: Calling next in chain 0x%p.\n",
+        KdPrint((__FUNCTION__ ": Calling next in chain 0x%p.\n",
             pMPDrvInfoGlobal->pChainUnload));
         pMPDrvInfoGlobal->pChainUnload(pDrvObj);
     }
@@ -415,7 +415,7 @@ ImScsiUnload(PDRIVER_OBJECT pDrvObj)
     // Free our own resources
     ImScsiFreeGlobalResources();
 
-    DbgPrint("PhDskMnt::ImScsiUnload: Done.\n");
+    DbgPrint(__FUNCTION__ ": Done.\n");
 }
 
 
@@ -453,7 +453,7 @@ __out      PBOOLEAN                        pBAgain
 #endif
     UNREFERENCED_PARAMETER(ArgumentString);
 
-    KdPrint(("PhDskMnt::MpHwFindAdapter: Arg=%s%s%s, pHBAExt = 0x%p, pConfigInfo = 0x%p, IRQL=%i\n",
+    KdPrint((__FUNCTION__ ": Arg=%s%s%s, pHBAExt = 0x%p, pConfigInfo = 0x%p, IRQL=%i\n",
         ArgumentString != NULL ? "\"" : "(",
         ArgumentString != NULL ? ArgumentString : "null",
         ArgumentString != NULL ? "\"" : ")",
@@ -472,7 +472,7 @@ __out      PBOOLEAN                        pBAgain
     {
         LARGE_INTEGER wait_time;
 
-        DbgPrint("PhDskMnt::MpHwFindAdapter: Already initialized.\n");
+        DbgPrint(__FUNCTION__ ": Already initialized.\n");
 
         wait_time.QuadPart = -1000000;
         KeDelayExecutionThread(KernelMode, FALSE, &wait_time);
@@ -581,7 +581,7 @@ __out      PBOOLEAN                        pBAgain
 
         if (!NT_SUCCESS(ntstatus))
         {
-            DbgPrint("PhDskMnt::ScsiGetLUExtension: Cannot create worker thread. (%#x)\n", ntstatus);
+            DbgPrint(__FUNCTION__ ": Cannot create worker thread. (%#x)\n", ntstatus);
 
             status = SP_RETURN_ERROR;
         }
@@ -598,7 +598,7 @@ __out      PBOOLEAN                        pBAgain
 
             if (!NT_SUCCESS(ntstatus))
             {
-                DbgPrint("PhDskMnt::ScsiGetLUExtension: Cannot reference worker thread. (%#x)\n", ntstatus);
+                DbgPrint(__FUNCTION__ ": Cannot reference worker thread. (%#x)\n", ntstatus);
                 KeSetEvent(&pMPDrvInfoGlobal->StopWorker, (KPRIORITY)0, FALSE);
                 ZwWaitForSingleObject(thread_handle, FALSE, NULL);
 
@@ -612,7 +612,7 @@ __out      PBOOLEAN                        pBAgain
     //Done:
     *pBAgain = FALSE;
 
-    KdPrint(("PhDskMnt::MpHwFindAdapter: End, status = 0x%X\n", status));
+    KdPrint((__FUNCTION__ ": End, status = 0x%X\n", status));
 
     return status;
 }                                                     // End MpHwFindAdapter().
@@ -625,7 +625,7 @@ MpHwInitialize(__in PVOID pHBAExt)
 {
     UNREFERENCED_PARAMETER(pHBAExt);
 
-    KdPrint2(("PhDskMnt::MpHwInitialize:  pHBAExt = 0x%p. IRQL=%i\n", pHBAExt, KeGetCurrentIrql()));
+    KdPrint2((__FUNCTION__ ": pHBAExt = 0x%p. IRQL=%i\n", pHBAExt, KeGetCurrentIrql()));
 
     return TRUE;
 }                                                     // End MpHwInitialize().
@@ -649,7 +649,7 @@ MpHwResetBus(
     //        set here to instruct the thread to complete outstanding I/Os as they appear; but a period for that
     //        happening would have to be devised (such completion shouldn't be unbounded).
 
-    DbgPrint("PhDskMnt::MpHwResetBus:  pHBAExt = 0x%p, BusId = %u. Ignored.\n", DeviceExtension, BusId);
+    DbgPrint(__FUNCTION__ ": pHBAExt = 0x%p, BusId = %u. Ignored.\n", DeviceExtension, BusId);
 
     return TRUE;
 }                                               // End MpHwResetBus().
@@ -666,7 +666,7 @@ MpHwResetBus(
     //        set here to instruct the thread to complete outstanding I/Os as they appear; but a period for that
     //        happening would have to be devised (such completion shouldn't be unbounded).
 
-    DbgPrint("PhDskMnt::MpHwResetBus:  pHBAExt = 0x%p, BusId = %u. Calling ScsiPortCompleteRequest().\n", DeviceExtension, BusId);
+    DbgPrint(__FUNCTION__ ": pHBAExt = 0x%p, BusId = %u. Calling ScsiPortCompleteRequest().\n", DeviceExtension, BusId);
 
     ScsiPortCompleteRequest(DeviceExtension,
         (UCHAR)BusId,
@@ -717,7 +717,7 @@ __inout __deref PKIRQL LowestAssumedIrql
 
         pWkRtnParms = (pMP_WorkRtnParms)CONTAINING_RECORD(request, MP_WorkRtnParms, ResponseListEntry);
 
-        KdPrint2(("PhDskMnt::ImScsiCompletePendingSrbs: Completing pWkRtnParms = 0x%p, pSrb = 0x%p\n", pWkRtnParms, pWkRtnParms->pSrb));
+        KdPrint2((__FUNCTION__ ": Completing pWkRtnParms = 0x%p, pSrb = 0x%p\n", pWkRtnParms, pWkRtnParms->pSrb));
 
         ScsiPortNotification(RequestComplete, pWkRtnParms->pHBAExt, pWkRtnParms->pSrb);
         ScsiPortNotification(NextRequest, pWkRtnParms->pHBAExt);
@@ -767,7 +767,7 @@ __inout __deref     PSCSI_REQUEST_BLOCK  pSrb
     UCHAR                   Lun = pSrb->Lun;
 #endif
 
-    KdPrint2(("PhDskMnt::MpHwStartIo:  pHBAExt = 0x%p, pSrb = 0x%p, Path=%i, Target=%i, Lun=%i, IRQL=%i\n",
+    KdPrint2((__FUNCTION__ ": pHBAExt = 0x%p, pSrb = 0x%p, Path=%i, Target=%i, Lun=%i, IRQL=%i\n",
         pHBAExt,
         pSrb,
         (int)pSrb->PathId,
@@ -807,17 +807,17 @@ __inout __deref     PSCSI_REQUEST_BLOCK  pSrb
         break;
 
     case SRB_FUNCTION_RESET_LOGICAL_UNIT:
-        DbgPrint("PhDskMnt::MpHwStartIo: SRB_FUNCTION_RESET_LOGICAL_UNIT.\n");
+        DbgPrint(__FUNCTION__ ": SRB_FUNCTION_RESET_LOGICAL_UNIT.\n");
         pSrb->SrbStatus = ScsiResetLun(pHBAExt, pSrb);
         break;
 
     case SRB_FUNCTION_RESET_DEVICE:
-        DbgPrint("PhDskMnt::MpHwStartIo: SRB_FUNCTION_RESET_DEVICE.\n");
+        DbgPrint(__FUNCTION__ ": SRB_FUNCTION_RESET_DEVICE.\n");
         pSrb->SrbStatus = ScsiResetDevice(pHBAExt, pSrb);
         break;
 
     case SRB_FUNCTION_RESET_BUS:
-        DbgPrint("PhDskMnt::MpHwStartIo: SRB_FUNCTION_RESET_BUS.\n");
+        DbgPrint(__FUNCTION__ ": SRB_FUNCTION_RESET_BUS.\n");
         pSrb->SrbStatus = MpHwResetBus(pHBAExt, pSrb->PathId);
         break;
 
@@ -826,21 +826,21 @@ __inout __deref     PSCSI_REQUEST_BLOCK  pSrb
         break;
 
     case SRB_FUNCTION_POWER:
-        KdPrint(("PhDskMnt::MpHwStartIo: SRB_FUNCTION_POWER.\n"));
+        KdPrint((__FUNCTION__ ": SRB_FUNCTION_POWER.\n"));
         // Do nothing.
         pSrb->SrbStatus = SRB_STATUS_SUCCESS;
 
         break;
 
     case SRB_FUNCTION_SHUTDOWN:
-        KdPrint(("PhDskMnt::MpHwStartIo: SRB_FUNCTION_SHUTDOWN.\n"));
+        KdPrint((__FUNCTION__ ": SRB_FUNCTION_SHUTDOWN.\n"));
         // Do nothing.
         pSrb->SrbStatus = SRB_STATUS_SUCCESS;
 
         break;
 
     default:
-        KdPrint(("PhDskMnt::MpHwStartIo: Unknown pSrb Function = 0x%X\n", pSrb->Function));
+        KdPrint((__FUNCTION__ ": Unknown pSrb Function = 0x%X\n", pSrb->Function));
 
         //StorPortLogError(pHBAExt, pSrb, pSrb->PathId, pSrb->TargetId, pSrb->Lun, SP_PROTOCOL_ERROR, 0x0200 | pSrb->Cdb[0]);
 
@@ -893,7 +893,7 @@ __in PVOID                      pParameters
     pHW_HBA_EXT                 pHBAExt = (pHW_HBA_EXT)DeviceExtension;
     ULONG                       i;
 
-    KdPrint2(("PhDskMnt::MpHwAdapterControl:  pHBAExt = 0x%p, ControlType = 0x%p, pParameters=0x%p\n", pHBAExt, ControlType, pParameters));
+    KdPrint2((__FUNCTION__ ": pHBAExt = 0x%p, ControlType = 0x%p, pParameters=0x%p\n", pHBAExt, ControlType, pParameters));
 
     pHBAExt->AdapterState = ControlType;
 
@@ -904,7 +904,7 @@ __in PVOID                      pParameters
         PSCSI_SUPPORTED_CONTROL_TYPE_LIST pCtlTypList =
             (PSCSI_SUPPORTED_CONTROL_TYPE_LIST)pParameters;
 
-        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiQuerySupportedControlTypes\n"));
+        KdPrint2((__FUNCTION__ ": ScsiQuerySupportedControlTypes\n"));
 
         // Get pointer to control type list
         // Cycle through list to set TRUE for each type supported
@@ -922,34 +922,34 @@ __in PVOID                      pParameters
     }
 
     case ScsiStopAdapter:
-        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiStopAdapter\n"));
+        KdPrint2((__FUNCTION__ ": ScsiStopAdapter\n"));
 
         break;
 
     case ScsiRestartAdapter:
-        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiRestartAdapter\n"));
+        KdPrint2((__FUNCTION__ ": ScsiRestartAdapter\n"));
 
         /* To Do: Add some function. */
 
         break;
 
     case ScsiSetBootConfig:
-        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiSetBootConfig\n"));
+        KdPrint2((__FUNCTION__ ": ScsiSetBootConfig\n"));
 
         break;
 
     case ScsiSetRunningConfig:
-        KdPrint2(("PhDskMnt::MpHwAdapterControl: ScsiSetRunningConfig\n"));
+        KdPrint2((__FUNCTION__ ": ScsiSetRunningConfig\n"));
 
         break;
 
     default:
-        KdPrint2(("PhDskMnt::MpHwAdapterControl: UNKNOWN: 0x%X\n", ControlType));
+        KdPrint2((__FUNCTION__ ": UNKNOWN: 0x%X\n", ControlType));
 
         break;
     }
 
-    KdPrint2(("PhDskMnt::MpHwAdapterControl End: status=0x%X\n", ScsiAdapterControlSuccess));
+    KdPrint2((__FUNCTION__ ": End: status=0x%X\n", ScsiAdapterControlSuccess));
 
     return ScsiAdapterControlSuccess;
 }                                                     // End MpHwAdapterControl().
@@ -965,14 +965,14 @@ __inout __deref PKIRQL LowestAssumedIrql
 {
     DEVICE_NUMBER rem_data;
 
-    KdPrint2(("PhDskMnt::ImScsiStopAdapter:  pHBAExt = 0x%p\n", pHBAExt));
+    KdPrint2((__FUNCTION__ ": pHBAExt = 0x%p\n", pHBAExt));
 
     // Remove all devices, using "wildcard" device number.
     rem_data.LongNumber = IMSCSI_ALL_DEVICES;
 
     ImScsiRemoveDevice(pHBAExt, &rem_data, LowestAssumedIrql);
 
-    KdPrint2(("PhDskMnt::ImScsiStopAdapter End.\n"));
+    KdPrint2((__FUNCTION__ ": End.\n"));
 
     return;
 }                                                     // End ImScsiStopAdapter().
@@ -1019,7 +1019,7 @@ MpHwFreeAdapterResources(__in PVOID DeviceExtension)
     KIRQL               lowest_assumed_irql = PASSIVE_LEVEL;
     pHW_HBA_EXT         pHBAExt = (pHW_HBA_EXT)DeviceExtension;
 
-    KdPrint2(("PhDskMnt::MpHwFreeAdapterResources:  pHBAExt = 0x%p\n", pHBAExt));
+    KdPrint2((__FUNCTION__ ": pHBAExt = 0x%p\n", pHBAExt));
 
     // Free memory allocated for disk
     ImScsiStopAdapter(pHBAExt, &lowest_assumed_irql);
@@ -1170,7 +1170,7 @@ ImScsiLogDbgError(__in __deref PVOID Object,
 
     if (packet_size > ERROR_LOG_MAXIMUM_SIZE)
     {
-        KdPrint(("PhDskMnt::Warning: Too large error log packet.\n"));
+        KdPrint((__FUNCTION__ ": Too large error log packet.\n"));
         return;
     }
 
@@ -1180,7 +1180,7 @@ ImScsiLogDbgError(__in __deref PVOID Object,
 
     if (error_log_packet == NULL)
     {
-        KdPrint(("PhDskMnt::Warning: IoAllocateErrorLogEntry() returned NULL.\n"));
+        KdPrint((__FUNCTION__ ": IoAllocateErrorLogEntry() returned NULL.\n"));
         return;
     }
 
@@ -1263,7 +1263,7 @@ __in __deref PLARGE_INTEGER Offset)
 
                 if (intermediate_buffer == NULL)
                 {
-                    DbgPrint("PhDskMnt::ImScsiSafeReadFile: Insufficient paged pool to allocate "
+                    DbgPrint(__FUNCTION__ ": Insufficient paged pool to allocate "
                         "intermediate buffer (%u bytes).\n", request_length);
 
                     IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -1290,7 +1290,7 @@ __in __deref PLARGE_INTEGER Offset)
                 ExFreePoolWithTag(intermediate_buffer, MP_TAG_GENERAL);
                 intermediate_buffer = NULL;
 
-                DbgPrint("PhDskMnt::ImScsiSafeReadFile: ZwReadFile error reading "
+                DbgPrint(__FUNCTION__ ": ZwReadFile error reading "
                     "%u bytes. Retrying with smaller read size. (Status 0x%X)\n",
                     request_length,
                     status);
@@ -1302,7 +1302,7 @@ __in __deref PLARGE_INTEGER Offset)
 
             if (!NT_SUCCESS(status))
             {
-                DbgPrint("PhDskMnt::ImScsiSafeReadFile: ZwReadFile error reading "
+                DbgPrint(__FUNCTION__ ": ZwReadFile error reading "
                     "%u bytes. (Status 0x%X)\n",
                     request_length,
                     status);
@@ -1324,14 +1324,14 @@ __in __deref PLARGE_INTEGER Offset)
 
         if (IoStatusBlock->Information == 0)
         {
-            DbgPrint("PhDskMnt::ImScsiSafeReadFile: IoStatusBlock->Information == 0, "
+            DbgPrint(__FUNCTION__ ": IoStatusBlock->Information == 0, "
                 "returning STATUS_CONNECTION_RESET.\n");
 
             status = STATUS_CONNECTION_RESET;
             break;
         }
 
-        KdPrint(("PhDskMnt::ImScsiSafeReadFile: Done %u bytes.\n",
+        KdPrint((__FUNCTION__ ": Done %u bytes.\n",
             (ULONG)IoStatusBlock->Information));
 
         length_done += IoStatusBlock->Information;
@@ -1345,12 +1345,12 @@ __in __deref PLARGE_INTEGER Offset)
 
     if (!NT_SUCCESS(status))
     {
-        DbgPrint("PhDskMnt::ImScsiSafeReadFile: Error return "
+        DbgPrint(__FUNCTION__ ": Error return "
             "(Status 0x%X)\n", status);
     }
     else
     {
-        KdPrint(("PhDskMnt::ImScsiSafeReadFile: Successful.\n"));
+        KdPrint((__FUNCTION__ ": Successful.\n"));
     }
 
     IoStatusBlock->Status = status;
@@ -1379,7 +1379,7 @@ __in ULONG Length)
 
     //PAGED_CODE();
 
-    KdPrint2(("ImScsiSafeIOStream: FileObject=%#x, MajorFunction=%#x, "
+    KdPrint2((__FUNCTION__ ": FileObject=%#x, MajorFunction=%#x, "
         "IoStatusBlock=%#x, Buffer=%#x, Length=%#x.\n",
         FileObject, MajorFunction, IoStatusBlock, Buffer, Length));
 
@@ -1400,7 +1400,7 @@ __in ULONG Length)
             PIRP irp;
             PDEVICE_OBJECT device_object = IoGetRelatedDeviceObject(FileObject);
 
-            KdPrint2(("ImScsiSafeIOStream: Building IRP...\n"));
+            KdPrint2((__FUNCTION__ ": Building IRP...\n"));
 
 #pragma warning(suppress: 6102)
             irp = IoBuildSynchronousFsdRequest(
@@ -1414,19 +1414,19 @@ __in ULONG Length)
 
             if (irp == NULL)
             {
-                KdPrint(("ImScsiSafeIOStream: Error building IRP.\n"));
+                KdPrint((__FUNCTION__ ": Error building IRP.\n"));
 
                 IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
                 IoStatusBlock->Information = length_done;
                 return IoStatusBlock->Status;
             }
 
-            KdPrint2(("ImScsiSafeIOStream: Built IRP=%#x.\n", irp));
+            KdPrint2((__FUNCTION__ ": Built IRP=%#x.\n", irp));
 
             io_stack = IoGetNextIrpStackLocation(irp);
             io_stack->FileObject = FileObject;
 
-            KdPrint2(("ImScsiSafeIOStream: MajorFunction=%#x, Length=%#x\n",
+            KdPrint2((__FUNCTION__ ": MajorFunction=%#x, Length=%#x\n",
                 io_stack->MajorFunction,
                 io_stack->Parameters.Read.Length));
 
@@ -1460,7 +1460,7 @@ __in ULONG Length)
 
             status = IoStatusBlock->Status;
 
-            KdPrint2(("ImScsiSafeIOStream: IRP %#x completed. Status=0x%X.\n",
+            KdPrint2((__FUNCTION__ ": IRP %#x completed. Status=0x%X.\n",
                 irp, IoStatusBlock->Status));
 
             RequestLength >>= 1;
@@ -1469,14 +1469,14 @@ __in ULONG Length)
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint2(("ImScsiSafeIOStream: I/O failed. Status=0x%X.\n", status));
+            KdPrint2((__FUNCTION__ ": I/O failed. Status=0x%X.\n", status));
 
             IoStatusBlock->Status = status;
             IoStatusBlock->Information = 0;
             return IoStatusBlock->Status;
         }
 
-        KdPrint2(("ImScsiSafeIOStream: I/O done. Status=0x%X. Length=0x%X\n",
+        KdPrint2((__FUNCTION__ ": I/O done. Status=0x%X. Length=0x%X\n",
             status, IoStatusBlock->Information));
 
         if (IoStatusBlock->Information == 0)
@@ -1489,7 +1489,7 @@ __in ULONG Length)
         length_done += (ULONG)IoStatusBlock->Information;
     }
 
-    KdPrint2(("ImScsiSafeIOStream: I/O complete.\n"));
+    KdPrint2((__FUNCTION__ ": I/O complete.\n"));
 
     IoStatusBlock->Status = STATUS_SUCCESS;
     IoStatusBlock->Information = length_done;
@@ -1520,7 +1520,7 @@ pMP_WorkRtnParms ImScsiCreateWorkItem(pHW_HBA_EXT pHBAExt,
 
 VOID ImScsiScheduleWorkItem(pMP_WorkRtnParms pWkRtnParms, PKIRQL LowestAssumedIrql)
 {
-    KdPrint2(("PhDskMnt::ImScsiScheduleWorkItem: Queuing work=0x%p\n", pWkRtnParms));
+    KdPrint2((__FUNCTION__ ": Queuing work=0x%p\n", pWkRtnParms));
 
     KLOCK_QUEUE_HANDLE lock_handle;
 

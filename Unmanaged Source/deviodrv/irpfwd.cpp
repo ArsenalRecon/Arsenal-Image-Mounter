@@ -341,7 +341,7 @@ DevIoDrvDispatchServerLockMemory(PIRP Irp,
 
     if (io_stack->Parameters.DeviceIoControl.OutputBufferLength < IMDPROXY_HEADER_SIZE)
     {
-        KdPrint(("IRP=%p Buffer too small: %u.\n",
+        KdPrint((__FUNCTION__ ": IRP=%p Buffer too small: %u.\n",
             Irp, io_stack->Parameters.DeviceIoControl.OutputBufferLength));
 
         DevIoDrvCompleteIrp(Irp, STATUS_BUFFER_TOO_SMALL, 0);
@@ -397,7 +397,7 @@ DevIoDrvDispatchServerIORequest(PIRP Irp,
     if (io_stack->Parameters.DeviceIoControl.OutputBufferLength > 0 &&
         io_stack->Parameters.DeviceIoControl.OutputBufferLength < IMDPROXY_HEADER_SIZE)
     {
-        KdPrint(("IRP=%p Buffer too small: %u.\n",
+        KdPrint((__FUNCTION__ ": IRP=%p Buffer too small: %u.\n",
             Irp, io_stack->Parameters.DeviceIoControl.OutputBufferLength));
 
         DevIoDrvCompleteIrp(Irp, STATUS_BUFFER_TOO_SMALL, 0);
@@ -881,7 +881,7 @@ DevIoDrvDispatchClientRequest(PIRP Irp,
 
     if (context->Server == NULL)
     {
-        KdPrint(("DevIoDrv: IRP=%p Request to disconnected device.\n", Irp));
+        KdPrint((__FUNCTION__ ": IRP=%p Request to disconnected device.\n", Irp));
         
         DevIoDrvCompleteIrp(Irp, STATUS_DEVICE_DOES_NOT_EXIST, 0);
         return STATUS_DEVICE_DOES_NOT_EXIST;
@@ -907,7 +907,7 @@ DevIoDrvDispatchClientRequest(PIRP Irp,
     {
         ImScsiReleaseLock(&lock_handle, LowestAssumedIrql);
 
-        KdPrint(("DevIoDrv: IRP=%p Request to disconnected device.\n", Irp));
+        KdPrint((__FUNCTION__ ": IRP=%p Request to disconnected device.\n", Irp));
 
         DevIoDrvCompleteIrpQueueItem(client_item, STATUS_DEVICE_DOES_NOT_EXIST, 0, LowestAssumedIrql);
 

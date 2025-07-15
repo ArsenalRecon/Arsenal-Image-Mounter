@@ -43,7 +43,7 @@ ImScsiWorkerThread(__in PVOID Context)
 
     if (pLUExt != NULL)
     {
-        KdPrint(("PhDskMnt::ImScsiWorkerThread: Device worker thread start. pLUExt = 0x%p\n",
+        KdPrint((__FUNCTION__ ": Device worker thread start. pLUExt = 0x%p\n",
             pLUExt));
 
         request_list = &pLUExt->RequestList;
@@ -59,7 +59,7 @@ ImScsiWorkerThread(__in PVOID Context)
     }
     else
     {
-        KdPrint(("PhDskMnt::ImScsiWorkerThread: Global worker thread start. pLUExt=%p\n",
+        KdPrint((__FUNCTION__ ": Global worker thread start. pLUExt=%p\n",
             pLUExt));
 
         request_list = &pMPDrvInfoGlobal->RequestList;
@@ -83,7 +83,7 @@ ImScsiWorkerThread(__in PVOID Context)
 
         if (pMPDrvInfoGlobal->ControllerObject != NULL)
         {
-            KdPrint2(("PhDskMnt::ImScsiWorkerThread: Pre-building IRP for next SMB_IMSCSI_CHECK.\n"));
+            KdPrint2((__FUNCTION__ ": Pre-building IRP for next SMB_IMSCSI_CHECK.\n"));
 
             irp = ImScsiBuildCompletionIrp();
         }
@@ -137,7 +137,7 @@ ImScsiWorkerThread(__in PVOID Context)
         // Request to wait for LU worker thread to terminate
         if (pWkRtnParms->pSrb == NULL)
         {
-            KdPrint(("PhDskMnt::ImScsiWorkerThread: Request to wait for LU worker thread to exit. pLUExt=%p\n",
+            KdPrint((__FUNCTION__ ": Request to wait for LU worker thread to exit. pLUExt=%p\n",
                 pWkRtnParms->pLUExt));
 
             if (pWkRtnParms->pLUExt->WorkerThread != NULL)
@@ -152,11 +152,11 @@ ImScsiWorkerThread(__in PVOID Context)
                 ObDereferenceObject(pWkRtnParms->pLUExt->WorkerThread);
                 pWkRtnParms->pLUExt->WorkerThread = NULL;
 
-                KdPrint(("PhDskMnt::ImScsiWorkerThread: Worker thread exit. Ready to free LUExt.\n"));
+                KdPrint((__FUNCTION__ ": Worker thread exit. Ready to free LUExt.\n"));
             }
             else
             {
-                KdPrint(("PhDskMnt::ImScsiWorkerThread: Worker not started. Ready to free LUExt.\n"));
+                KdPrint((__FUNCTION__ ": Worker not started. Ready to free LUExt.\n"));
             }
             
             ExFreePoolWithTag(pWkRtnParms->pLUExt, MP_TAG_GENERAL);
@@ -180,26 +180,26 @@ ImScsiWorkerThread(__in PVOID Context)
 
 #ifdef USE_SCSIPORT
 
-        KdPrint2(("PhDskMnt::ImScsiWorkerThread: Calling SMB_IMSCSI_CHECK for work: 0x%p.\n", pWkRtnParms));
+        KdPrint2((__FUNCTION__ ": Calling SMB_IMSCSI_CHECK for work: 0x%p.\n", pWkRtnParms));
 
         status = ImScsiCallForCompletion(irp, pWkRtnParms, &lowest_assumed_irql);
 
         if (!NT_SUCCESS(status))
-            DbgPrint("PhDskMnt::ImScsiWorkerThread: IoCallDriver failed: 0x%X for work 0x%p\n", status, pWkRtnParms);
+            DbgPrint(__FUNCTION__ ": IoCallDriver failed: 0x%X for work 0x%p\n", status, pWkRtnParms);
         else
-            KdPrint2(("PhDskMnt::ImScsiWorkerThread: Finished SMB_IMSCSI_CHECK for work: 0x%p.\n", pWkRtnParms));
+            KdPrint2((__FUNCTION__ ": Finished SMB_IMSCSI_CHECK for work: 0x%p.\n", pWkRtnParms));
 
 #endif
 
 #ifdef USE_STORPORT
 
-        KdPrint2(("PhDskMnt::ImScsiWorkerThread: Sending 'RequestComplete' to StorPort for work: 0x%p.\n", pWkRtnParms));
+        KdPrint2((__FUNCTION__ ": Sending 'RequestComplete' to StorPort for work: 0x%p.\n", pWkRtnParms));
 
         StorPortNotification(RequestComplete, pWkRtnParms->pHBAExt, pWkRtnParms->pSrb);
 
         ExFreePoolWithTag(pWkRtnParms, MP_TAG_GENERAL);
 
-        KdPrint2(("PhDskMnt::ImScsiWorkerThread: Finished work: 0x%p.\n", pWkRtnParms));
+        KdPrint2((__FUNCTION__ ": Finished work: 0x%p.\n", pWkRtnParms));
 
 #endif
 
@@ -245,13 +245,13 @@ ImScsiDispatchReadWrite(
 
     startingOffset.QuadPart = startingSector.QuadPart << pLUExt->BlockPower;
 
-    KdPrint2(("PhDskMnt::ImScsiDispatchWork starting sector: 0x%I64X\n", startingSector));
+    KdPrint2((__FUNCTION__ ": starting sector: 0x%I64X\n", startingSector));
 
     ULONG s_status = StoragePortGetSystemAddress(pHBAExt, pSrb, &sysaddress);
 
     if ((s_status != STORAGE_STATUS_SUCCESS) || (sysaddress == NULL))
     {
-        DbgPrint("PhDskMnt::ImScsiDispatchWork: StorPortGetSystemAddress failed: status=0x%X address=0x%p translated=0x%p\n",
+        DbgPrint(__FUNCTION__ ": StorPortGetSystemAddress failed: status=0x%X address=0x%p translated=0x%p\n",
             s_status,
             pSrb->DataBuffer,
             sysaddress);
@@ -266,7 +266,7 @@ ImScsiDispatchReadWrite(
 
     if (buffer == NULL)
     {
-        DbgPrint("PhDskMnt::ImScsiDispatchWork: Memory allocation failed.\n");
+        DbgPrint(__FUNCTION__ ": Memory allocation failed.\n");
 
         pSrb->SrbStatus = SRB_STATUS_ERROR;
         pSrb->ScsiStatus = SCSISTAT_GOOD;
@@ -295,12 +295,12 @@ ImScsiDispatchReadWrite(
     {
         ExFreePoolWithTag(buffer, MP_TAG_GENERAL);
 
-        DbgPrint("PhDskMnt::ImScsiDispatchWork: I/O error status=0x%X\n", status);
+        DbgPrint(__FUNCTION__ ": I/O error status=0x%X\n", status);
         switch (status)
         {
         case STATUS_INVALID_BUFFER_SIZE:
         {
-            DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
+            DbgPrint(__FUNCTION__ ": STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
             
             ScsiSetCheckCondition(
                 pSrb,
@@ -314,7 +314,7 @@ ImScsiDispatchReadWrite(
 
         case STATUS_DEVICE_BUSY:
         {
-            DbgPrint("PhDskMnt::ImScsiDispatchWork: STATUS_DEVICE_BUSY from image I/O. Reporting SRB_STATUS_BUSY/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_BECOMING_READY.\n");
+            DbgPrint(__FUNCTION__ ": STATUS_DEVICE_BUSY from image I/O. Reporting SRB_STATUS_BUSY/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_BECOMING_READY.\n");
             
             ScsiSetCheckCondition(
                 pSrb,
@@ -335,7 +335,7 @@ ImScsiDispatchReadWrite(
         case STATUS_PORT_DISCONNECTED:
         case STATUS_REMOTE_DISCONNECT:
         {
-            DbgPrint("PhDskMnt::ImScsiDispatchWork: Underlying image disconnected. Reporting SRB_STATUS_ERROR/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_NOT_REACHABLE.\n");
+            DbgPrint(__FUNCTION__ ": Underlying image disconnected. Reporting SRB_STATUS_ERROR/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_NOT_REACHABLE.\n");
             
             ImScsiRemoveDevice(pHBAExt, &pLUExt->DeviceNumber, &lowest_assumed_irql);
             
@@ -377,13 +377,13 @@ ImScsiDispatchReadWrite(
             ((*(mbr + 0x01DE) & 0x7F) == 0x00) &&
             ((*(mbr + 0x01EE) & 0x7F) == 0x00))
         {
-            DbgPrint("PhDskMnt::ImScsiDispatchWork: Faking disk signature as %#X.\n", pLUExt->FakeDiskSignature);
+            DbgPrint(__FUNCTION__ ": Faking disk signature as %#X.\n", pLUExt->FakeDiskSignature);
 
             *(PULONG)(mbr + 0x01B8) = pLUExt->FakeDiskSignature;
         }
         else
         {
-            DbgPrint("PhDskMnt::ImScsiDispatchWork: Present MBR data not compatible with fake disk signature option.\n");
+            DbgPrint(__FUNCTION__ ": Present MBR data not compatible with fake disk signature option.\n");
 
             pLUExt->FakeDiskSignature = 0;
         }
@@ -436,7 +436,7 @@ __in pMP_WorkRtnParms        pWkRtnParms
     PSCSI_REQUEST_BLOCK       pSrb = pWkRtnParms->pSrb;
     PETHREAD                  pReqThread = pWkRtnParms->pReqThread;
 
-    KdPrint2(("PhDskMnt::ImScsiDispatchWork Action: 0x%X, pSrb: 0x%p, pSrb->DataBuffer: 0x%p pSrb->DataTransferLength: 0x%X\n",
+    KdPrint2((__FUNCTION__ " Action: 0x%X, pSrb: 0x%p, pSrb->DataBuffer: 0x%p pSrb->DataTransferLength: 0x%X\n",
         (int)pSrb->Cdb[0], pSrb, pSrb->DataBuffer, pSrb->DataTransferLength));
 
     switch (pSrb->Function)
@@ -451,7 +451,7 @@ __in pMP_WorkRtnParms        pWkRtnParms
         {                       // Create new?
             KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
 
-            KdPrint(("PhDskMnt::ImScsiDispatchWork: Request SMP_IMSCSI_CREATE_DEVICE.\n"));
+            KdPrint((__FUNCTION__ ": Request SMP_IMSCSI_CREATE_DEVICE.\n"));
 
             ImScsiCreateLU(pHBAExt, pSrb, pReqThread, &lowest_assumed_irql);
         }
@@ -461,7 +461,7 @@ __in pMP_WorkRtnParms        pWkRtnParms
         {
             PSRB_IMSCSI_EXTEND_DEVICE srb_buffer = (PSRB_IMSCSI_EXTEND_DEVICE)pSrb->DataBuffer;
 
-            KdPrint(("PhDskMnt::ImScsiDispatchWork: Request SMP_IMSCSI_EXTEND_DEVICE.\n"));
+            KdPrint((__FUNCTION__ ": Request SMP_IMSCSI_EXTEND_DEVICE.\n"));
 
             srb_io_control->ReturnCode = ImScsiExtendLU(pHBAExt, pLUExt, srb_buffer);
 
@@ -493,7 +493,7 @@ __in pMP_WorkRtnParms        pWkRtnParms
 
         default:
         {
-            DbgPrint("PhDskMnt::ImScsiDispatchWork unknown function: 0x%X\n", (int)pSrb->Cdb[0]);
+            DbgPrint(__FUNCTION__ " unknown function: 0x%X\n", (int)pSrb->Cdb[0]);
 
             ScsiSetError(pSrb, SRB_STATUS_INTERNAL_ERROR);
         }
@@ -503,7 +503,7 @@ __in pMP_WorkRtnParms        pWkRtnParms
         break;
     }
 
-    KdPrint2(("PhDskMnt::ImScsiDispatchWork: End pSrb: 0x%p.\n", pSrb));
+    KdPrint2((__FUNCTION__ ": End pSrb: 0x%p.\n", pSrb));
 
 }                                                     // End ImScsiDispatchWork().
 
@@ -561,7 +561,7 @@ ImScsiDispatchUnmapDevice(
                 pLUExt->FakeDiskSignature = 0;
             }
 
-            KdPrint(("PhDskMnt::ImScsiDispatchUnmapDevice: Offset: %I64i, bytes: %I64u\n",
+            KdPrint((__FUNCTION__ ": Offset: %I64i, bytes: %I64u\n",
                 range[i].StartingOffset, range[i].LengthInBytes));
         }
 
@@ -612,7 +612,7 @@ ImScsiDispatchUnmapDevice(
                 pLUExt->FakeDiskSignature = 0;
             }
 
-            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: Zero data request from 0x%I64X to 0x%I64X\n",
+            KdPrint((__FUNCTION__ ": Zero data request from 0x%I64X to 0x%I64X\n",
                 zerodata.FileOffset.QuadPart, zerodata.BeyondFinalZero.QuadPart));
 
 #if _NT_TARGET_VERSION >= 0x602
@@ -621,7 +621,7 @@ ImScsiDispatchUnmapDevice(
                 fltrim->Ranges[i].Offset = zerodata.FileOffset.QuadPart;
                 fltrim->Ranges[i].Length = (LONGLONG)numBlocks << pLUExt->BlockPower;
 
-                KdPrint(("PhDskMnt::ImScsiDispatchUnmap: File level trim request 0x%I64X bytes at 0x%I64X\n",
+                KdPrint((__FUNCTION__ ": File level trim request 0x%I64X bytes at 0x%I64X\n",
                     fltrim->Ranges[i].Length, fltrim->Ranges[i].Offset));
             }
 #endif
@@ -638,7 +638,7 @@ ImScsiDispatchUnmapDevice(
                 NULL,
                 0);
 
-            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: FSCTL_SET_ZERO_DATA result: 0x%#X\n", status));
+            KdPrint((__FUNCTION__ ": FSCTL_SET_ZERO_DATA result: 0x%#X\n", status));
 
             if (!NT_SUCCESS(status))
             {
@@ -661,7 +661,7 @@ ImScsiDispatchUnmapDevice(
                 NULL,
                 0);
 
-            KdPrint(("PhDskMnt::ImScsiDispatchUnmap: FSCTL_FILE_LEVEL_TRIM result: %#x\n", status));
+            KdPrint((__FUNCTION__ ": FSCTL_FILE_LEVEL_TRIM result: %#x\n", status));
 
             if (!NT_SUCCESS(status))
             {
@@ -677,7 +677,7 @@ ImScsiDispatchUnmapDevice(
 
 done:
 
-    KdPrint(("PhDskMnt::ImScsiDispatchUnmap: Result: %#x\n", status));
+    KdPrint((__FUNCTION__ ": Result: %#x\n", status));
 
     ScsiSetSuccess(pSrb, 0);
 }
@@ -697,7 +697,7 @@ ImScsiCreateLU(
 
     KLOCK_QUEUE_HANDLE      LockHandle;
 
-    KdPrint(("PhDskMnt::ImScsiCreateLU: Initializing new device: %d:%d:%d\n",
+    KdPrint((__FUNCTION__ ": Initializing new device: %d:%d:%d\n",
         new_device->Fields.DeviceNumber.PathId,
         new_device->Fields.DeviceNumber.TargetId,
         new_device->Fields.DeviceNumber.Lun));
@@ -784,7 +784,7 @@ ImScsiExtendLU(
         device_extension->DiskSize.QuadPart +
         extend_device_data->ExtendSize.QuadPart;
 
-    KdPrint(("ImScsi: New size of device %i:%i:%i will be %I64i bytes.\n",
+    KdPrint((__FUNCTION__ ": New size of device %i:%i:%i will be %I64i bytes.\n",
         (int)extend_device_data->DeviceNumber.PathId,
         (int)extend_device_data->DeviceNumber.TargetId,
         (int)extend_device_data->DeviceNumber.Lun,
@@ -818,7 +818,7 @@ ImScsiExtendLU(
         }
 #endif // _WIN64
 
-        KdPrint(("ImScsi: Allocating %I64u bytes.\n",
+        KdPrint((__FUNCTION__ ": Allocating %I64u bytes.\n",
             (ULONGLONG)max_size));
 
         status = ZwAllocateVirtualMemory(NtCurrentProcess(),
@@ -886,7 +886,7 @@ ImScsiExtendLU(
         goto done;
     }
 
-    KdPrint(("ImScsi: Current image size is %I64u bytes.\n",
+    KdPrint((__FUNCTION__ ": Current image size is %I64u bytes.\n",
         file_standard_information.EndOfFile.QuadPart));
 
     if (file_standard_information.EndOfFile.QuadPart >=
@@ -901,7 +901,7 @@ ImScsiExtendLU(
     // For other, fixed file-backed disks we need to adjust the
     // physical file size.
 
-    KdPrint(("ImScsi: Setting new image size to %I64u bytes.\n",
+    KdPrint((__FUNCTION__ ": Setting new image size to %I64u bytes.\n",
         new_size.EndOfFile.QuadPart));
 
     status = ZwSetInformationFile(device_extension->ImageFile,
@@ -917,7 +917,7 @@ ImScsiExtendLU(
     }
 
 done:
-    KdPrint(("ImScsi: SMP_IMSCSI_EXTEND_DEVICE result: %#x\n", status));
+    KdPrint((__FUNCTION__ ": SMP_IMSCSI_EXTEND_DEVICE result: %#x\n", status));
 
     return status;
 }

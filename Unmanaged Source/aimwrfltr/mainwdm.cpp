@@ -375,7 +375,7 @@ AIMWrFltSaveDiffHeader(IN PDEVICE_EXTENSION DeviceExtension)
     if (!NT_SUCCESS(status) || io_status.Information !=
         sizeof(DeviceExtension->Statistics.DiffDeviceVbr))
     {
-        DbgPrint("AIMWrFiltr: Error writing diff file header: %#x\n", status);
+        DbgPrint(__FUNCTION__ ": Error writing diff file header: %#x\n", status);
         return status;
     }
 
@@ -397,7 +397,7 @@ AIMWrFltSaveDiffHeader(IN PDEVICE_EXTENSION DeviceExtension)
 
     if (io_status.Information != alloc_table_size || !NT_SUCCESS(status))
     {
-        DbgPrint("AIMWrFiltr: Error writing diff allocation table: %#x\n", status);
+        DbgPrint(__FUNCTION__ ": Error writing diff allocation table: %#x\n", status);
         return status;
     }
 
@@ -431,7 +431,7 @@ AIMWrFltrCleanupDevice(IN PDEVICE_EXTENSION DeviceExtension)
         
         AIMWrFltrReleaseLock(&lock_handle, &current_irql);
 
-        DbgPrint("AIMWrFltrCleanupDevice: Shutting down worker thread with %i items in queue\n",
+        DbgPrint(__FUNCTION__ ": Shutting down worker thread with %i items in queue\n",
             items_in_queue);
 
 #endif
@@ -475,7 +475,7 @@ AIMWrFltrGetDiffDevicePath(IN PUNICODE_STRING MountDevName,
 {
     PAGED_CODE();
 
-    KdPrint(("AIMWrFltrGetDiffDevicePath: Device assigned link '%wZ'\n",
+    KdPrint((__FUNCTION__ ": Device assigned link '%wZ'\n",
         MountDevName));
 
     ULONG length;
@@ -484,7 +484,7 @@ AIMWrFltrGetDiffDevicePath(IN PUNICODE_STRING MountDevName,
 
     if (!NT_SUCCESS(status))
     {
-        KdPrint(("AIMWrFltrGetDiffDevicePath: Cannot query registry settings for device '%wZ' status 0x%X.\n",
+        KdPrint((__FUNCTION__ ": Cannot query registry settings for device '%wZ' status 0x%X.\n",
             MountDevName, status));
 
         return status;
@@ -501,13 +501,13 @@ AIMWrFltrGetDiffDevicePath(IN PUNICODE_STRING MountDevName,
 
     if (DiffDevicePath->DataLength < 4)
     {
-        DbgPrint("AIMWrFltrGetDiffDevicePath: Empty diff device for volume '%wZ'.\n",
+        DbgPrint(__FUNCTION__ ": Empty diff device for volume '%wZ'.\n",
             MountDevName);
 
         return STATUS_DEVICE_CONFIGURATION_ERROR;
     }
 
-    KdPrint(("AIMWrFltrGetDiffDevicePath: Setting diff device for volume '%wZ' to '%ws'.\n",
+    KdPrint((__FUNCTION__ ": Setting diff device for volume '%wZ' to '%ws'.\n",
         MountDevName, (PCWSTR)DiffDevicePath->Data));
 
     return STATUS_SUCCESS;
@@ -666,7 +666,7 @@ AIMWrFltrSynchronousReadWrite(
 #ifdef DBG
     if (!NT_SUCCESS(status) && MajorFunction == IRP_MJ_WRITE)
     {
-        DbgPrint("AIMWrFltrSynchronousReadWrite: Failed 0x%X\n", status);
+        DbgPrint(__FUNCTION__ ": Failed 0x%X\n", status);
     }
 #endif
 
@@ -696,7 +696,7 @@ AIMWrFltrReadDiffDeviceVbr(IN PDEVICE_EXTENSION DeviceExtension)
 
         if (!NT_SUCCESS(status) && status != STATUS_END_OF_FILE)
         {
-            DbgPrint("AIMWrFltrReadDiffDeviceVbr: Error reading diff device for %p: 0x%X\n",
+            DbgPrint(__FUNCTION__ ": Error reading diff device for %p: 0x%X\n",
                 DeviceExtension->DeviceObject, status);
 
 #if DBG
@@ -732,7 +732,7 @@ AIMWrFltrReadDiffDeviceVbr(IN PDEVICE_EXTENSION DeviceExtension)
                 DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
                 DiffBlockBits != DIFF_BLOCK_BITS))
         {
-            DbgPrint("AIMWrFltrReadDiffDeviceVbr: Diff device VBR for %p is invalid.\n",
+            DbgPrint(__FUNCTION__ ": Diff device VBR for %p is invalid.\n",
                 DeviceExtension->DeviceObject);
 
 #if DBG
@@ -758,7 +758,7 @@ AIMWrFltrReadDiffDeviceVbr(IN PDEVICE_EXTENSION DeviceExtension)
         if (DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
             MajorVersion != major_version)
         {
-            DbgPrint("AIMWrFltrReadDiffDeviceVbr: Overwriting incompatible version. Found in VBR %i:%i, expected %i:%i.\n",
+            DbgPrint(__FUNCTION__ ": Overwriting incompatible version. Found in VBR %i:%i, expected %i:%i.\n",
                 DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
                 MajorVersion,
                 DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
@@ -772,7 +772,7 @@ AIMWrFltrReadDiffDeviceVbr(IN PDEVICE_EXTENSION DeviceExtension)
         else if (DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
             MinorVersion != minor_version)
         {
-            DbgPrint("AIMWrFltrReadDiffDeviceVbr: Minor version mismatch. Found in VBR %i:%i, expected %i:%i.\n",
+            DbgPrint(__FUNCTION__ ": Minor version mismatch. Found in VBR %i:%i, expected %i:%i.\n",
                 DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
                 MajorVersion,
                 DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.
@@ -1013,7 +1013,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
 
     if (!DeviceExtension->Statistics.IsProtected)
     {
-        DbgPrint("AIMWrFltrInitializeDiffDevice: Diff init called for not-protected volume. Previous calls may have failed.\n");
+        DbgPrint(__FUNCTION__ ": Diff init called for not-protected volume. Previous calls may have failed.\n");
         return STATUS_SUCCESS;
     }
 
@@ -1034,7 +1034,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint(("AIMWrFltrInitializeDiffDevice: Error querying volume size: %#x.\n",
+            KdPrint((__FUNCTION__ ": Error querying volume size: %#x.\n",
                 status));
 
             DeviceExtension->Statistics.LastErrorCode = status;
@@ -1125,7 +1125,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
         io_status.Information !=
         sizeof(DeviceExtension->Statistics.DiffDeviceVbr))
     {
-        DbgPrint("AIMWrFltrInitializeDiffDevice: Error writing diff device for %p: 0x%X\n",
+        DbgPrint(__FUNCTION__ ": Error writing diff device for %p: 0x%X\n",
             DeviceExtension->DeviceObject, status);
     }
 
@@ -1137,7 +1137,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
 
         if ((number_of_blocks + alloc_table_blocks) >= MAXLONG)
         {
-            DbgPrint("AIMWrFltr: FATAL: Filtered volume is %I64u bytes which is too large. Max = %I64u.\n",
+            DbgPrint(__FUNCTION__ ": FATAL: Filtered volume is %I64u bytes which is too large. Max = %I64u.\n",
                 DeviceExtension->Statistics.DiffDeviceVbr.Fields.Head.Size.QuadPart,
                 ((LONGLONG)MAXLONG - 1) << DIFF_BLOCK_BITS);
 
@@ -1236,7 +1236,7 @@ AIMWrFltrInitializeDiffDevice(IN PDEVICE_EXTENSION DeviceExtension)
 
     if (status == STATUS_SUCCESS)
     {
-        KdPrint(("AIMWrFltr:InitializeDiffDevice: Acquired Mutex, calling init function.\n"));
+        KdPrint((__FUNCTION__ ": Acquired Mutex, calling init function.\n"));
 
         status = AIMWrFltrInitializeDiffDeviceUnsafe(DeviceExtension);
 
@@ -1244,7 +1244,7 @@ AIMWrFltrInitializeDiffDevice(IN PDEVICE_EXTENSION DeviceExtension)
     }
     else
     {
-        KdPrint(("AIMWrFltr:InitializeDiffDevice: Error acquiring Mutex, status = 0x%X.\n",
+        KdPrint((__FUNCTION__ ": Error acquiring Mutex, status = 0x%X.\n",
             status));
     }
 
@@ -1305,7 +1305,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
     //if (PhysicalDeviceObject->Characteristics & FILE_READ_ONLY_DEVICE)
     //{
-    //    KdPrint(("AIMWrFltrAddDevice: DeviceObject 0x%p is read-only. Ignored.\n",
+    //    KdPrint((__FUNCTION__ ": DeviceObject 0x%p is read-only. Ignored.\n",
     //        PhysicalDeviceObject));
 
     //    return STATUS_SUCCESS;
@@ -1337,7 +1337,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("AIMWrFltrAddDevice Error getting enumerator name for device: %#x\n",
+            DbgPrint(__FUNCTION__ ": Error getting enumerator name for device: %#x\n",
                 status);
 
             ph_obj_name[0] = 0;
@@ -1353,11 +1353,11 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("AIMWrFltrAddDevice Error getting class name for '%ws' device: %#x\n",
+            DbgPrint(__FUNCTION__ ": Error getting class name for '%ws' device: %#x\n",
                 (PWSTR)ph_obj_name, status);
         }
 
-        DbgPrint("AIMWrFltrAddDevice for Enum\\Class\\Number: '%ws\\%i'\n",
+        DbgPrint(__FUNCTION__ " for Enum\\Class\\Number: '%ws\\%i'\n",
             (PWSTR)ph_obj_name, bus_count);
     }
 #endif
@@ -1384,7 +1384,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
     if (!NT_SUCCESS(status))
     {
-        DbgPrint("AIMWrFltrAddDevice: ObQueryNameString failed for PhysicalDeviceObject: %#x.\n", status);
+        DbgPrint(__FUNCTION__ ": ObQueryNameString failed for PhysicalDeviceObject: %#x.\n", status);
         return status;
     }
 
@@ -1426,7 +1426,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint(("AIMWrFltrAddDevice: Error querying SCSI address: %#x.\n",
+            KdPrint((__FUNCTION__ ": Error querying SCSI address: %#x.\n",
                 status));
 
             return status;
@@ -1457,7 +1457,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint(("AIMWrFltrAddDevice: Error querying SCSI device: %#x.\n",
+            KdPrint((__FUNCTION__ ": Error querying SCSI device: %#x.\n",
                 status));
 
             return status;
@@ -1471,7 +1471,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
             create_data->Fields.WriteOverlayFileNameLength +
             sizeof(HANDLE))
         {
-            DbgPrint("AIMWrFltrAddDevice: This AIM device is not configured with write overlay mode.\n");
+            DbgPrint(__FUNCTION__ ": This AIM device is not configured with write overlay mode.\n");
             return STATUS_INVALID_DEVICE_REQUEST;
         }
 
@@ -1485,14 +1485,14 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
             create_data->Fields.FileNameLength +
             create_data->Fields.WriteOverlayFileNameLength);
 
-        DbgPrint("AIMWrFltrAddDevice: Configuring diff device '%wZ' handle %p for attached device '%wZ'.\n",
+        DbgPrint(__FUNCTION__ ": Configuring diff device '%wZ' handle %p for attached device '%wZ'.\n",
             &diff_device_path,
             diff_device_handle,
             &obj_name_info->Name);
 
 #if DBG
 
-        DbgPrint("AIMWrFltr: Device stack for %p:\n", PhysicalDeviceObject);
+        DbgPrint(__FUNCTION__ ": Device stack for %p:\n", PhysicalDeviceObject);
         for (PDEVICE_OBJECT devobj = PhysicalDeviceObject; devobj != NULL; devobj = devobj->AttachedDevice)
         {
             DbgPrint("%p %wZ\n", devobj, &devobj->DriverObject->DriverName);
@@ -1511,7 +1511,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("AIMWrFltrAddDevice: No diff device configured for attached device '%wZ': %#x.\n",
+            DbgPrint(__FUNCTION__ ": No diff device configured for attached device '%wZ': %#x.\n",
                 &obj_name_info->Name,
                 status);
 
@@ -1522,7 +1522,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         RtlInitUnicodeString(&diff_device_path, (PCWSTR)diff_device_reg_value->Data);
 
-        DbgPrint("AIMWrFltrAddDevice: Configuring diff device '%wZ' for attached device '%wZ'.\n",
+        DbgPrint(__FUNCTION__ ": Configuring diff device '%wZ' for attached device '%wZ'.\n",
             &diff_device_path,
             &obj_name_info->Name);
     }
@@ -1602,7 +1602,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("Diff device initialization failed for device '%wZ': %#x\n",
+            DbgPrint(__FUNCTION__ ": Diff device initialization failed for device '%wZ': %#x\n",
                 &obj_name_info->Name, status);
         }
     }
@@ -1619,7 +1619,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
 
             if (RtlEqualUnicodeString(&suffix, &non_removable_suffix, FALSE))
             {
-                KdPrint(("aimwrfltr: Request to fake non-removable properties.\n"));
+                KdPrint((__FUNCTION__ ": Request to fake non-removable properties.\n"));
                 diff_device_path.Length -= suffix.Length;
                 device_extension->Statistics.FakeNonRemovable = TRUE;
             }
@@ -1635,7 +1635,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
         }
         else
         {
-            DbgPrint("Diff device open failed for device '%wZ': %#x\n",
+            DbgPrint(__FUNCTION__ ": Diff device open failed for device '%wZ': %#x\n",
                 &obj_name_info->Name, status);
 
             device_extension->Statistics.IsProtected = FALSE;
@@ -1759,7 +1759,7 @@ NTSTATUS
     PAGED_CODE();
 #endif
 
-    //KdPrint(("AIMWrFltrPnp: DeviceObject 0x%p Irp 0x%p\n",
+    //KdPrint((__FUNCTION__ ": DeviceObject 0x%p Irp 0x%p\n",
     //    DeviceObject, Irp));
 
     //
@@ -1810,7 +1810,7 @@ NTSTATUS
         // Free resources, pass the IRP down to the next driver
         // Detach and Delete the device. 
         //
-        KdPrint(("AIMWrFltrPnp: Processing REMOVE_DEVICE\n"));
+        KdPrint((__FUNCTION__ ": Processing REMOVE_DEVICE\n"));
         status = AIMWrFltrRemoveDevice(DeviceObject, Irp);
 
         //
@@ -1822,7 +1822,7 @@ NTSTATUS
     }
     case IRP_MN_DEVICE_USAGE_NOTIFICATION:
     {
-        KdPrint(("AIMWrFltrPnp: Processing DEVICE_USAGE_NOTIFICATION\n"));
+        KdPrint((__FUNCTION__ ": Processing DEVICE_USAGE_NOTIFICATION\n"));
 
         status = AIMWrFltrDeviceUsageNotification(DeviceObject, Irp);
 
@@ -1830,7 +1830,7 @@ NTSTATUS
     }
     case IRP_MN_QUERY_REMOVE_DEVICE:
     {
-        KdPrint(("AIMWrFltrPnp: Processing IRP_MN_QUERY_REMOVE_DEVICE\n"));
+        KdPrint((__FUNCTION__ ": Processing IRP_MN_QUERY_REMOVE_DEVICE\n"));
 
         device_extension->QueryRemoveDeviceSent = true;
 
@@ -1858,7 +1858,7 @@ NTSTATUS
 
         AIMWrFltrReleaseLock(&lock_handle, &current_irql);
 
-        DbgPrint("AIMWrFltrPnp: Processing IRP_MN_SURPRISE_REMOVAL with %i items in queue\n",
+        DbgPrint(__FUNCTION__ ": Processing IRP_MN_SURPRISE_REMOVAL with %i items in queue\n",
             items_in_queue);
 
 #endif
@@ -1872,7 +1872,7 @@ NTSTATUS
     }
     case IRP_MN_CANCEL_REMOVE_DEVICE:
     {
-        KdPrint(("AIMWrFltrPnp: Processing IRP_MN_CANCEL_REMOVE_DEVICE\n"));
+        KdPrint((__FUNCTION__ ": Processing IRP_MN_CANCEL_REMOVE_DEVICE\n"));
 
         device_extension->CancelRemoveDeviceSent = true;
 
@@ -1881,7 +1881,7 @@ NTSTATUS
         break;
     }
     default:
-        //KdPrint(("AIMWrFltrPnp: Forwarding irp\n"));
+        //KdPrint((__FUNCTION__ ": Forwarding irp\n"));
 
         //
         // Simply forward all other Irps
@@ -2022,7 +2022,7 @@ Status of removing the device
 
     device_extension->ShutdownThread = true;
 
-    KdPrint(("AIMWrFltr: Waiting for remove lock completion.\n"));
+    KdPrint((__FUNCTION__ ": Waiting for remove lock completion.\n"));
 
     //
     // Call Remove lock and wait to ensure all outstanding operations
@@ -2037,22 +2037,22 @@ Status of removing the device
     //
     NTSTATUS status = AIMWrFltrSendToNextDriver(DeviceObject, Irp);
 
-    KdPrint(("AIMWrFltr: REMOVE_DEVICE sent to lower device (status %#x), detaching from device stack.\n", status));
+    KdPrint((__FUNCTION__ ": REMOVE_DEVICE sent to lower device (status %#x), detaching from device stack.\n", status));
 
     //
     // Detach us from the stack 
     //
     IoDetachDevice(device_extension->TargetDeviceObject);
 
-    KdPrint(("AIMWrFltr: Detached from device stack, cleaning up.\n"));
+    KdPrint((__FUNCTION__ ": Detached from device stack, cleaning up.\n"));
 
     AIMWrFltrCleanupDevice(device_extension);
 
-    KdPrint(("AIMWrFltr: Deleting device object %p.\n", DeviceObject));
+    KdPrint((__FUNCTION__ ": Deleting device object %p.\n", DeviceObject));
 
     IoDeleteDevice(DeviceObject);
 
-    KdPrint(("AIMWrFltr: REMOVE_DEVICE finished (status %#x)\n", status));
+    KdPrint((__FUNCTION__ ": REMOVE_DEVICE finished (status %#x)\n", status));
 
     return status;
 }
@@ -2107,14 +2107,14 @@ AIMWrFltrDeviceUsageNotification(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         if (DeviceObject->Flags & DO_POWER_INRUSH)
         {
-            KdPrint(("AIMWrFltrPnp: last paging file "
+            KdPrint((__FUNCTION__ ": last paging file "
                 "removed but DO_POWER_INRUSH set, so not "
                 "setting PAGABLE bit "
                 "for DO %p\n", DeviceObject));
         }
         else
         {
-            KdPrint(("AIMWrFltrPnp: Setting  PAGABLE "
+            KdPrint((__FUNCTION__ ": Setting  PAGABLE "
                 "bit for DO %p\n", DeviceObject));
             DeviceObject->Flags |= DO_POWER_PAGABLE;
             set_pagable = true;
@@ -2334,7 +2334,7 @@ VOID.
 
     UNREFERENCED_PARAMETER(DriverObject);
 
-    DbgPrint("AIMWrFltr: Unloading.\n");
+    DbgPrint(__FUNCTION__ ": Unloading.\n");
 
     if (AIMWrFltrParametersKey != NULL)
     {

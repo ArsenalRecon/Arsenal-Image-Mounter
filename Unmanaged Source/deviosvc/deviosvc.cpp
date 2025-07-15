@@ -100,7 +100,7 @@ class ImDiskSvcServerSession
     {
         IMDPROXY_CONNECT_REQ ConnectReq;
 
-        KdPrint(("DevIoSvc: Thread created.\n"));
+        KdPrint((__FUNCTION__ ": Thread created.\n"));
 
         if (Overlapped.BufRecv(hPipe, &ConnectReq.request_code,
             sizeof ConnectReq.request_code) !=
@@ -134,7 +134,7 @@ class ImDiskSvcServerSession
 
         if ((ConnectReq.length == 0) || (ConnectReq.length > 520))
         {
-            KdPrint(("DevIoSvc: Bad connection string length received (%u).\n",
+            KdPrint((__FUNCTION__ ": Bad connection string length received (%u).\n",
                 ConnectReq.length));
 
             delete this;
@@ -144,7 +144,7 @@ class ImDiskSvcServerSession
         WCRTMem<WCHAR> ConnectionString((size_t)ConnectReq.length + 2);
         if (!ConnectionString)
         {
-            KdPrintLastError(("malloc() failed"));
+            KdPrintLastError((__FUNCTION__ ": malloc() failed"));
 
             delete this;
             return 0;
@@ -154,7 +154,7 @@ class ImDiskSvcServerSession
             (DWORD)ConnectReq.length) !=
             ConnectReq.length)
         {
-            KdPrintLastError(("Overlapped.BufRecv() failed"));
+            KdPrintLastError((__FUNCTION__ ": Overlapped.BufRecv() failed"));
 
             
             delete this;

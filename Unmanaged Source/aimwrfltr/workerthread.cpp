@@ -20,7 +20,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 {
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)Context;
 
-    KdPrint(("AIMWrFltr: Worker thread %p started for device %p\n",
+    KdPrint((__FUNCTION__ ": Worker thread %p started for device %p\n",
         KeGetCurrentThread(),
         device_extension->DeviceObject));
 
@@ -57,7 +57,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
         if (request == &device_extension->ListHead &&
             device_extension->ShutdownThread)
         {
-            KdPrint(("AIMWrFltr: Worker thread queue empty and device shutting down\n",
+            KdPrint((__FUNCTION__ ": Worker thread queue empty and device shutting down\n",
                 device_extension->DeviceObject));
 
             break;
@@ -77,7 +77,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
             NTSTATUS status = IoCreateUnprotectedSymbolicLink(&event_link,
                 &event_path);
 
-            KdPrint(("AIMWrFltr:DeviceWorkerThread: Link creation status: %#x\n",
+            KdPrint((__FUNCTION__ ": Link creation status: %#x\n",
                 status));
 
             if (NT_SUCCESS(status) ||
@@ -133,7 +133,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 
                     device_extension->Statistics.DelayWriteFailed = TRUE;
 
-                    DbgPrint("AimWrFltrDeviceWorkerThread: Delayed write failed: 0x%X\n",
+                    DbgPrint(__FUNCTION__ ": Delayed write failed: 0x%X\n",
                         status);
 
                     if (AIMWrFltrDiffFullEvent != NULL)
@@ -166,7 +166,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 
                 default:
                     status = STATUS_INTERNAL_ERROR;
-                    KdPrint(("AimWrFltrDeviceWorkerThread: Internal error.\n"));
+                    KdPrint((__FUNCTION__ ": Internal error.\n"));
 
 #if DBG
                     if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -180,7 +180,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
 
             default:
                 status = STATUS_INTERNAL_ERROR;
-                KdPrint(("AimWrFltrDeviceWorkerThread: Internal error.\n"));
+                KdPrint((__FUNCTION__ ": Internal error.\n"));
 
 #if DBG
                 if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -195,7 +195,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
             }
             else if (!NT_SUCCESS(status))
             {
-                DbgPrint("AimWrFltrDeviceWorkerThread: Delayed 0x%X failed: 0x%X\n",
+                DbgPrint(__FUNCTION__ ": Delayed 0x%X failed: 0x%X\n",
                     (int)io_stack->MajorFunction,
                     status);
 
@@ -206,7 +206,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
         IoReleaseRemoveLock(&device_extension->RemoveLock, cached_irp);
     }
 
-    KdPrint(("AIMWrFltr: Terminating worker thread for device %p\n",
+    KdPrint((__FUNCTION__ ": Terminating worker thread for device %p\n",
         device_extension->DeviceObject));
 
     delete[] block_buffer;

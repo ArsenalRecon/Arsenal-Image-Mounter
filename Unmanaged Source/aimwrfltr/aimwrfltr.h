@@ -635,7 +635,7 @@ typedef class SCATTERED_IRP
         }
         else
         {
-            KdPrint(("AIMWrFltr::Complete: Lower level I/O failed: 0x%X\n",
+            KdPrint((__FUNCTION__ ": Lower level I/O failed: 0x%X\n",
                 LastFailedStatus));
 
 #if DBG
@@ -677,7 +677,7 @@ public:
         NTSTATUS status = IoAcquireRemoveLock(RemoveLock, OriginalIrp);
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("AIMWrFltr::Create: Remove lock failed Irp type %i\n",
+            DbgPrint(__FUNCTION__ ": Remove lock failed Irp type %i\n",
                 IoGetCurrentIrpStackLocation(OriginalIrp)->MajorFunction);
 
             return status;
@@ -687,7 +687,7 @@ public:
 
         if (*Object == NULL)
         {
-            DbgPrint("AIMWrFltr::Create: Memory allocation error.\n");
+            DbgPrint(__FUNCTION__ ": Memory allocation error.\n");
 
             IoReleaseRemoveLock(RemoveLock, OriginalIrp);
 
@@ -916,7 +916,7 @@ extern "C"
         NTSTATUS
         AIMWrFltrHandleRemovedDevice(PIRP Irp)
     {
-        KdPrint(("AIMWrFltr: IRP %p MJ %#x sent to device that is being removed.\n",
+        KdPrint((__FUNCTION__ ": IRP %p MJ %#x sent to device that is being removed.\n",
             Irp, (int)IoGetCurrentIrpStackLocation(Irp)->MajorFunction));
 
         Irp->IoStatus.Information = 0;

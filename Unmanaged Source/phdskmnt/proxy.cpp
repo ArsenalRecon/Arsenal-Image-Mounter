@@ -113,7 +113,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
 
             if (temp_buffer == NULL)
             {
-                KdPrint(("ImScsi Proxy Client: Memory allocation failed.\n."));
+                KdPrint((__FUNCTION__ ": Memory allocation failed.\n."));
 
                 IoStatusBlock->Status = STATUS_INSUFFICIENT_RESOURCES;
                 IoStatusBlock->Information = 0;
@@ -147,7 +147,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
                 KeReadStateEvent(CancelEvent) != 0 :
                 FALSE)
             {
-                KdPrint(("ImScsi Proxy Client: Request cancelled.\n."));
+                KdPrint((__FUNCTION__ ": Request cancelled.\n."));
 
                 if (temp_buffer != NULL)
                 {
@@ -168,7 +168,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
 
             if (!NT_SUCCESS(status))
             {
-                KdPrint(("ImScsi Proxy Client: Request error %#x\n.",
+                KdPrint((__FUNCTION__ ": Request error %#x\n.",
                     status));
 
                 if (temp_buffer != NULL)
@@ -193,7 +193,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
                 KeReadStateEvent(CancelEvent) != 0 :
                 FALSE)
             {
-                KdPrint(("ImScsi Proxy Client: Request cancelled.\n."));
+                KdPrint((__FUNCTION__ ": Request cancelled.\n."));
 
                 IoStatusBlock->Status = STATUS_CANCELLED;
                 IoStatusBlock->Information = 0;
@@ -209,7 +209,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
 
             if (!NT_SUCCESS(status))
             {
-                KdPrint(("ImScsi Proxy Client: Response header error %#x\n.",
+                KdPrint((__FUNCTION__ ": Response header error %#x\n.",
                     status));
 
                 IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
@@ -222,7 +222,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
         {
             if (*ResponseDataSize > ResponseDataBufferSize)
             {
-                KdPrint(("ImScsi Proxy Client: Fatal: Request %u bytes, "
+                KdPrint((__FUNCTION__ ": Fatal: Request %u bytes, "
                     "receiving %u bytes.\n",
                     ResponseDataBufferSize, *ResponseDataSize));
 
@@ -235,7 +235,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
                 KeReadStateEvent(CancelEvent) != 0 :
                 FALSE)
             {
-                KdPrint(("ImScsi Proxy Client: Request cancelled.\n."));
+                KdPrint((__FUNCTION__ ": Request cancelled.\n."));
 
                 IoStatusBlock->Status = STATUS_CANCELLED;
                 IoStatusBlock->Information = 0;
@@ -243,7 +243,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
             }
 
             KdPrint2
-                (("ImScsi Proxy Client: Got ok resp. Waiting for data.\n"));
+                ((__FUNCTION__ ": Got ok resp. Waiting for data.\n"));
 
             status = ImScsiSafeIOStream(Proxy->device,
                 IRP_MJ_READ,
@@ -254,10 +254,10 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
 
             if (!NT_SUCCESS(status))
             {
-                KdPrint(("ImScsi Proxy Client: Response data error %#x\n.",
+                KdPrint((__FUNCTION__ ": Response data error %#x\n.",
                     status));
 
-                KdPrint(("ImScsi Proxy Client: Response data %u bytes, "
+                KdPrint((__FUNCTION__ ": Response data %u bytes, "
                     "got %u bytes.\n",
                     *ResponseDataSize,
                     (ULONG)IoStatusBlock->Information));
@@ -268,7 +268,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
             }
 
             KdPrint2
-                (("ImScsi Proxy Client: Received %u byte data stream.\n",
+                ((__FUNCTION__ ": Received %u byte data stream.\n",
                     IoStatusBlock->Information));
         }
 
@@ -299,7 +299,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
             (((ULONG_PTR)RequestDataSize + IMDPROXY_HEADER_SIZE) >
                 Proxy->shared_memory_size))
         {
-            KdPrint(("ImScsi Proxy Client: "
+            KdPrint((__FUNCTION__ ": "
                 "Parameter values not supported.\n."));
 
             IoStatusBlock->Status = STATUS_INVALID_BUFFER_SIZE;
@@ -333,7 +333,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
 
         if (status == STATUS_WAIT_1)
         {
-            KdPrint(("ImScsi Proxy Client: Incomplete wait %#x.\n.", status));
+            KdPrint((__FUNCTION__ ": Incomplete wait %#x.\n.", status));
 
             IoStatusBlock->Status = STATUS_CANCELLED;
             IoStatusBlock->Information = 0;
@@ -354,7 +354,7 @@ __drv_when(ResponseDataBufferSize > 0, __inout __deref) ULONG *ResponseDataSize)
                 (((ULONG_PTR)*ResponseDataSize + IMDPROXY_HEADER_SIZE) >
                     Proxy->shared_memory_size))
             {
-                DbgPrint("ImScsi Proxy Client: Invalid response size %u expected at most %u.\n.",
+                DbgPrint(__FUNCTION__ ": Invalid response size %u expected at most %u.\n.",
                     *ResponseDataSize, ResponseDataBufferSize);
 
 #if DBG
@@ -509,7 +509,7 @@ __in USHORT ConnectionStringLength)
     connect_req.flags = Flags;
     connect_req.length = ConnectionStringLength;
 
-    KdPrint(("ImScsi Proxy Client: Sending IMDPROXY_CONNECT_REQ.\n"));
+    KdPrint((__FUNCTION__ ": Sending IMDPROXY_CONNECT_REQ.\n"));
 
     status = ImScsiCallProxy(Proxy,
         IoStatusBlock,
@@ -526,7 +526,7 @@ __in USHORT ConnectionStringLength)
 
     if (!NT_SUCCESS(status))
     {
-        KdPrint(("ImScsi Proxy Client: ImScsiCallProxy failed: %#X.\n", status));
+        KdPrint((__FUNCTION__ ": ImScsiCallProxy failed: %#X.\n", status));
         IoStatusBlock->Status = status;
         IoStatusBlock->Information = 0;
         return IoStatusBlock->Status;
@@ -534,7 +534,7 @@ __in USHORT ConnectionStringLength)
 
     if (connect_resp.error_code != 0)
     {
-        KdPrint(("ImScsi Proxy Client: Proxy returned error code: %#I64X.\n", connect_resp.error_code));
+        KdPrint((__FUNCTION__ ": Proxy returned error code: %#I64X.\n", connect_resp.error_code));
         IoStatusBlock->Status = STATUS_CONNECTION_REFUSED;
         IoStatusBlock->Information = 0;
         return IoStatusBlock->Status;
@@ -561,7 +561,7 @@ __in USHORT ConnectionStringLength)
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("ImScsi Proxy Client: Cannot find '%wZ': %#x. DevIoDrv driver not installed?\n",
+            DbgPrint(__FUNCTION__ ": Cannot find '%wZ': %#x. DevIoDrv driver not installed?\n",
                 &imdisk_ctl_dev_name, status);
 
             IoStatusBlock->Status = status;
@@ -602,7 +602,7 @@ __in USHORT ConnectionStringLength)
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("ImScsi Proxy Client: Failed claiming referenced object %p: %#x "
+            DbgPrint(__FUNCTION__ ": Failed claiming referenced object %p: %#x "
                 "Please upgrade Arsenal Image Mounter driver components to version 1.2.18 to resolve this problem!\n",
                 (PVOID)(ULONG_PTR)connect_resp.object_ptr, status);
 
@@ -615,7 +615,7 @@ __in USHORT ConnectionStringLength)
         Proxy->device = (PFILE_OBJECT)(ULONG_PTR)connect_resp.object_ptr;
     }
 
-    KdPrint(("ImScsi Proxy Client: Got ok response IMDPROXY_CONNECT_RESP.\n"));
+    KdPrint((__FUNCTION__ ": Got ok response IMDPROXY_CONNECT_RESP.\n"));
 
     IoStatusBlock->Status = STATUS_SUCCESS;
     IoStatusBlock->Information = 0;
@@ -645,7 +645,7 @@ __in ULONG ProxyInfoResponseLength)
         return IoStatusBlock->Status;
     }
 
-    KdPrint(("ImScsi Proxy Client: Sending IMDPROXY_REQ_INFO.\n"));
+    KdPrint((__FUNCTION__ ": Sending IMDPROXY_REQ_INFO.\n"));
 
     status = ImScsiCallProxy(Proxy,
         IoStatusBlock,
@@ -667,7 +667,7 @@ __in ULONG ProxyInfoResponseLength)
         return IoStatusBlock->Status;
     }
 
-    KdPrint(("ImScsi Proxy Client: Got ok response IMDPROXY_INFO_RESP.\n"));
+    KdPrint((__FUNCTION__ ": Got ok response IMDPROXY_INFO_RESP.\n"));
 
 #ifdef MAX_512_BYTE_SECTOR_SIZE_PROXY
     if (ProxyInfoResponse->req_alignment - 1 > FILE_512_BYTE_ALIGNMENT)
@@ -721,7 +721,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
     {
         ULONG length_to_do = Length - length_done;
 
-        KdPrint2(("ImScsi Proxy Client: "
+        KdPrint2((__FUNCTION__ ": "
             "IMDPROXY_REQ_READ 0x%.8x done 0x%.8x left to do.\n",
             length_done, length_to_do));
 
@@ -729,7 +729,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
         read_req.offset = ByteOffset->QuadPart + length_done;
         read_req.length = min(length_to_do, max_transfer_size);
 
-        KdPrint2(("ImScsi Proxy Client: "
+        KdPrint2((__FUNCTION__ ": "
             "IMDPROXY_REQ_READ 0x%.8x%.8x bytes at 0x%.8x%.8x.\n",
             ((PLARGE_INTEGER)&read_req.length)->HighPart,
             ((PLARGE_INTEGER)&read_req.length)->LowPart,
@@ -760,14 +760,14 @@ __in __deref PLARGE_INTEGER ByteOffset)
 
         if (read_resp.errorno != 0)
         {
-            KdPrint(("ImScsi Proxy Client: Server returned error %#I64x.\n",
+            KdPrint((__FUNCTION__ ": Server returned error %#I64x.\n",
                 read_resp.errorno));
             IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
             IoStatusBlock->Information = length_done;
             return IoStatusBlock->Status;
         }
 
-        KdPrint2(("ImScsi Proxy Client: Server sent 0x%.8x%.8x bytes.\n",
+        KdPrint2((__FUNCTION__ ": Server sent 0x%.8x%.8x bytes.\n",
             ((PLARGE_INTEGER)&read_resp.length)->HighPart,
             ((PLARGE_INTEGER)&read_resp.length)->LowPart));
 
@@ -814,7 +814,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
     {
         ULONG length_to_do = Length - length_done;
 
-        KdPrint2(("ImScsi Proxy Client: "
+        KdPrint2((__FUNCTION__ ": "
             "IMDPROXY_REQ_WRITE 0x%.8x done 0x%.8x left to do.\n",
             length_done, length_to_do));
 
@@ -822,7 +822,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
         write_req.offset = ByteOffset->QuadPart + length_done;
         write_req.length = min(length_to_do, max_transfer_size);
 
-        KdPrint2(("ImScsi Proxy Client: "
+        KdPrint2((__FUNCTION__ ": "
             "IMDPROXY_REQ_WRITE 0x%.8x%.8x bytes at 0x%.8x%.8x.\n",
             ((PLARGE_INTEGER)&write_req.length)->HighPart,
             ((PLARGE_INTEGER)&write_req.length)->LowPart,
@@ -852,7 +852,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
 
         if (write_resp.errorno != 0)
         {
-            KdPrint(("ImScsi Proxy Client: Server returned error 0x%I64x.\n",
+            KdPrint((__FUNCTION__ ": Server returned error 0x%I64x.\n",
                 write_resp.errorno));
             IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
             IoStatusBlock->Information = length_done;
@@ -861,7 +861,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
 
         if (write_resp.length != write_req.length)
         {
-            KdPrint(("ImScsi Proxy Client: IMDPROXY_REQ_WRITE %u bytes, "
+            KdPrint((__FUNCTION__ ": IMDPROXY_REQ_WRITE %u bytes, "
                 "IMDPROXY_RESP_WRITE %u bytes.\n",
                 Length,
                 (ULONG)write_resp.length));
@@ -870,7 +870,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
             return IoStatusBlock->Status;
         }
 
-        KdPrint2(("ImScsi Proxy Client: Server replied OK.\n"));
+        KdPrint2((__FUNCTION__ ": Server replied OK.\n"));
 
         length_done += (ULONG)write_req.length;
     }
@@ -881,7 +881,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
 
     //if (write_resp.length != Length)
     //  {
-    //    KdPrint(("ImScsi Proxy Client: IMDPROXY_REQ_WRITE %u bytes, "
+    //    KdPrint((__FUNCTION__ ": IMDPROXY_REQ_WRITE %u bytes, "
     //      "IMDPROXY_RESP_WRITE %u bytes.\n",
     //      Length, (ULONG) write_resp.length));
     //    IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
@@ -889,7 +889,7 @@ __in __deref PLARGE_INTEGER ByteOffset)
     //    return IoStatusBlock->Status;
     //  }
 
-    //KdPrint2(("ImScsi Proxy Client: Got ok response. "
+    //KdPrint2((__FUNCTION__ ": Got ok response. "
     //   "Resetting IoStatusBlock fields.\n"));
 
     //IoStatusBlock->Status = STATUS_SUCCESS;
@@ -931,7 +931,7 @@ ImScsiUnmapOrZeroProxy(
 
 #pragma warning(suppress: 6064)
 #pragma warning(suppress: 6328)
-    KdPrint(("ImScsi Proxy Client: Unmap/Zero 0x%.8x%.8x\n", RequestCode));
+    KdPrint((__FUNCTION__ ": Unmap/Zero 0x%.8x%.8x\n", RequestCode));
 
     status = ImScsiCallProxy(Proxy,
         IoStatusBlock,
@@ -957,14 +957,14 @@ ImScsiUnmapOrZeroProxy(
     {
 #pragma warning(suppress: 6064)
 #pragma warning(suppress: 6328)
-        KdPrint(("ImScsi Proxy Client: Server returned error 0x%.8x%.8x.\n",
+        KdPrint((__FUNCTION__ ": Server returned error 0x%.8x%.8x.\n",
             unmap_resp.errorno));
         IoStatusBlock->Status = STATUS_IO_DEVICE_ERROR;
         IoStatusBlock->Information = 0;
         return IoStatusBlock->Status;
     }
 
-    KdPrint(("ImScsi Proxy Client: Server replied OK.\n"));
+    KdPrint((__FUNCTION__ ": Server replied OK.\n"));
 
     IoStatusBlock->Status = STATUS_SUCCESS;
     IoStatusBlock->Information = 0;

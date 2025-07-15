@@ -95,12 +95,12 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
         if (device_extension->Statistics.LargestWriteSize >= 4096)
         {
-            KdPrint(("AIMWrFltrWrite: Largest write size is now %u KB\n",
+            KdPrint((__FUNCTION__ ": Largest write size is now %u KB\n",
                 device_extension->Statistics.LargestWriteSize >> 10));
         }
         else
         {
-            KdPrint(("AIMWrFltrWrite: Largest write size is now %u bytes\n",
+            KdPrint((__FUNCTION__ ": Largest write size is now %u bytes\n",
                 device_extension->Statistics.LargestWriteSize));
         }
     }
@@ -112,10 +112,9 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     // called in the completion routine for the same IRP. Also, queue original
     // request directly if queue is becoming too deep.
     if (device_extension->CompletingIrp == Irp ||
-        (MaxQueueDepth != 0 &&
-            AIMWrFltrIsQueueDeeperThan(device_extension, MaxQueueDepth, TRUE, &current_irql) >= MaxQueueDepth) ||
-        (HighCommitCondition != NULL &&
-            KeReadStateEvent(HighCommitCondition)))
+        device_extension->DiffDeviceObject->SectorSize > device_extension->TargetDeviceObject->SectorSize ||
+        (MaxQueueDepth != 0 && AIMWrFltrIsQueueDeeperThan(device_extension, MaxQueueDepth, TRUE, &current_irql) >= MaxQueueDepth) ||
+        (HighCommitCondition != NULL && KeReadStateEvent(HighCommitCondition)))
     {
         PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
@@ -327,7 +326,7 @@ PUCHAR BlockBuffer)
             ((page_offset_this_iter & sector_mask) != 0 ||
                 ((bytes_this_iter & sector_mask) != 0)))
         {
-            KdPrint(("AIMWrFltrDeferredWrite: Requested writing 0x%X bytes at 0x%I64X requires alignment.\n",
+            KdPrint((__FUNCTION__ ": Requested writing 0x%X bytes at 0x%I64X requires alignment.\n",
                 bytes_this_iter, ((LONGLONG)block_address <<
                     DIFF_BLOCK_BITS) + page_offset_this_iter));
 
@@ -340,7 +339,7 @@ PUCHAR BlockBuffer)
             offset.QuadPart = ((LONGLONG)block_address <<
                 DIFF_BLOCK_BITS) + new_page_offset_this_iter;
 
-            KdPrint(("AIMWrFltrDeferredWrite: Alignment read 0x%X bytes from 0x%I64X.\n",
+            KdPrint((__FUNCTION__ ": Alignment read 0x%X bytes from 0x%I64X.\n",
                 new_bytes_this_iter, offset));
 
             status = AIMWrFltrSynchronousReadWrite(
@@ -356,7 +355,7 @@ PUCHAR BlockBuffer)
             if (NT_SUCCESS(status) &&
                 io_status.Information != new_bytes_this_iter)
             {
-                DbgPrint("AIMWrFltrDeferredWrite: Alignment block read request 0x%X bytes, done 0x%IX.\n",
+                DbgPrint(__FUNCTION__ ": Alignment block read request 0x%X bytes, done 0x%IX.\n",
                     new_bytes_this_iter, io_status.Information);
 
 #if DBG
@@ -369,7 +368,7 @@ PUCHAR BlockBuffer)
 
             if (!NT_SUCCESS(status))
             {
-                DbgPrint("AIMWrFltrDeferredWrite: IRQL=%i Alignmenet block read 0x%X bytes at 0x%I64X from diff device failed: 0x%X\n",
+                DbgPrint(__FUNCTION__ ": IRQL=%i Alignmenet block read 0x%X bytes at 0x%I64X from diff device failed: 0x%X\n",
                     (int)KeGetCurrentIrql(), new_bytes_this_iter, offset.QuadPart, status);
 
 #if DBG
@@ -423,7 +422,7 @@ PUCHAR BlockBuffer)
 
                     if (!NT_SUCCESS(status))
                     {
-                        DbgPrint("AIMWrFltrDeferredWrite: Fill read from original device failed: 0x%X\n",
+                        DbgPrint(__FUNCTION__ ": Fill read from original device failed: 0x%X\n",
                             status);
 
                         //KdBreakPoint();
@@ -433,7 +432,7 @@ PUCHAR BlockBuffer)
 
                     if (io_status.Information != page_offset_this_iter)
                     {
-                        DbgPrint("AIMWrFltrDeferredWrite: Fill read request 0x%X bytes, got 0x%IX.\n",
+                        DbgPrint(__FUNCTION__ ": Fill read request 0x%X bytes, got 0x%IX.\n",
                             page_offset_this_iter, io_status.Information);
                     }
 
@@ -476,7 +475,7 @@ PUCHAR BlockBuffer)
 
                     if (!NT_SUCCESS(status))
                     {
-                        DbgPrint("AIMWrFltrDeferredWrite: Fill read from original device failed: 0x%X\n",
+                        DbgPrint(__FUNCTION__ ": Fill read from original device failed: 0x%X\n",
                             status);
 
                         //KdBreakPoint();
@@ -486,7 +485,7 @@ PUCHAR BlockBuffer)
 
                     if (io_status.Information != fill_length)
                     {
-                        DbgPrint("AIMWrFltrDeferredWrite: Fill read request 0x%X bytes, got 0x%IX.\n",
+                        DbgPrint(__FUNCTION__ ": Fill read request 0x%X bytes, got 0x%IX.\n",
                             (ULONG)(DIFF_BLOCK_SIZE - bytes_this_iter), io_status.Information);
                     }
 
@@ -494,7 +493,7 @@ PUCHAR BlockBuffer)
 
                     if (pad_length > 0)
                     {
-                        DbgPrint("AIMWrFltrDeferredWrite: Padding 0x%X bytes at end block.\n",
+                        DbgPrint(__FUNCTION__ ": Padding 0x%X bytes at end block.\n",
                             pad_length);
 
                         RtlZeroMemory(BlockBuffer + bytes_this_iter + io_status.Information, pad_length);
@@ -528,7 +527,7 @@ PUCHAR BlockBuffer)
         if (NT_SUCCESS(status) &&
             io_status.Information != bytes_this_iter)
         {
-            DbgPrint("AIMWrFltrDeferredWrite: Write request 0x%X bytes, done 0x%IX.\n",
+            DbgPrint(__FUNCTION__ ": Write request 0x%X bytes, done 0x%IX.\n",
                 bytes_this_iter, io_status.Information);
 
 #if DBG
@@ -541,7 +540,7 @@ PUCHAR BlockBuffer)
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("AIMWrFltrDeferredWrite: IRQL=%i Write 0x%X bytes at 0x%I64X to diff device failed: 0x%X\n",
+            DbgPrint(__FUNCTION__ ": IRQL=%i Write 0x%X bytes at 0x%I64X to diff device failed: 0x%X\n",
                 (int)KeGetCurrentIrql(), bytes_this_iter, lower_offset.QuadPart, status);
 
 #if DBG
@@ -583,7 +582,7 @@ AIMWrFltrDeferredFlushBuffers(
         Irp->Irp != NULL ? Irp->Irp->Tail.Overlay.Thread : NULL,
         &io_status);
 
-    KdPrint(("AIMWrFltrDeferredFlushBuffers: Flush buffers complete.\n"));
+    KdPrint((__FUNCTION__ ": Flush buffers complete.\n"));
 
     return status;
 }
@@ -591,7 +590,7 @@ AIMWrFltrDeferredFlushBuffers(
 NTSTATUS
 AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
-    //KdPrint(("AIMWrFltrFlushBuffers: DeviceObject %p Irp %p\n",
+    //KdPrint((__FUNCTION__ ": DeviceObject %p Irp %p\n",
     //    DeviceObject, Irp));
 
     PDEVICE_EXTENSION device_extension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
@@ -676,7 +675,7 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
     if (IsListEmpty(&device_extension->ListHead))
     {
-        KdPrint(("AIMWrFltrFlushBuffers: Completing flush request with empty queue.\n"));
+        KdPrint((__FUNCTION__ ": Completing flush request with empty queue.\n"));
 
         AIMWrFltrReleaseLock(&lock_handle, &current_irql);
 

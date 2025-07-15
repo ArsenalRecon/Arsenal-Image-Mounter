@@ -68,7 +68,7 @@ DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING)
     NTSTATUS status = IoCreateDevice(DriverObject, 0, &dev_path, FILE_DEVICE_DISK_FILE_SYSTEM, 0, FALSE, &DeviceObject);
     if (!NT_SUCCESS(status))
     {
-        DbgPrint("Failed creating device %wZ: %#x\n", &dev_path, status);
+        DbgPrint(__FUNCTION__ ": Failed creating device %wZ: %#x\n", &dev_path, status);
         return status;
     }
     UNICODE_STRING symlink_path;
@@ -78,7 +78,7 @@ DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING)
     if (!NT_SUCCESS(status))
     {
         IoDeleteDevice(DeviceObject);
-        DbgPrint("Failed creating symlink %wZ to %wZ: %#x\n", &symlink_path, &dev_path, status);
+        DbgPrint(__FUNCTION__ ": Failed creating symlink %wZ to %wZ: %#x\n", &symlink_path, &dev_path, status);
         return status;
     }
 
@@ -141,7 +141,7 @@ DevIoDrvUnload(PDRIVER_OBJECT DriverObject)
     NTSTATUS status = IoDeleteSymbolicLink(&symlink_path);
     if (!NT_SUCCESS(status))
     {
-        DbgPrint("Failed removing symlink %wZ: %#x\n", &symlink_path, status);
+        DbgPrint(__FUNCTION__ ": Failed removing symlink %wZ: %#x\n", &symlink_path, status);
     }
 
     while (DriverObject->DeviceObject != NULL)

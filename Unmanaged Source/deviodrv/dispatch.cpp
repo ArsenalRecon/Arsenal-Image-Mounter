@@ -213,7 +213,7 @@ DevIoDrvDispatchControl(PDEVICE_OBJECT, PIRP Irp)
             KLOCK_QUEUE_HANDLE lock_handle = { 0 };
             PREFERENCED_OBJECT record;
 
-            KdPrint(("DevIoDrv: IOCTL_DEVIODRV_REFERENCE_HANDLE.\n"));
+            KdPrint((__FUNCTION__ ": IOCTL_DEVIODRV_REFERENCE_HANDLE.\n"));
 
             // This IOCTL requires work that must be done at IRQL < DISPATCH_LEVEL
             // but must be done in the thread context of the calling application and
@@ -222,7 +222,7 @@ DevIoDrvDispatchControl(PDEVICE_OBJECT, PIRP Irp)
             // reason.
             if (KeGetCurrentIrql() > PASSIVE_LEVEL)
             {
-                KdPrint(("DevIoDrv: IOCTL_DEVIODRV_REFERENCE_HANDLE not accessible "
+                KdPrint((__FUNCTION__ ": IOCTL_DEVIODRV_REFERENCE_HANDLE not accessible "
                     "at current IRQL (%i).", KeGetCurrentIrql()));
 
                 status = STATUS_ACCESS_DENIED;
@@ -234,7 +234,7 @@ DevIoDrvDispatchControl(PDEVICE_OBJECT, PIRP Irp)
                 !SeSinglePrivilegeCheck(RtlConvertLongToLuid(SE_TCB_PRIVILEGE),
                     Irp->RequestorMode))
             {
-                KdPrint(("DevIoDrv: IOCTL_DEVIODRV_REFERENCE_HANDLE not accessible, "
+                KdPrint((__FUNCTION__ ": IOCTL_DEVIODRV_REFERENCE_HANDLE not accessible, "
                     "privilege not held by calling thread.\n"));
 
                 status = STATUS_ACCESS_DENIED;
@@ -261,7 +261,7 @@ DevIoDrvDispatchControl(PDEVICE_OBJECT, PIRP Irp)
                 break;
             }
 
-            KdPrint(("DevIoDrv: Referencing handle %p.\n",
+            KdPrint((__FUNCTION__ ": Referencing handle %p.\n",
                 *(PHANDLE)Irp->AssociatedIrp.SystemBuffer));
 
             status = ObReferenceObjectByHandle(
@@ -274,7 +274,7 @@ DevIoDrvDispatchControl(PDEVICE_OBJECT, PIRP Irp)
                 (PVOID*)&record->file_object,
                 NULL);
 
-            KdPrint(("DevIoDrv: Status=%#x, PFILE_OBJECT %p.\n",
+            KdPrint((__FUNCTION__ ": Status=%#x, PFILE_OBJECT %p.\n",
                 status,
                 record->file_object));
 
@@ -342,12 +342,12 @@ DevIoDrvDispatchControl(PDEVICE_OBJECT, PIRP Irp)
 
             if (NT_SUCCESS(status))
             {
-                KdPrint(("DevIoDrv: Successfully claimed referenced object %p.\n",
+                KdPrint((__FUNCTION__ ": Successfully claimed referenced object %p.\n",
                     *(PFILE_OBJECT*)Irp->AssociatedIrp.SystemBuffer));
             }
             else
             {
-                DbgPrint("DevIoDrv Warning: Requested %p not in referenced objects list.\n",
+                DbgPrint(__FUNCTION__ ": Warning: Requested %p not in referenced objects list.\n",
                     *(PFILE_OBJECT*)Irp->AssociatedIrp.SystemBuffer);
             }
 
@@ -509,7 +509,7 @@ DevIoDrvDispatchSetInformation(PDEVICE_OBJECT, PIRP Irp)
 
     default:
     {
-        KdPrint(("DevIoDrv: Unknown SetInformation function %#x.\n",
+        KdPrint((__FUNCTION__ ": Unknown SetInformation function %#x.\n",
             io_stack->Parameters.SetFile.FileInformationClass));
 
         status = STATUS_INVALID_DEVICE_REQUEST;
@@ -536,7 +536,7 @@ DevIoDrvDispatchReadWrite(PDEVICE_OBJECT, PIRP Irp)
         ((io_stack->Parameters.Read.ByteOffset.QuadPart +
             io_stack->Parameters.Read.Length) < 0))
     {
-        KdPrint(("DevIoDrv: Read/write attempt on negative offset.\n"));
+        KdPrint((__FUNCTION__ ": Read/write attempt on negative offset.\n"));
 
         Irp->IoStatus.Status = STATUS_INVALID_PARAMETER;
 
@@ -559,7 +559,7 @@ DevIoDrvDispatchReadWrite(PDEVICE_OBJECT, PIRP Irp)
     }
     else if (context->Server == NULL)
     {
-        KdPrint(("DevIoDrv: IRP=%p Request to disconnected device.\n", Irp));
+        KdPrint((__FUNCTION__ ": IRP=%p Request to disconnected device.\n", Irp));
 
         status = STATUS_DEVICE_DOES_NOT_EXIST;
     }
@@ -692,7 +692,7 @@ DevIoDrvDispatchQueryInformation(PDEVICE_OBJECT, PIRP Irp)
     }
 
     default:
-        KdPrint(("DevIoDrv: Unknown QueryInformation function %#x.\n",
+        KdPrint((__FUNCTION__ ": Unknown QueryInformation function %#x.\n",
             io_stack->Parameters.QueryFile.FileInformationClass));
 
         status = STATUS_INVALID_DEVICE_REQUEST;

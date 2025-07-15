@@ -61,7 +61,7 @@ __inout __deref PKIRQL         LowestAssumedIrql
     pMP_WorkRtnParms        free_worker_params = NULL;
     KLOCK_QUEUE_HANDLE      LockHandle;
 
-    KdPrint(("PhDskMnt::ImScsiCleanupLU: Removing device: %d:%d:%d pLUExt=%p\n",
+    KdPrint((__FUNCTION__ ": Removing device: %d:%d:%d pLUExt=%p\n",
         pLUExt->DeviceNumber.PathId,
         pLUExt->DeviceNumber.TargetId,
         pLUExt->DeviceNumber.Lun,
@@ -72,7 +72,7 @@ __inout __deref PKIRQL         LowestAssumedIrql
 
     if (free_worker_params == NULL)
     {
-        DbgPrint("PhDskMnt::ImScsiCleanupLU: Memory allocation error.\n");
+        DbgPrint(__FUNCTION__ ": Memory allocation error.\n");
         return;
     }
 
@@ -120,7 +120,7 @@ __inout __deref PKIRQL         LowestAssumedIrql
             // the context of global worker thread. Instruct it
             // to free LUExt as next request, which will happen
             // after this function has run to completion.
-            KdPrint(("PhDskMnt::ImScsiCleanupLU: Setting request to wait for LU worker thread.\n"));
+            KdPrint((__FUNCTION__ ": Setting request to wait for LU worker thread.\n"));
 
             ImScsiAcquireLock(&pMPDrvInfoGlobal->RequestListLock,
                 &inner_lock_handle, inner_assumed_irql);
@@ -206,7 +206,7 @@ __inout __deref PKIRQL         LowestAssumedIrql
         pLUExt->WriteOverlayFileName.MaximumLength = 0;
     }
 
-    KdPrint(("PhDskMnt::ImScsiCleanupLU: Done.\n"));
+    KdPrint((__FUNCTION__ ": Done.\n"));
 }
 
 #ifdef USE_SCSIPORT
@@ -221,10 +221,10 @@ PVOID Context)
     UNREFERENCED_PARAMETER(Context);
 
     if (!NT_SUCCESS(Irp->IoStatus.Status))
-        DbgPrint("PhDskMnt::ImScsiIoCtlCallCompletion: SMB_IMSCSI_CHECK failed: 0x%X\n",
+        DbgPrint(__FUNCTION__ ": SMB_IMSCSI_CHECK failed: 0x%X\n",
         Irp->IoStatus.Status);
     else
-        KdPrint2(("PhDskMnt::ImScsiIoCtlCallCompletion: Finished SMB_IMSCSI_CHECK.\n"));
+        KdPrint2((__FUNCTION__ ": Finished SMB_IMSCSI_CHECK.\n"));
 
     ExFreePoolWithTag(Irp->AssociatedIrp.SystemBuffer, MP_TAG_GENERAL);
 
@@ -255,7 +255,7 @@ PVOID Context)
         {
         case STATUS_INVALID_BUFFER_SIZE:
         {
-            DbgPrint("PhDskMnt::ImScsiParallelReadWriteImageCompletion: STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
+            DbgPrint(__FUNCTION__ ": STATUS_INVALID_BUFFER_SIZE from image I/O. Reporting SCSI_SENSE_ILLEGAL_REQUEST/SCSI_ADSENSE_INVALID_CDB/0x00.\n");
             
             ScsiSetCheckCondition(
                 pWkRtnParms->pSrb,
@@ -269,7 +269,7 @@ PVOID Context)
 
         case STATUS_DEVICE_BUSY:
         {
-            DbgPrint("PhDskMnt::ImScsiParallelReadWriteImageCompletion: STATUS_DEVICE_BUSY from image I/O. Reporting SRB_STATUS_BUSY/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_BECOMING_READY.\n");
+            DbgPrint(__FUNCTION__ ": STATUS_DEVICE_BUSY from image I/O. Reporting SRB_STATUS_BUSY/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_BECOMING_READY.\n");
             
             ScsiSetCheckCondition(
                 pWkRtnParms->pSrb,
@@ -290,7 +290,7 @@ PVOID Context)
         case STATUS_PORT_DISCONNECTED:
         case STATUS_REMOTE_DISCONNECT:
         {
-            DbgPrint("PhDskMnt::ImScsiDispatchWork: Underlying image disconnected. Reporting SRB_STATUS_ERROR/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_NOT_REACHABLE.\n");
+            DbgPrint(__FUNCTION__ ": Underlying image disconnected. Reporting SRB_STATUS_ERROR/SCSI_SENSE_NOT_READY/SCSI_ADSENSE_LUN_NOT_READY/SCSI_SENSEQ_NOT_REACHABLE.\n");
 
             ImScsiRemoveDevice(pWkRtnParms->pHBAExt, &pWkRtnParms->pLUExt->DeviceNumber, &lowest_assumed_irql);
 
@@ -307,7 +307,7 @@ PVOID Context)
 
         default:
         {
-            KdPrint(("PhDskMnt::ImScsiParallelReadWriteImageCompletion: Parallel I/O failed with status %#x\n",
+            KdPrint((__FUNCTION__ ": Parallel I/O failed with status %#x\n",
                 Irp->IoStatus.Status));
 
             ScsiSetCheckCondition(
@@ -421,15 +421,15 @@ PVOID Context)
 
             if (ioctl_irp == NULL)
             {
-                DbgPrint("PhDskMnt::ImScsiParallelReadWriteImageCompletion: ImScsiBuildCompletionIrp failed.\n");
+                DbgPrint(__FUNCTION__ ": ImScsiBuildCompletionIrp failed.\n");
             }
         }
         else
         {
-            KdPrint2(("PhDskMnt::ImScsiParallelReadWriteImageCompletion: IRQL too high to call for Srb completion through SMP_IMSCSI_CHECK. Queuing for timer instead.\n"));
+            KdPrint2((__FUNCTION__ ": IRQL too high to call for Srb completion through SMP_IMSCSI_CHECK. Queuing for timer instead.\n"));
         }
 
-        KdPrint2(("PhDskMnt::ImScsiParallelReadWriteImageCompletion calling for Srb completion.\n"));
+        KdPrint2((__FUNCTION__ ": Calling for Srb completion.\n"));
 
         ImScsiCallForCompletion(ioctl_irp, pWkRtnParms, &lowest_assumed_irql);
     }
@@ -498,7 +498,7 @@ __inout __deref PKIRQL LowestAssumedIrql)
 {
     KLOCK_QUEUE_HANDLE lock_handle;
 
-    KdPrint2(("PhDskMnt::ImScsiCallForCompletion: Invoking SMB_IMSCSI_CHECK for work: 0x%p.\n",
+    KdPrint2((__FUNCTION__ ": Invoking SMB_IMSCSI_CHECK for work: 0x%p.\n",
         pWkRtnParms));
 
     ImScsiAcquireLock(&pMPDrvInfoGlobal->ResponseListLock,
@@ -552,7 +552,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
         pWkRtnParms->pLUExt->BlockPower) +
         pWkRtnParms->pLUExt->ImageOffset.QuadPart;
 
-    KdPrint2(("PhDskMnt::ImScsiParallelReadWriteImage starting sector: 0x%I64X\n",
+    KdPrint2((__FUNCTION__ ": Starting sector: 0x%I64X\n",
         starting_sector));
 
     if ((pWkRtnParms->pSrb->Cdb[0] == SCSIOP_READ) ||
@@ -610,7 +610,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
         if ((storage_status != STORAGE_STATUS_SUCCESS) ||
             (pWkRtnParms->MappedSystemBuffer == NULL))
         {
-            DbgPrint("PhDskMnt::ImScsiParallelReadWriteImage: Memory allocation failed: status=0x%X address=0x%p translated=0x%p\n",
+            DbgPrint(__FUNCTION__ ": Memory allocation failed: status=0x%X address=0x%p translated=0x%p\n",
                 storage_status,
                 pWkRtnParms->pSrb->DataBuffer,
                 pWkRtnParms->MappedSystemBuffer);
@@ -627,7 +627,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
 
         if (pWkRtnParms->AllocatedBuffer == NULL)
         {
-            DbgPrint("PhDskMnt::ImScsiParallelReadWriteImage: Memory allocation failed: status=0x%X address=0x%p translated=0x%p\n",
+            DbgPrint(__FUNCTION__ ": Memory allocation failed: status=0x%X address=0x%p translated=0x%p\n",
                 storage_status,
                 pWkRtnParms->pSrb->DataBuffer,
                 pWkRtnParms->MappedSystemBuffer);
@@ -696,7 +696,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
             pWkRtnParms->AllocatedBuffer = NULL;
         }
 
-        DbgPrint("PhDskMnt::ImScsiParallelReadWriteImage: IRP allocation failed: data length=0x%u\n",
+        DbgPrint(__FUNCTION__ ": IRP allocation failed: data length=0x%u\n",
             pWkRtnParms->pSrb->DataTransferLength);
 
         ScsiSetCheckCondition(pWkRtnParms->pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
@@ -753,7 +753,7 @@ __in PULONG           Length
 
     byteoffset.QuadPart = Offset->QuadPart + pLUExt->ImageOffset.QuadPart;
 
-    KdPrint2(("PhDskMnt::ImScsiReadDevice: pLUExt=%p, Buffer=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n", pLUExt, Buffer, *Offset, byteoffset, *Length));
+    KdPrint2((__FUNCTION__ ": pLUExt=%p, Buffer=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n", pLUExt, Buffer, *Offset, byteoffset, *Length));
 
     if (pLUExt->VMDisk)
     {
@@ -810,7 +810,7 @@ __in PULONG           Length
         *Length = 0;
     }
 
-    KdPrint2(("PhDskMnt::ImScsiReadDevice Result: pLUExt=%p, status=0x%X, Length=0x%X\n", pLUExt, status, *Length));
+    KdPrint2((__FUNCTION__ ": Result: pLUExt=%p, status=0x%X, Length=0x%X\n", pLUExt, status, *Length));
 
     return status;
 }
@@ -828,7 +828,7 @@ ImScsiZeroDevice(
 
     byteoffset.QuadPart = Offset->QuadPart + pLUExt->ImageOffset.QuadPart;
 
-    KdPrint2(("PhDskMnt::ImScsiZeroDevice: pLUExt=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n",
+    KdPrint2((__FUNCTION__ ": pLUExt=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n",
         pLUExt, *Offset, byteoffset, Length));
 
     pLUExt->Modified = TRUE;
@@ -879,7 +879,7 @@ ImScsiZeroDevice(
             0);
     }
 
-    KdPrint2(("PhDskMnt::ImScsiZeroDevice Result: pLUExt=%p, status=0x%X\n",
+    KdPrint2((__FUNCTION__ ": Result: pLUExt=%p, status=0x%X\n",
         pLUExt, status));
 
     return status;
@@ -904,13 +904,13 @@ __in PULONG           Length
 
         if (NT_SUCCESS(status))
         {
-            KdPrint2(("PhDskMnt::ImScsiWriteDevice: Zero block set at %I64i, bytes: %u.\n",
+            KdPrint2((__FUNCTION__ ": Zero block set at %I64i, bytes: %u.\n",
                 Offset->QuadPart, *Length));
 
             return status;
         }
 
-        KdPrint(("PhDskMnt::ImScsiWriteDevice: Volume does not support "
+        KdPrint((__FUNCTION__ ": Volume does not support "
             "FSCTL_SET_ZERO_DATA: 0x%#X\n", status));
 
         pLUExt->SupportsZero = FALSE;
@@ -918,7 +918,7 @@ __in PULONG           Length
 
     byteoffset.QuadPart = Offset->QuadPart + pLUExt->ImageOffset.QuadPart;
 
-    KdPrint2(("PhDskMnt::ImScsiWriteDevice: pLUExt=%p, Buffer=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n",
+    KdPrint2((__FUNCTION__ ": pLUExt=%p, Buffer=%p, Offset=0x%I64X, EffectiveOffset=0x%I64X, Length=0x%X\n",
         pLUExt, Buffer, *Offset, byteoffset, *Length));
 
     pLUExt->Modified = TRUE;
@@ -972,7 +972,7 @@ __in PULONG           Length
         *Length = 0;
     }
 
-    KdPrint2(("PhDskMnt::ImScsiWriteDevice Result: pLUExt=%p, status=0x%X, Length=0x%X\n", pLUExt, status, *Length));
+    KdPrint2((__FUNCTION__ ": Result: pLUExt=%p, status=0x%X, Length=0x%X\n", pLUExt, status, *Length));
 
     return status;
 }
@@ -986,7 +986,7 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION pLUExt)
     if (pLUExt->ImageFile != NULL &&
         !pLUExt->UseProxy)
     {
-        KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Image file, attempting to generate UID from volume/file ids\n"));
+        KdPrint((__FUNCTION__ ": Image file, attempting to generate UID from volume/file ids\n"));
 
         WPoolMem<FILE_FS_VOLUME_INFORMATION, NonPagedPool> volume_info(
             sizeof(FILE_FS_VOLUME_INFORMATION) + MAXIMUM_VOLUME_LABEL_LENGTH);
@@ -1027,11 +1027,11 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION pLUExt)
             return;
         }
 
-        KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Failed generating UID from volume/file ids: 0x%X\n",
+        KdPrint((__FUNCTION__ ": Failed generating UID from volume/file ids: 0x%X\n",
             status));
     }
 
-    KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Generating UID from new GUID\n"));
+    KdPrint((__FUNCTION__ ": Generating UID from new GUID\n"));
 
     for (;;)
     {
@@ -1042,7 +1042,7 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION pLUExt)
             return;
         }
 
-        KdPrint(("PhDskMnt::ImScsiGenerateUniqueId: Error generating GUID: 0x%X\n",
+        KdPrint((__FUNCTION__ ": Error generating GUID: 0x%X\n",
             status));
 
         LARGE_INTEGER interval;
@@ -1107,7 +1107,7 @@ __in __deref PETHREAD ClientThread)
         (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_AWEALLOC) &&
         (CreateData->Fields.DiskSize.QuadPart > 0))))
     {
-        DbgPrint("PhDskMnt: Blank filenames only supported for non-zero length "
+        DbgPrint(__FUNCTION__ ": Blank filenames only supported for non-zero length "
             "vm type disks.\n");
 
         ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
@@ -1133,7 +1133,7 @@ __in __deref PETHREAD ClientThread)
             CreateData->Fields.WriteOverlayFileNameLength == 0 ||
             IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_VM))
     {
-        DbgPrint("PhDskMnt: Write overlay mode requires read-only image mounting and a write overlay image path.\n");
+        DbgPrint(__FUNCTION__ ": Write overlay mode requires read-only image mounting and a write overlay image path.\n");
 
         ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
             0,
@@ -1154,7 +1154,7 @@ __in __deref PETHREAD ClientThread)
 
     if (IMSCSI_BYTE_SWAP(CreateData->Fields.Flags))
     {
-        KdPrint(("PhDskMnt: IMSCSI_OPTION_BYTE_SWAP not implemented.\n"));
+        KdPrint((__FUNCTION__ ": IMSCSI_OPTION_BYTE_SWAP not implemented.\n"));
 
         return STATUS_NOT_IMPLEMENTED;
     }
@@ -1165,7 +1165,7 @@ __in __deref PETHREAD ClientThread)
         ((CreateData->Fields.DiskSize.QuadPart & 0xFFFFFFFF80000000) !=
         0))
     {
-        KdPrint(("PhDskMnt: Cannot create >= 2GB vm disks on 32-bit system.\n"));
+        KdPrint((__FUNCTION__ ": Cannot create >= 2GB vm disks on 32-bit system.\n"));
 
         return STATUS_INVALID_PARAMETER;
     }
@@ -1195,7 +1195,7 @@ __in __deref PETHREAD ClientThread)
 
             if (file_name.Buffer == NULL)
             {
-                KdPrint(("PhDskMnt: Error allocating buffer for filename.\n"));
+                KdPrint((__FUNCTION__ ": Error allocating buffer for filename.\n"));
 
                 ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
                     0,
@@ -1239,11 +1239,11 @@ __in __deref PETHREAD ClientThread)
         else if (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags) ==
             IMSCSI_DEVICE_TYPE_FD)
         {
-            KdPrint(("PhDskMnt: IMSCSI_DEVICE_TYPE_FD not implemented.\n"));
+            KdPrint((__FUNCTION__ ": IMSCSI_DEVICE_TYPE_FD not implemented.\n"));
         }
 
         KdPrint((
-            "PhDskMnt: Done with device type auto-selection by file ext.\n"));
+            __FUNCTION__ ": Done with device type auto-selection by file ext.\n"));
 
         if (ClientThread != NULL)
         {
@@ -1270,15 +1270,15 @@ __in __deref PETHREAD ClientThread)
 
             if (NT_SUCCESS(status))
             {
-                KdPrint(("PhDskMnt: Impersonating client thread token.\n"));
+                KdPrint((__FUNCTION__ ": Impersonating client thread token.\n"));
                 SeImpersonateClient(&security_client_context, NULL);
                 SeDeleteClientSecurity(&security_client_context);
             }
             else
-                DbgPrint("PhDskMnt: Error impersonating client thread token: %#X\n", status);
+                DbgPrint(__FUNCTION__ ": Error impersonating client thread token: %#X\n", status);
         }
         else
-            KdPrint(("PhDskMnt: No impersonation information.\n"));
+            KdPrint((__FUNCTION__ ": No impersonation information.\n"));
 
         if ((IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE) &&
             (IMSCSI_FILE_TYPE(CreateData->Fields.Flags) ==
@@ -1294,7 +1294,7 @@ __in __deref PETHREAD ClientThread)
 
             if (real_file_name.Buffer == NULL)
             {
-                KdPrint(("PhDskMnt: Out of memory while allocating %#x bytes\n",
+                KdPrint((__FUNCTION__ ": Out of memory while allocating %#x bytes\n",
                     real_file_name.MaximumLength));
 
                 if (file_name.Buffer != NULL)
@@ -1316,7 +1316,7 @@ __in __deref PETHREAD ClientThread)
 
             if (!NT_SUCCESS(status))
             {
-                KdPrint(("PhDskMnt: Internal error: "
+                KdPrint((__FUNCTION__ ": Internal error: "
                     "RtlAppendUnicodeStringToString failed with "
                     "pre-allocated buffers.\n"));
 
@@ -1415,7 +1415,7 @@ __in __deref PETHREAD ClientThread)
                 create_options |= FILE_WRITE_THROUGH;
             }
 
-            KdPrint(("PhDskMnt::ImScsiCreateLU: Passing DesiredAccess=%#x ShareAccess=%#x CreateOptions=%#x\n",
+            KdPrint((__FUNCTION__ ": Passing DesiredAccess=%#x ShareAccess=%#x CreateOptions=%#x\n",
                 desired_access, share_access, create_options));
 
             status = ZwCreateFile(
@@ -1475,7 +1475,7 @@ __in __deref PETHREAD ClientThread)
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint(("PhDskMnt: Error opening file '%.*ws'. Status: %#x SpecSize: %i WritableFile: %i DevTypeFile: %i Flags: %#x\n",
+            KdPrint((__FUNCTION__ ": Error opening file '%.*ws'. Status: %#x SpecSize: %i WritableFile: %i DevTypeFile: %i Flags: %#x\n",
                 (int)(real_file_name.Length / sizeof(WCHAR)),
                 real_file_name.Buffer,
                 status,
@@ -1523,7 +1523,7 @@ __in __deref PETHREAD ClientThread)
                     NULL,
                     L"Cannot create image file."));
 
-                KdPrint(("PhDskMnt: Cannot create '%.*ws'. (%#x)\n",
+                KdPrint((__FUNCTION__ ": Cannot create '%.*ws'. (%#x)\n",
                     (int)(CreateData->Fields.FileNameLength /
                     sizeof(*CreateData->Fields.FileName)),
                     CreateData->Fields.FileName,
@@ -1555,7 +1555,7 @@ __in __deref PETHREAD ClientThread)
                 NULL,
                 L"Cannot open image file."));
 
-            KdPrint(("PhDskMnt: Cannot open file '%.*ws'. Status: %#x\n",
+            KdPrint((__FUNCTION__ ": Cannot open file '%.*ws'. Status: %#x\n",
                 (int)(real_file_name.Length / sizeof(WCHAR)),
                 real_file_name.Buffer,
                 status));
@@ -1570,7 +1570,7 @@ __in __deref PETHREAD ClientThread)
             return status;
         }
 
-        KdPrint(("PhDskMnt: File '%.*ws' opened successfully.\n",
+        KdPrint((__FUNCTION__ ": File '%.*ws' opened successfully.\n",
             (int)(real_file_name.Length / sizeof(WCHAR)),
             real_file_name.Buffer));
 
@@ -1628,13 +1628,13 @@ __in __deref PETHREAD ClientThread)
                     NULL,
                     L"Error referencing proxy device."));
 
-                KdPrint(("PhDskMnt: Error referencing proxy device (%#x).\n",
+                KdPrint((__FUNCTION__ ": Error referencing proxy device (%#x).\n",
                     status));
 
                 return status;
             }
 
-            KdPrint(("PhDskMnt: Got reference to proxy object %p.\n",
+            KdPrint((__FUNCTION__ ": Got reference to proxy object %p.\n",
                 proxy.connection_type == PROXY_CONNECTION::PROXY_CONNECTION_DEVICE ?
                 (PVOID)proxy.device :
                 (PVOID)proxy.shared_memory));
@@ -1670,7 +1670,7 @@ __in __deref PETHREAD ClientThread)
                     NULL,
                     L"Error connecting proxy."));
 
-                KdPrint(("PhDskMnt: Error connecting proxy (%#x).\n", status));
+                KdPrint((__FUNCTION__ ": Error connecting proxy (%#x).\n", status));
 
                 return status;
             }
@@ -1708,7 +1708,7 @@ __in __deref PETHREAD ClientThread)
                     L"Error getting image size."));
 
                 KdPrint
-                    (("PhDskMnt: Error getting image size (%#x).\n",
+                    ((__FUNCTION__ ": Error getting image size (%#x).\n",
                     status));
 
                 return status;
@@ -1744,7 +1744,7 @@ __in __deref PETHREAD ClientThread)
                         if (file_name.Buffer != NULL)
                             ExFreePoolWithTag(file_name.Buffer, MP_TAG_GENERAL);
 
-                        KdPrint(("PhDskMnt: VM disk >= 2GB not supported.\n"));
+                        KdPrint((__FUNCTION__ ": VM disk >= 2GB not supported.\n"));
 
                         return STATUS_INSUFFICIENT_RESOURCES;
                     }
@@ -1787,7 +1787,7 @@ __in __deref PETHREAD ClientThread)
                         NULL,
                         L"Not enough memory for VM disk."));
 
-                    KdPrint(("PhDskMnt: Error allocating vm for image. (%#x)\n",
+                    KdPrint((__FUNCTION__ ": Error allocating vm for image. (%#x)\n",
                         status));
 
                     return STATUS_NO_MEMORY;
@@ -1830,7 +1830,7 @@ __in __deref PETHREAD ClientThread)
                         NULL,
                         L"Error getting alignment information."));
 
-                    KdPrint(("PhDskMnt: Error querying file alignment (%#x).\n",
+                    KdPrint((__FUNCTION__ ": Error querying file alignment (%#x).\n",
                         status));
 
                     return status;
@@ -1853,9 +1853,9 @@ __in __deref PETHREAD ClientThread)
                         );
 
                     if (NT_SUCCESS(status))
-                        KdPrint(("PhDskMnt::ImScsiInitializeLU: Sparse attribute set on image file.\n"));
+                        KdPrint((__FUNCTION__ ": Sparse attribute set on image file.\n"));
                     else
-                        DbgPrint("PhDskMnt::ImScsiInitializeLU: Cannot set sparse attribute on image file: 0x%X\n", status);
+                        DbgPrint(__FUNCTION__ ": Cannot set sparse attribute on image file: 0x%X\n", status);
                 }
 
                 if (CreateData->Fields.DiskSize.QuadPart == 0)
@@ -1902,7 +1902,7 @@ __in __deref PETHREAD ClientThread)
                             NULL,
                             L"Error setting file size."));
 
-                        DbgPrint("PhDskMnt: Error setting eof (%#x).\n", status);
+                        DbgPrint(__FUNCTION__ ": Error setting eof (%#x).\n", status);
                         return status;
                     }
                 }
@@ -1943,7 +1943,7 @@ __in __deref PETHREAD ClientThread)
                     NULL,
                     L"Error querying proxy."));
 
-                KdPrint(("PhDskMnt: Error querying proxy (%#x).\n", status));
+                KdPrint((__FUNCTION__ ": Error querying proxy (%#x).\n", status));
 
                 return status;
             }
@@ -1975,7 +1975,7 @@ __in __deref PETHREAD ClientThread)
                     NULL,
                     L"Unsupported sizes."));
 
-                KdPrint(("PhDskMnt: Unsupported sizes. "
+                KdPrint((__FUNCTION__ ": Unsupported sizes. "
                     "Got 0x%I64x size and 0x%I64x alignment.\n",
                     proxy_info.file_size,
                     proxy_info.req_alignment));
@@ -1998,7 +1998,7 @@ __in __deref PETHREAD ClientThread)
             if ((proxy_info.flags & IMDPROXY_FLAG_SUPPORTS_SHARED) == 0)
                 CreateData->Fields.Flags &= ~IMSCSI_OPTION_SHARED_IMAGE;
 
-            KdPrint(("PhDskMnt: Got from proxy: Siz=0x%08x%08x Flg=%#x Alg=%#x.\n",
+            KdPrint((__FUNCTION__ ": Got from proxy: Siz=0x%08x%08x Flg=%#x Alg=%#x.\n",
                 CreateData->Fields.DiskSize.HighPart,
                 CreateData->Fields.DiskSize.LowPart,
                 (ULONG)proxy_info.flags,
@@ -2023,7 +2023,7 @@ __in __deref PETHREAD ClientThread)
                 NULL,
                 L"Disk size equals zero."));
 
-            KdPrint(("PhDskMnt: Fatal error: Disk size equals zero.\n"));
+            KdPrint((__FUNCTION__ ": Fatal error: Disk size equals zero.\n"));
 
             ImScsiCloseProxy(&proxy);
             if (file_handle != NULL)
@@ -2061,7 +2061,7 @@ __in __deref PETHREAD ClientThread)
         if (!NT_SUCCESS(status))
         {
             KdPrint
-                (("PhDskMnt: Error allocating virtual memory for vm disk (%#x).\n",
+                ((__FUNCTION__ ": Error allocating virtual memory for vm disk (%#x).\n",
                 status));
 
             ImScsiLogError((pMPDrvInfoGlobal->pDriverObj,
@@ -2084,7 +2084,7 @@ __in __deref PETHREAD ClientThread)
         alignment_requirement = FILE_BYTE_ALIGNMENT;
     }
 
-    KdPrint(("PhDskMnt: Done with file/memory checks.\n"));
+    KdPrint((__FUNCTION__ ": Done with file/memory checks.\n"));
 
     // If no device-type specified and size matches common floppy sizes,
     // auto-select FILE_DEVICE_DISK with FILE_FLOPPY_DISKETTE and
@@ -2096,7 +2096,7 @@ __in __deref PETHREAD ClientThread)
         CreateData->Fields.Flags |= IMSCSI_DEVICE_TYPE_HD;
     }
 
-    KdPrint(("PhDskMnt: Done with device type selection for floppy sizes.\n"));
+    KdPrint((__FUNCTION__ ": Done with device type selection for floppy sizes.\n"));
 
     // If some parts of the DISK_GEOMETRY structure are zero, auto-fill with
     // typical values for this type of disk.
@@ -2113,7 +2113,7 @@ __in __deref PETHREAD ClientThread)
             CreateData->Fields.BytesPerSector = DEFAULT_SECTOR_SIZE_HDD;
     }
 
-    KdPrint(("PhDskMnt: Done with disk geometry setup.\n"));
+    KdPrint((__FUNCTION__ ": Done with disk geometry setup.\n"));
 
     // Now build real DeviceType and DeviceCharacteristics parameters.
     switch (IMSCSI_DEVICE_TYPE(CreateData->Fields.Flags))
@@ -2141,7 +2141,7 @@ __in __deref PETHREAD ClientThread)
         CreateData->Fields.BytesPerSector = alignment_requirement + 1;
 
     KdPrint
-        (("PhDskMnt: After checks and translations we got this create data:\n"
+        ((__FUNCTION__ ": After checks and translations we got this create data:\n"
         "DeviceNumber   = %#x\n"
         "DiskSize       = %I64u\n"
         "ImageOffset    = %I64u\n"
@@ -2264,7 +2264,7 @@ __in __deref PETHREAD ClientThread)
 
         RtlFreeUnicodeString(&guid);
 
-        DbgPrint("PhDskMnt::ImScsiInitializeLU: Unique id: %s\n", pLUExt->GuidString);
+        DbgPrint(__FUNCTION__ ": Unique id: %s\n", pLUExt->GuidString);
     }
 
     if (IMSCSI_WRITE_OVERLAY(CreateData->Fields.Flags) &&
@@ -2308,7 +2308,7 @@ __in __deref PETHREAD ClientThread)
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("PhDskMnt::ImScsiCreateLU: Error creating write overlay image '%wZ': %#x\n",
+            DbgPrint(__FUNCTION__ ": Error creating write overlay image '%wZ': %#x\n",
                 &overlay_file_name, status);
             
             return status;
@@ -2338,7 +2338,7 @@ __in __deref PETHREAD ClientThread)
 
     KeSetEvent(&pLUExt->Initialized, (KPRIORITY)0, FALSE);
 
-    KdPrint(("PhDskMnt::ImScsiInitializeLU: Creating worker thread for pLUExt=0x%p.\n",
+    KdPrint((__FUNCTION__ ": Creating worker thread for pLUExt=0x%p.\n",
         pLUExt));
 
     // Get FILE_OBJECT if we will need that later
@@ -2358,7 +2358,7 @@ __in __deref PETHREAD ClientThread)
         {
             pLUExt->FileObject = NULL;
 
-            DbgPrint("PhDskMnt::ImScsiCreateLU: Error referencing image file handle: %#x\n",
+            DbgPrint(__FUNCTION__ ": Error referencing image file handle: %#x\n",
                 status);
         }
     }
@@ -2374,7 +2374,7 @@ __in __deref PETHREAD ClientThread)
 
     if (!NT_SUCCESS(status))
     {
-        DbgPrint("PhDskMnt::ImScsiCreateLU: Cannot create device worker thread. (%#x)\n", status);
+        DbgPrint(__FUNCTION__ ": Cannot create device worker thread. (%#x)\n", status);
 
         return status;
     }
@@ -2399,13 +2399,13 @@ __in __deref PETHREAD ClientThread)
     {
         pLUExt->WorkerThread = NULL;
 
-        DbgPrint("PhDskMnt::ImScsiCreateLU: Cannot reference device worker thread. (%#x)\n", status);
+        DbgPrint(__FUNCTION__ ": Cannot reference device worker thread. (%#x)\n", status);
         KeSetEvent(&pLUExt->StopThread, (KPRIORITY)0, FALSE);
         ZwWaitForSingleObject(thread_handle, FALSE, NULL);
     }
     else
     {
-        KdPrint(("PhDskMnt::ImScsiCreateLU: Device created and ready.\n"));
+        KdPrint((__FUNCTION__ ": Device created and ready.\n"));
     }
 
     ZwClose(thread_handle);
@@ -2451,7 +2451,7 @@ ImScsiFillMemoryDisk(pHW_LU_EXTENSION pLUExt)
         }
     }
 
-    KdPrint(("PhDskMnt: Reading image file into vm disk buffer.\n"));
+    KdPrint((__FUNCTION__ ": Reading image file into vm disk buffer.\n"));
 
     status =
         ImScsiSafeReadFile(
@@ -2467,12 +2467,12 @@ ImScsiFillMemoryDisk(pHW_LU_EXTENSION pLUExt)
     // Failure to read pre-load image is now considered a fatal error
     if (!NT_SUCCESS(status))
     {
-        KdPrint(("PhDskMnt: Failed to read image file (%#x).\n", status));
+        KdPrint((__FUNCTION__ ": Failed to read image file (%#x).\n", status));
 
         return FALSE;
     }
 
-    KdPrint(("PhDskMnt: Image loaded successfully.\n"));
+    KdPrint((__FUNCTION__ ": Image loaded successfully.\n"));
 
     return TRUE;
 }

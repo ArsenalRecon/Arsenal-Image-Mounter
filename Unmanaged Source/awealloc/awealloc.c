@@ -409,7 +409,7 @@ IN PUNICODE_STRING RegistryPath)
 
     DriverObject->DriverUnload = AWEAllocUnload;
 
-    KdPrint(("AWEAlloc: Initialization done. Leaving DriverEntry().\n"));
+    KdPrint((__FUNCTION__ ": Initialization done. Leaving DriverEntry().\n"));
 
     return STATUS_SUCCESS;
 }
@@ -432,7 +432,7 @@ IN OUT PKIRQL LowestAssumedIrql)
             (Context->ActiveReaders >= (OwnsReadLock ? 2 : 1)))
         {
             Context->WriteRequestLockConflicts++;
-            KdPrint2(("AWEAlloc: I/O write protection busy while requesting lock for writing. Active readers: %i writers: %i\n",
+            KdPrint2((__FUNCTION__ "AWEAlloc: I/O write protection busy while requesting lock for writing. Active readers: %i writers: %i\n",
                 Context->ActiveReaders, Context->ActiveWriters));
 
             status = STATUS_DEVICE_BUSY;
@@ -442,7 +442,7 @@ IN OUT PKIRQL LowestAssumedIrql)
             Context->ActiveWriters++;
             if (Context->ActiveWriters <= 0)
             {
-                DbgPrint("AWEAlloc: I/O synchronization state corrupt.\n");
+                DbgPrint(__FUNCTION__ ": I/O synchronization state corrupt.\n");
 
 #if DBG
                 if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -453,7 +453,7 @@ IN OUT PKIRQL LowestAssumedIrql)
             }
             else
             {
-                KdPrint2(("AWEAlloc: Thread %p acquired lock for writing. Active readers: %i writers: %i\n",
+                KdPrint2((__FUNCTION__ ": Thread %p acquired lock for writing. Active readers: %i writers: %i\n",
                     KeGetCurrentThread(),
                     Context->ActiveReaders, Context->ActiveWriters));
 
@@ -466,7 +466,7 @@ IN OUT PKIRQL LowestAssumedIrql)
         if ((Context->ActiveWriters >= 1) | (Context->ActiveReaders >= LONG_MAX))
         {
             Context->ReadRequestLockConflicts++;
-            KdPrint2(("AWEAlloc: I/O write protection busy while requesting lock for reading. Active readers: %i writers: %i\n",
+            KdPrint2((__FUNCTION__ ": I/O write protection busy while requesting lock for reading. Active readers: %i writers: %i\n",
                 Context->ActiveReaders, Context->ActiveWriters));
 
             status = STATUS_DEVICE_BUSY;
@@ -476,7 +476,7 @@ IN OUT PKIRQL LowestAssumedIrql)
             Context->ActiveReaders++;
             if (Context->ActiveReaders <= 0)
             {
-                DbgPrint("AWEAlloc: I/O synchronization state corrupt.\n");
+                DbgPrint(__FUNCTION__ ": I/O synchronization state corrupt.\n");
 
 #if DBG
                 if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -487,7 +487,7 @@ IN OUT PKIRQL LowestAssumedIrql)
             }
             else
             {
-                KdPrint2(("AWEAlloc: Thread %p acquired lock for reading. Active readers: %i writers: %i\n",
+                KdPrint2((__FUNCTION__ ": Thread %p acquired lock for reading. Active readers: %i writers: %i\n",
                     KeGetCurrentThread(),
                     Context->ActiveReaders, Context->ActiveWriters));
 
@@ -511,13 +511,13 @@ IN OUT PKIRQL LowestAssumedIrql)
     {
         Context->ActiveWriters--;
 
-        KdPrint2(("AWEAlloc: Thread %p released lock for writing. Active readers: %i writers: %i\n",
+        KdPrint2((__FUNCTION__ ": Thread %p released lock for writing. Active readers: %i writers: %i\n",
             KeGetCurrentThread(),
             Context->ActiveReaders, Context->ActiveWriters));
 
         if (Context->ActiveWriters < 0)
         {
-            DbgPrint("AWEAlloc: I/O synchronization state corrupt.\n");
+            DbgPrint(__FUNCTION__ ": I/O synchronization state corrupt.\n");
 
 #if DBG
             if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -529,13 +529,13 @@ IN OUT PKIRQL LowestAssumedIrql)
     {
         Context->ActiveReaders--;
 
-        KdPrint2(("AWEAlloc: Thread %p released lock for reading. Active readers: %i writers: %i\n",
+        KdPrint2((__FUNCTION__ ": Thread %p released lock for reading. Active readers: %i writers: %i\n",
             KeGetCurrentThread(),
             Context->ActiveReaders, Context->ActiveWriters));
 
         if (Context->ActiveReaders < 0)
         {
-            DbgPrint("AWEAlloc: I/O synchronization state corrupt.\n");
+            DbgPrint(__FUNCTION__ ": I/O synchronization state corrupt.\n");
 
 #if DBG
             if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -577,7 +577,7 @@ IN OUT PKIRQL LowestAssumedIrql)
     ULONG size_to_map = ALLOC_PAGE_SIZE;
     PBLOCK_DESCRIPTOR block;
 
-    KdPrint2(("AWEAlloc: MapPage request NewOffset=%#I64x BaseAddress=%#I64x.\n",
+    KdPrint2((__FUNCTION__ ": MapPage request NewOffset=%#I64x BaseAddress=%#I64x.\n",
         NewOffset,
         page_base));
     
@@ -586,7 +586,7 @@ IN OUT PKIRQL LowestAssumedIrql)
         (CurrentPageContext->Mdl != NULL) &
         (CurrentPageContext->Ptr != NULL))
     {
-        KdPrint2(("AWEAlloc: MapPage: Region is within already mapped page.\n"));
+        KdPrint2((__FUNCTION__ ": MapPage: Region is within already mapped page.\n"));
         return STATUS_SUCCESS;
     }
 
@@ -597,13 +597,13 @@ IN OUT PKIRQL LowestAssumedIrql)
         (CurrentPageContext->Mdl != NULL) &
         (CurrentPageContext->Ptr != NULL))
     {
-        KdPrint2(("AWEAlloc: MapPage: Region is within previously mapped page.\n"));
+        KdPrint2((__FUNCTION__ ": MapPage: Region is within previously mapped page.\n"));
         return STATUS_SUCCESS;
     }
 
     if (CurrentPageContext->Mdl != NULL)
     {
-        KdPrint2(("AWEAlloc: MapPage: Freeing stored mapped page that we cannot use.\n"));
+        KdPrint2((__FUNCTION__ ": MapPage: Freeing stored mapped page that we cannot use.\n"));
         IoFreeMdl(CurrentPageContext->Mdl);
     }
 
@@ -611,7 +611,7 @@ IN OUT PKIRQL LowestAssumedIrql)
 
     if (NewOffset < 0)
     {
-        KdPrint2(("AWEAlloc: MapPage: Stored mapped page and returning empty current page.\n"));
+        KdPrint2((__FUNCTION__ ": MapPage: Stored mapped page and returning empty current page.\n"));
         return STATUS_SUCCESS;
     }
 
@@ -623,7 +623,7 @@ IN OUT PKIRQL LowestAssumedIrql)
 
     if (block == NULL)
     {
-        DbgPrint("AWEAlloc: MapPage: Cannot find block for BaseAddress=%#I64x.\n",
+        DbgPrint(__FUNCTION__ ": MapPage: Cannot find block for BaseAddress=%#I64x.\n",
             page_base);
 
 #if DBG
@@ -636,12 +636,12 @@ IN OUT PKIRQL LowestAssumedIrql)
 
     page_base_within_block = page_base - block->Offset;
 
-    KdPrint2(("AWEAlloc: MapPage found block NewOffset=%#I64x BaseAddress=%#I64x.\n",
+    KdPrint2((__FUNCTION__ ": MapPage found block NewOffset=%#I64x BaseAddress=%#I64x.\n",
         block->Offset, page_base_within_block));
 
     if (MmGetMdlByteCount(block->Mdl) <= page_base - block->Offset)
     {
-        DbgPrint("AWEAlloc: MapPage: Bad sized block BaseAddress=%#I64x.\n",
+        DbgPrint(__FUNCTION__ ": MapPage: Bad sized block BaseAddress=%#I64x.\n",
             page_base);
 
 #if DBG
@@ -657,7 +657,7 @@ IN OUT PKIRQL LowestAssumedIrql)
 
     if (CurrentPageContext->Mdl == NULL)
     {
-        DbgPrint("AWEAlloc: IoAllocateMdl() FAILED.\n");
+        DbgPrint(__FUNCTION__ ": IoAllocateMdl() FAILED.\n");
 
 #if DBG
         if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -671,7 +671,7 @@ IN OUT PKIRQL LowestAssumedIrql)
         size_to_map)
     {
         KdPrint
-            (("AWEAlloc: Incomplete page size! Shrinking page size.\n"));
+            ((__FUNCTION__ ": Incomplete page size! Shrinking page size.\n"));
         size_to_map = 0;  // This will map remaining bytes
     }
 
@@ -684,7 +684,7 @@ IN OUT PKIRQL LowestAssumedIrql)
 
     if (CurrentPageContext->Ptr == NULL)
     {
-        DbgPrint("AWEAlloc: MmGetSystemAddressForMdlSafe() FAILED.\n");
+        DbgPrint(__FUNCTION__ ": MmGetSystemAddressForMdlSafe() FAILED.\n");
 
 #if DBG
         if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -713,7 +713,7 @@ IN OUT PKIRQL LowestAssumedIrql)
 
     CurrentPageContext->PageBase = page_base;
 
-    KdPrint2(("AWEAlloc: MapPage success BaseAddress=%#I64x.\n",
+    KdPrint2((__FUNCTION__ ": MapPage success BaseAddress=%#I64x.\n",
         page_base));
 
     return STATUS_SUCCESS;
@@ -727,12 +727,12 @@ IN PIRP Irp)
     POBJECT_CONTEXT context = io_stack->FileObject->FsContext2;
     NTSTATUS status;
 
-    KdPrint2(("AWEAlloc: FileSystemControl request %#x.\n",
+    KdPrint2((__FUNCTION__ ": FileSystemControl request %#x.\n",
         io_stack->Parameters.FileSystemControl.FsControlCode));
 
     if (context == NULL)
     {
-        KdPrint2(("VhdAccess: FileSystemControl request on not initialized device.\n"));
+        KdPrint2((__FUNCTION__ ": FileSystemControl request on not initialized device.\n"));
 
         status = STATUS_INVALID_DEVICE_REQUEST;
 
@@ -848,7 +848,7 @@ IN PIRP Irp)
     PAGE_CONTEXT current_page_context = { 0 };
     KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
 
-    KdPrint2(("AWEAlloc: Read/write request Offset=%#I64x Len=%#x.\n",
+    KdPrint2((__FUNCTION__ ": Read/write request Offset=%#I64x Len=%#x.\n",
         io_stack->Parameters.Read.ByteOffset,
         io_stack->Parameters.Read.Length));
 
@@ -856,7 +856,7 @@ IN PIRP Irp)
         ((io_stack->Parameters.Read.ByteOffset.QuadPart +
         io_stack->Parameters.Read.Length) < 0))
     {
-        KdPrint(("AWEAlloc: Read/write attempt on negative offset.\n"));
+        KdPrint((__FUNCTION__ ": Read/write attempt on negative offset.\n"));
 
         Irp->IoStatus.Status = STATUS_INVALID_PARAMETER;
         Irp->IoStatus.Information = 0;
@@ -868,7 +868,7 @@ IN PIRP Irp)
 
     if (context == NULL)
     {
-        KdPrint2(("AWEAlloc: Read/write request on not initialized device.\n"));
+        KdPrint2((__FUNCTION__ ": Read/write request on not initialized device.\n"));
 
         Irp->IoStatus.Status = STATUS_INVALID_DEVICE_REQUEST;
         Irp->IoStatus.Information = 0;
@@ -880,7 +880,7 @@ IN PIRP Irp)
 
     if (io_stack->Parameters.Read.Length == 0)
     {
-        KdPrint2(("AWEAlloc: Zero bytes read/write request.\n"));
+        KdPrint2((__FUNCTION__ ": Zero bytes read/write request.\n"));
 
         Irp->IoStatus.Status = STATUS_SUCCESS;
         Irp->IoStatus.Information = 0;
@@ -895,7 +895,7 @@ IN PIRP Irp)
 
     if (system_buffer == NULL)
     {
-        DbgPrint("AWEAlloc: Failed mapping system buffer.\n");
+        DbgPrint(__FUNCTION__ ": Failed mapping system buffer.\n");
 
 #if DBG
         if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -908,12 +908,12 @@ IN PIRP Irp)
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    KdPrint2(("AWEAlloc: System buffer: %p\n", system_buffer));
+    KdPrint2((__FUNCTION__ ": System buffer: %p\n", system_buffer));
 
     status = AWEAllocTryAcquireProtection(context, FALSE, FALSE, &lowest_assumed_irql);
     if (!NT_SUCCESS(status))
     {
-        DbgPrint("AWEAlloc: Page table is busy.\n");
+        DbgPrint(__FUNCTION__ ": Page table is busy.\n");
 
         Irp->IoStatus.Status = status;
         Irp->IoStatus.Information = 0;
@@ -925,7 +925,7 @@ IN PIRP Irp)
     if ((io_stack->MajorFunction == IRP_MJ_READ) &&
         (io_stack->Parameters.Read.ByteOffset.QuadPart > context->VirtualSize))
     {
-        KdPrint(("AWEAlloc: Read request starting past EOF.\n"));
+        KdPrint((__FUNCTION__ ": Read request starting past EOF.\n"));
 
         AWEAllocReleaseProtection(context, TRUE, FALSE,
             &lowest_assumed_irql);
@@ -954,7 +954,7 @@ IN PIRP Irp)
 
             if (!NT_SUCCESS(status))
             {
-                DbgPrint("AWEAlloc: Page table busy.\n");
+                DbgPrint(__FUNCTION__ ": Page table busy.\n");
 
                 AWEAllocReleaseProtection(context, TRUE, FALSE,
                     &lowest_assumed_irql);
@@ -975,7 +975,7 @@ IN PIRP Irp)
 
             if (!NT_SUCCESS(status))
             {
-                DbgPrint("AWEAlloc: Error growing in-memory file.\n");
+                DbgPrint(__FUNCTION__ ": Error growing in-memory file.\n");
 
                 AWEAllocReleaseProtection(context, TRUE, TRUE,
                     &lowest_assumed_irql);
@@ -1000,7 +1000,7 @@ IN PIRP Irp)
                 (context->VirtualSize -
                 io_stack->Parameters.Read.ByteOffset.QuadPart);
 
-            KdPrint2(("AWEAlloc: Read request towards EOF. Len set to %x\n",
+            KdPrint2((__FUNCTION__ ": Read request towards EOF. Len set to %x\n",
                 io_stack->Parameters.Read.Length));
         }
     }
@@ -1015,7 +1015,7 @@ IN PIRP Irp)
 
         if (length_done >= io_stack->Parameters.Read.Length)
         {
-            KdPrint2(("AWEAlloc: Nothing left to do.\n"));
+            KdPrint2((__FUNCTION__ ": Nothing left to do.\n"));
 
             AWEAllocMapPage(context, INVALID_OFFSET, &current_page_context,
                 &lowest_assumed_irql);
@@ -1041,7 +1041,7 @@ IN PIRP Irp)
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("AWEAlloc: Failed mapping current image page.\n");
+            DbgPrint(__FUNCTION__ ": Failed mapping current image page.\n");
 
             AWEAllocReleaseProtection(context, TRUE, FALSE,
                 &lowest_assumed_irql);
@@ -1054,7 +1054,7 @@ IN PIRP Irp)
             return status;
         }
 
-        KdPrint2(("AWEAlloc: Current image page mdl ptr=%p system ptr=%p.\n",
+        KdPrint2((__FUNCTION__ ": Current image page mdl ptr=%p system ptr=%p.\n",
             current_page_context.Mdl,
             current_page_context.Ptr));
 
@@ -1064,7 +1064,7 @@ IN PIRP Irp)
         {
         case IRP_MJ_READ:
         {
-            KdPrint2(("AWEAlloc: Copying memory image -> I/O buffer.\n"));
+            KdPrint2((__FUNCTION__ ": Copying memory image -> I/O buffer.\n"));
 
             RtlCopyMemory(system_buffer + length_done,
                 current_page_context.Ptr + page_offset_this_iter,
@@ -1075,7 +1075,7 @@ IN PIRP Irp)
 
         case IRP_MJ_WRITE:
         {
-            KdPrint2(("AWEAlloc: Copying memory image <- I/O buffer.\n"));
+            KdPrint2((__FUNCTION__ ": Copying memory image <- I/O buffer.\n"));
             
             RtlCopyMemory(current_page_context.Ptr + page_offset_this_iter,
                 system_buffer + length_done,
@@ -1087,7 +1087,7 @@ IN PIRP Irp)
 
         io_stack->FileObject->CurrentByteOffset.QuadPart += bytes_this_iter;
 
-        KdPrint2(("AWEAlloc: Copy done.\n"));
+        KdPrint2((__FUNCTION__ ": Copy done.\n"));
 
         length_done += bytes_this_iter;
 
@@ -1124,7 +1124,7 @@ IN PWCHAR Message)
 
     if (packet_size > ERROR_LOG_MAXIMUM_SIZE)
     {
-        DbgPrint("AWEAlloc: Warning: Too large error log packet.\n");
+        DbgPrint(__FUNCTION__ ": Warning: Too large error log packet.\n");
         return;
     }
 
@@ -1135,7 +1135,7 @@ IN PWCHAR Message)
     if (error_log_packet == NULL)
     {
         DbgPrint
-            ("AWEAlloc: Warning: IoAllocateErrorLogEntry() returned NULL.\n");
+            (__FUNCTION__ ": Warning: IoAllocateErrorLogEntry() returned NULL.\n");
 
         return;
     }
@@ -1194,7 +1194,7 @@ IN PBLOCK_DESCRIPTOR Block)
     block_size = AWEAllocGetPageBaseFromAbsOffset(MmGetMdlByteCount(Block->Mdl));
     if (block_size == 0)
     {
-        KdPrint(("AWEAlloc: Got %u bytes which is too small for page size.\n",
+        KdPrint((__FUNCTION__ ": Got %u bytes which is too small for page size.\n",
             MmGetMdlByteCount(Block->Mdl)));
 
         MmFreePagesFromMdl(Block->Mdl);
@@ -1214,7 +1214,7 @@ AWEAllocSetSize(IN POBJECT_CONTEXT Context,
 IN OUT PIO_STATUS_BLOCK IoStatus,
 IN PLARGE_INTEGER EndOfFile)
 {
-    KdPrint2(("AWEAlloc: Setting size to %u KB.\n",
+    KdPrint2((__FUNCTION__ ": Setting size to %u KB.\n",
         (ULONG)(EndOfFile->QuadPart >> 10)));
 
     if (AWEAllocGetTotalSize(Context) >= EndOfFile->QuadPart)
@@ -1227,7 +1227,7 @@ IN PLARGE_INTEGER EndOfFile)
                 Context->LatestPageContext.Mdl = NULL;
             }
 
-            KdPrint(("AWEAlloc: Reducing size from 0x%I64X to 0x%I64X\n",
+            KdPrint((__FUNCTION__ ": Reducing size from 0x%I64X to 0x%I64X\n",
                 AWEAllocGetTotalSize(Context), EndOfFile->QuadPart));
 
             while (Context->FirstBlock != NULL &&
@@ -1237,7 +1237,7 @@ IN PLARGE_INTEGER EndOfFile)
 
                 Context->FirstBlock = free_block->NextBlock;
 
-                KdPrint(("AWEAlloc: Freeing block=%p mdl=%p.\n",
+                KdPrint((__FUNCTION__ ": Freeing block=%p mdl=%p.\n",
                     free_block, free_block->Mdl));
 
                 if (free_block->Mdl != NULL)
@@ -1272,7 +1272,7 @@ IN PLARGE_INTEGER EndOfFile)
         // allocate
         if (KeReadStateEvent(HighMemoryCondition) == 0)
         {
-            DbgPrint("AWEAlloc: Risk of running out of memory. Refusing to allocate more at this point.\n");
+            DbgPrint(__FUNCTION__ ": Risk of running out of memory. Refusing to allocate more at this point.\n");
 
             IoStatus->Status = STATUS_NO_MEMORY;
             IoStatus->Information = 0;
@@ -1284,7 +1284,7 @@ IN PLARGE_INTEGER EndOfFile)
 
         if (block == NULL)
         {
-            DbgPrint("AWEAlloc: Out of pool memory.\n");
+            DbgPrint(__FUNCTION__ ": Out of pool memory.\n");
 
             IoStatus->Status = STATUS_NO_MEMORY;
             IoStatus->Information = 0;
@@ -1304,13 +1304,13 @@ IN PLARGE_INTEGER EndOfFile)
                     AWEAllocGetTotalSize(Context));
         }
 
-        KdPrint(("AWEAlloc: Allocating %u MB.\n",
+        KdPrint((__FUNCTION__ ": Allocating %u MB.\n",
             (ULONG)(bytes_to_allocate >> 20)));
 
 #ifndef _WIN64
 
         // On 32-bit, first try to allocate as high as possible
-        KdPrint(("AWEAlloc: Allocating above 8 GB.\n"));
+        KdPrint((__FUNCTION__ ": Allocating above 8 GB.\n"));
 
         block->Mdl = MmAllocatePagesForMdl(physical_address_8GB,
             physical_address_max64,
@@ -1320,7 +1320,7 @@ IN PLARGE_INTEGER EndOfFile)
         if (AWEAllocAddBlock(Context, block))
             continue;
 
-        KdPrint(("AWEAlloc: Not enough memory available above 8 GB.\n"
+        KdPrint((__FUNCTION__ ": Not enough memory available above 8 GB.\n"
             "AWEAlloc: Allocating above 6 GB.\n"));
 
         AWEAllocLogError(AWEAllocDriverObject,
@@ -1345,7 +1345,7 @@ IN PLARGE_INTEGER EndOfFile)
         if (AWEAllocAddBlock(Context, block))
             continue;
 
-        KdPrint(("AWEAlloc: Not enough memory available above 6 GB.\n"
+        KdPrint((__FUNCTION__ ": Not enough memory available above 6 GB.\n"
             "AWEAlloc: Allocating above 5 GB.\n"));
 
         AWEAllocLogError(AWEAllocDriverObject,
@@ -1370,7 +1370,7 @@ IN PLARGE_INTEGER EndOfFile)
         if (AWEAllocAddBlock(Context, block))
             continue;
 
-        KdPrint(("AWEAlloc: Not enough memory available above 5 GB.\n"
+        KdPrint((__FUNCTION__ ": Not enough memory available above 5 GB.\n"
             "AWEAlloc: Allocating above 4 GB.\n"));
 
         AWEAllocLogError(AWEAllocDriverObject,
@@ -1395,7 +1395,7 @@ IN PLARGE_INTEGER EndOfFile)
         if (AWEAllocAddBlock(Context, block))
             continue;
 
-        KdPrint(("AWEAlloc: Not enough memory available above 4 GB.\n"
+        KdPrint((__FUNCTION__ ": Not enough memory available above 4 GB.\n"
             "AWEAlloc: Allocating at any available location.\n"));
 
         AWEAllocLogError(AWEAllocDriverObject,
@@ -1422,7 +1422,7 @@ IN PLARGE_INTEGER EndOfFile)
         if (AWEAllocAddBlock(Context, block))
             continue;
 
-        DbgPrint("AWEAlloc: Failed to allocate memory to increase file size.\n");
+        DbgPrint(__FUNCTION__ ": Failed to allocate memory to increase file size.\n");
 
         AWEAllocLogError(AWEAllocDriverObject,
             0,
@@ -1453,7 +1453,7 @@ IN PIRP Irp)
     PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(Irp);
     POBJECT_CONTEXT context = io_stack->FileObject->FsContext2;
 
-    KdPrint2(("AWEAlloc: QueryFileInformation: %u.\n",
+    KdPrint2((__FUNCTION__ ": QueryFileInformation: %u.\n",
         io_stack->Parameters.QueryFile.FileInformationClass));
 
     RtlZeroMemory(Irp->AssociatedIrp.SystemBuffer,
@@ -1562,7 +1562,7 @@ IN PIRP Irp)
     }
 
     default:
-        KdPrint(("AWEAlloc: Unsupported QueryFile.FileInformationClass: %u\n",
+        KdPrint((__FUNCTION__ ": Unsupported QueryFile.FileInformationClass: %u\n",
             io_stack->Parameters.QueryFile.FileInformationClass));
 
         Irp->IoStatus.Status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1580,7 +1580,7 @@ IN PIRP Irp)
     POBJECT_CONTEXT context = io_stack->FileObject->FsContext2;
     KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
 
-    KdPrint2(("AWEAlloc: SetFileInformation: %u.\n",
+    KdPrint2((__FUNCTION__ ": SetFileInformation: %u.\n",
         io_stack->Parameters.SetFile.FileInformationClass));
 
     switch (io_stack->Parameters.SetFile.FileInformationClass)
@@ -1605,7 +1605,7 @@ IN PIRP Irp)
             &lowest_assumed_irql);
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("AWEAlloc: Page table busy.\n");
+            DbgPrint(__FUNCTION__ ": Page table busy.\n");
             Irp->IoStatus.Status = status;
             Irp->IoStatus.Information = 0;
             IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -1655,7 +1655,7 @@ IN PIRP Irp)
         return STATUS_SUCCESS;
 
     default:
-        KdPrint(("AWEAlloc: Unsupported SetFile.FileInformationClass: %u\n",
+        KdPrint((__FUNCTION__ ": Unsupported SetFile.FileInformationClass: %u\n",
             io_stack->Parameters.SetFile.FileInformationClass));
 
         Irp->IoStatus.Status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1705,7 +1705,7 @@ IN BOOLEAN OwnsReadLock)
 
     if (!NT_SUCCESS(status))
     {
-        KdPrint(("AWEAlloc: ZwOpenFile failed: %#x\n", status));
+        KdPrint((__FUNCTION__ ": ZwOpenFile failed: %#x\n", status));
         return status;
     }
 
@@ -1717,7 +1717,7 @@ IN BOOLEAN OwnsReadLock)
 
     if (!NT_SUCCESS(status))
     {
-        KdPrint(("AWEAlloc: ZwQueryInformationFile failed: %#x\n", status));
+        KdPrint((__FUNCTION__ ": ZwQueryInformationFile failed: %#x\n", status));
         ZwClose(file_handle);
         return status;
     }
@@ -1726,7 +1726,7 @@ IN BOOLEAN OwnsReadLock)
 
     if (!NT_SUCCESS(status))
     {
-        KdPrint(("AWEAlloc: AWEAllocSetSize failed: %#x\n", status));
+        KdPrint((__FUNCTION__ ": AWEAllocSetSize failed: %#x\n", status));
         ZwClose(file_handle);
         return status;
     }
@@ -1740,7 +1740,7 @@ IN BOOLEAN OwnsReadLock)
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint(("AWEAlloc: Failed mapping current image page.\n"));
+            KdPrint((__FUNCTION__ ": Failed mapping current image page.\n"));
 
             IoStatus->Status = status;
             IoStatus->Information = 0;
@@ -1750,7 +1750,7 @@ IN BOOLEAN OwnsReadLock)
 
         __analysis_assume(current_page_context.Ptr != NULL);
 
-        KdPrint2(("AWEAlloc: Current image page mdl=%p ptr=%p.\n",
+        KdPrint2((__FUNCTION__ ": Current image page mdl=%p ptr=%p.\n",
             current_page_context.Mdl,
             current_page_context.Ptr));
 
@@ -1766,7 +1766,7 @@ IN BOOLEAN OwnsReadLock)
 
         if (!NT_SUCCESS(status))
         {
-            KdPrint(("AWEAlloc: ZwReadFile failed on image file.\n"));
+            KdPrint((__FUNCTION__ ": ZwReadFile failed on image file.\n"));
             break;
         }
     }
@@ -1787,7 +1787,7 @@ IN PIRP Irp)
     PFILE_OBJECT file_object = IoGetCurrentIrpStackLocation(Irp)->FileObject;
     POBJECT_CONTEXT context;
 
-    KdPrint(("AWEAlloc: Create.\n"));
+    KdPrint((__FUNCTION__ ": Create.\n"));
 
     PAGED_CODE();
 
@@ -1805,7 +1805,7 @@ IN PIRP Irp)
 
     if (context == NULL)
     {
-        KdPrint(("AWEAlloc: Pool allocation failed.\n"));
+        KdPrint((__FUNCTION__ ": Pool allocation failed.\n"));
 
         Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
         Irp->IoStatus.Information = 0;
@@ -1832,7 +1832,7 @@ IN PIRP Irp)
     {
         NTSTATUS status;
 
-        KdPrint(("AWEAlloc: Image file requested: '%wZ'.\n",
+        KdPrint((__FUNCTION__ ": Image file requested: '%wZ'.\n",
             &file_object->FileName));
 
         status = AWEAllocLoadImageFile(context, &Irp->IoStatus,
@@ -1840,7 +1840,7 @@ IN PIRP Irp)
 
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-        KdPrint(("AWEAlloc: Image file status: %#x.\n", status));
+        KdPrint((__FUNCTION__ ": Image file status: %#x.\n", status));
 
         if (!NT_SUCCESS(status))
         {
@@ -1876,7 +1876,7 @@ IN PIRP Irp)
     PIO_STACK_LOCATION io_stack = IoGetCurrentIrpStackLocation(Irp);
     POBJECT_CONTEXT context = io_stack->FileObject->FsContext2;
 
-    KdPrint(("AWEAlloc: Close.\n"));
+    KdPrint((__FUNCTION__ ": Close.\n"));
 
     PAGED_CODE();
 
@@ -1902,7 +1902,7 @@ AWEAllocUnload(IN PDRIVER_OBJECT DriverObject)
     PDEVICE_OBJECT device_object = DriverObject->DeviceObject;
     UNICODE_STRING sym_link;
 
-    KdPrint(("AWEAlloc: Unload.\n"));
+    KdPrint((__FUNCTION__ ": Unload.\n"));
 
     PAGED_CODE();
 

@@ -468,7 +468,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
         if (!NT_SUCCESS(status))
         {
-            DbgPrint("AIMWrFltr:DeviceControl: IOCTL_AIMWRFLTR_DELETE_ON_CLOSE: Error setting disposition flag for diff device: 0x%X\n",
+            DbgPrint(__FUNCTION__ ": IOCTL_AIMWRFLTR_DELETE_ON_CLOSE: Error setting disposition flag for diff device: 0x%X\n",
                 status);
 
             IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -477,7 +477,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
         device_extension->Statistics.IgnoreFlushBuffers = TRUE;
 
-        KdPrint(("AIMWrFltr:DeviceControl: IOCTL_AIMWRFLTR_DELETE_ON_CLOSE: Disposition flag set for diff device.\n"));
+        KdPrint((__FUNCTION__ ": IOCTL_AIMWRFLTR_DELETE_ON_CLOSE: Disposition flag set for diff device.\n"));
 
         status = STATUS_SUCCESS;
 
@@ -490,7 +490,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
     {
         if (device_extension->Statistics.IsProtected)
         {
-            KdPrint(("AIMWrFltr:DeviceControl: IOCTL_DISK_COPY_DATA blocked for protected devices.\n"));
+            KdPrint((__FUNCTION__ ": IOCTL_DISK_COPY_DATA blocked for protected devices.\n"));
 
             status = STATUS_INVALID_DEVICE_REQUEST;
 
@@ -707,7 +707,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
         }
         else if (device_extension->Statistics.IsProtected)
         {
-            KdPrint(("AIMWrFltr:DeviceControl: IOCTL_DISK_IS_WRITABLE for protected but not yet initialized device\n"));
+            KdPrint((__FUNCTION__ ": IOCTL_DISK_IS_WRITABLE for protected but not yet initialized device\n"));
 
             status = STATUS_DEVICE_NOT_READY;
 
@@ -753,13 +753,13 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
 #ifdef SCSIOP_UNMAP
             case SCSIOP_UNMAP:
-                KdPrint(("AIMWrFltr:DeviceControl: Ignoring SCSIOP_UNMAP\n"));
+                KdPrint((__FUNCTION__ ": Ignoring SCSIOP_UNMAP\n"));
 
                 break;
 #endif
 
             default:
-                KdPrint(("AIMWrFltr:DeviceControl: Attempt IOCTL_SCSI_PASS_THROUGH_DIRECT. Operation %#.2x\n",
+                KdPrint((__FUNCTION__ ": Attempt IOCTL_SCSI_PASS_THROUGH_DIRECT. Operation %#.2x\n",
                     (int)pCdb->CDB6GENERIC.OperationCode));
             }
 
@@ -774,7 +774,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
         }
         else
         {
-            KdPrint(("AIMWrFltr:DeviceControl: Bad formatted IOCTL_SCSI_PASS_THROUGH_DIRECT sent to protected disk.\n"));
+            KdPrint((__FUNCTION__ ": Bad formatted IOCTL_SCSI_PASS_THROUGH_DIRECT sent to protected disk.\n"));
         }
 
         status = STATUS_INVALID_DEVICE_REQUEST;
@@ -797,7 +797,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                     io_stack->Parameters.DeviceIoControl.IoControlCode) ==
                 IOCTL_STORAGE_BASE))
         {
-            KdPrint(("AIMWrFltr:DeviceControl: Destructive direct IOCTL %#x CTL_CODE(%s, %s, %s, %s) access to disk with protected disk\n",
+            KdPrint((__FUNCTION__ ": Destructive direct IOCTL %#x CTL_CODE(%s, %s, %s, %s) access to disk with protected disk\n",
                 io_stack->Parameters.DeviceIoControl.IoControlCode,
                 AIMWrFltrGetIoctlDeviceTypeName(io_stack->Parameters.DeviceIoControl.IoControlCode),
                 AIMWrFltrGetIoctlFunctionName(io_stack->Parameters.DeviceIoControl.IoControlCode),
@@ -818,18 +818,18 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             PSTORAGE_PROPERTY_QUERY query = (PSTORAGE_PROPERTY_QUERY)
                 Irp->AssociatedIrp.SystemBuffer;
 
-            KdPrint(("AIMWrFltr:DeviceControl: IOCTL_STORAGE_QUERY_PROPERTY QueryType=%i, PropertyId=%i.\n",
+            KdPrint((__FUNCTION__ ": IOCTL_STORAGE_QUERY_PROPERTY QueryType=%i, PropertyId=%i.\n",
                 query->QueryType, query->PropertyId));
 
             if (query->PropertyId == StorageDeviceProperty)
             {
-                KdPrint(("AIMWrFltr:DeviceControl: StorageDeviceProperty, requesting physical properties.\n"));
+                KdPrint((__FUNCTION__ ": StorageDeviceProperty, requesting physical properties.\n"));
                 
                 status = AIMWrFltrForwardIrpSynchronous(DeviceObject, Irp);
 
                 if (!NT_SUCCESS(status))
                 {
-                    KdPrint(("AIMWrFltr:DeviceControl: StorageDeviceProperty, physical properties request failed: 0x%X.\n", status));
+                    KdPrint((__FUNCTION__ ": StorageDeviceProperty, physical properties request failed: 0x%X.\n", status));
 
                     IoCompleteRequest(Irp, IO_NO_INCREMENT);
                     return status;
@@ -841,7 +841,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
                     if (descriptor->RemovableMedia)
                     {
-                        KdPrint(("AIMWrFltr:DeviceControl: StorageDeviceProperty, reporting non-removable.\n"));
+                        KdPrint((__FUNCTION__ ": StorageDeviceProperty, reporting non-removable.\n"));
                         descriptor->RemovableMedia = FALSE;
                     }
                 }
@@ -852,7 +852,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
         }
 
-        KdPrint(("AIMWrFltr:DeviceControl: Forwarding down read-only IOCTL %#x CTL_CODE(%s, %s, %s, %s).\n",
+        KdPrint((__FUNCTION__ ": Forwarding down read-only IOCTL %#x CTL_CODE(%s, %s, %s, %s).\n",
             io_stack->Parameters.DeviceIoControl.IoControlCode,
             AIMWrFltrGetIoctlDeviceTypeName(io_stack->Parameters.DeviceIoControl.IoControlCode),
             AIMWrFltrGetIoctlFunctionName(io_stack->Parameters.DeviceIoControl.IoControlCode),

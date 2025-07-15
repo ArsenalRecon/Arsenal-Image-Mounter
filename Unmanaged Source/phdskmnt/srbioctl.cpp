@@ -34,7 +34,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
         || ((srb_io_control->HeaderLength != sizeof(SRB_IO_CONTROL)) ||
         (srb_io_control->HeaderLength + srb_io_control->Length > pSrb->DataTransferLength)))
     {
-        KdPrint2(("PhDskMnt::ScsiIoControl: Malformed MiniportIOCtl detected.\n",
+        KdPrint2((__FUNCTION__ ": Malformed MiniportIOCtl detected.\n",
             sizeof(srb_io_control->Signature),
             srb_io_control->Signature));
 
@@ -45,7 +45,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
     if (memcmp(srb_io_control->Signature, IMSCSI_FUNCTION_SIGNATURE,
         sizeof(IMSCSI_FUNCTION_SIGNATURE) - 1))
     {
-        KdPrint2(("PhDskMnt::ScsiIoControl: MiniportIOCtl sig '%.*s' not supported\n",
+        KdPrint2((__FUNCTION__ ": MiniportIOCtl sig '%.*s' not supported\n",
             sizeof(srb_io_control->Signature),
             srb_io_control->Signature));
 
@@ -53,14 +53,14 @@ __inout __deref PKIRQL      LowestAssumedIrql
         goto Done;
     }
 
-    KdPrint2(("PhDskMnt::ScsiIoControl: Miniport IOCtl ControlCode = %#x\n",
+    KdPrint2((__FUNCTION__ ": Miniport IOCtl ControlCode = %#x\n",
         srb_io_control->ControlCode));
 
     switch (srb_io_control->ControlCode)
     {
     case SMP_IMSCSI_CHECK:
     {
-        KdPrint2(("PhDskMnt::ScsiIoControl: Request to complete SRBs.\n"));
+        KdPrint2((__FUNCTION__ ": Request to complete SRBs.\n"));
         srb_io_control->ReturnCode = STATUS_SUCCESS;
         ScsiSetSuccess(pSrb, 0);
 
@@ -77,7 +77,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
             (ULONG)FIELD_OFFSET(SRB_IMSCSI_CREATE_DATA, Fields.FileName) >
             pSrb->DataTransferLength))
         {
-            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_CREATE_DEVICE request.\n"));
+            KdPrint((__FUNCTION__ ": Bad SMP_IMSCSI_CREATE_DEVICE request.\n"));
 
             ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
             goto Done;
@@ -92,11 +92,11 @@ __inout __deref PKIRQL      LowestAssumedIrql
     {
         PSRB_IMSCSI_REMOVE_DEVICE srb_buffer = (PSRB_IMSCSI_REMOVE_DEVICE)pSrb->DataBuffer;
 
-        KdPrint2(("PhDskMnt::ScsiIoControl: Request to remove device.\n"));
+        KdPrint2((__FUNCTION__ ": Request to remove device.\n"));
 
         if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
         {
-            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_REMOVE_DEVICE request.\n"));
+            KdPrint((__FUNCTION__ ": Bad SMP_IMSCSI_REMOVE_DEVICE request.\n"));
 
             ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
             goto Done;
@@ -113,7 +113,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
     {
         PSRB_IMSCSI_QUERY_VERSION srb_buffer = (PSRB_IMSCSI_QUERY_VERSION)pSrb->DataBuffer;
 
-        KdPrint2(("PhDskMnt::ScsiIoControl: Request for driver version.\n"));
+        KdPrint2((__FUNCTION__ ": Request for driver version.\n"));
 
         if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
         {
@@ -138,11 +138,11 @@ __inout __deref PKIRQL      LowestAssumedIrql
     {
         PSRB_IMSCSI_CREATE_DATA srb_buffer = (PSRB_IMSCSI_CREATE_DATA)pSrb->DataBuffer;
 
-        KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_QUERY_DEVICE.\n"));
+        KdPrint2((__FUNCTION__ ": Request SMP_IMSCSI_QUERY_DEVICE.\n"));
 
         if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
         {
-            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_QUERY_DEVICE request.\n"));
+            KdPrint((__FUNCTION__ ": Bad SMP_IMSCSI_QUERY_DEVICE request.\n"));
 
             pSrb->DataTransferLength = 0;
             ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
@@ -160,11 +160,11 @@ __inout __deref PKIRQL      LowestAssumedIrql
     {
         PSRB_IMSCSI_QUERY_ADAPTER srb_buffer = (PSRB_IMSCSI_QUERY_ADAPTER)pSrb->DataBuffer;
 
-        KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_QUERY_ADAPTER.\n"));
+        KdPrint2((__FUNCTION__ ": Request SMP_IMSCSI_QUERY_ADAPTER.\n"));
 
         if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
         {
-            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_QUERY_ADAPTER request.\n"));
+            KdPrint((__FUNCTION__ ": Bad SMP_IMSCSI_QUERY_ADAPTER request.\n"));
 
             ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
             goto Done;
@@ -181,11 +181,11 @@ __inout __deref PKIRQL      LowestAssumedIrql
     {
         PSRB_IMSCSI_SET_DEVICE_FLAGS srb_buffer = (PSRB_IMSCSI_SET_DEVICE_FLAGS)pSrb->DataBuffer;
 
-        KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_SET_DEVICE_FLAGS.\n"));
+        KdPrint2((__FUNCTION__ ": Request SMP_IMSCSI_SET_DEVICE_FLAGS.\n"));
 
         if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
         {
-            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_SET_DEVICE_FLAGS request.\n"));
+            KdPrint((__FUNCTION__ ": Bad SMP_IMSCSI_SET_DEVICE_FLAGS request.\n"));
 
             ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
             goto Done;
@@ -202,11 +202,11 @@ __inout __deref PKIRQL      LowestAssumedIrql
     {
         PSRB_IMSCSI_EXTEND_DEVICE srb_buffer = (PSRB_IMSCSI_EXTEND_DEVICE)pSrb->DataBuffer;
 
-        KdPrint2(("PhDskMnt::ScsiIoControl: Request SMP_IMSCSI_EXTEND_DEVICE.\n"));
+        KdPrint2((__FUNCTION__ ": Request SMP_IMSCSI_EXTEND_DEVICE.\n"));
 
         if (!SRB_IO_CONTROL_SIZE_OK(srb_buffer))
         {
-            KdPrint(("PhDskMnt::ScsiIoControl: Bad SMP_IMSCSI_EXTEND_DEVICE request.\n"));
+            KdPrint((__FUNCTION__ ": Bad SMP_IMSCSI_EXTEND_DEVICE request.\n"));
 
             ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
             goto Done;
@@ -219,7 +219,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
 
     default:
 
-        DbgPrint("PhDskMnt::ScsiExecute: Unknown IOControl code=0x%X\n", srb_io_control->ControlCode);
+        DbgPrint(__FUNCTION__ ": Unknown IOControl code=0x%X\n", srb_io_control->ControlCode);
 
         ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
         break;
@@ -227,7 +227,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
     } // end switch
 
 Done:
-    KdPrint2(("PhDskMnt::ScsiIoControl: End: *Result=%i\n", (INT)*pResult));
+    KdPrint2((__FUNCTION__ ": End: *Result=%i\n", (INT)*pResult));
 
     return;
 }
@@ -247,7 +247,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
     // If auto-selecting device number
     if (new_device->Fields.DeviceNumber.LongNumber == IMSCSI_AUTO_DEVICE_NUMBER)
     {
-        KdPrint(("PhDskMnt::ImScsiCreateDevice: Auto-select device number.\n"));
+        KdPrint((__FUNCTION__ ": Auto-select device number.\n"));
 
         for (new_device->Fields.DeviceNumber.PathId = 0;
             new_device->Fields.DeviceNumber.PathId < pMPDrvInfoGlobal->MPRegInfo.NumberOfBuses;
@@ -290,20 +290,20 @@ __inout __deref PKIRQL      LowestAssumedIrql
 
         if (pLUExt != NULL)
         {
-            KdPrint(("PhDskMnt::ImScsiCreateDevice: No free device number found.\n"));
+            KdPrint((__FUNCTION__ ": No free device number found.\n"));
             new_device->SrbIoControl.ReturnCode = (ULONG)STATUS_NO_MORE_ENTRIES;
             ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
             return;
         }
 
-        KdPrint(("PhDskMnt::ImScsiCreateDevice: PathId=%i, TargetId=%i, Lun=%i.\n",
+        KdPrint((__FUNCTION__ ": PathId=%i, TargetId=%i, Lun=%i.\n",
             (int)new_device->Fields.DeviceNumber.PathId,
             (int)new_device->Fields.DeviceNumber.TargetId,
             (int)new_device->Fields.DeviceNumber.Lun));
     }
     else
     {
-        KdPrint(("PhDskMnt::ImScsiCreateDevice: PathId=%i, TargetId=%i, Lun=%i.\n",
+        KdPrint((__FUNCTION__ ": PathId=%i, TargetId=%i, Lun=%i.\n",
             (int)new_device->Fields.DeviceNumber.PathId,
             (int)new_device->Fields.DeviceNumber.TargetId,
             (int)new_device->Fields.DeviceNumber.Lun));
@@ -311,7 +311,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
 #ifdef USE_SCSIPORT
         if (new_device->Fields.DeviceNumber.LongNumber == 0)
         {
-            DbgPrint("PhDskMnt::ImScsiCreateDevice: Device number 0:0:0 is reserved.\n");
+            DbgPrint(__FUNCTION__ ": Device number 0:0:0 is reserved.\n");
             new_device->SrbIoControl.ReturnCode = (ULONG)STATUS_OBJECT_NAME_COLLISION;
             ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
             return;
@@ -329,7 +329,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
 
         if (pLUExt != NULL)
         {
-            KdPrint(("PhDskMnt::ImScsiCreateDevice: Device already exists.\n"));
+            KdPrint((__FUNCTION__ ": Device already exists.\n"));
             new_device->SrbIoControl.ReturnCode = (ULONG)STATUS_OBJECT_NAME_COLLISION;
             ScsiSetSuccess(pSrb, pSrb->DataTransferLength);
             return;
@@ -361,7 +361,7 @@ __inout __deref PKIRQL      LowestAssumedIrql
 
     StoragePortNotification(BusChangeDetected, pHBAExt, new_device->Fields.DeviceNumber.PathId);
 
-    KdPrint(("PhDskMnt::ImScsiCreateDevice: End: *Result=%i\n", *pResult));
+    KdPrint((__FUNCTION__ ": End: *Result=%i\n", *pResult));
 
     return;
 }
@@ -377,7 +377,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
     pHW_LU_EXTENSION        device_extension = NULL;
     UCHAR                   srb_status;
 
-    KdPrint(("PhDskMnt::ImScsiQueryDevice: Device %i:%i:%i.\n",
+    KdPrint((__FUNCTION__ ": Device %i:%i:%i.\n",
         (int)create_data->Fields.DeviceNumber.PathId,
         (int)create_data->Fields.DeviceNumber.TargetId,
         (int)create_data->Fields.DeviceNumber.Lun));
@@ -393,7 +393,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
 
     if (srb_status != SRB_STATUS_SUCCESS)
     {
-        KdPrint(("PhDskMnt::ImScsiQueryDevice: Device not found.\n"));
+        KdPrint((__FUNCTION__ ": Device not found.\n"));
         *Length = sizeof(SRB_IO_CONTROL);
         return STATUS_OBJECT_NAME_NOT_FOUND;
     }
@@ -404,7 +404,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
         device_extension->WriteOverlayFileName.Length +
         sizeof(*create_data->Fields.FileName))
     {
-        KdPrint(("PhDskMnt::ImScsiQueryDevice: Buffer too small. Got %u, need %u.\n",
+        KdPrint((__FUNCTION__ ": Buffer too small. Got %u, need %u.\n",
             *Length,
             (ULONG)(sizeof(SRB_IMSCSI_CREATE_DATA) +
                 device_extension->ObjectName.Length +
@@ -504,7 +504,7 @@ __inout __deref PKIRQL              LowestAssumedIrql
             create_data->Fields.WriteOverlayFileNameLength;
     }
 
-    KdPrint(("PhDskMnt::ImScsiQueryDevice: End.\n"));
+    KdPrint((__FUNCTION__ ": End.\n"));
     return STATUS_SUCCESS;
 }
 
@@ -520,7 +520,7 @@ __inout __deref PKIRQL                      LowestAssumedIrql
     ULONG                 count;
     PLIST_ENTRY           list_ptr;
 
-    KdPrint(("PhDskMnt::ImScsiQueryAdapter:  pHBAExt = 0x%p\n", pHBAExt));
+    KdPrint((__FUNCTION__ ": pHBAExt = 0x%p\n", pHBAExt));
 
     ImScsiAcquireLock(                   // Serialize the linked list of LUN extensions.              
         &pHBAExt->LUListLock, &LockHandle, *LowestAssumedIrql);
@@ -650,7 +650,7 @@ ImScsiExtendDevice(
     UCHAR scsi_status;
     pHW_LU_EXTENSION device_extension;
 
-    KdPrint(("ImScsi: Request to grow device %i:%i:%i by %I64i bytes.\n",
+    KdPrint((__FUNCTION__ ": Request to grow device %i:%i:%i by %I64i bytes.\n",
         (int)extend_device_data->DeviceNumber.PathId,
         (int)extend_device_data->DeviceNumber.TargetId,
         (int)extend_device_data->DeviceNumber.Lun,
@@ -727,7 +727,7 @@ __inout __deref PKIRQL          LowestAssumedIrql
     KLOCK_QUEUE_HANDLE      LockHandle;
     UCHAR                   pathId = DeviceNumber->PathId;
 
-    KdPrint(("PhDskMnt::ImScsiRemoveDevice: PathId=%i, TargetId=%i, Lun=%i.\n",
+    KdPrint((__FUNCTION__ ": PathId=%i, TargetId=%i, Lun=%i.\n",
         (int)DeviceNumber->PathId, (int)DeviceNumber->TargetId, (int)DeviceNumber->Lun));
 
     ImScsiAcquireLock(                   // Serialize the linked list of LUN extensions.              
@@ -756,12 +756,12 @@ __inout __deref PKIRQL          LowestAssumedIrql
 
     if (count == 0)
     {
-        KdPrint(("PhDskMnt::ImScsiRemoveDevice: Non-existing device.\n"));
+        KdPrint((__FUNCTION__ ": Non-existing device.\n"));
         status = STATUS_OBJECT_NAME_NOT_FOUND;
         goto Done;
     }
 
-    KdPrint(("PhDskMnt::ImScsiRemoveDevice: Found %i device(s).\n", count));
+    KdPrint((__FUNCTION__ ": Found %i device(s).\n", count));
 
     status = STATUS_SUCCESS;
 
@@ -771,7 +771,7 @@ __inout __deref PKIRQL          LowestAssumedIrql
     StoragePortNotification(BusChangeDetected, pHBAExt, pathId);
 
 Done:
-    KdPrint2(("PhDskMnt::ImScsiRemoveDevice: End: status=0x%X, *Result=%i\n", status));
+    KdPrint2((__FUNCTION__ ": End: status=0x%X, *Result=%i\n", status));
 
     return status;
 }

@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CCDE959C-C0CA-4F98-B379-64931C7C91D0}"
 	ProjectSection(SolutionItems) = preProject
 		phdskmnt\inc\phdskmntver.h = phdskmnt\inc\phdskmntver.h
+		phdskmnt\readme.txt = phdskmnt\readme.txt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "phdskmnt", "phdskmnt\phdskmnt.vcxproj", "{7550B521-2E05-48AC-A33C-0B18FF04F92B}"
