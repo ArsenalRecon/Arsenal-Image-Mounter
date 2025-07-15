@@ -26,8 +26,8 @@
     <None Include="aim_cli">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="aim_cli" Pack="true" PackagePath="lib\net6.0" />
-    <None Include="aim_cli" Pack="true" PackagePath="lib\net7.0" />
+    <None Include="aim_cli" Pack="true" PackagePath="lib\net8.0" />
+    <None Include="aim_cli" Pack="true" PackagePath="lib\net9.0" />
   </ItemGroup>
 
 </Project>
