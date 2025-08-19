@@ -350,6 +350,11 @@ typedef struct _DEVICE_EXTENSION
     LONG volatile * AllocationTable;
 
     //
+    // Sector size power bits (default = 9)
+    //
+    ULONG SectorPower;
+
+    //
     // FILE_OBJECT for diff device
     //
     PFILE_OBJECT DiffFileObject;

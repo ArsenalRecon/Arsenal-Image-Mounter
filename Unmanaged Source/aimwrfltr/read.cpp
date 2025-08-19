@@ -14,7 +14,7 @@
 #include "aimwrfltr.h"
 
 //#define QUEUE_READ_REQUESTS
-#define QUEUE_ALL_MODIFIED_READS
+#define ALIGN_DIFF_READS
 
 NTSTATUS
 AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
@@ -335,8 +335,11 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             items_in_queue));
     }
 
-    if (device_extension->DiffFileObject != NULL ||
-        device_extension->DiffDeviceObject->SectorSize > device_extension->TargetDeviceObject->SectorSize)
+    // It does no longer seem necessary to defer all diff file read I/O to worker thread
+    // provided write operations to diff file can retry on busy result
+    if (//device_extension->DiffFileObject != NULL ||
+        (device_extension->DiffDeviceObject->SectorSize > 512 &&
+        device_extension->DiffDeviceObject->SectorSize > device_extension->TargetDeviceObject->SectorSize))
     {
         PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
@@ -543,13 +546,10 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
                         lower_device == IoGetRelatedDeviceObject(lower_file)));
 
                 // Defer all reads from actual files to worker thread, just to keep safe
-                if (lower_file != NULL)
+                if (lower_file != NULL && current_irql > PASSIVE_LEVEL)
                 {
-                    if (current_irql > PASSIVE_LEVEL)
-                    {
-                        KdPrint((__FUNCTION__ ": Read from diff at IRQL=%i. Deferring to worker thread. %u items in queue.\n",
-                            current_irql, items_in_queue));
-                    }
+                    KdPrint((__FUNCTION__ ": Read from diff at IRQL=%i. Deferring to worker thread. %u items in queue.\n",
+                        current_irql, items_in_queue));
 
                     PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedForwardIrp(lower_device, lower_irp);
 
@@ -657,6 +657,7 @@ AIMWrFltrDeferredRead(
 
     LONG first = (LONG)
         DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Read.ByteOffset.QuadPart);
+
     LONG last = (LONG)
         DIFF_GET_BLOCK_NUMBER(io_stack->Parameters.Read.ByteOffset.QuadPart +
             io_stack->Parameters.Read.Length - 1);
@@ -678,8 +679,10 @@ AIMWrFltrDeferredRead(
         LONGLONG abs_offset_this_iter =
             io_stack->Parameters.Read.ByteOffset.QuadPart +
             length_done;
+
         ULONG page_offset_this_iter =
             DIFF_GET_BLOCK_OFFSET(abs_offset_this_iter);
+        
         ULONG bytes_this_iter = io_stack->Parameters.Read.Length -
             length_done;
 
@@ -692,18 +695,12 @@ AIMWrFltrDeferredRead(
         LONG block_address = DeviceExtension->AllocationTable[i];
         if (block_address == DIFF_BLOCK_UNALLOCATED)
         {
-            LARGE_INTEGER offset = { 0 };
-
-            offset.QuadPart =
-                DIFF_GET_BLOCK_BASE_FROM_ABS_OFFSET(abs_offset_this_iter) +
-                page_offset_this_iter;
-
             PIRP target_irp = IoBuildSynchronousFsdRequest(
                 IRP_MJ_READ,
                 DeviceExtension->TargetDeviceObject,
-                BlockBuffer + page_offset_this_iter,
+                buffer + length_done,
                 bytes_this_iter,
-                &offset,
+                &io_stack->Parameters.Read.ByteOffset,
                 &event,
                 &io_status);
 
@@ -758,12 +755,13 @@ AIMWrFltrDeferredRead(
         {
             LARGE_INTEGER lower_offset = { 0 };
 
+            ULONG aligned_page_offset_this_iter = page_offset_this_iter;
+            ULONG aligned_bytes_this_iter = bytes_this_iter;
+
+#ifdef ALIGN_DIFF_READS
             // If requested I/O position or length are not aligned to sector
             // size of diff device
             ULONG sector_mask = (ULONG)(DeviceExtension->DiffDeviceObject->SectorSize - 1);
-
-            ULONG aligned_page_offset_this_iter = page_offset_this_iter;
-            ULONG aligned_bytes_this_iter = bytes_this_iter;
 
             if (DeviceExtension->DiffDeviceObject->SectorSize != 0 &&
                 ((page_offset_this_iter & sector_mask) != 0 ||
@@ -781,9 +779,17 @@ AIMWrFltrDeferredRead(
                     aligned_bytes_this_iter, ((LONGLONG)block_address <<
                         DIFF_BLOCK_BITS) + aligned_page_offset_this_iter));
             }
+#endif
 
             lower_offset.QuadPart = ((LONGLONG)block_address <<
                 DIFF_BLOCK_BITS) + aligned_page_offset_this_iter;
+
+#ifdef DBG
+            if ((ULONGLONG)aligned_page_offset_this_iter + aligned_bytes_this_iter > DIFF_BLOCK_SIZE)
+            {
+                DbgBreakPoint();
+            }
+#endif
 
             status = AIMWrFltrSynchronousReadWrite(
                 DeviceExtension->DiffDeviceObject,
@@ -819,20 +825,18 @@ AIMWrFltrDeferredRead(
 
                 return io_status.Status;
             }
-        }
 
-        RtlCopyMemory(buffer + length_done,
-            BlockBuffer + page_offset_this_iter, bytes_this_iter);
+            RtlCopyMemory(buffer + length_done,
+                BlockBuffer + page_offset_this_iter, bytes_this_iter);
+        }
 
         length_done += bytes_this_iter;
     }
 
-    if (NT_SUCCESS(Irp->IoStatus.Status))
-    {
-        Irp->IoStatus.Information = io_stack->Parameters.Read.Length;
-    }
+    Irp->IoStatus.Status = STATUS_SUCCESS;
+    Irp->IoStatus.Information = length_done;
 
-    return Irp->IoStatus.Status;
+    return STATUS_SUCCESS;
 }
 
 

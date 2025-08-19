@@ -33,6 +33,13 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
         (void)AIMWrFltrInitializeDiffDevice(device_extension);
     }
 
+    KdPrint((__FUNCTION__ ": IOCTL %#x CTL_CODE(%s, %s, %s, %s)\n",
+        io_stack->Parameters.DeviceIoControl.IoControlCode,
+        AIMWrFltrGetIoctlDeviceTypeName(io_stack->Parameters.DeviceIoControl.IoControlCode),
+        AIMWrFltrGetIoctlFunctionName(io_stack->Parameters.DeviceIoControl.IoControlCode),
+        AIMWrFltrGetIoctlMethodName(io_stack->Parameters.DeviceIoControl.IoControlCode),
+        AIMWrFltrGetIoctlAccessName(io_stack->Parameters.DeviceIoControl.IoControlCode)));
+
     NTSTATUS status;
 
     Irp->IoStatus.Information = 0;
@@ -733,7 +740,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
     case IOCTL_SCSI_PASS_THROUGH_DIRECT:
     {
-        if (device_extension->Statistics.IsProtected)
+        if (!device_extension->Statistics.IsProtected)
         {
             return AIMWrFltrSendToNextDriver(DeviceObject, Irp);
         }
@@ -753,7 +760,10 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
 #ifdef SCSIOP_UNMAP
             case SCSIOP_UNMAP:
-                KdPrint((__FUNCTION__ ": Ignoring SCSIOP_UNMAP\n"));
+                // ToDo: Make a SCSIOP_UNMAP implementation for allocated blocks for cases like
+                // VMs that send IOCTL_SCSI_PASS_THROUGH_DIRECT commands
+
+                KdPrint((__FUNCTION__ ": SCSIOP_UNMAP not supported\n"));
 
                 break;
 #endif
@@ -864,5 +874,4 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
     break;
     }
 }				// end AIMWrFltrDeviceControl()
-
 

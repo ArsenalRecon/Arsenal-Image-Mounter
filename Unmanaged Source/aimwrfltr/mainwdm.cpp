@@ -598,79 +598,94 @@ AIMWrFltrSynchronousReadWrite(
         DeviceObject = IoGetRelatedDeviceObject(FileObject);
     }
 
-    PIRP lower_irp = IoBuildAsynchronousFsdRequest(
-        MajorFunction,
-        DeviceObject,
-        SystemBuffer,
-        BufferLength,
-        StartingOffset,
-        IoStatus);
-
-    if (lower_irp == NULL)
+    for (int i = 0; ; i++)
     {
+        PIRP lower_irp = IoBuildAsynchronousFsdRequest(
+            MajorFunction,
+            DeviceObject,
+            SystemBuffer,
+            BufferLength,
+            StartingOffset,
+            IoStatus);
+
+        if (lower_irp == NULL)
+        {
 #if DBG
-        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
-            DbgBreakPoint();
+            if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                DbgBreakPoint();
 #endif
 
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    PIO_STACK_LOCATION lower_io_stack = IoGetNextIrpStackLocation(lower_irp);
-    
-    lower_io_stack->FileObject = FileObject;
-
-    lower_irp->Tail.Overlay.Thread = Thread;
-
-    if (MajorFunction == IRP_MJ_WRITE)
-    {
-        lower_irp->Flags |= IRP_WRITE_OPERATION;
-
-        if (FileObject == NULL || (FileObject->Flags & FO_NO_INTERMEDIATE_BUFFERING) != 0)
-        {
-            lower_irp->Flags |= IRP_WRITE_OPERATION | IRP_NOCACHE;
+            return STATUS_INSUFFICIENT_RESOURCES;
         }
-    }
-    else if (MajorFunction == IRP_MJ_READ)
-    {
-        lower_irp->Flags |= IRP_READ_OPERATION;
 
-        if (FileObject == NULL || (FileObject->Flags & FO_NO_INTERMEDIATE_BUFFERING) != 0)
+        PIO_STACK_LOCATION lower_io_stack = IoGetNextIrpStackLocation(lower_irp);
+
+        lower_io_stack->FileObject = FileObject;
+
+        lower_irp->Tail.Overlay.Thread = Thread;
+
+        if (MajorFunction == IRP_MJ_WRITE)
         {
-            lower_irp->Flags |= IRP_READ_OPERATION | IRP_NOCACHE;
+            lower_irp->Flags |= IRP_WRITE_OPERATION;
+
+            if (FileObject == NULL || (FileObject->Flags & FO_NO_INTERMEDIATE_BUFFERING) != 0)
+            {
+                lower_irp->Flags |= IRP_WRITE_OPERATION | IRP_NOCACHE;
+            }
         }
-    }
+        else if (MajorFunction == IRP_MJ_READ)
+        {
+            lower_irp->Flags |= IRP_READ_OPERATION;
 
-    KEVENT event;
-    KeInitializeEvent(&event, NotificationEvent, FALSE);
+            if (FileObject == NULL || (FileObject->Flags & FO_NO_INTERMEDIATE_BUFFERING) != 0)
+            {
+                lower_irp->Flags |= IRP_READ_OPERATION | IRP_NOCACHE;
+            }
+        }
 
-    IoSetCompletionRoutine(lower_irp, AIMWrFltrSynchronousIrpCompletion,
-        &event, TRUE, TRUE, TRUE);
+        KEVENT event;
+        KeInitializeEvent(&event, NotificationEvent, FALSE);
 
-    NTSTATUS status = IoCallDriver(DeviceObject, lower_irp);
+        IoSetCompletionRoutine(lower_irp, AIMWrFltrSynchronousIrpCompletion,
+            &event, TRUE, TRUE, TRUE);
 
-    if (status == STATUS_PENDING)
-    {
-        KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
-    }
+        NTSTATUS status = IoCallDriver(DeviceObject, lower_irp);
 
-    status = lower_irp->IoStatus.Status;
+        if (status == STATUS_PENDING)
+        {
+            KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
+        }
 
-    if (IoStatus != NULL)
-    {
-        *IoStatus = lower_irp->IoStatus;
-    }
+        status = lower_irp->IoStatus.Status;
 
-    AIMWrFltrFreeIrpWithMdls(lower_irp);
+        if (IoStatus != NULL)
+        {
+            *IoStatus = lower_irp->IoStatus;
+        }
+
+        AIMWrFltrFreeIrpWithMdls(lower_irp);
+
+        if (status == STATUS_DEVICE_BUSY && i < 50)
+        {
+            KdPrint((__FUNCTION__ ": Failed 0x%X, attempt %i, retrying in 20 ms\n", status, i));
+
+            LARGE_INTEGER interval;
+            interval.QuadPart = -10000LL * 20;    // 20 ms
+
+            KeDelayExecutionThread(KernelMode, FALSE, &interval);
+
+            continue;
+        }
 
 #ifdef DBG
-    if (!NT_SUCCESS(status) && MajorFunction == IRP_MJ_WRITE)
-    {
-        DbgPrint(__FUNCTION__ ": Failed 0x%X\n", status);
-    }
+        if (!NT_SUCCESS(status) && MajorFunction == IRP_MJ_WRITE)
+        {
+            DbgPrint(__FUNCTION__ ": Failed 0x%X\n", status);
+        }
 #endif
 
-    return status;
+        return status;
+    }
 }
 
 
@@ -1686,6 +1701,18 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
         PhysicalDeviceObject->Flags));
 
     obj_name_info.Free();
+
+    ULONG bytes_per_sector = device_extension->TargetDeviceObject->SectorSize;
+
+    while (bytes_per_sector >>= 1)
+    {
+        device_extension->SectorPower++;
+    }
+
+    if (device_extension->SectorPower == 0)
+    {
+        device_extension->SectorPower = SECTOR_BITS;
+    }
 
     if (device_extension->Statistics.IsProtected)
     {

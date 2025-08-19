@@ -43,6 +43,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
         AIMWrFltrAcquireLock(&device_extension->ListLock, &lock_handle,
             lowest_assumed_irql);
 
+        // Free previously handled request, if any
         if (request != &device_extension->ListHead)
         {
             RemoveEntryList(request);
@@ -50,6 +51,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
             delete CONTAINING_RECORD(request, CACHED_IRP, ListEntry);
         }
 
+        // Pick next request in queue
         request = device_extension->ListHead.Flink;
 
         AIMWrFltrReleaseLock(&lock_handle, &lowest_assumed_irql);
@@ -57,7 +59,7 @@ AIMWrFltrDeviceWorkerThread(PVOID Context)
         if (request == &device_extension->ListHead &&
             device_extension->ShutdownThread)
         {
-            KdPrint((__FUNCTION__ ": Worker thread queue empty and device shutting down\n",
+            KdPrint((__FUNCTION__ ": Device %p queue empty, worker thread shutting down\n",
                 device_extension->DeviceObject));
 
             break;
