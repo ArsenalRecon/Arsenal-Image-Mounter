@@ -1087,9 +1087,9 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     public static ProviderType GetProviderTypeFromFileName(string imageFile)
         => Path.GetExtension(imageFile).ToLowerInvariant() switch
         {
+            ".vmdk" when imageFile.EndsWith("-flat.vmdk", StringComparison.OrdinalIgnoreCase) => ProviderType.None,
             ".vhd" or ".avhd" or ".vdi" or ".vmdk" or ".vhdx" or ".avhdx" or ".dmg" or ".ova" => ProviderType.DiscUtils,
-            ".001" => File.Exists(Path.ChangeExtension(imageFile, ".002")) ? ProviderType.MultiPartRaw : ProviderType.None,
-            ".raw" or ".dd" or ".img" or ".ima" or ".iso" or ".bin" or ".nrg" => ProviderType.None,
+            ".001" when File.Exists(Path.ChangeExtension(imageFile, ".002")) => ProviderType.MultiPartRaw,
             ".e01" or ".aff" or ".ex01" or ".s01" or ".lx01" => ProviderType.LibEwf,
             ".qcow" or ".qcow2" or ".qcow2c" => ProviderType.LibQcow,
             ".aff4" => ProviderType.LibAFF4,
