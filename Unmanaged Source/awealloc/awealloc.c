@@ -913,7 +913,7 @@ IN PIRP Irp)
     status = AWEAllocTryAcquireProtection(context, FALSE, FALSE, &lowest_assumed_irql);
     if (!NT_SUCCESS(status))
     {
-        DbgPrint(__FUNCTION__ ": Page table is busy.\n");
+        DbgPrint(__FUNCTION__ ": Acquire lock for reading: Page table busy.\n");
 
         Irp->IoStatus.Status = status;
         Irp->IoStatus.Information = 0;
@@ -954,7 +954,7 @@ IN PIRP Irp)
 
             if (!NT_SUCCESS(status))
             {
-                DbgPrint(__FUNCTION__ ": Page table busy.\n");
+                DbgPrint(__FUNCTION__ ": Acquire lock for writing: Page table busy.\n");
 
                 AWEAllocReleaseProtection(context, TRUE, FALSE,
                     &lowest_assumed_irql);
@@ -1601,11 +1601,11 @@ IN PIRP Irp)
             return STATUS_BUFFER_TOO_SMALL;
         }
 
-        status = AWEAllocTryAcquireProtection(context, TRUE, FALSE,
-            &lowest_assumed_irql);
+        status = AWEAllocTryAcquireProtection(context, TRUE, FALSE, &lowest_assumed_irql);
+
         if (!NT_SUCCESS(status))
         {
-            DbgPrint(__FUNCTION__ ": Page table busy.\n");
+            DbgPrint(__FUNCTION__ ": Acquire lock for writing: Page table busy.\n");
             Irp->IoStatus.Status = status;
             Irp->IoStatus.Information = 0;
             IoCompleteRequest(Irp, IO_NO_INCREMENT);

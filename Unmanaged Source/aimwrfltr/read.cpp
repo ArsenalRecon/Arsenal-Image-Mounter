@@ -335,9 +335,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
             items_in_queue));
     }
 
-    // It does no longer seem necessary to defer all diff file read I/O to worker thread
-    // provided write operations to diff file can retry on busy result
-    if (//device_extension->DiffFileObject != NULL ||
+    if (device_extension->DiffFileObject != NULL ||
         (device_extension->DiffDeviceObject->SectorSize > 512 &&
         device_extension->DiffDeviceObject->SectorSize > device_extension->TargetDeviceObject->SectorSize))
     {
@@ -545,7 +543,7 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
                         lower_device == device_extension->DiffDeviceObject &&
                         lower_device == IoGetRelatedDeviceObject(lower_file)));
 
-                // Defer all reads from actual files to worker thread, just to keep safe
+                // Defer all reads at raised IRQL from actual files to worker thread, just to keep safe
                 if (lower_file != NULL && current_irql > PASSIVE_LEVEL)
                 {
                     KdPrint((__FUNCTION__ ": Read from diff at IRQL=%i. Deferring to worker thread. %u items in queue.\n",
@@ -695,12 +693,16 @@ AIMWrFltrDeferredRead(
         LONG block_address = DeviceExtension->AllocationTable[i];
         if (block_address == DIFF_BLOCK_UNALLOCATED)
         {
+            LARGE_INTEGER lower_offset;
+
+            lower_offset.QuadPart = abs_offset_this_iter;
+
             PIRP target_irp = IoBuildSynchronousFsdRequest(
                 IRP_MJ_READ,
                 DeviceExtension->TargetDeviceObject,
                 buffer + length_done,
                 bytes_this_iter,
-                &io_stack->Parameters.Read.ByteOffset,
+                &lower_offset,
                 &event,
                 &io_status);
 
