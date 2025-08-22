@@ -700,7 +700,7 @@ AIMWrFltrDeferredRead(
             PIRP target_irp = IoBuildSynchronousFsdRequest(
                 IRP_MJ_READ,
                 DeviceExtension->TargetDeviceObject,
-                buffer + length_done,
+                BlockBuffer + page_offset_this_iter,
                 bytes_this_iter,
                 &lower_offset,
                 &event,
@@ -827,10 +827,10 @@ AIMWrFltrDeferredRead(
 
                 return io_status.Status;
             }
-
-            RtlCopyMemory(buffer + length_done,
-                BlockBuffer + page_offset_this_iter, bytes_this_iter);
         }
+
+        RtlCopyMemory(buffer + length_done,
+            BlockBuffer + page_offset_this_iter, bytes_this_iter);
 
         length_done += bytes_this_iter;
     }
