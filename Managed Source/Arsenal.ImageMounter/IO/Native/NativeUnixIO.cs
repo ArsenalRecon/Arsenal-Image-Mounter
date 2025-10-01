@@ -186,6 +186,9 @@ public static partial class NativeUnixIO
 #if NET6_0_OR_GREATER
         var target = Encoding.UTF8.GetString(MemoryMarshal.CreateReadOnlySpanFromNullTerminated(buffer));
         NativeMemory.Free(buffer);
+#elif NETCOREAPP || NETSTANDARD
+        var target = Marshal.PtrToStringUTF8((nint)buffer);
+        UnixAPI.free(buffer);
 #else
         var target = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(buffer, (int)UnixAPI.strlen(buffer)));
         UnixAPI.free(buffer);
