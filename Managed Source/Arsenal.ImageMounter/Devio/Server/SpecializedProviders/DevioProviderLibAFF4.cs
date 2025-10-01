@@ -14,6 +14,7 @@ using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 
@@ -26,7 +27,7 @@ public unsafe partial class DevioProviderLibAFF4(string filename)
         dllopen,
         filename,
         readOnly: true,
-        get_last_error: () => new IOException(geterrormessage(getlasterrorcode())))
+        get_last_error: () => new IOException(Marshal.PtrToStringAnsi(geterrormessage(getlasterrorcode()))))
 {
 #if NET7_0_OR_GREATER
     [LibraryImport("libaff4_devio")]
@@ -48,8 +49,7 @@ public unsafe partial class DevioProviderLibAFF4(string filename)
 
     [LibraryImport("libaff4_devio", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller))]
     [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    [return: MarshalAs(UnmanagedType.LPStr)]
-    public static partial string geterrormessage(int errorcode);
+    public static partial nint geterrormessage(int errorcode);
 
     [LibraryImport("libaff4_devio")]
     [UnmanagedCallConv(CallConvs = new System.Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
@@ -72,8 +72,7 @@ public unsafe partial class DevioProviderLibAFF4(string filename)
 
     [DllImport("libaff4_devio", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true, CharSet = CharSet.Ansi)]
     [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most likely analyzer bug")]
-    [return: MarshalAs(UnmanagedType.LPStr)]
-    public static extern string geterrormessage(int errorcode);
+    public static extern nint geterrormessage(int errorcode);
 
     [DllImport("libaff4_devio", CallingConvention = CallingConvention.Cdecl, ThrowOnUnmappableChar = true)]
     [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments", Justification = "Most likely analyzer bug")]
