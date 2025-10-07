@@ -11,17 +11,17 @@
     <PackageReference Include="Microsoft.Win32.Registry" Version="*" />
     <PackageReference Include="System.IO.FileSystem.AccessControl" Version="*" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="*" />
-    <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Dmg" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.OpticalDisk" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Streams" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Vdi" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Vmdk" Version="1.0.64" />
-    <PackageReference Include="LTRData.DiscUtils.Xva" Version="1.0.64" />
+    <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Dmg" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.OpticalDisk" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Streams" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Vdi" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Vmdk" Version="1.0.65" />
+    <PackageReference Include="LTRData.DiscUtils.Xva" Version="1.0.65" />
     <PackageReference Include="LTRData.Extensions" Version="*" />
     <PackageReference Include="LTRData.Extensions.Native" Version="*" />
   </ItemGroup>
