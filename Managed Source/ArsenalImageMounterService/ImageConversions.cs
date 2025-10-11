@@ -205,6 +205,7 @@ internal static class ImageConversions
                     case "IMA":
                     case "ISO":
                     case "BIN":
+                    case "000":
                     case "001":
                         provider.ConvertToRawImage(outputImage, OutputImageVariant, bufferSize, hashResults, completionPosition, cancellationToken);
                         break;

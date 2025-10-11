@@ -857,6 +857,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     case "IMA":
                     case "ISO":
                     case "BIN":
+                    case "000":
                     case "001":
                         {
                             var target = new FileStream(fileName,
