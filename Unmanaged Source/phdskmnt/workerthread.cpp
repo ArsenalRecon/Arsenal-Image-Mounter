@@ -577,26 +577,6 @@ ImScsiDispatchUnmapDevice(
     {
         FILE_ZERO_DATA_INFORMATION zerodata;
 
-#if _NT_TARGET_VERSION >= 0x602
-        ULONG fltrim_size = FIELD_OFFSET(FILE_LEVEL_TRIM, Ranges) +
-            (items * sizeof(FILE_LEVEL_TRIM_RANGE));
-
-        WPoolMem<FILE_LEVEL_TRIM, PagedPool> fltrim;
-
-        if (!pLUExt->NoFileLevelTrim)
-        {
-            fltrim.Alloc(fltrim_size);
-
-            if (!fltrim)
-            {
-                ScsiSetError(pSrb, SRB_STATUS_ERROR);
-                return;
-            }
-
-            fltrim->NumRanges = items;
-        }
-#endif
-
         for (int i = 0; i < items; i++)
         {
             LONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
@@ -614,17 +594,6 @@ ImScsiDispatchUnmapDevice(
 
             KdPrint((__FUNCTION__ ": Zero data request from 0x%I64X to 0x%I64X\n",
                 zerodata.FileOffset.QuadPart, zerodata.BeyondFinalZero.QuadPart));
-
-#if _NT_TARGET_VERSION >= 0x602
-            if (!pLUExt->NoFileLevelTrim)
-            {
-                fltrim->Ranges[i].Offset = zerodata.FileOffset.QuadPart;
-                fltrim->Ranges[i].Length = (LONGLONG)numBlocks << pLUExt->BlockPower;
-
-                KdPrint((__FUNCTION__ ": File level trim request 0x%I64X bytes at 0x%I64X\n",
-                    fltrim->Ranges[i].Length, fltrim->Ranges[i].Offset));
-            }
-#endif
 
             status = ZwFsControlFile(
                 pLUExt->ImageFile,
@@ -645,30 +614,6 @@ ImScsiDispatchUnmapDevice(
                 goto done;
             }
         }
-
-#if _NT_TARGET_VERSION >= 0x602
-        if (!pLUExt->NoFileLevelTrim)
-        {
-            status = ZwFsControlFile(
-                pLUExt->ImageFile,
-                NULL,
-                NULL,
-                NULL,
-                &io_status,
-                FSCTL_FILE_LEVEL_TRIM,
-                fltrim,
-                fltrim_size,
-                NULL,
-                0);
-
-            KdPrint((__FUNCTION__ ": FSCTL_FILE_LEVEL_TRIM result: %#x\n", status));
-
-            if (!NT_SUCCESS(status))
-            {
-                pLUExt->NoFileLevelTrim = TRUE;
-            }
-        }
-#endif
     }
     else
     {
@@ -746,6 +691,14 @@ ImScsiCreateLU(
     pLUExt->DeviceNumber = new_device->Fields.DeviceNumber;
 
     KeInitializeEvent(&pLUExt->StopThread, NotificationEvent, FALSE);
+
+    KeInitializeSpinLock(&pLUExt->RequestListLock);
+    InitializeListHead(&pLUExt->RequestList);
+    KeInitializeEvent(&pLUExt->RequestEvent, SynchronizationEvent, FALSE);
+
+    KeInitializeEvent(&pLUExt->Initialized, NotificationEvent, FALSE);
+
+    KeInitializeSpinLock(&pLUExt->LastIoLock);
 
     InsertHeadList(&pHBAExt->LUList, &pLUExt->List);
 

@@ -2328,14 +2328,6 @@ __in __deref PETHREAD ClientThread)
         RtlCopyUnicodeString(&pLUExt->WriteOverlayFileName, &overlay_file_name);
     }
 
-    KeInitializeSpinLock(&pLUExt->RequestListLock);
-    InitializeListHead(&pLUExt->RequestList);
-    KeInitializeEvent(&pLUExt->RequestEvent, SynchronizationEvent, FALSE);
-
-    KeInitializeEvent(&pLUExt->Initialized, NotificationEvent, FALSE);
-
-    KeInitializeSpinLock(&pLUExt->LastIoLock);
-
     KeSetEvent(&pLUExt->Initialized, (KPRIORITY)0, FALSE);
 
     KdPrint((__FUNCTION__ ": Creating worker thread for pLUExt=0x%p.\n",
