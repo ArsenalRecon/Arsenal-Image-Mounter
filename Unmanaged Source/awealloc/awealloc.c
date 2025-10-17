@@ -1780,9 +1780,24 @@ IN BOOLEAN OwnsReadLock)
     return status;
 }
 
+void
+AWEAllocCleanup(IN POBJECT_CONTEXT Context,
+    IN OUT PIO_STATUS_BLOCK IoStatus)
+{
+    LARGE_INTEGER zero_size = { 0 };
+
+    KdPrint((__FUNCTION__ ": Cleanup called.\n"));
+    
+    PAGED_CODE();
+    
+    AWEAllocSetSize(Context, IoStatus, &zero_size);
+    
+    ExFreePoolWithTag(Context, POOL_TAG);
+}
+
 NTSTATUS
 AWEAllocCreate(IN PDEVICE_OBJECT DeviceObject,
-IN PIRP Irp)
+    IN PIRP Irp)
 {
     PFILE_OBJECT file_object = IoGetCurrentIrpStackLocation(Irp)->FileObject;
     POBJECT_CONTEXT context;
@@ -1838,6 +1853,17 @@ IN PIRP Irp)
         status = AWEAllocLoadImageFile(context, &Irp->IoStatus,
             &file_object->FileName, FALSE);
 
+        if (!NT_SUCCESS(status))
+        {
+            IO_STATUS_BLOCK io_status;
+
+            KdPrint((__FUNCTION__ ": Loading image file failed: %#x.\n", status));
+
+            AWEAllocCleanup(context, &io_status);
+        }
+
+        Irp->IoStatus.Status = status;
+        Irp->IoStatus.Information = 0;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
         KdPrint((__FUNCTION__ ": Image file status: %#x.\n", status));
@@ -1882,11 +1908,7 @@ IN PIRP Irp)
 
     if (context != NULL)
     {
-        LARGE_INTEGER zero = { 0 };
-
-        AWEAllocSetSize(context, &Irp->IoStatus, &zero);
-
-        ExFreePoolWithTag(context, POOL_TAG);
+        AWEAllocCleanup(context, &Irp->IoStatus);
     }
 
     Irp->IoStatus.Status = STATUS_SUCCESS;
