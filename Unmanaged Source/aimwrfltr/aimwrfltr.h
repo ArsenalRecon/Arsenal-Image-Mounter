@@ -370,6 +370,11 @@ typedef struct _DEVICE_EXTENSION
     HANDLE DiffDeviceHandle;
 
     //
+    // Sector size of diff device
+    //
+    ULONG DiffDeviceSectorSize;
+
+    //
     // RemoveLock prevents removal of a device while it is busy.
     //
     IO_REMOVE_LOCK RemoveLock;

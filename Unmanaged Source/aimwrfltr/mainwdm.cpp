@@ -111,7 +111,7 @@ STATUS_SUCCESS if successful
     else
     {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        KdPrint(("AIMWrFltr:DriverEntry: Memory allocation error for security descriptor.\n"));
+        KdPrint((__FUNCTION__ ": Memory allocation error for security descriptor.\n"));
     }
 
     if (NT_SUCCESS(status))
@@ -244,7 +244,7 @@ STATUS_SUCCESS if successful
     if (NT_SUCCESS(status) && queue_without_cache_value.DataLength >= sizeof(ULONG))
     {
         MaxQueueDepth = *(ULONG*)queue_without_cache_value.Data;
-        DbgPrint("AIMWrFltr: MaxQueueDepth = 0x%X\n", MaxQueueDepth);
+        DbgPrint("AIMWrFltr:DriverEntry: MaxQueueDepth = 0x%X\n", MaxQueueDepth);
     }
 
     //
@@ -495,7 +495,7 @@ AIMWrFltrGetDiffDevicePath(IN PUNICODE_STRING MountDevName,
     if (!NT_SUCCESS(status))
     {
         DbgPrint(
-            "AIMWrFltrGetDiffDevicePath: Warning: Failed removing registry value for device '%wZ': 0x%#X\n",
+            __FUNCTION__ ": Warning: Failed removing registry value for device '%wZ': 0x%#X\n",
             MountDevName, status);
     }
 
@@ -830,7 +830,7 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
     if (DeviceExtension->DiffFileObject == NULL)
     {
         KdPrint((
-            "AIMWrFltrOpenDiffDevice: Attempting to open device '%wZ' as diff device for %p.\n",
+            __FUNCTION__ ": Attempting to open device '%wZ' as diff device for %p.\n",
             DiffDevicePath, DeviceExtension->DeviceObject));
 
         OBJECT_ATTRIBUTES obj_attrs = { 0 };
@@ -880,7 +880,7 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
         if (!NT_SUCCESS(status))
         {
             DbgPrint(
-                "AIMWrFltrOpenDiffDevice: Open failed for device '%wZ' status 0x%X.\n",
+                __FUNCTION__ ": Open failed for device '%wZ' status 0x%X.\n",
                 DiffDevicePath,
                 status);
 
@@ -897,11 +897,11 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
         __analysis_assume(file_object != NULL);
 
         DbgPrint(
-            "AIMWrFltrOpenDiffDevice: Successfully opened device '%wZ' as diff device.\n",
+            __FUNCTION__ ": Successfully opened device '%wZ' as diff device.\n",
             DiffDevicePath);
 
         KdPrint((
-            "AIMWrFltrOpenDiffDevice: Successfully opened device diff device for %p. Diff volume FS driver '%wZ'.\n",
+            __FUNCTION__ ": Successfully opened device diff device for %p. Diff volume FS driver '%wZ'.\n",
             DeviceExtension->DeviceObject,
             &(file_object->Vpb != NULL && file_object->Vpb->DeviceObject != NULL ?
                 file_object->Vpb->DeviceObject : file_object->DeviceObject)->DriverObject->DriverName));
@@ -911,7 +911,7 @@ AIMWrFltrOpenDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
         DeviceExtension->DiffFileObject = file_object;
 
         KdPrint((
-            "AIMWrFltrInitializeDiffDevice: Diff device driver: '%wZ'\n",
+            __FUNCTION__ ": Diff device driver: '%wZ'\n",
             &DeviceExtension->DiffFileObject->DeviceObject->DriverObject->DriverName));
     }
 
@@ -929,7 +929,7 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
     if (DeviceExtension->DiffFileObject == NULL)
     {
         KdPrint((
-            "AIMWrFltrInitializePhDskMntDiffDevice: Attempting to duplicate handle %p as diff device for %p.\n",
+            __FUNCTION__ ": Attempting to duplicate handle %p as diff device for %p.\n",
             DiffDeviceHandle, DeviceExtension->DeviceObject));
 
         // Open diff file and make sure the file system where it is
@@ -962,7 +962,7 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
         if (!NT_SUCCESS(status))
         {
             DbgPrint(
-                "AIMWrFltrInitializePhDskMntDiffDevice: Duplicate failed for handle %p status 0x%X.\n",
+                __FUNCTION__ ": Duplicate failed for handle %p status 0x%X.\n",
                 DiffDeviceHandle,
                 status);
 
@@ -979,11 +979,11 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
         __analysis_assume(file_object != NULL);
 
         DbgPrint(
-            "AIMWrFltrInitializePhDskMntDiffDevice: Successfully duplicated handle %p as diff device.\n",
+            __FUNCTION__ ": Successfully duplicated handle %p as diff device.\n",
             DiffDeviceHandle);
 
         KdPrint((
-            "AIMWrFltrInitializePhDskMntDiffDevice: Successfully opened device diff device for %p. Diff volume FS driver '%wZ'.\n",
+            __FUNCTION__ ": Successfully opened device diff device for %p. Diff volume FS driver '%wZ'.\n",
             DeviceExtension->DeviceObject,
             &(file_object->Vpb != NULL && file_object->Vpb->DeviceObject != NULL ?
                 file_object->Vpb->DeviceObject : file_object->DeviceObject)->DriverObject->DriverName));
@@ -998,7 +998,7 @@ AIMWrFltrInitializePhDskMntDiffDevice(IN PDEVICE_EXTENSION DeviceExtension,
         }
 
         KdPrint((
-            "AIMWrFltrInitializePhDskMntDiffDevice: Diff device driver: '%wZ'\n",
+            __FUNCTION__ ": Diff device driver: '%wZ'\n",
             &DeviceExtension->DiffFileObject->DeviceObject->DriverObject->DriverName));
     }
 
@@ -1030,6 +1030,42 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
     {
         DbgPrint(__FUNCTION__ ": Diff init called for not-protected volume. Previous calls may have failed.\n");
         return STATUS_SUCCESS;
+    }
+    
+    // Query diff device alignment requirements
+    if (DeviceExtension->DiffDeviceSectorSize == 0)
+    {
+        if (DeviceExtension->DiffDeviceObject->SectorSize >= 512)
+        {
+            DeviceExtension->DiffDeviceSectorSize =
+                DeviceExtension->DiffDeviceObject->SectorSize;
+        }
+#if NTDDI_VERSION >= NTDDI_WIN7 && !defined(_M_IA64)
+        else
+        {
+            IO_STATUS_BLOCK io_status;
+            FILE_FS_SECTOR_SIZE_INFORMATION ssi = { 0 };
+
+            status = ZwQueryVolumeInformationFile(
+                DeviceExtension->DiffDeviceHandle,
+                &io_status,
+                &ssi,
+                sizeof ssi,
+                FileFsSectorSizeInformation);
+
+            if (NT_SUCCESS(status))
+            {
+                DeviceExtension->DiffDeviceSectorSize = ssi.FileSystemEffectivePhysicalBytesPerSectorForAtomicity;
+            }
+            else
+            {
+                DbgPrint(__FUNCTION__ ": Error querying diff device sector alignment requirements: %#x.\n",
+                    status);
+
+                DeviceExtension->Statistics.LastErrorCode = status;
+            }
+        }
+#endif
     }
 
     // Query volume size
@@ -1174,7 +1210,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
         if (DeviceExtension->AllocationTable == NULL)
         {
             DbgPrint(
-                "AIMWrFltrInitializeDiffDevice: Memory allocation error.\n");
+                __FUNCTION__ ": Memory allocation error.\n");
 
 #if DBG
             if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
@@ -1205,7 +1241,7 @@ AIMWrFltrInitializeDiffDeviceUnsafe(IN PDEVICE_EXTENSION DeviceExtension)
         if (!NT_SUCCESS(status) && status != STATUS_END_OF_FILE)
         {
             DbgPrint(
-                "AIMWrFltrInitializeDiffDevice: Error reading diff device for %p: 0x%X\n",
+                __FUNCTION__ ": Error reading diff device for %p: 0x%X\n",
                 DeviceExtension->DeviceObject, status);
 
 #if DBG
@@ -1558,7 +1594,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
     if (!NT_SUCCESS(status))
     {
         DbgPrint(
-            "AIMWrFltrAddDevice: Cannot create filter_device_object. Status 0x%X\n",
+            __FUNCTION__ ": Cannot create filter_device_object. Status 0x%X\n",
             status);
 
 #if DBG
@@ -1667,7 +1703,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
         IoDeleteDevice(filter_device_object);
 
         KdPrint((
-            "AIMWrFltrAddDevice: Unable to attach 0x%p to target 0x%p\n",
+            __FUNCTION__ ": Unable to attach 0x%p to target 0x%p\n",
             filter_device_object, PhysicalDeviceObject));
 
 #if DBG
@@ -1693,7 +1729,7 @@ AIMWrFltrAddDevice(IN PDRIVER_OBJECT DriverObject,
     //(void)AIMWrFltrInitializeDiffDeviceUnsafe(device_extension);
 
     KdPrint((
-        "AIMWrFltrAddDevice: Attached to device '%wZ' above driver '%wZ'. Filter device flags: %#x Target device flags: %#x Physical device flags: %#x\n",
+        __FUNCTION__ ": Attached to device '%wZ' above driver '%wZ'. Filter device flags: %#x Target device flags: %#x Physical device flags: %#x\n",
         &obj_name_info->Name,
         &device_extension->TargetDeviceObject->DriverObject->DriverName,
         filter_device_object->Flags,
@@ -1826,7 +1862,7 @@ NTSTATUS
         // Call the Start Routine handler to schedule a completion routine
         //
         KdPrint((
-            "AIMWrFltrPnp: Schedule completion for START_DEVICE\n"));
+            __FUNCTION__ ": Schedule completion for START_DEVICE\n"));
         status = AIMWrFltrStartDevice(DeviceObject, Irp);
         break;
 
@@ -1927,7 +1963,7 @@ NTSTATUS
     {
 
         //DebugPrint((2,
-        //    "AIMWrFltrPnp : Releasing Lock: DeviceObject 0x%p Irp 0x%p\n",
+        //    __FUNCTION__ ": Releasing Lock: DeviceObject 0x%p Irp 0x%p\n",
         //    DeviceObject, Irp));
         //
         // Release the remove lock
@@ -2178,7 +2214,7 @@ AIMWrFltrDeviceUsageNotification(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
                 //
 
                 KdPrint((
-                    "AIMWrFltrPnp: Clearing PAGABLE bit "
+                    __FUNCTION__ ": Clearing PAGABLE bit "
                     "for DO %p\n", DeviceObject));
                 DeviceObject->Flags &= ~DO_POWER_PAGABLE;
             }
@@ -2199,7 +2235,7 @@ AIMWrFltrDeviceUsageNotification(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         if (set_pagable == true)
         {
             KdPrint((
-                "AIMWrFltrPnp: Lower level driver failed, "
+                __FUNCTION__ ": Lower level driver failed, "
                 "resetting PAGABLE bit for DO %p\n", DeviceObject));
             DeviceObject->Flags &= ~DO_POWER_PAGABLE;
             set_pagable = false;

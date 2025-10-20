@@ -336,8 +336,8 @@ AIMWrFltrRead(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     }
 
     if (device_extension->DiffFileObject != NULL ||
-        (device_extension->DiffDeviceObject->SectorSize > 512 &&
-        device_extension->DiffDeviceObject->SectorSize > device_extension->TargetDeviceObject->SectorSize))
+        (device_extension->DiffDeviceSectorSize > 512 &&
+        device_extension->DiffDeviceSectorSize > device_extension->TargetDeviceObject->SectorSize))
     {
         PCACHED_IRP cached_irp = CACHED_IRP::CreateEnqueuedIrp(Irp);
 
@@ -763,9 +763,9 @@ AIMWrFltrDeferredRead(
 #ifdef ALIGN_DIFF_READS
             // If requested I/O position or length are not aligned to sector
             // size of diff device
-            ULONG sector_mask = (ULONG)(DeviceExtension->DiffDeviceObject->SectorSize - 1);
+            ULONG sector_mask = (ULONG)(DeviceExtension->DiffDeviceSectorSize - 1);
 
-            if (DeviceExtension->DiffDeviceObject->SectorSize != 0 &&
+            if (DeviceExtension->DiffDeviceSectorSize != 0 &&
                 ((page_offset_this_iter & sector_mask) != 0 ||
                     ((bytes_this_iter & sector_mask) != 0)))
             {

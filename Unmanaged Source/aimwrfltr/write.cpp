@@ -112,7 +112,7 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     // called in the completion routine for the same IRP. Also, queue original
     // request directly if queue is becoming too deep.
     if (device_extension->CompletingIrp == Irp ||
-        device_extension->DiffDeviceObject->SectorSize > device_extension->TargetDeviceObject->SectorSize ||
+        device_extension->DiffDeviceSectorSize > device_extension->TargetDeviceObject->SectorSize ||
         (MaxQueueDepth != 0 && AIMWrFltrIsQueueDeeperThan(device_extension, MaxQueueDepth, TRUE, &current_irql) >= MaxQueueDepth) ||
         (HighCommitCondition != NULL && KeReadStateEvent(HighCommitCondition)))
     {
@@ -145,7 +145,7 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         if (!NT_SUCCESS(status))
         {
             DbgPrint(
-                "AIMWrFltrRead: Remove lock failed read type Irp: 0x%X\n",
+                __FUNCTION__ ": Remove lock failed read type Irp: 0x%X\n",
                 status);
 
 #if DBG
@@ -205,7 +205,7 @@ AIMWrFltrWrite(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         if (!NT_SUCCESS(status))
         {
             DbgPrint(
-                "AIMWrFltrWrite: Remove lock failed write type Irp: 0x%X\n",
+                __FUNCTION__ ": Remove lock failed write type Irp: 0x%X\n",
                 status);
 
             Irp->IoStatus.Status = status;
@@ -319,10 +319,10 @@ PUCHAR BlockBuffer)
         // If requested I/O position or length are not aligned to sector
         // size of diff device, we need to fill parts of buffer before and
         // after new data with old data from existing diff block
-        ULONG sector_mask = (ULONG)(DeviceExtension->DiffDeviceObject->SectorSize - 1);
+        ULONG sector_mask = (ULONG)(DeviceExtension->DiffDeviceSectorSize - 1);
 
         if (block_address != DIFF_BLOCK_UNALLOCATED &&
-            DeviceExtension->DiffDeviceObject->SectorSize != 0 &&
+            DeviceExtension->DiffDeviceSectorSize != 0 &&
             ((page_offset_this_iter & sector_mask) != 0 ||
                 ((bytes_this_iter & sector_mask) != 0)))
         {
@@ -619,7 +619,7 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         ULONG items_in_queue = AIMWrFltrIsQueueDeeperThan(device_extension, MAXULONG, TRUE, &current_irql);
 
         DbgPrint(
-            "AIMWrFltrFlushBuffers: Ignoring flush request, %u items in queue.\n",
+            __FUNCTION__ ": Ignoring flush request, %u items in queue.\n",
             items_in_queue);
 
 #endif
@@ -655,7 +655,7 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     if (!NT_SUCCESS(status))
     {
         DbgPrint(
-            "AIMWrFltrFlushBuffers: Remove lock failed flush type Irp: 0x%X\n",
+            __FUNCTION__ ": Remove lock failed flush type Irp: 0x%X\n",
             status);
 
 #if DBG
@@ -694,7 +694,7 @@ AIMWrFltrFlushBuffers(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     ULONG items_in_queue = AIMWrFltrIsQueueDeeperThan(device_extension, MAXULONG, FALSE, NULL);
 
     DbgPrint(
-        "AIMWrFltrFlushBuffers: Queuing flush request, %u items in queue.\n",
+        __FUNCTION__ ": Queuing flush request, %u items in queue.\n",
         items_in_queue);
 
 #endif
@@ -757,7 +757,7 @@ PUCHAR BlockBuffer)
     for (int i = 0; i < items; i++)
     {
         KdPrint((
-            "AIMWrFltrDeferredManageDataSetAttributes: Trim request 0x%I64X bytes at 0x%I64X\n",
+            __FUNCTION__ ": Trim request 0x%I64X bytes at 0x%I64X\n",
             range[i].LengthInBytes, range[i].StartingOffset));
 
         if (range[i].LengthInBytes == 0)
@@ -846,7 +846,7 @@ PUCHAR BlockBuffer)
     if (allocated <= 0)
     {
         KdPrint((
-            "AIMWrFltrControl: None of trim blocks are yet allocated.\n"));
+            __FUNCTION__ ": None of trim blocks are yet allocated.\n"));
 
         return STATUS_SUCCESS;
     }
@@ -931,7 +931,7 @@ PUCHAR BlockBuffer)
             lower_range->Length = bytes_this_iter;
 
             //KdPrint((
-            //    "AIMWrFltrControl: Trimming diff 0x%I64X bytes at physical=0x%I64X virtual=0x%I64X\n",
+            //    __FUNCTION__ ": Trimming diff 0x%I64X bytes at physical=0x%I64X virtual=0x%I64X\n",
             //    lower_range->LengthInBytes, lower_range->StartingOffset,
             //    range[i].StartingOffset + length_done));
 
