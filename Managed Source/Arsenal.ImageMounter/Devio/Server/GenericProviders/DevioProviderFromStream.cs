@@ -246,7 +246,7 @@ public class DevioProviderFromStream : IDevioProvider
         {
             RandomAccess.Write(randomAccessFileHandle, buffer.AsSpan(bufferoffset, count), fileOffset);
 
-            return buffer.Length;
+            return count;
         }
 #endif
 
