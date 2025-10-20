@@ -1070,7 +1070,7 @@ __in __deref PETHREAD ClientThread)
     ASSERT(CreateData != NULL);
 
     KdPrint((
-        "PhDskMnt: Got request to create a virtual disk. Request data:\n"
+        __FUNCTION__ ": Got request to create a virtual disk. Request data:\n"
         "DeviceNumber   = %#x\n"
         "DiskSize       = %I64u\n"
         "ImageOffset    = %I64u\n"

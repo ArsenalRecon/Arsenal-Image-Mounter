@@ -432,7 +432,7 @@ IN OUT PKIRQL LowestAssumedIrql)
             (Context->ActiveReaders >= (OwnsReadLock ? 2 : 1)))
         {
             Context->WriteRequestLockConflicts++;
-            KdPrint2((__FUNCTION__ "AWEAlloc: I/O write protection busy while requesting lock for writing. Active readers: %i writers: %i\n",
+            KdPrint2((__FUNCTION__ ": I/O write protection busy while requesting lock for writing. Active readers: %i writers: %i\n",
                 Context->ActiveReaders, Context->ActiveWriters));
 
             status = STATUS_DEVICE_BUSY;
@@ -1321,7 +1321,7 @@ IN PLARGE_INTEGER EndOfFile)
             continue;
 
         KdPrint((__FUNCTION__ ": Not enough memory available above 8 GB.\n"
-            "AWEAlloc: Allocating above 6 GB.\n"));
+            "Allocating above 6 GB.\n"));
 
         AWEAllocLogError(AWEAllocDriverObject,
             0,
@@ -1346,7 +1346,7 @@ IN PLARGE_INTEGER EndOfFile)
             continue;
 
         KdPrint((__FUNCTION__ ": Not enough memory available above 6 GB.\n"
-            "AWEAlloc: Allocating above 5 GB.\n"));
+            "Allocating above 5 GB.\n"));
 
         AWEAllocLogError(AWEAllocDriverObject,
             0,
@@ -1371,7 +1371,7 @@ IN PLARGE_INTEGER EndOfFile)
             continue;
 
         KdPrint((__FUNCTION__ ": Not enough memory available above 5 GB.\n"
-            "AWEAlloc: Allocating above 4 GB.\n"));
+            "Allocating above 4 GB.\n"));
 
         AWEAllocLogError(AWEAllocDriverObject,
             0,
@@ -1396,7 +1396,7 @@ IN PLARGE_INTEGER EndOfFile)
             continue;
 
         KdPrint((__FUNCTION__ ": Not enough memory available above 4 GB.\n"
-            "AWEAlloc: Allocating at any available location.\n"));
+            "Allocating at any available location.\n"));
 
         AWEAllocLogError(AWEAllocDriverObject,
             0,

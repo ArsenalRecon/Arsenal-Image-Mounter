@@ -615,7 +615,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                 if (!allocated)
                 {
                     //KdPrint((
-                    //    "AIMWrFltrControl: Trim request 0x%I64X bytes at 0x%I64X (not yet allocated)\n",
+                    //    __FUNCTION__ ": Trim request 0x%I64X bytes at 0x%I64X (not yet allocated)\n",
                     //    range[i].LengthInBytes, range[i].StartingOffset));
                 }
             }
@@ -623,7 +623,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             if (!allocated)
             {
                 //KdPrint((
-                //    "AIMWrFltrControl: None of trim blocks are yet allocated.\n"));
+                //    __FUNCTION__ ": None of trim blocks are yet allocated.\n"));
 
                 status = STATUS_SUCCESS;
 
@@ -654,7 +654,7 @@ AIMWrFltrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             if (!NT_SUCCESS(status))
             {
                 DbgPrint(
-                    "AIMWrFltrControl: Remove lock failed for trim: 0x%X\n",
+                    __FUNCTION__ ": Remove lock failed for trim: 0x%X\n",
                     status);
 
                 Irp->IoStatus.Status = status;
