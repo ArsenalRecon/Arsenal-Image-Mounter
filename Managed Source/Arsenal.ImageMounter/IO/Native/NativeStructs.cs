@@ -1893,10 +1893,10 @@ public struct freebsd_statfs
 #if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
             return MemoryMarshal.CreateReadOnlySpan(ref f_mntonname[0], MNAMELEN).ReadNullTerminatedMultiByteString(Encoding.UTF8);
 #else
-                fixed (byte* ptr = f_mntonname)
-                {
-                    return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MNAMELEN).IndexOfTerminator());
-                }
+            fixed (byte* ptr = f_mntonname)
+            {
+                return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MNAMELEN).IndexOfTerminator());
+            }
 #endif
         }
     }
