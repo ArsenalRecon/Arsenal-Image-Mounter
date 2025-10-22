@@ -216,7 +216,14 @@ public static class NativeStruct
                                                         CompletionPosition? completionPosition,
                                                         CancellationToken cancellationToken)
     {
-        Trace.WriteLine($"Starting copy {sourceLength} bytes stream, sourceLength = {sourceLength}, bufferSize = {bufferSize}, skipWriteZeroBlocks = {skipWriteZeroBlocks}");
+        if (source.CanSeek)
+        {
+            Trace.WriteLine($"Starting copy {source.Length} bytes stream, sourceLength = {sourceLength}, bufferSize = {bufferSize}, skipWriteZeroBlocks = {skipWriteZeroBlocks}");
+        }
+        else
+        {
+            Trace.WriteLine($"Starting copy stream, sourceLength = {sourceLength}, bufferSize = {bufferSize}, skipWriteZeroBlocks = {skipWriteZeroBlocks}");
+        }
 
         using var hashProviders = new DisposableDictionary<string, HashAlgorithm>(StringComparer.OrdinalIgnoreCase);
 
