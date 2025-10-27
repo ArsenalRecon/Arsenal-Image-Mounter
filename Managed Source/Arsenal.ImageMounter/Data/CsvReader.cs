@@ -72,25 +72,20 @@ public abstract class CsvReader : MarshalByRefObject, IEnumerable, IEnumerator, 
     // IDisposable
     protected virtual void Dispose(bool disposing)
     {
-
         if (!disposedValue)
         {
-
             if (disposing)
             {
                 // TODO: dispose managed state (managed objects).
                 BaseReader?.Dispose();
-
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
 
             // TODO: set large fields to null.
-
         }
 
         disposedValue = true;
-
     }
 
     // TODO: override Finalize() only if Dispose( disposing As Boolean) above has code to free unmanaged resources.

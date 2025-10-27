@@ -258,19 +258,19 @@ public class DevioProviderFromStream : IDevioProvider
 
     protected virtual void Dispose(bool disposing)
     {
-        OnDisposing(EventArgs.Empty);
-
         if (!disposedValue &&
             disposing &&
             OwnsBaseStream &&
             BaseStream is not null)
         {
+            OnDisposing(EventArgs.Empty);
+
             BaseStream.Dispose();
+
+            OnDisposed(EventArgs.Empty);
         }
 
         disposedValue = true;
-
-        OnDisposed(EventArgs.Empty);
     }
 
     protected virtual void OnDisposing(EventArgs e) => Disposing?.Invoke(this, e);

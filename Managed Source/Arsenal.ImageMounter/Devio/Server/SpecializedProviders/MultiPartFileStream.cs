@@ -31,10 +31,14 @@ public class MultiPartFileStream(IEnumerable<string> Imagefiles, FileAccess Disk
 
     private static IReadOnlyCollection<FileStream> OpenImagefiles(IEnumerable<string> Imagefiles, FileAccess DiskAccess, FileShare ShareMode)
     {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(Imagefiles);
+#else
         if (Imagefiles is null)
         {
             throw new ArgumentNullException(nameof(Imagefiles));
         }
+#endif
 
         var imagestreams = new List<FileStream>();
 

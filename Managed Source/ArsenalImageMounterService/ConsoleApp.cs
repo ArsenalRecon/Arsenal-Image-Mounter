@@ -71,7 +71,7 @@ public static class ConsoleApp
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine("Unexpected client exit.");
             Console.ResetColor();
-            return Marshal.GetHRForException(ex);
+            return ex.HResult;
         }
         catch (Exception ex)
         {
@@ -79,7 +79,7 @@ public static class ConsoleApp
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine(ex.JoinMessages());
             Console.ResetColor();
-            return Marshal.GetHRForException(ex);
+            return ex.HResult;
         }
         finally
         {
