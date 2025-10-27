@@ -859,57 +859,53 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     case "BIN":
                     case "000":
                     case "001":
-                        {
-                            var target = new FileStream(fileName,
-                                                        FileMode.CreateNew,
-                                                        FileAccess.ReadWrite,
-                                                        FileShare.Delete);
+                        var target = new FileStream(fileName,
+                                                    FileMode.CreateNew,
+                                                    FileAccess.ReadWrite,
+                                                    FileShare.Delete);
 
-                            if ("fixed".Equals(outputImageVariant, StringComparison.OrdinalIgnoreCase))
+                        if ("fixed".Equals(outputImageVariant, StringComparison.OrdinalIgnoreCase))
+                        {
+                        }
+                        else if ("dynamic".Equals(outputImageVariant, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                             {
-                            }
-                            else if ("dynamic".Equals(outputImageVariant, StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                                try
                                 {
-                                    try
-                                    {
-                                        NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, true);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Trace.WriteLine($"Sparse files not supported on target platform or file system: {ex.JoinMessages()}");
-                                    }
+                                    NativeFileIO.SetFileSparseFlag(target.SafeFileHandle, true);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Trace.WriteLine($"Sparse files not supported on target platform or file system: {ex.JoinMessages()}");
                                 }
                             }
-                            else
-                            {
-                                throw new ArgumentException($"Value {outputImageVariant} not supported as output image variant. Valid values are fixed or dynamic.");
-                            }
-
-                            target.SetLength(diskSize.Value);
-
-                            disk = new Disk(target, ownsStream: Ownership.Dispose);
-
-                            break;
                         }
+                        else
+                        {
+                            throw new ArgumentException($"Value {outputImageVariant} not supported as output image variant. Valid values are fixed or dynamic.");
+                        }
+
+                        target.SetLength(diskSize.Value);
+
+                        disk = new Disk(target, ownsStream: Ownership.Dispose);
+
+                        break;
 
                     default:
+                        if (!DiscUtilsInteraction.DiscUtilsInitialized)
                         {
-                            if (!DiscUtilsInteraction.DiscUtilsInitialized)
-                            {
-                                throw new NotSupportedException();
-                            }
-
-                            disk = VirtualDisk.CreateDisk(image_type,
-                                                          outputImageVariant,
-                                                          fileName,
-                                                          diskSize.Value,
-                                                          geometry,
-                                                          null);
-
-                            break;
+                            throw new NotSupportedException();
                         }
+
+                        disk = VirtualDisk.CreateDisk(image_type,
+                                                      outputImageVariant,
+                                                      fileName,
+                                                      diskSize.Value,
+                                                      geometry,
+                                                      null);
+
+                        break;
                 }
 
                 using (disk)
@@ -1231,16 +1227,19 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             };
         }
 
-        if (service is not DevioNoneService)
+        using (service)
         {
-            service.WaitForExit(Timeout.InfiniteTimeSpan);
+            if (service is not DevioNoneService)
+            {
+                service.WaitForExit(Timeout.InfiniteTimeSpan);
 
-            Console.WriteLine("Service stopped.");
+                Console.WriteLine("Service stopped.");
+            }
+
+            return service.Exception is not null
+                ? throw new Exception("Service failed.", service.Exception)
+                : 0;
         }
-
-        return service.Exception is not null
-            ? throw new Exception("Service failed.", service.Exception)
-            : 0;
     }
 
     public static int StartBackgroundProcess()
