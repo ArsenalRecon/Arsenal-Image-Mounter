@@ -4322,11 +4322,7 @@ Currently, the following application has files open on this volume:
         return devInst;
     }
 
-#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
     public static bool EnumerateDeviceInstancesForService(string service, [NotNullWhen(true)] out IEnumerable<ReadOnlyMemory<char>>? instances, out uint errorCode)
-#else
-    public static bool EnumerateDeviceInstancesForService(string service, out IEnumerable<ReadOnlyMemory<char>>? instances, out uint errorCode)
-#endif
     {
         instances = null;
         errorCode = UnsafeNativeMethods.CM_Get_Device_ID_List_SizeW(out var length,
@@ -4354,11 +4350,7 @@ Currently, the following application has files open on this volume:
         return true;
     }
 
-#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
     public static bool EnumerateDeviceInstancesForSetupClass(Guid setupClass, [NotNullWhen(true)] out IEnumerable<ReadOnlyMemory<char>>? instances, out uint errorCode)
-#else
-    public static bool EnumerateDeviceInstancesForSetupClass(Guid setupClass, out IEnumerable<ReadOnlyMemory<char>>? instances, out uint errorCode)
-#endif
     {
         instances = null;
 

@@ -1861,10 +1861,10 @@ public struct freebsd_statfs
 #if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
             return MemoryMarshal.CreateReadOnlySpan(ref f_fstypename[0], MFSNAMELEN).ReadNullTerminatedMultiByteString(Encoding.UTF8);
 #else
-                fixed (byte* ptr = f_fstypename)
-                {
-                    return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MFSNAMELEN).IndexOfTerminator());
-                }
+            fixed (byte* ptr = f_fstypename)
+            {
+                return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MFSNAMELEN).IndexOfTerminator());
+            }
 #endif
         }
     }
@@ -1877,10 +1877,10 @@ public struct freebsd_statfs
 #if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
             return MemoryMarshal.CreateReadOnlySpan(ref f_mntfromname[0], MNAMELEN).ReadNullTerminatedMultiByteString(Encoding.UTF8);
 #else
-                fixed (byte* ptr = f_mntfromname)
-                {
-                    return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MNAMELEN).IndexOfTerminator());
-                }
+            fixed (byte* ptr = f_mntfromname)
+            {
+                return Encoding.UTF8.GetString(ptr, new ReadOnlySpan<byte>(ptr, MNAMELEN).IndexOfTerminator());
+            }
 #endif
         }
     }

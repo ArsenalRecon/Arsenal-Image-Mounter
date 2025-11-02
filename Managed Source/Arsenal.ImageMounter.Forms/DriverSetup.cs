@@ -271,11 +271,11 @@ public static class DriverSetup
         {
             if (Registry.GetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager", "PendingFileRenameOperations", null) is string[] array)
             {
-                array = (from p in array
+                array = [.. from p in array
                          where p != null && p.Length > 4
                          select p.Substring(4) into p
                          where File.Exists(p)
-                         select FileVersionInfo.GetVersionInfo(p)?.OriginalFilename ?? Path.GetFileName(p)).ToArray();
+                         select FileVersionInfo.GetVersionInfo(p)?.OriginalFilename ?? Path.GetFileName(p)];
 
                 Trace.WriteLine($"Pending file replace operations: '{string.Join("', '", array)}'");
 
