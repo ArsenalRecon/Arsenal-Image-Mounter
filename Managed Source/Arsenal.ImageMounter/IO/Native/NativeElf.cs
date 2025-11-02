@@ -603,5 +603,17 @@ public struct ElfHeader
         _ => throw new NotSupportedException(),
     });
 #endif
+
+    public readonly uint Version;
+    public readonly ulong EntryPoint;
+    public readonly ulong ProgramHeaderOffset;
+    public readonly ulong SectionHeaderOffset;
+    public readonly uint Flags;
+    public readonly ushort HeaderSize;
+    public readonly ushort ProgramHeaderEntrySize;
+    public readonly ushort ProgramHeaderEntryCount;
+    public readonly ushort SectionHeaderEntrySize;
+    public readonly ushort SectionHeaderEntryCount;
+    public readonly ushort SectionHeaderStringTableIndex;
 };
 

@@ -19,7 +19,7 @@ using WORD = System.UInt16;
 
 namespace Arsenal.ImageMounter.Internal;
 
-internal readonly unsafe struct IMAGE_OPTIONAL_HEADER32
+public readonly unsafe struct ImageOptionalHeader32
 {
     //
     // Standard fields.
@@ -64,7 +64,7 @@ internal readonly unsafe struct IMAGE_OPTIONAL_HEADER32
     // Here follows 16 IMAGE_DATA_DIRECTORY entries
 }
 
-internal readonly unsafe struct IMAGE_OPTIONAL_HEADER64
+public readonly unsafe struct ImageOptionalHeader64
 {
     public readonly WORD Magic;
     public readonly BYTE MajorLinkerVersion;
@@ -99,7 +99,7 @@ internal readonly unsafe struct IMAGE_OPTIONAL_HEADER64
     // Here follows 16 IMAGE_DATA_DIRECTORY entries
 }
 
-internal struct IMAGE_SECTION_HEADER
+public struct ImageSectionHeader
 {
     private unsafe fixed byte name[8];
     public unsafe ReadOnlySpan<byte> Name => BufferExtensions.CreateReadOnlySpan(name[0], 8);
@@ -114,7 +114,7 @@ internal struct IMAGE_SECTION_HEADER
     public readonly DWORD Characteristics;
 }
 
-internal readonly struct IMAGE_RESOURCE_DIRECTORY
+public readonly struct ImageResourceDirectory
 {
     public readonly DWORD Characteristics;
     public readonly DWORD TimeDateStamp;
@@ -125,7 +125,7 @@ internal readonly struct IMAGE_RESOURCE_DIRECTORY
     //  IMAGE_RESOURCE_DIRECTORY_ENTRY DirectoryEntries[];
 }
 
-internal readonly struct IMAGE_RESOURCE_DIRECTORY_ENTRY
+public readonly struct ImageResourceDirectoryEntry
 {
     private readonly DWORD NameId;
 
@@ -138,7 +138,7 @@ internal readonly struct IMAGE_RESOURCE_DIRECTORY_ENTRY
     public uint OffsetToDirectory => OffsetToData & 0x7fffffffu;
 }
 
-internal readonly struct IMAGE_RESOURCE_DATA_ENTRY
+public readonly struct ImageResourceDataEntry
 {
     public readonly DWORD OffsetToData;
     public readonly DWORD Size;

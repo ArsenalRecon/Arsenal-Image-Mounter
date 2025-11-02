@@ -218,19 +218,19 @@ public static class NativePE
 
         var data_table = GetImageDataTable(sizeOfOptionalHeader, optional_header_ptr);
 
-        ref readonly var resource_header = ref data_table[IMAGE_DIRECTORY_ENTRY_RESOURCE];
+        ref readonly var resource_header = ref data_table[(int)ImageDirectoryEntry.Resource];
 
-        var section_table = MemoryMarshal.Cast<byte, IMAGE_SECTION_HEADER>(optional_header_ptr.Slice(sizeOfOptionalHeader))
+        var section_table = MemoryMarshal.Cast<byte, ImageSectionHeader>(optional_header_ptr.Slice(sizeOfOptionalHeader))
             .Slice(0, header.FileHeader.NumberOfSections);
 
         ref readonly var section_header = ref FindResourceSection(section_table);
 
         var raw = fileData.Slice((int)section_header.PointerToRawData);
 
-        var resource_section = raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress));
-        ref readonly var resource_dir = ref resource_section.CastRef<IMAGE_RESOURCE_DIRECTORY>();
-        var resource_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(
-            raw.Slice((int)(resource_header.VirtualAddress - section_header.VirtualAddress) + sizeof(IMAGE_RESOURCE_DIRECTORY)));
+        var resource_section = raw.Slice((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress));
+        ref readonly var resource_dir = ref resource_section.CastRef<ImageResourceDirectory>();
+        var resource_dir_entry = MemoryMarshal.Cast<byte, ImageResourceDirectoryEntry>(
+            raw.Slice((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress) + sizeof(ImageResourceDirectory)));
 
         for (var i = 0; i < resource_dir.NumberOfNamedEntries + resource_dir.NumberOfIdEntries; i++)
         {
@@ -244,14 +244,14 @@ public static class NativePE
             ref readonly var found_entry = ref resource_dir_entry[i];
 
             var found_dir = resource_section.Slice((int)found_entry.OffsetToDirectory);
-            ref readonly var found_dir_header = ref found_dir.CastRef<IMAGE_RESOURCE_DIRECTORY>();
+            ref readonly var found_dir_header = ref found_dir.CastRef<ImageResourceDirectory>();
 
             if (found_dir_header.NumberOfIdEntries + found_dir_header.NumberOfNamedEntries == 0)
             {
                 continue;
             }
 
-            var found_dir_entry = MemoryMarshal.Cast<byte, IMAGE_RESOURCE_DIRECTORY_ENTRY>(found_dir.Slice(sizeof(IMAGE_RESOURCE_DIRECTORY)));
+            var found_dir_entry = MemoryMarshal.Cast<byte, ImageResourceDirectoryEntry>(found_dir.Slice(sizeof(ImageResourceDirectory)));
 
             for (var j = 0; j < found_dir_header.NumberOfNamedEntries + found_dir_header.NumberOfIdEntries; j++)
             {
@@ -261,15 +261,15 @@ public static class NativePE
                 }
 
                 var found_subdir = resource_section.Slice((int)found_dir_entry[j].OffsetToDirectory);
-                ref readonly var found_subdir_header = ref found_subdir.CastRef<IMAGE_RESOURCE_DIRECTORY>();
+                ref readonly var found_subdir_header = ref found_subdir.CastRef<ImageResourceDirectory>();
 
                 if (found_subdir_header.NumberOfIdEntries + found_subdir_header.NumberOfNamedEntries == 0)
                 {
                     continue;
                 }
 
-                var found_subdir_entry = found_subdir.Slice(sizeof(IMAGE_RESOURCE_DIRECTORY));
-                ref readonly var found_subdir_entry_header = ref found_subdir_entry.CastRef<IMAGE_RESOURCE_DIRECTORY_ENTRY>();
+                var found_subdir_entry = found_subdir.Slice(sizeof(ImageResourceDirectory));
+                ref readonly var found_subdir_entry_header = ref found_subdir_entry.CastRef<ImageResourceDirectoryEntry>();
 
                 if (found_subdir_entry_header.DataIsDirectory)
                 {
@@ -277,7 +277,7 @@ public static class NativePE
                 }
 
                 var found_data_entry = resource_section.Slice((int)found_subdir_entry_header.OffsetToData);
-                ref readonly var found_data_entry_header = ref found_data_entry.CastRef<IMAGE_RESOURCE_DATA_ENTRY>();
+                ref readonly var found_data_entry_header = ref found_data_entry.CastRef<ImageResourceDataEntry>();
 
                 var found_res = raw.Slice(
                     (int)(found_data_entry_header.OffsetToData - section_header.VirtualAddress),
@@ -301,11 +301,12 @@ public static class NativePE
     }
 
     /// <summary>
-    /// Locates certificate data in a PE image
+    /// Locates directory entry in a PE image
     /// </summary>
     /// <param name="fileData">Pointer to raw or mapped exe or dll</param>
+    /// <param name="imageDirectoryEntry"></param>
     /// <returns>Reference to located certificate</returns>
-    public static unsafe ReadOnlySpan<byte> GetRawFileCertificateSection(ReadOnlySpan<byte> fileData)
+    public static unsafe ImageDataDirectory GetRawFileDirectoryEntry(ReadOnlySpan<byte> fileData, ImageDirectoryEntry imageDirectoryEntry)
     {
         ref readonly var dos_header = ref fileData.CastRef<IMAGE_DOS_HEADER>();
 
@@ -330,11 +331,7 @@ public static class NativePE
 
         var data_table = GetImageDataTable(sizeOfOptionalHeader, optional_header_ptr);
 
-        ref readonly var security_header = ref data_table[IMAGE_DIRECTORY_ENTRY_SECURITY];
-
-        var section = fileData.Slice((int)security_header.VirtualAddress, (int)security_header.Size);
-
-        return section;
+        return data_table[(int)imageDirectoryEntry];
     }
 
     /// <summary>
@@ -382,23 +379,23 @@ public static class NativePE
 
         var optional_header_ptr = fileSpan.Slice(dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) - sizeof(IMAGE_OPTIONAL_HEADER));
 
-        ReadOnlySpan<IMAGE_DATA_DIRECTORY> data_table;
+        ReadOnlySpan<ImageDataDirectory> data_table;
 
         int checksumFieldOffset;
 
-        if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER32) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
+        if (sizeOfOptionalHeader == sizeof(ImageOptionalHeader32) + 16 * sizeof(ImageDataDirectory))
         {
-            ref readonly var optional_header = ref optional_header_ptr.CastRef<IMAGE_OPTIONAL_HEADER32>();
+            ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader32>();
             checksumFieldOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.AsRef(in MemoryMarshal.AsBytes(BufferExtensions.CreateReadOnlySpan(in optional_header.CheckSum, 1))[0]));
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER32));
-            data_table = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
+            var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader32));
+            data_table = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
         }
-        else if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
+        else if (sizeOfOptionalHeader == sizeof(ImageOptionalHeader64) + 16 * sizeof(ImageDataDirectory))
         {
-            ref readonly var optional_header = ref optional_header_ptr.CastRef<IMAGE_OPTIONAL_HEADER64>();
+            ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader64>();
             checksumFieldOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.AsRef(in MemoryMarshal.AsBytes(BufferExtensions.CreateReadOnlySpan(in optional_header.CheckSum, 1))[0]));
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER64));
-            data_table = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
+            var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader64));
+            data_table = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
         }
         else
         {
@@ -409,15 +406,15 @@ public static class NativePE
 
         hashAlgorithm.TransformBlock(fileData, 0, checksumFieldOffset, null, 0);
 
-        var dataTableEntryOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.AsRef(in MemoryMarshal.AsBytes(data_table.Slice(IMAGE_DIRECTORY_ENTRY_SECURITY, 1))[0]));
+        var dataTableEntryOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.AsRef(in MemoryMarshal.AsBytes(data_table.Slice((int)ImageDirectoryEntry.Security, 1))[0]));
 
         var afterChecksumFieldOffset = checksumFieldOffset + sizeof(uint);
 
         hashAlgorithm.TransformBlock(fileData, afterChecksumFieldOffset, dataTableEntryOffset - afterChecksumFieldOffset, null, 0);
 
-        ref readonly var security_header = ref data_table[IMAGE_DIRECTORY_ENTRY_SECURITY];
+        ref readonly var security_header = ref data_table[(int)ImageDirectoryEntry.Security];
 
-        var afterDataTableEntryOffset = dataTableEntryOffset + sizeof(IMAGE_DATA_DIRECTORY);
+        var afterDataTableEntryOffset = dataTableEntryOffset + sizeof(ImageDataDirectory);
 
         if (security_header.Size == 0)
         {
@@ -425,7 +422,7 @@ public static class NativePE
         }
         else
         {
-            hashAlgorithm.TransformBlock(fileData, afterDataTableEntryOffset, (int)(security_header.VirtualAddress - afterDataTableEntryOffset), null, 0);
+            hashAlgorithm.TransformBlock(fileData, afterDataTableEntryOffset, (int)(security_header.RelativeVirtualAddress - afterDataTableEntryOffset), null, 0);
         }
 
         hashAlgorithm.TransformFinalBlock([], 0, 0);
@@ -469,7 +466,7 @@ public static class NativePE
         .Slice(0, MemoryMarshal.Read<WinCertificateHeader>(certificateSection).Length)
         .Slice(sizeof(WinCertificateHeader));
 
-    private static ref readonly IMAGE_SECTION_HEADER FindResourceSection(ReadOnlySpan<IMAGE_SECTION_HEADER> section_table)
+    private static ref readonly ImageSectionHeader FindResourceSection(ReadOnlySpan<ImageSectionHeader> section_table)
     {
         for (var i = 0; i < section_table.Length; i++)
         {
@@ -482,26 +479,74 @@ public static class NativePE
         throw new BadImageFormatException("No resource section found in PE file");
     }
 
-    private const int IMAGE_DIRECTORY_ENTRY_RESOURCE = 2;
-
-    private const int IMAGE_DIRECTORY_ENTRY_SECURITY = 4;
-
-    private static unsafe ReadOnlySpan<IMAGE_DATA_DIRECTORY> GetImageDataTable(ushort sizeOfOptionalHeader, ReadOnlySpan<byte> optional_header_ptr)
+    /// <summary>
+    /// Identifies the various directory entries in a PE (Portable Executable) file's optional header.
+    /// These correspond to IMAGE_DIRECTORY_ENTRY_* constants in winnt.h.
+    /// </summary>
+    public enum ImageDirectoryEntry
     {
-        if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER32) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
+        /// <summary>Export Directory</summary>
+        Export = 0,
+
+        /// <summary>Import Directory</summary>
+        Import = 1,
+
+        /// <summary>Resource Directory</summary>
+        Resource = 2,
+
+        /// <summary>Exception Directory</summary>
+        Exception = 3,
+
+        /// <summary>Security Directory</summary>
+        Security = 4,
+
+        /// <summary>Base Relocation Table</summary>
+        BaseRelocationTable = 5,
+
+        /// <summary>Debug Directory</summary>
+        Debug = 6,
+
+        /// <summary>Architecture Specific Data (formerly IMAGE_DIRECTORY_ENTRY_COPYRIGHT on x86)</summary>
+        Architecture = 7,
+
+        /// <summary>RVA of Global Pointer</summary>
+        GlobalPointer = 8,
+
+        /// <summary>TLS (Thread Local Storage) Directory</summary>
+        Tls = 9,
+
+        /// <summary>Load Configuration Directory</summary>
+        LoadConfig = 10,
+
+        /// <summary>Bound Import Directory in headers</summary>
+        BoundImport = 11,
+
+        /// <summary>Import Address Table</summary>
+        ImportAddressTable = 12,
+
+        /// <summary>Delay Load Import Descriptors</summary>
+        DelayImport = 13,
+
+        /// <summary>COM Runtime Descriptor</summary>
+        ComDescriptor = 14
+    }
+
+    private static unsafe ReadOnlySpan<ImageDataDirectory> GetImageDataTable(ushort sizeOfOptionalHeader, ReadOnlySpan<byte> optional_header_ptr)
+    {
+        if (sizeOfOptionalHeader == sizeof(ImageOptionalHeader32) + 16 * sizeof(ImageDataDirectory))
         {
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER32));
-            var data_directory = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
+            var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader32));
+            var data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
             return data_directory;
         }
-        else if (sizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64) + 16 * sizeof(IMAGE_DATA_DIRECTORY))
+        else if (sizeOfOptionalHeader == sizeof(ImageOptionalHeader64) + 16 * sizeof(ImageDataDirectory))
         {
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(IMAGE_OPTIONAL_HEADER64));
-            var data_directory = MemoryMarshal.Cast<byte, IMAGE_DATA_DIRECTORY>(data_directory_ptr);
+            var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader64));
+            var data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
             return data_directory;
         }
 
-        throw new BadImageFormatException();
+        throw new BadImageFormatException($"Unsupported size of optional header ({sizeOfOptionalHeader})");
     }
 }
 

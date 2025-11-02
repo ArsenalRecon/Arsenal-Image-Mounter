@@ -78,9 +78,9 @@ public readonly struct IMAGE_FILE_HEADER
     public WORD Characteristics { get; }
 }
 
-internal readonly struct IMAGE_DATA_DIRECTORY
+public readonly struct ImageDataDirectory
 {
-    public DWORD VirtualAddress { get; }
+    public DWORD RelativeVirtualAddress { get; }
     public DWORD Size { get; }
 }
 
@@ -564,4 +564,3 @@ public class NativeFileVersion
 #endif
     }
 }
-
