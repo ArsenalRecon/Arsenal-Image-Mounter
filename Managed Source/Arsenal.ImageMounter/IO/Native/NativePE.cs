@@ -334,7 +334,7 @@ public static class NativePE
     /// <param name="fileData">Pointer to raw or mapped exe or dll</param>
     /// <param name="imageDirectoryEntry"></param>
     /// <returns>Reference to located certificate</returns>
-    public static unsafe ImageDataDirectory GetRawFileDirectoryEntry(ReadOnlySpan<byte> fileData, ImageDirectoryEntry imageDirectoryEntry)
+    public static unsafe ref readonly ImageDataDirectory GetRawFileDirectoryEntry(ReadOnlySpan<byte> fileData, ImageDirectoryEntry imageDirectoryEntry)
     {
         ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
 
@@ -388,22 +388,67 @@ public static class NativePE
                 }
 
             case ImageOptionalHeaderMagic.IMAGE_ROM_OPTIONAL_HDR_MAGIC:
-                {
-                    throw new BadImageFormatException("ROM images are not supported");
-                }
+                throw new BadImageFormatException("ROM images are not supported");
 
             default:
-                throw new BadImageFormatException();
+                throw new BadImageFormatException($"Unrecognized optional header type: 0x{headers.OptionalHeader.Magic}");
         }
 
         var index = (int)imageDirectoryEntry;
-        
+
         if (index < 0 || index >= data_directory.Length)
         {
-            return default;
+            throw new BadImageFormatException($"Image data directory does not contain directory index {index}");
         }
 
-        return data_directory[index];
+        return ref data_directory[index];
+    }
+
+    public static unsafe ref readonly uint GetRawFileChecksumField(ReadOnlySpan<byte> fileData)
+    {
+        ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
+
+        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic)
+        {
+            throw new BadImageFormatException();
+        }
+
+        var header_ptr = fileData.Slice(dos_header.e_lfanew);
+
+        ref readonly var headers = ref header_ptr.CastRef<ImageNtHeaders>();
+
+        var sizeOfOptionalHeader = headers.FileHeader.SizeOfOptionalHeader;
+
+        if (headers.Signature != ImageNtHeaders.ExpectedSignature
+            || sizeOfOptionalHeader == 0)
+        {
+            throw new BadImageFormatException();
+        }
+
+        var optional_header_ptr = header_ptr.Slice(sizeof(ImageNtHeaders) - sizeof(ImageOptionalHeader), sizeOfOptionalHeader);
+
+        switch (headers.OptionalHeader.Magic)
+        {
+            case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR32_MAGIC:
+                {
+                    ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader32>();
+
+                    return ref optional_header.CheckSum;
+                }
+
+            case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR64_MAGIC:
+                {
+                    ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader64>();
+
+                    return ref optional_header.CheckSum;
+                }
+
+            case ImageOptionalHeaderMagic.IMAGE_ROM_OPTIONAL_HDR_MAGIC:
+                throw new BadImageFormatException("ROM images are not supported");
+
+            default:
+                throw new BadImageFormatException($"Unrecognized optional header type: 0x{headers.OptionalHeader.Magic}");
+        }
     }
 
     /// <summary>
@@ -449,42 +494,21 @@ public static class NativePE
             throw new BadImageFormatException();
         }
 
-        var optional_header_ptr = fileSpan.Slice(dos_header.e_lfanew + sizeof(ImageNtHeaders) - sizeof(ImageOptionalHeader));
+        ref readonly var security_header = ref GetRawFileDirectoryEntry(fileSpan, ImageDirectoryEntry.Security);
 
-        ReadOnlySpan<ImageDataDirectory> data_table;
+        var dataTableEntryOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.As<ImageDataDirectory, byte>(ref Unsafe.AsRef(in security_header)));
 
-        int checksumFieldOffset;
+        ref readonly uint checksumField = ref GetRawFileChecksumField(fileSpan);
 
-        if (sizeOfOptionalHeader == sizeof(ImageOptionalHeader32) + 16 * sizeof(ImageDataDirectory))
-        {
-            ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader32>();
-            checksumFieldOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.AsRef(in MemoryMarshal.AsBytes(BufferExtensions.CreateReadOnlySpan(in optional_header.CheckSum, 1))[0]));
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader32));
-            data_table = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
-        }
-        else if (sizeOfOptionalHeader == sizeof(ImageOptionalHeader64) + 16 * sizeof(ImageDataDirectory))
-        {
-            ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader64>();
-            checksumFieldOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.AsRef(in MemoryMarshal.AsBytes(BufferExtensions.CreateReadOnlySpan(in optional_header.CheckSum, 1))[0]));
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader64));
-            data_table = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
-        }
-        else
-        {
-            throw new BadImageFormatException();
-        }
+        var checksumFieldOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.As<uint, byte>(ref Unsafe.AsRef(in checksumField)));
 
         hashAlgorithm.Initialize();
 
         hashAlgorithm.TransformBlock(fileData, 0, checksumFieldOffset, null, 0);
 
-        var dataTableEntryOffset = (int)Unsafe.ByteOffset(ref Unsafe.AsRef(in fileSpan[0]), ref Unsafe.AsRef(in MemoryMarshal.AsBytes(data_table.Slice((int)ImageDirectoryEntry.Security, 1))[0]));
-
         var afterChecksumFieldOffset = checksumFieldOffset + sizeof(uint);
 
         hashAlgorithm.TransformBlock(fileData, afterChecksumFieldOffset, dataTableEntryOffset - afterChecksumFieldOffset, null, 0);
-
-        ref readonly var security_header = ref data_table[(int)ImageDirectoryEntry.Security];
 
         var afterDataTableEntryOffset = dataTableEntryOffset + sizeof(ImageDataDirectory);
 

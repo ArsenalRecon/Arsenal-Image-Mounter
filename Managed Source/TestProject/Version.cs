@@ -1,6 +1,7 @@
 ﻿using Arsenal.ImageMounter.IO.Native;
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 #if NET8_0_OR_GREATER
@@ -22,9 +23,14 @@ public class Version
 
 #if NET8_0_OR_GREATER
     [Fact]
-    public void ValidateAuthenticode()
+    public void ValidateAuthenticodeWinPE64()
     {
-        ValidateFile(@"C:\Windows\system32\ntdll.dll");
+        ValidateFile(@"C:\Windows\sysnative\ntdll.dll");
+    }
+
+    [Fact]
+    public void ValidateAuthenticodeWinPE32()
+    {
         ValidateFile(@"C:\Windows\syswow64\ntdll.dll");
     }
 
@@ -69,7 +75,10 @@ public class Version
         chain.ChainPolicy.VerificationFlags = X509VerificationFlags.IgnoreNotTimeValid | X509VerificationFlags.IgnoreNotTimeNested | X509VerificationFlags.IgnoreCtlNotTimeValid;
         var result = chain.Build(certificate);
 
-        Assert.True(result);
+        if (!result)
+        {
+            throw new InvalidDataException(string.Join(Environment.NewLine, chain.ChainStatus.Select(cs => $"{cs.Status}: {cs.StatusInformation}")));
+        }
     }
 #endif
 }
