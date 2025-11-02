@@ -8,6 +8,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using Arsenal.ImageMounter.IO.Native;
 using LTRData.Extensions.Buffers;
 using System;
 using BYTE = System.Byte;
@@ -25,7 +26,7 @@ public readonly unsafe struct ImageOptionalHeader32
     // Standard fields.
     //
 
-    public readonly WORD Magic;
+    public readonly ImageOptionalHeaderMagic Magic;
     public readonly BYTE MajorLinkerVersion;
     public readonly BYTE MinorLinkerVersion;
     public readonly DWORD SizeOfCode;
@@ -59,14 +60,14 @@ public readonly unsafe struct ImageOptionalHeader32
     public readonly DWORD SizeOfHeapReserve;
     public readonly DWORD SizeOfHeapCommit;
     public readonly DWORD LoaderFlags;
-    public readonly DWORD NumberOfRvaAndSizes;
+    public readonly int NumberOfRvaAndSizes;
 
     // Here follows 16 IMAGE_DATA_DIRECTORY entries
 }
 
 public readonly unsafe struct ImageOptionalHeader64
 {
-    public readonly WORD Magic;
+    public readonly ImageOptionalHeaderMagic Magic;
     public readonly BYTE MajorLinkerVersion;
     public readonly BYTE MinorLinkerVersion;
     public readonly DWORD SizeOfCode;
@@ -94,9 +95,29 @@ public readonly unsafe struct ImageOptionalHeader64
     public readonly ULONGLONG SizeOfHeapReserve;
     public readonly ULONGLONG SizeOfHeapCommit;
     public readonly DWORD LoaderFlags;
-    public readonly DWORD NumberOfRvaAndSizes;
+    public readonly int NumberOfRvaAndSizes;
 
     // Here follows 16 IMAGE_DATA_DIRECTORY entries
+}
+
+public readonly struct ImageRomOptionalHeader
+{
+    public readonly WORD Magic;
+    public readonly BYTE MajorLinkerVersion;
+    public readonly BYTE MinorLinkerVersion;
+    public readonly DWORD SizeOfCode;
+    public readonly DWORD SizeOfInitializedData;
+    public readonly DWORD SizeOfUninitializedData;
+    public readonly DWORD AddressOfEntryPoint;
+    public readonly DWORD BaseOfCode;
+    public readonly DWORD BaseOfData;
+    public readonly DWORD BaseOfBss;
+    public readonly DWORD GprMask;
+    public readonly DWORD CprMask0;
+    public readonly DWORD CprMask1;
+    public readonly DWORD CprMask2;
+    public readonly DWORD CprMask3;
+    public readonly DWORD GpValue;
 }
 
 public struct ImageSectionHeader
@@ -105,8 +126,8 @@ public struct ImageSectionHeader
     public unsafe ReadOnlySpan<byte> Name => BufferExtensions.CreateReadOnlySpan(name[0], 8);
     public readonly DWORD VirtualSize;
     public readonly DWORD VirtualAddress;
-    public readonly DWORD SizeOfRawData;
-    public readonly DWORD PointerToRawData;
+    public readonly int SizeOfRawData;
+    public readonly int PointerToRawData;
     public readonly DWORD PointerToRelocations;
     public readonly DWORD PointerToLinenumbers;
     public readonly WORD NumberOfRelocations;

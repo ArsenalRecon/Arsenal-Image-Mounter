@@ -31,6 +31,11 @@ using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.IO.Native;
 
+using BYTE = System.Byte;
+using DWORD = System.UInt32;
+using LONG = System.Int32;
+using WORD = System.UInt16;
+
 public static class NativePE
 {
     private static ReadOnlySpan<byte> RsrcId => ".rsrc\0\0\0"u8;
@@ -124,7 +129,7 @@ public static class NativePE
         return GetFixedFileVerInfo(file);
     }
 
-    public static IMAGE_NT_HEADERS GetImageNtHeaders(Stream exe)
+    public static ImageNtHeaders GetImageNtHeaders(Stream exe)
     {
         var buffer = ArrayPool<byte>.Shared.Rent((int)Math.Min(exe.Length, 65536));
         try
@@ -139,7 +144,7 @@ public static class NativePE
         }
     }
 
-    public static IMAGE_NT_HEADERS GetImageNtHeaders(string exepath)
+    public static ImageNtHeaders GetImageNtHeaders(string exepath)
     {
         var size = (int)Math.Min(65536, new FileInfo(exepath).Length);
 
@@ -167,10 +172,10 @@ public static class NativePE
     /// </summary>
     /// <param name="fileData">Raw exe or dll data</param>
     /// <returns>IMAGE_NT_HEADERS structure</returns>
-    public static ref readonly IMAGE_NT_HEADERS GetImageNtHeaders(ReadOnlySpan<byte> fileData)
+    public static ref readonly ImageNtHeaders GetImageNtHeaders(ReadOnlySpan<byte> fileData)
     {
-        ref readonly var dos_header = ref fileData.CastRef<IMAGE_DOS_HEADER>();
-        ref readonly var header = ref fileData.Slice(dos_header.e_lfanew).CastRef<IMAGE_NT_HEADERS>();
+        ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
+        ref readonly var header = ref fileData.Slice(dos_header.e_lfanew).CastRef<ImageNtHeaders>();
 
         if (header.Signature != 0x4550 || header.FileHeader.SizeOfOptionalHeader == 0)
         {
@@ -195,37 +200,21 @@ public static class NativePE
     /// <returns>Reference to located version resource</returns>
     public static unsafe ReadOnlySpan<byte> GetRawFileVersionResource(ReadOnlySpan<byte> fileData)
     {
-        ref readonly var dos_header = ref fileData.CastRef<IMAGE_DOS_HEADER>();
+        var section_header = FindSection(fileData, RsrcId);
 
-        if (dos_header.e_magic != IMAGE_DOS_HEADER.ExpectedMagic)
+        if (section_header.SizeOfRawData == 0)
         {
-            throw new BadImageFormatException();
+            return null;
         }
 
-        var header_ptr = fileData.Slice(dos_header.e_lfanew);
+        var raw = fileData.Slice(section_header.PointerToRawData, section_header.SizeOfRawData);
 
-        ref readonly var header = ref header_ptr.CastRef<IMAGE_NT_HEADERS>();
+        var resource_header = GetRawFileDirectoryEntry(fileData, ImageDirectoryEntry.Resource);
 
-        var sizeOfOptionalHeader = header.FileHeader.SizeOfOptionalHeader;
-
-        if (header.Signature != IMAGE_NT_HEADERS.ExpectedSignature
-            || sizeOfOptionalHeader == 0)
+        if (resource_header.Size == 0)
         {
-            throw new BadImageFormatException();
+            return null;
         }
-
-        var optional_header_ptr = fileData.Slice(dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) - sizeof(IMAGE_OPTIONAL_HEADER));
-
-        var data_table = GetImageDataTable(sizeOfOptionalHeader, optional_header_ptr);
-
-        ref readonly var resource_header = ref data_table[(int)ImageDirectoryEntry.Resource];
-
-        var section_table = MemoryMarshal.Cast<byte, ImageSectionHeader>(optional_header_ptr.Slice(sizeOfOptionalHeader))
-            .Slice(0, header.FileHeader.NumberOfSections);
-
-        ref readonly var section_header = ref FindResourceSection(section_table);
-
-        var raw = fileData.Slice((int)section_header.PointerToRawData);
 
         var resource_section = raw.Slice((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress));
         ref readonly var resource_dir = ref resource_section.CastRef<ImageResourceDirectory>();
@@ -290,14 +279,53 @@ public static class NativePE
                     found_res_block.FixedFileInfo.StructVersion == 0 ||
                     found_res_block.FixedFileInfo.Signature != FixedFileVerInfo.FixedFileVerSignature)
                 {
-                    throw new FileNotFoundException("Unsupported version resource in PE file");
+                    return null;
                 }
 
                 return found_res;
             }
         }
 
-        throw new FileNotFoundException("No version resource in PE file");
+        return null;
+    }
+
+    /// <summary>
+    /// Finds and returns the image section header that matches the specified section identifier.
+    /// </summary>
+    /// <remarks>This method checks the validity of the file data by verifying the DOS header magic number and
+    /// the NT headers signature. If these checks fail, the method returns the default value of <see
+    /// cref="ImageSectionHeader"/>.</remarks>
+    /// <param name="fileData">The binary data of the file to search, represented as a read-only span of bytes.</param>
+    /// <param name="sectionId">The identifier of the section to find, represented as a read-only span of eight bytes.</param>
+    /// <returns>The <see cref="ImageSectionHeader"/> that matches the specified section identifier. Returns the default value of
+    /// <see cref="ImageSectionHeader"/> if the section is not found or if the file data is invalid.</returns>
+    public static unsafe ImageSectionHeader FindSection(ReadOnlySpan<byte> fileData, ReadOnlySpan<byte> sectionId)
+    {
+        ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
+
+        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic)
+        {
+            return default;
+        }
+
+        var header_ptr = fileData.Slice(dos_header.e_lfanew);
+
+        ref readonly var header = ref header_ptr.CastRef<ImageNtHeaders>();
+
+        if (header.Signature != ImageNtHeaders.ExpectedSignature
+            || header.FileHeader.SizeOfOptionalHeader == 0)
+        {
+            return default;
+        }
+
+        var section_table_ptr = fileData.Slice(dos_header.e_lfanew + sizeof(ImageNtHeaders) - sizeof(ImageOptionalHeader) + header.FileHeader.SizeOfOptionalHeader);
+
+        var section_table = MemoryMarshal.Cast<byte, ImageSectionHeader>(section_table_ptr)
+            .Slice(0, header.FileHeader.NumberOfSections);
+
+        var section_header = FindSection(section_table, sectionId);
+
+        return section_header;
     }
 
     /// <summary>
@@ -308,30 +336,74 @@ public static class NativePE
     /// <returns>Reference to located certificate</returns>
     public static unsafe ImageDataDirectory GetRawFileDirectoryEntry(ReadOnlySpan<byte> fileData, ImageDirectoryEntry imageDirectoryEntry)
     {
-        ref readonly var dos_header = ref fileData.CastRef<IMAGE_DOS_HEADER>();
+        ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
 
-        if (dos_header.e_magic != IMAGE_DOS_HEADER.ExpectedMagic)
+        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic)
         {
             throw new BadImageFormatException();
         }
 
         var header_ptr = fileData.Slice(dos_header.e_lfanew);
 
-        ref readonly var header = ref header_ptr.CastRef<IMAGE_NT_HEADERS>();
+        ref readonly var headers = ref header_ptr.CastRef<ImageNtHeaders>();
 
-        var sizeOfOptionalHeader = header.FileHeader.SizeOfOptionalHeader;
+        var sizeOfOptionalHeader = headers.FileHeader.SizeOfOptionalHeader;
 
-        if (header.Signature != IMAGE_NT_HEADERS.ExpectedSignature
+        if (headers.Signature != ImageNtHeaders.ExpectedSignature
             || sizeOfOptionalHeader == 0)
         {
             throw new BadImageFormatException();
         }
 
-        var optional_header_ptr = fileData.Slice(dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) - sizeof(IMAGE_OPTIONAL_HEADER));
+        var optional_header_ptr = header_ptr.Slice(sizeof(ImageNtHeaders) - sizeof(ImageOptionalHeader), sizeOfOptionalHeader);
 
-        var data_table = GetImageDataTable(sizeOfOptionalHeader, optional_header_ptr);
+        ReadOnlySpan<ImageDataDirectory> data_directory;
 
-        return data_table[(int)imageDirectoryEntry];
+        switch (headers.OptionalHeader.Magic)
+        {
+            case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR32_MAGIC:
+                {
+                    var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader32));
+
+                    data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
+
+                    ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader32>();
+
+                    data_directory = data_directory.Slice(0, optional_header.NumberOfRvaAndSizes);
+
+                    break;
+                }
+
+            case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR64_MAGIC:
+                {
+                    var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader64));
+
+                    data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
+
+                    ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader64>();
+
+                    data_directory = data_directory.Slice(0, optional_header.NumberOfRvaAndSizes);
+
+                    break;
+                }
+
+            case ImageOptionalHeaderMagic.IMAGE_ROM_OPTIONAL_HDR_MAGIC:
+                {
+                    throw new BadImageFormatException("ROM images are not supported");
+                }
+
+            default:
+                throw new BadImageFormatException();
+        }
+
+        var index = (int)imageDirectoryEntry;
+        
+        if (index < 0 || index >= data_directory.Length)
+        {
+            return default;
+        }
+
+        return data_directory[index];
     }
 
     /// <summary>
@@ -358,26 +430,26 @@ public static class NativePE
     {
         var fileSpan = fileData.AsSpan(0, fileLength);
 
-        ref readonly var dos_header = ref fileSpan.CastRef<IMAGE_DOS_HEADER>();
+        ref readonly var dos_header = ref fileSpan.CastRef<ImageDosHeader>();
 
-        if (dos_header.e_magic != IMAGE_DOS_HEADER.ExpectedMagic)
+        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic)
         {
             throw new BadImageFormatException();
         }
 
         var header_ptr = fileSpan.Slice(dos_header.e_lfanew);
 
-        ref readonly var header = ref header_ptr.CastRef<IMAGE_NT_HEADERS>();
+        ref readonly var header = ref header_ptr.CastRef<ImageNtHeaders>();
 
         var sizeOfOptionalHeader = header.FileHeader.SizeOfOptionalHeader;
 
-        if (header.Signature != IMAGE_NT_HEADERS.ExpectedSignature
+        if (header.Signature != ImageNtHeaders.ExpectedSignature
             || sizeOfOptionalHeader == 0)
         {
             throw new BadImageFormatException();
         }
 
-        var optional_header_ptr = fileSpan.Slice(dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) - sizeof(IMAGE_OPTIONAL_HEADER));
+        var optional_header_ptr = fileSpan.Slice(dos_header.e_lfanew + sizeof(ImageNtHeaders) - sizeof(ImageOptionalHeader));
 
         ReadOnlySpan<ImageDataDirectory> data_table;
 
@@ -422,7 +494,7 @@ public static class NativePE
         }
         else
         {
-            hashAlgorithm.TransformBlock(fileData, afterDataTableEntryOffset, (int)(security_header.RelativeVirtualAddress - afterDataTableEntryOffset), null, 0);
+            hashAlgorithm.TransformBlock(fileData, afterDataTableEntryOffset, security_header.RelativeVirtualAddress - afterDataTableEntryOffset, null, 0);
         }
 
         hashAlgorithm.TransformFinalBlock([], 0, 0);
@@ -466,87 +538,210 @@ public static class NativePE
         .Slice(0, MemoryMarshal.Read<WinCertificateHeader>(certificateSection).Length)
         .Slice(sizeof(WinCertificateHeader));
 
-    private static ref readonly ImageSectionHeader FindResourceSection(ReadOnlySpan<ImageSectionHeader> section_table)
+    private static ImageSectionHeader FindSection(ReadOnlySpan<ImageSectionHeader> section_table, ReadOnlySpan<byte> sectionId)
     {
-        for (var i = 0; i < section_table.Length; i++)
+        foreach (var section_header in section_table)
         {
-            if (section_table[i].Name.SequenceEqual(RsrcId))
+            if (section_header.Name.SequenceEqual(sectionId))
             {
-                return ref section_table[i];
+                return section_header;
             }
         }
 
-        throw new BadImageFormatException("No resource section found in PE file");
+        return default;
     }
+}
+
+/// <summary>
+/// Identifies the various directory entries in a PE (Portable Executable) file's optional header.
+/// These correspond to IMAGE_DIRECTORY_ENTRY_* constants in winnt.h.
+/// </summary>
+public enum ImageDirectoryEntry
+{
+    /// <summary>Export Directory</summary>
+    Export = 0,
+
+    /// <summary>Import Directory</summary>
+    Import = 1,
+
+    /// <summary>Resource Directory</summary>
+    Resource = 2,
+
+    /// <summary>Exception Directory</summary>
+    Exception = 3,
+
+    /// <summary>Security Directory</summary>
+    Security = 4,
+
+    /// <summary>Base Relocation Table</summary>
+    BaseRelocationTable = 5,
+
+    /// <summary>Debug Directory</summary>
+    Debug = 6,
+
+    /// <summary>Architecture Specific Data (formerly IMAGE_DIRECTORY_ENTRY_COPYRIGHT on x86)</summary>
+    Architecture = 7,
+
+    /// <summary>RVA of Global Pointer</summary>
+    GlobalPointer = 8,
+
+    /// <summary>TLS (Thread Local Storage) Directory</summary>
+    Tls = 9,
+
+    /// <summary>Load Configuration Directory</summary>
+    LoadConfig = 10,
+
+    /// <summary>Bound Import Directory in headers</summary>
+    BoundImport = 11,
+
+    /// <summary>Import Address Table</summary>
+    ImportAddressTable = 12,
+
+    /// <summary>Delay Load Import Descriptors</summary>
+    DelayImport = 13,
+
+    /// <summary>COM Runtime Descriptor</summary>
+    ComDescriptor = 14
+}
+
+public enum ImageFileMachine : WORD
+{
+    UNKNOWN = 0,
+    I386 = 0x014c,
+    R3000 = 0x0162,
+    R4000 = 0x0166,
+    R10000 = 0x0168,
+    WCEMIPSV2 = 0x0169,
+    ALPHA = 0x0184,
+    SH3 = 0x01a2,
+    SH3DSP = 0x01a3,
+    SH3E = 0x01a4,
+    SH4 = 0x01a6,
+    SH5 = 0x01a8,
+    ARM = 0x01c0,
+    THUMB = 0x01c2,
+    ARM2 = 0x01c4,
+    AM33 = 0x01d3,
+    POWERPC = 0x01F0,
+    POWERPCFP = 0x01f1,
+    IA64 = 0x0200,
+    MIPS16 = 0x0266,
+    ALPHA64 = 0x0284,
+    MIPSFPU = 0x0366,
+    MIPSFPU16 = 0x0466,
+    TRICORE = 0x0520,
+    CEF = 0x0CEF,
+    EBC = 0x0EBC,
+    AMD64 = 0x8664,
+    M32R = 0x9041,
+    ARM64 = 0xAA64,
+    CEE = 0xC0EE
+}
+
+/// <summary>
+/// PE image header
+/// </summary>
+public readonly struct ImageFileHeader
+{
+    public static readonly unsafe int SizeOf = sizeof(ImageFileHeader);
+
+    public ImageFileMachine Machine { get; }
+    public WORD NumberOfSections { get; }
+    public DWORD TimeDateStamp { get; }
+    public DWORD PointerToSymbolTable { get; }
+    public DWORD NumberOfSymbols { get; }
+    public WORD SizeOfOptionalHeader { get; }
+    public WORD Characteristics { get; }
+}
+
+public readonly struct ImageDataDirectory
+{
+    public int RelativeVirtualAddress { get; }
+    public int Size { get; }
+}
+
+/// <summary>
+/// Identifies the format of the IMAGE_OPTIONAL_HEADER in a PE file.
+/// </summary>
+public enum ImageOptionalHeaderMagic : ushort
+{
+    /// <summary>
+    /// Standard 32-bit executable (PE32).
+    /// </summary>
+    IMAGE_NT_OPTIONAL_HDR32_MAGIC = 0x10B,
 
     /// <summary>
-    /// Identifies the various directory entries in a PE (Portable Executable) file's optional header.
-    /// These correspond to IMAGE_DIRECTORY_ENTRY_* constants in winnt.h.
+    /// 64-bit executable (PE32+).
     /// </summary>
-    public enum ImageDirectoryEntry
-    {
-        /// <summary>Export Directory</summary>
-        Export = 0,
+    IMAGE_NT_OPTIONAL_HDR64_MAGIC = 0x20B,
 
-        /// <summary>Import Directory</summary>
-        Import = 1,
+    /// <summary>
+    /// ROM image.
+    /// </summary>
+    IMAGE_ROM_OPTIONAL_HDR_MAGIC = 0x107
+}
 
-        /// <summary>Resource Directory</summary>
-        Resource = 2,
+/// <summary>
+/// PE optional header
+/// </summary>
+public readonly struct ImageOptionalHeader
+{
+    public static readonly unsafe int SizeOf = sizeof(ImageOptionalHeader);
 
-        /// <summary>Exception Directory</summary>
-        Exception = 3,
+    //
+    // Standard fields.
+    //
 
-        /// <summary>Security Directory</summary>
-        Security = 4,
+    public ImageOptionalHeaderMagic Magic { get; }
+    public BYTE MajorLinkerVersion { get; }
+    public BYTE MinorLinkerVersion { get; }
+    public DWORD SizeOfCode { get; }
+    public DWORD SizeOfInitializedData { get; }
+    public DWORD SizeOfUninitializedData { get; }
+    public DWORD AddressOfEntryPoint { get; }
+    public DWORD BaseOfCode { get; }
 
-        /// <summary>Base Relocation Table</summary>
-        BaseRelocationTable = 5,
+    // Different fields follow depending on architecture
+}
 
-        /// <summary>Debug Directory</summary>
-        Debug = 6,
+public struct ImageDosHeader
+{      // DOS .EXE header
+    public static readonly WORD ExpectedMagic = MemoryMarshal.Read<WORD>("MZ"u8);
 
-        /// <summary>Architecture Specific Data (formerly IMAGE_DIRECTORY_ENTRY_COPYRIGHT on x86)</summary>
-        Architecture = 7,
+    public static unsafe readonly int SizeOf = sizeof(ImageDosHeader);
 
-        /// <summary>RVA of Global Pointer</summary>
-        GlobalPointer = 8,
+    public readonly WORD e_magic;                     // Magic number
+    public readonly WORD e_cblp;                      // Bytes on last page of file
+    public readonly WORD e_cp;                        // Pages in file
+    public readonly WORD e_crlc;                      // Relocations
+    public readonly WORD e_cparhdr;                   // Size of header in paragraphs
+    public readonly WORD e_minalloc;                  // Minimum extra paragraphs needed
+    public readonly WORD e_maxalloc;                  // Maximum extra paragraphs needed
+    public readonly WORD e_ss;                        // Initial (relative) SS value
+    public readonly WORD e_sp;                        // Initial SP value
+    public readonly WORD e_csum;                      // Checksum
+    public readonly WORD e_ip;                        // Initial IP value
+    public readonly WORD e_cs;                        // Initial (relative) CS value
+    public readonly WORD e_lfarlc;                    // File address of relocation table
+    public readonly WORD e_ovno;                      // Overlay number
+    public unsafe fixed WORD e_res[4];                // Reserved words
+    public readonly WORD e_oemid;                     // OEM identifier (for e_oeminfo)
+    public readonly WORD e_oeminfo;                   // OEM information; e_oemid specific
+    public unsafe fixed WORD e_res2[10];              // Reserved words
+    public readonly LONG e_lfanew;                    // File address of new exe header
+}
 
-        /// <summary>TLS (Thread Local Storage) Directory</summary>
-        Tls = 9,
+/// <summary>
+/// Base of PE headers
+/// </summary>
+public readonly struct ImageNtHeaders
+{
+    public static readonly unsafe int SizeOf = sizeof(ImageNtHeaders);
 
-        /// <summary>Load Configuration Directory</summary>
-        LoadConfig = 10,
+    public static readonly WORD ExpectedSignature = MemoryMarshal.Read<WORD>("PE\0\0"u8);
 
-        /// <summary>Bound Import Directory in headers</summary>
-        BoundImport = 11,
-
-        /// <summary>Import Address Table</summary>
-        ImportAddressTable = 12,
-
-        /// <summary>Delay Load Import Descriptors</summary>
-        DelayImport = 13,
-
-        /// <summary>COM Runtime Descriptor</summary>
-        ComDescriptor = 14
-    }
-
-    private static unsafe ReadOnlySpan<ImageDataDirectory> GetImageDataTable(ushort sizeOfOptionalHeader, ReadOnlySpan<byte> optional_header_ptr)
-    {
-        if (sizeOfOptionalHeader == sizeof(ImageOptionalHeader32) + 16 * sizeof(ImageDataDirectory))
-        {
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader32));
-            var data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
-            return data_directory;
-        }
-        else if (sizeOfOptionalHeader == sizeof(ImageOptionalHeader64) + 16 * sizeof(ImageDataDirectory))
-        {
-            var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader64));
-            var data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
-            return data_directory;
-        }
-
-        throw new BadImageFormatException($"Unsupported size of optional header ({sizeOfOptionalHeader})");
-    }
+    public int Signature { get; }
+    public ImageFileHeader FileHeader { get; }
+    public ImageOptionalHeader OptionalHeader { get; }
 }
 

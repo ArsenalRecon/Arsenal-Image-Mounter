@@ -12,15 +12,15 @@ using Arsenal.ImageMounter.Extensions;
 using LTRData.Extensions.Buffers;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Diagnostics.CodeAnalysis;
+
+
 
 #if NET6_0_OR_GREATER
 using System.Collections.Immutable;
 #endif
 using System.Runtime.InteropServices;
-using BYTE = System.Byte;
-using DWORD = System.UInt32;
-using LONG = System.Int32;
-using WORD = System.UInt16;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable 0649
@@ -28,125 +28,6 @@ using WORD = System.UInt16;
 #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.Native;
-public enum IMAGE_FILE_MACHINE : WORD
-{
-    UNKNOWN = 0,
-    I386 = 0x014c,
-    R3000 = 0x0162,
-    R4000 = 0x0166,
-    R10000 = 0x0168,
-    WCEMIPSV2 = 0x0169,
-    ALPHA = 0x0184,
-    SH3 = 0x01a2,
-    SH3DSP = 0x01a3,
-    SH3E = 0x01a4,
-    SH4 = 0x01a6,
-    SH5 = 0x01a8,
-    ARM = 0x01c0,
-    THUMB = 0x01c2,
-    ARM2 = 0x01c4,
-    AM33 = 0x01d3,
-    POWERPC = 0x01F0,
-    POWERPCFP = 0x01f1,
-    IA64 = 0x0200,
-    MIPS16 = 0x0266,
-    ALPHA64 = 0x0284,
-    MIPSFPU = 0x0366,
-    MIPSFPU16 = 0x0466,
-    TRICORE = 0x0520,
-    CEF = 0x0CEF,
-    EBC = 0x0EBC,
-    AMD64 = 0x8664,
-    M32R = 0x9041,
-    ARM64 = 0xAA64,
-    CEE = 0xC0EE
-}
-
-/// <summary>
-/// PE image header
-/// </summary>
-public readonly struct IMAGE_FILE_HEADER
-{
-    public static readonly unsafe int SizeOf = sizeof(IMAGE_FILE_HEADER);
-
-    public IMAGE_FILE_MACHINE Machine { get; }
-    public WORD NumberOfSections { get; }
-    public DWORD TimeDateStamp { get; }
-    public DWORD PointerToSymbolTable { get; }
-    public DWORD NumberOfSymbols { get; }
-    public WORD SizeOfOptionalHeader { get; }
-    public WORD Characteristics { get; }
-}
-
-public readonly struct ImageDataDirectory
-{
-    public DWORD RelativeVirtualAddress { get; }
-    public DWORD Size { get; }
-}
-
-/// <summary>
-/// PE optional header
-/// </summary>
-public readonly struct IMAGE_OPTIONAL_HEADER
-{
-    public static readonly unsafe int SizeOf = sizeof(IMAGE_OPTIONAL_HEADER);
-
-    //
-    // Standard fields.
-    //
-
-    public WORD Magic { get; }
-    public BYTE MajorLinkerVersion { get; }
-    public BYTE MinorLinkerVersion { get; }
-    public DWORD SizeOfCode { get; }
-    public DWORD SizeOfInitializedData { get; }
-    public DWORD SizeOfUninitializedData { get; }
-    public DWORD AddressOfEntryPoint { get; }
-    public DWORD BaseOfCode { get; }
-
-    // Different fields follow depending on architecture
-}
-
-public struct IMAGE_DOS_HEADER
-{      // DOS .EXE header
-    public static readonly WORD ExpectedMagic = MemoryMarshal.Read<WORD>("MZ"u8);
-
-    public static unsafe readonly int SizeOf = sizeof(IMAGE_DOS_HEADER);
-
-    public readonly WORD e_magic;                     // Magic number
-    public readonly WORD e_cblp;                      // Bytes on last page of file
-    public readonly WORD e_cp;                        // Pages in file
-    public readonly WORD e_crlc;                      // Relocations
-    public readonly WORD e_cparhdr;                   // Size of header in paragraphs
-    public readonly WORD e_minalloc;                  // Minimum extra paragraphs needed
-    public readonly WORD e_maxalloc;                  // Maximum extra paragraphs needed
-    public readonly WORD e_ss;                        // Initial (relative) SS value
-    public readonly WORD e_sp;                        // Initial SP value
-    public readonly WORD e_csum;                      // Checksum
-    public readonly WORD e_ip;                        // Initial IP value
-    public readonly WORD e_cs;                        // Initial (relative) CS value
-    public readonly WORD e_lfarlc;                    // File address of relocation table
-    public readonly WORD e_ovno;                      // Overlay number
-    public unsafe fixed WORD e_res[4];                // Reserved words
-    public readonly WORD e_oemid;                     // OEM identifier (for e_oeminfo)
-    public readonly WORD e_oeminfo;                   // OEM information; e_oemid specific
-    public unsafe fixed WORD e_res2[10];              // Reserved words
-    public readonly LONG e_lfanew;                    // File address of new exe header
-}
-
-/// <summary>
-/// Base of PE headers
-/// </summary>
-public readonly struct IMAGE_NT_HEADERS
-{
-    public static readonly unsafe int SizeOf = sizeof(IMAGE_NT_HEADERS);
-
-    public static readonly WORD ExpectedSignature = MemoryMarshal.Read<WORD>("PE\0\0"u8);
-
-    public int Signature { get; }
-    public IMAGE_FILE_HEADER FileHeader { get; }
-    public IMAGE_OPTIONAL_HEADER OptionalHeader { get; }
-}
 
 public enum VersionResourceType : ushort
 {
@@ -512,10 +393,10 @@ public class NativeFileVersion
     /// <param name="strRecordName">Name of string record</param>
     /// <param name="dwTranslationCode">Translation language code or MaxValue to use default for version resource</param>
     /// <returns>Pointer to located string, or null if not found</returns>
-    internal static ReadOnlySpan<char> QueryValueWithTranslation(ReadOnlySpan<byte> versionResource, string strRecordName, DWORD dwTranslationCode = DWORD.MaxValue)
+    internal static ReadOnlySpan<char> QueryValueWithTranslation(ReadOnlySpan<byte> versionResource, string strRecordName, uint dwTranslationCode = uint.MaxValue)
     {
-        const DWORD dwDefaultTranslationCode = 0x04E40409;
-        if (dwTranslationCode == DWORD.MaxValue)
+        const uint dwDefaultTranslationCode = 0x04E40409;
+        if (dwTranslationCode == uint.MaxValue)
         {
             var lpwTranslationCode = QueryValueInt(versionResource, "VarFileInfo", "Translation");
 
@@ -538,29 +419,61 @@ public class NativeFileVersion
     /// Parses raw or mapped file data into a NativeFileVersion structure
     /// </summary>
     /// <param name="fileData">Raw or mapped exe or dll file data with a version resource</param>
-    public NativeFileVersion(ReadOnlySpan<byte> fileData)
+    public static NativeFileVersion GetVersion(ReadOnlySpan<byte> fileData)
     {
-        var ptr = NativePE.GetRawFileVersionResource(fileData);
+        var ver = NativePE.GetRawFileVersionResource(fileData);
 
-        ref readonly var verHeader = ref ptr.CastRef<VS_VERSIONINFO>();
+        if (ver.IsEmpty)
+        {
+            throw new ArgumentException("File does not contain a version resource.");
+        }
+
+        return new(ver);
+    }
+
+    private NativeFileVersion(ReadOnlySpan<byte> ver)
+    {
+        ref readonly var verHeader = ref ver.CastRef<VS_VERSIONINFO>();
 
         Fixed = verHeader.FixedFileInfo;
 
-        var lpdwTranslationCode = QueryValueInt(ptr, "VarFileInfo", "Translation");
+        var lpdwTranslationCode = QueryValueInt(ver, "VarFileInfo", "Translation");
 
         if (!lpdwTranslationCode.HasValue)
         {
             lpdwTranslationCode = 0x04E40409;
         }
 
-        var fields = QueryValueStrings(ptr, "StringFileInfo", lpdwTranslationCode.Value);
-        
-        fields.Add("TranslationCode", lpdwTranslationCode.Value.ToString("X"));
+        var fields = QueryValueStrings(ver, "StringFileInfo", lpdwTranslationCode.Value);
+
+        fields["TranslationCode"] = lpdwTranslationCode.Value.ToString("X");
 
 #if NET6_0_OR_GREATER
         Fields = fields.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
 #else
         Fields = fields.AsReadOnly();
 #endif
+    }
+
+    /// <summary>
+    /// Parses raw or mapped file data into a NativeFileVersion structure
+    /// </summary>
+    /// <param name="fileData">Raw or mapped exe or dll file data with a version resource</param>
+    /// <param name="version">Located NativeFileVersion structure, or null if not found</param>
+    /// <returns>True if version resource found, false if not</returns>
+    public static bool TryGetVersion(ReadOnlySpan<byte> fileData, [NotNullWhen(true)] out NativeFileVersion? version)
+    {
+        version = null;
+        
+        var ver = NativePE.GetRawFileVersionResource(fileData);
+        
+        if (ver.IsEmpty)
+        {
+            return false;
+        }
+
+        version = new(ver);
+        
+        return true;
     }
 }
