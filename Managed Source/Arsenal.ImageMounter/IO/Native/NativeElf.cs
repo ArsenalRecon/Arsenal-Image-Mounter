@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -585,29 +586,39 @@ public struct ElfHeader
     private unsafe fixed byte type[2];       // 2=executable, 3=shared object
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    private unsafe ReadOnlySpan<byte> TypePtr => MemoryMarshal.CreateReadOnlySpan(ref type[0], sizeof(ushort));
+#else
+    private unsafe ReadOnlySpan<byte> TypePtr => new(Unsafe.AsPointer(ref type[0]), sizeof(ushort));
+#endif
+
     public unsafe ElfType Type => (ElfType)(data switch
     {
-        ElfData.ELFDATA2LSB => EndianUtilities.ToUInt16LittleEndian(MemoryMarshal.CreateReadOnlySpan(ref type[0], sizeof(ushort))),
-        ElfData.ELFDATA2MSB => EndianUtilities.ToUInt16BigEndian(MemoryMarshal.CreateReadOnlySpan(ref type[0], sizeof(ushort))),
+        ElfData.ELFDATA2LSB => EndianUtilities.ToUInt16LittleEndian(TypePtr),
+        ElfData.ELFDATA2MSB => EndianUtilities.ToUInt16BigEndian(TypePtr),
         _ => throw new NotSupportedException(),
     });
-#endif
 
     private unsafe fixed byte machine[2];    // 0x3E=x86-64, 0x28=ARM64
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public unsafe ElfMachine Machine => (ElfMachine)(data switch
-    {
-        ElfData.ELFDATA2LSB => EndianUtilities.ToUInt16LittleEndian(MemoryMarshal.CreateReadOnlySpan(ref machine[0], sizeof(ushort))),
-        ElfData.ELFDATA2MSB => EndianUtilities.ToUInt16BigEndian(MemoryMarshal.CreateReadOnlySpan(ref machine[0], sizeof(ushort))),
-        _ => throw new NotSupportedException(),
-    });
+    private unsafe ReadOnlySpan<byte> MachinePtr => MemoryMarshal.CreateReadOnlySpan(ref machine[0], sizeof(ushort));
+#else
+    private unsafe ReadOnlySpan<byte> MachinePtr => new(Unsafe.AsPointer(ref machine[0]), sizeof(ushort));
 #endif
 
+    public unsafe ElfMachine Machine => (ElfMachine)(data switch
+    {
+        ElfData.ELFDATA2LSB => EndianUtilities.ToUInt16LittleEndian(MachinePtr),
+        ElfData.ELFDATA2MSB => EndianUtilities.ToUInt16BigEndian(MachinePtr),
+        _ => throw new NotSupportedException(),
+    });
+
     public readonly uint Version;
-    public readonly ulong EntryPoint;
-    public readonly ulong ProgramHeaderOffset;
-    public readonly ulong SectionHeaderOffset;
+};
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct ElfHeaderEnd
+{
     public readonly uint Flags;
     public readonly ushort HeaderSize;
     public readonly ushort ProgramHeaderEntrySize;
@@ -617,3 +628,26 @@ public struct ElfHeader
     public readonly ushort SectionHeaderStringTableIndex;
 };
 
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct ElfHeader64
+{
+    public readonly ElfHeader Base;
+
+    public readonly ulong EntryPoint;
+    public readonly ulong ProgramHeaderOffset;
+    public readonly ulong SectionHeaderOffset;
+
+    public readonly ElfHeaderEnd End;
+};
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct ElfHeader32
+{
+    public readonly ElfHeader Base;
+
+    public readonly uint EntryPoint;
+    public readonly uint ProgramHeaderOffset;
+    public readonly uint SectionHeaderOffset;
+
+    public readonly ElfHeaderEnd End;
+};
