@@ -231,7 +231,6 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
         try
         {
-
             using var mapping = MemoryMappedFile.CreateNew(null,
                                                            bufferSize,
                                                            MemoryMappedFileAccess.ReadWrite,
@@ -244,7 +243,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
             bufferId = mapView.SafeMemoryMappedViewHandle.DangerousGetHandle();
 
-            mapMemoryManager = mapView.SafeMemoryMappedViewHandle.GetMemoryManager();
+            mapMemoryManager = mapView.SafeMemoryMappedViewHandle.GetMemoryManager(ownsBuffer: false);
 
             mapMemory = mapMemoryManager.Memory;
 
@@ -420,7 +419,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
                         bufferId = mapView.SafeMemoryMappedViewHandle.DangerousGetHandle();
 
-                        mapMemoryManager = mapView.SafeMemoryMappedViewHandle.GetMemoryManager();
+                        mapMemoryManager = mapView.SafeMemoryMappedViewHandle.GetMemoryManager(ownsBuffer: false);
 
                         mapMemory = mapMemoryManager.Memory;
 

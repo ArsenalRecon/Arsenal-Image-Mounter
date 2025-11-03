@@ -9,6 +9,7 @@
 // 
 
 using LTRData.Extensions.Buffers;
+using LTRData.Extensions.Native.Memory;
 using LTRData.Extensions.Split;
 using Microsoft.Win32.SafeHandles;
 using System;
