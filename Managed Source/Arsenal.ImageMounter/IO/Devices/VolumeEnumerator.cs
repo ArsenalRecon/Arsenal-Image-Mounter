@@ -52,10 +52,14 @@ public readonly struct VolumeEnumerator : IEnumerable<string>
 
         public bool MoveNext()
         {
+#if NET7_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+#else
             if (disposedValue)
             {
-                throw new ObjectDisposedException("VolumeEnumerator.Enumerator");
+                throw new ObjectDisposedException(typeof(Enumerator).Name);
             }
+#endif
 
             if (SafeHandle is null)
             {

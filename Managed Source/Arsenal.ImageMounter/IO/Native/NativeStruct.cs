@@ -286,10 +286,7 @@ public static class NativeStruct
 
             await write_task.ConfigureAwait(false);
 
-            if (completionPosition is not null)
-            {
-                completionPosition.LengthComplete = target.Position;
-            }
+            completionPosition?.LengthComplete = target.Position;
 
             if (count <= 0)
             {

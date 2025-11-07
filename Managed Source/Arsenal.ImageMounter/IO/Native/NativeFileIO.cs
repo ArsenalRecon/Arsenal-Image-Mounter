@@ -23,9 +23,7 @@ using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-#if NET6_0_OR_GREATER
 using System.Collections.Immutable;
-#endif
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1180,7 +1178,7 @@ public static partial class NativeFileIO
 
                 var Response = DeviceIoControl(adapter, NativeConstants.IOCTL_SCSI_MINIPORT, indata, 0);
 
-                header = MemoryMarshal.Read<SRB_IO_CONTROL>(Response);
+                header = Response.CastRef<SRB_IO_CONTROL>();
 
                 returncode = header.ReturnCode;
 
@@ -1384,14 +1382,14 @@ public static partial class NativeFileIO
 
             if (partitions is not null)
             {
-                partitioncount = Enumerable.Count(partitions,
+                partitioncount = Enumerable.Count(partitions.Value,
                                                 part => part.PartitionLength > 0 &&
                                                 ((part.PartitionStyle == PARTITION_STYLE.GPT &&
                                                 WindowsRecognizedGPTPartitionTypes.Contains(part.GPT.PartitionType)) ||
                                                 (part.PartitionStyle == PARTITION_STYLE.MBR &&
                                                 WindowsRecognizedMBRPartitionTypes.Contains((byte)part.MBR.PartitionType))));
 
-                Trace.WriteLine($"Found {partitioncount} recognizable partitions of {partitions.Count} total in partition table.");
+                Trace.WriteLine($"Found {partitioncount} recognizable partitions of {partitions.Value.Length} total in partition table.");
             }
             else
             {
@@ -1482,14 +1480,14 @@ public static partial class NativeFileIO
 
             if (partitions is not null)
             {
-                partitioncount = Enumerable.Count(partitions,
+                partitioncount = Enumerable.Count(partitions.Value,
                                                 part => part.PartitionLength > 0 &&
                                                 ((part.PartitionStyle == PARTITION_STYLE.GPT &&
                                                 WindowsRecognizedGPTPartitionTypes.Contains(part.GPT.PartitionType)) ||
                                                 (part.PartitionStyle == PARTITION_STYLE.MBR &&
                                                 WindowsRecognizedMBRPartitionTypes.Contains((byte)part.MBR.PartitionType))));
 
-                Trace.WriteLine($"Found {partitioncount} recognizable partitions of {partitions.Count} total in partition table.");
+                Trace.WriteLine($"Found {partitioncount} recognizable partitions of {partitions.Value.Length} total in partition table.");
             }
             else
             {
@@ -3597,7 +3595,7 @@ Currently, the following application has files open on this volume:
 
     public static unsafe PARTITION_INFORMATION? GetPartitionInformation(SafeFileHandle disk)
         => UnsafeNativeMethods.DeviceIoControl(disk,
-                                               NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX,
+                                               NativeConstants.IOCTL_DISK_GET_PARTITION_INFO,
                                                0,
                                                0U,
                                                out PARTITION_INFORMATION partition_info,
@@ -3631,13 +3629,13 @@ Currently, the following application has files open on this volume:
     {
         public DRIVE_LAYOUT_INFORMATION_EX DriveLayoutInformation { get; }
 
-        public ReadOnlyCollection<PARTITION_INFORMATION_EX> Partitions { get; }
+        public ImmutableArray<PARTITION_INFORMATION_EX> Partitions { get; }
 
-        public DriveLayoutInformationType(DRIVE_LAYOUT_INFORMATION_EX DriveLayoutInformation, IList<PARTITION_INFORMATION_EX> Partitions)
+        public DriveLayoutInformationType(DRIVE_LAYOUT_INFORMATION_EX DriveLayoutInformation, ReadOnlySpan<PARTITION_INFORMATION_EX> Partitions)
         {
 
             this.DriveLayoutInformation = DriveLayoutInformation;
-            this.Partitions = new ReadOnlyCollection<PARTITION_INFORMATION_EX>(Partitions);
+            this.Partitions = Partitions.ToImmutableArray();
         }
 
         public override int GetHashCode() => 0;
@@ -3649,7 +3647,9 @@ Currently, the following application has files open on this volume:
     {
         public DRIVE_LAYOUT_INFORMATION_MBR MBR { get; }
 
-        public DriveLayoutInformationMBR(DRIVE_LAYOUT_INFORMATION_EX DriveLayoutInformation, PARTITION_INFORMATION_EX[] Partitions, DRIVE_LAYOUT_INFORMATION_MBR DriveLayoutInformationMBR)
+        public DriveLayoutInformationMBR(DRIVE_LAYOUT_INFORMATION_EX DriveLayoutInformation,
+                                         ReadOnlySpan<PARTITION_INFORMATION_EX> Partitions,
+                                         in DRIVE_LAYOUT_INFORMATION_MBR DriveLayoutInformationMBR)
             : base(DriveLayoutInformation, Partitions)
         {
 
@@ -3665,7 +3665,9 @@ Currently, the following application has files open on this volume:
     {
         public DRIVE_LAYOUT_INFORMATION_GPT GPT { get; }
 
-        public DriveLayoutInformationGPT(DRIVE_LAYOUT_INFORMATION_EX DriveLayoutInformation, PARTITION_INFORMATION_EX[] Partitions, DRIVE_LAYOUT_INFORMATION_GPT DriveLayoutInformationGPT)
+        public DriveLayoutInformationGPT(DRIVE_LAYOUT_INFORMATION_EX DriveLayoutInformation,
+                                         ReadOnlySpan<PARTITION_INFORMATION_EX> Partitions,
+                                         in DRIVE_LAYOUT_INFORMATION_GPT DriveLayoutInformationGPT)
             : base(DriveLayoutInformation, Partitions)
         {
             GPT = DriveLayoutInformationGPT;
@@ -3716,7 +3718,7 @@ Currently, the following application has files open on this volume:
                     return null;
                 }
 
-                var layout = MemoryMarshal.Read<DRIVE_LAYOUT_INFORMATION_EX>(buffer);
+                ref readonly var layout = ref buffer.CastRef<DRIVE_LAYOUT_INFORMATION_EX>();
 
                 if (layout.PartitionCount > max_partitions)
                 {
@@ -3724,26 +3726,18 @@ Currently, the following application has files open on this volume:
                     continue;
                 }
 
-                var partitions = new PARTITION_INFORMATION_EX[layout.PartitionCount];
-
-                for (int i = 0, loopTo = layout.PartitionCount - 1; i <= loopTo; i++)
-                {
-                    var source = buffer
-                        .AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()
-                        + Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_GPT>()
-                        + i * Unsafe.SizeOf<PARTITION_INFORMATION_EX>());
-
-                    partitions[i] = MemoryMarshal.Read<PARTITION_INFORMATION_EX>(source);
-                }
+                var partitions = MemoryMarshal
+                    .Cast<byte, PARTITION_INFORMATION_EX>(buffer.AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>() + Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_GPT>()))
+                    .Slice(0, layout.PartitionCount);
 
                 if (layout.PartitionStyle == PARTITION_STYLE.MBR)
                 {
-                    var mbr = MemoryMarshal.Read<DRIVE_LAYOUT_INFORMATION_MBR>(buffer.AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()));
+                    ref readonly var mbr = ref buffer.AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()).CastRef<DRIVE_LAYOUT_INFORMATION_MBR>();
                     return new DriveLayoutInformationMBR(layout, partitions, mbr);
                 }
                 else if (layout.PartitionStyle == PARTITION_STYLE.GPT)
                 {
-                    var gpt = MemoryMarshal.Read<DRIVE_LAYOUT_INFORMATION_GPT>(buffer.AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()));
+                    ref readonly var gpt = ref buffer.AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()).CastRef<DRIVE_LAYOUT_INFORMATION_GPT>();
                     return new DriveLayoutInformationGPT(layout, partitions, gpt);
                 }
                 else
@@ -3769,7 +3763,7 @@ Currently, the following application has files open on this volume:
         }
 #endif
 
-        var partition_count = Math.Min(layout.Partitions.Count, layout.DriveLayoutInformation.PartitionCount);
+        var partition_count = Math.Min(layout.Partitions.Length, layout.DriveLayoutInformation.PartitionCount);
 
         var size_needed = Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>()
             + Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_GPT>()

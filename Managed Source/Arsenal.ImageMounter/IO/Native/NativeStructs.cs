@@ -591,16 +591,8 @@ public readonly struct PARTITION_INFORMATION_EX
 
     public PARTITION_INFORMATION_GPT GPT => _part;
 
-    public unsafe PARTITION_INFORMATION_MBR MBR
-    {
-        get
-        {
-            fixed (void* buffer = &_part)
-            {
-                return *(PARTITION_INFORMATION_MBR*)buffer;
-            }
-        }
-    }
+    public PARTITION_INFORMATION_MBR MBR
+        => Unsafe.As<PARTITION_INFORMATION_GPT, PARTITION_INFORMATION_MBR>(ref Unsafe.AsRef(in _part));
 }
 
 [StructLayout(LayoutKind.Sequential)]

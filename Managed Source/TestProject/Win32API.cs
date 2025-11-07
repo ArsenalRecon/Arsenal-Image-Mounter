@@ -1,5 +1,6 @@
 ﻿using Arsenal.ImageMounter.IO.Devices;
 using Arsenal.ImageMounter.IO.Native;
+using System.IO;
 using System.Linq;
 using Xunit;
 
@@ -56,5 +57,29 @@ public class Win32API
         Assert.Equal(@"\??\C:\Users\Default", TargetPath);
         Assert.Equal(@"C:\Users\Default", DisplayName);
         Assert.Equal(SymlinkFlags.FullPath, Flags);
+    }
+
+    [Fact]
+    public void PartitionTests()
+    {
+        using var disk = new DiskDevice(@"\\?\C:", FileAccess.Read);
+
+        var driveLayoutEx = disk.DriveLayoutEx;
+
+        Assert.NotNull(driveLayoutEx);
+
+        Assert.NotEmpty(driveLayoutEx.Partitions);
+
+        var offset1 = disk.PartitionInformation?.HiddenSectors;
+
+        Assert.NotNull(offset1);
+
+        var offset2 = disk.PartitionInformationEx?.StartingOffset;
+
+        Assert.NotNull(offset2);
+
+        var found = driveLayoutEx.Partitions.Where(p => p.StartingOffset == offset2);
+
+        Assert.Single(found);
     }
 }

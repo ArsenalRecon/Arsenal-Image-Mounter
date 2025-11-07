@@ -1,4 +1,5 @@
 ﻿using DiscUtils.Streams;
+using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
 using System;
 using System.Collections.Generic;
@@ -922,7 +923,7 @@ public class ElfReader
     {
         FileContents = fileContents;
 
-        var raw = MemoryMarshal.Read<ElfHeaderRaw>(fileContents.Span);
+        ref readonly var raw = ref fileContents.Span.CastRef<ElfHeaderRaw>();
 
         if (!raw.IsValid)
         {
@@ -931,12 +932,12 @@ public class ElfReader
 
         if (raw.Is64)
         {
-            var elf64 = MemoryMarshal.Read<ElfHeader64>(fileContents.Span);
+            var elf64 = fileContents.Span.CastRef<ElfHeader64>();
             Header = elf64.Parse();
         }
         else
         {
-            var elf32 = MemoryMarshal.Read<ElfHeader32>(fileContents.Span);
+            var elf32 = fileContents.Span.CastRef<ElfHeader32>();
             Header = elf32.Parse();
         }
     }
@@ -982,12 +983,12 @@ public class ElfReader
 
             if (Header.Is64)
             {
-                var header = MemoryMarshal.Read<ElfProgramHeader64>(entryData);
+                ref readonly var header = ref entryData.CastRef<ElfProgramHeader64>();
                 programHeader = header.Parse(Header.IsLittleEndian);
             }
             else
             {
-                var header = MemoryMarshal.Read<ElfProgramHeader32>(entryData);
+                ref readonly var header = ref entryData.CastRef<ElfProgramHeader32>();
                 programHeader = header.Parse(Header.IsLittleEndian);
             }
 

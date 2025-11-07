@@ -1,4 +1,5 @@
 ﻿using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Buffers;
 using System;
 using System.IO;
 using System.Linq;

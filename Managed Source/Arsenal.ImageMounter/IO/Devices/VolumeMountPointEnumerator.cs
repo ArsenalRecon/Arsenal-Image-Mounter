@@ -55,10 +55,14 @@ public readonly struct VolumeMountPointEnumerator(string VolumePath) : IEnumerab
 
         public bool MoveNext()
         {
+#if NET7_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+#else
             if (disposedValue)
             {
-                throw new ObjectDisposedException("VolumeMountPointEnumerator.Enumerator");
+                throw new ObjectDisposedException(typeof(Enumerator).Name);
             }
+#endif
 
             if (SafeHandle is null)
             {
