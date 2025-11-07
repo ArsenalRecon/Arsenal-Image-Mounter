@@ -1,4 +1,5 @@
 ﻿using DiscUtils.Streams;
+using LTRData.Extensions.Formatting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,7 @@ namespace Arsenal.ImageMounter.IO.Native;
 
 public enum ElfClass : byte
 {
+    ELFCLASSNONE = 0,
     ELFCLASS32 = 1,
     ELFCLASS64 = 2
 }
@@ -544,100 +546,378 @@ public enum ElfMachine : ushort
     EM_CDP = 215,
 }
 
+public enum ElfMachineFlags : uint
+{
+    EF_NONE = 0
+}
+
+/// <summary>
+/// Identifies the operating system and ABI extensions to which an ELF file conforms.
+/// Corresponds to the e_ident[EI_OSABI] field in the ELF header.
+/// </summary>
+public enum ElfOsAbi : byte
+{
+    /// <summary>
+    /// No extensions or unspecified system.
+    /// </summary>
+    ELFOSABI_NONE = 0,
+
+    /// <summary>
+    /// Hewlett-Packard HP-UX.
+    /// </summary>
+    ELFOSABI_HPUX = 1,
+
+    /// <summary>
+    /// NetBSD.
+    /// </summary>
+    ELFOSABI_NETBSD = 2,
+
+    /// <summary>
+    /// Linux.
+    /// </summary>
+    ELFOSABI_LINUX = 3,
+
+    /// <summary>
+    /// Sun Solaris.
+    /// </summary>
+    ELFOSABI_SOLARIS = 6,
+
+    /// <summary>
+    /// IBM AIX.
+    /// </summary>
+    ELFOSABI_AIX = 7,
+
+    /// <summary>
+    /// SGI IRIX.
+    /// </summary>
+    ELFOSABI_IRIX = 8,
+
+    /// <summary>
+    /// FreeBSD.
+    /// </summary>
+    ELFOSABI_FREEBSD = 9,
+
+    /// <summary>
+    /// Compaq TRU64 UNIX.
+    /// </summary>
+    ELFOSABI_TRU64 = 10,
+
+    /// <summary>
+    /// Novell Modesto.
+    /// </summary>
+    ELFOSABI_MODESTO = 11,
+
+    /// <summary>
+    /// OpenBSD.
+    /// </summary>
+    ELFOSABI_OPENBSD = 12,
+
+    /// <summary>
+    /// OpenVMS.
+    /// </summary>
+    ELFOSABI_OPENVMS = 13,
+
+    /// <summary>
+    /// Hewlett-Packard Non-Stop Kernel.
+    /// </summary>
+    ELFOSABI_NSK = 14
+}
+
 public enum ElfData : byte
 {
+    ELFDATANONE = 0,
     ELFDATA2LSB = 1,
     ELFDATA2MSB = 2
 }
 
-public enum ElfVersion : byte
+public enum ElfVersion : uint
 {
+    EV_NONE = 0,
     EV_CURRENT = 1
 }
 
-public enum ElfType : ushort
+/// <summary>
+/// Identifies the type of an ELF file.
+/// Corresponds to the <c>e_type</c> field in the ELF header.
+/// </summary>
+public enum ElfFileType : ushort
 {
+    /// <summary>
+    /// No file type.
+    /// </summary>
+    ET_NONE = 0,
+
+    /// <summary>
+    /// Relocatable file (object file).
+    /// </summary>
+    ET_REL = 1,
+
+    /// <summary>
+    /// Executable file.
+    /// </summary>
     ET_EXEC = 2,
-    ET_DYN = 3
+
+    /// <summary>
+    /// Shared object file (shared library).
+    /// </summary>
+    ET_DYN = 3,
+
+    /// <summary>
+    /// Core dump file.
+    /// </summary>
+    ET_CORE = 4,
+
+    /// <summary>
+    /// Operating system-specific range start.
+    /// </summary>
+    ET_LOOS = 0xFE00,
+
+    /// <summary>
+    /// Operating system-specific range end.
+    /// </summary>
+    ET_HIOS = 0xFEFF,
+
+    /// <summary>
+    /// Processor-specific range start.
+    /// </summary>
+    ET_LOPROC = 0xFF00,
+
+    /// <summary>
+    /// Processor-specific range end.
+    /// </summary>
+    ET_HIPROC = 0xFFFF
+}
+
+public unsafe struct ElfUInt16 : IEquatable<ElfUInt16>
+{
+    private fixed byte value[sizeof(ushort)];
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    private ReadOnlySpan<byte> Span => MemoryMarshal.CreateReadOnlySpan(ref value[0], sizeof(ushort));
+#else
+    private ReadOnlySpan<byte> Span => new(Unsafe.AsPointer(ref value[0]), sizeof(ushort));
+#endif
+
+    public ushort Parse(bool asLittleEndian)
+    {
+        if (asLittleEndian)
+        {
+            return EndianUtilities.ToUInt16LittleEndian(Span);
+        }
+        else
+        {
+            return EndianUtilities.ToUInt16BigEndian(Span);
+        }
+    }
+
+    public static ushort Parse(ReadOnlySpan<byte> span, bool asLittleEndian)
+    {
+        if (asLittleEndian)
+        {
+            return EndianUtilities.ToUInt16LittleEndian(span);
+        }
+        else
+        {
+            return EndianUtilities.ToUInt16BigEndian(span);
+        }
+    }
+
+    public override bool Equals(object? obj) => obj is ElfUInt16 @int && Equals(@int);
+    public unsafe bool Equals(ElfUInt16 other) => Unsafe.As<byte, ushort>(ref value[0]) == Unsafe.As<byte, ushort>(ref other.value[0]);
+    public override int GetHashCode() => Unsafe.As<byte, ushort>(ref value[0]);
+
+    public static bool operator ==(ElfUInt16 left, ElfUInt16 right) => left.Equals(right);
+    public static bool operator !=(ElfUInt16 left, ElfUInt16 right) => !(left == right);
+
+    public override string ToString() => Span.ToHexString();
+}
+
+public unsafe struct ElfUInt32 : IEquatable<ElfUInt32>
+{
+    private fixed byte value[sizeof(uint)];
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    private ReadOnlySpan<byte> Span => MemoryMarshal.CreateReadOnlySpan(ref value[0], sizeof(uint));
+#else
+    private ReadOnlySpan<byte> Span => new(Unsafe.AsPointer(ref value[0]), sizeof(uint));
+#endif
+
+    public uint Parse(bool asLittleEndian)
+    {
+        if (asLittleEndian)
+        {
+            return EndianUtilities.ToUInt32LittleEndian(Span);
+        }
+        else
+        {
+            return EndianUtilities.ToUInt32BigEndian(Span);
+        }
+    }
+
+    public static uint Parse(ReadOnlySpan<byte> span, bool asLittleEndian)
+    {
+        if (asLittleEndian)
+        {
+            return EndianUtilities.ToUInt32LittleEndian(span);
+        }
+        else
+        {
+            return EndianUtilities.ToUInt32BigEndian(span);
+        }
+    }
+
+    public override bool Equals(object? obj) => obj is ElfUInt32 @int && Equals(@int);
+    public unsafe bool Equals(ElfUInt32 other) => Unsafe.As<byte, uint>(ref value[0]) == Unsafe.As<byte, uint>(ref other.value[0]);
+    public override int GetHashCode() => Unsafe.As<byte, int>(ref value[0]);
+
+    public static bool operator ==(ElfUInt32 left, ElfUInt32 right) => left.Equals(right);
+    public static bool operator !=(ElfUInt32 left, ElfUInt32 right) => !(left == right);
+
+    public override string ToString() => Span.ToHexString();
+}
+
+public unsafe struct ElfUInt64 : IEquatable<ElfUInt64>
+{
+    private fixed byte value[sizeof(ulong)];
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    private ReadOnlySpan<byte> Span => MemoryMarshal.CreateReadOnlySpan(ref value[0], sizeof(ulong));
+#else
+    private ReadOnlySpan<byte> Span => new(Unsafe.AsPointer(ref value[0]), sizeof(ulong));
+#endif
+
+    public ulong Parse(bool asLittleEndian)
+    {
+        if (asLittleEndian)
+        {
+            return EndianUtilities.ToUInt64LittleEndian(Span);
+        }
+        else
+        {
+            return EndianUtilities.ToUInt64BigEndian(Span);
+        }
+    }
+
+    public static ulong Parse(ReadOnlySpan<byte> span, bool asLittleEndian)
+    {
+        if (asLittleEndian)
+        {
+            return EndianUtilities.ToUInt64LittleEndian(span);
+        }
+        else
+        {
+            return EndianUtilities.ToUInt64BigEndian(span);
+        }
+    }
+
+    public override bool Equals(object? obj) => obj is ElfUInt64 @int && Equals(@int);
+    public unsafe bool Equals(ElfUInt64 other) => Unsafe.As<byte, ulong>(ref value[0]) == Unsafe.As<byte, ulong>(ref other.value[0]);
+    public override int GetHashCode() => HashCode.Combine(Unsafe.As<byte, ulong>(ref value[0]));
+
+    public static bool operator ==(ElfUInt64 left, ElfUInt64 right) => left.Equals(right);
+    public static bool operator !=(ElfUInt64 left, ElfUInt64 right) => !(left == right);
+
+    public override string ToString() => Span.ToHexString();
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct ElfHeader
+public readonly struct ElfHeaderIdent
 {
-    private unsafe fixed byte magic[4];   // 0x7F 'E' 'L' 'F'
+    private readonly byte magic0;   // 0x7F 'E' 'L' 'F'
+    private readonly byte magic1;
+    private readonly byte magic2;
+    private readonly byte magic3;
 
-    public unsafe bool IsValidMagic =>
-        magic[0] == 0x7F
-        && magic[1] == (byte)'E'
-        && magic[2] == (byte)'L'
-        && magic[3] == (byte)'F';
+    public unsafe bool IsValid =>
+        magic0 == 0x7F
+        && magic1 == 'E'
+        && magic2 == 'L'
+        && magic3 == 'F'
+        && Class is ElfClass.ELFCLASS32 or ElfClass.ELFCLASS64
+        && Version == ElfVersion.EV_CURRENT;
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    public unsafe ReadOnlySpan<byte> Magic => MemoryMarshal.CreateReadOnlySpan(ref magic[0], 4);
-#endif
+    public readonly ElfClass Class;        // 1=32-bit, 2=64-bit
+    public readonly ElfData Data;       // 1=little, 2=big
 
-    public readonly ElfClass cls;        // 1=32-bit, 2=64-bit
-    public readonly ElfData data;       // 1=little, 2=big
-    public readonly byte version;
-    public readonly byte osabi;
-    public readonly byte abiversion;
+    private readonly byte version;
+    public readonly ElfVersion Version => (ElfVersion)version;
 
-    private unsafe fixed byte pad[7];
-    private unsafe fixed byte type[2];       // 2=executable, 3=shared object
+    public readonly ElfOsAbi OsAbi;
+    
+    public readonly byte AbiVersion;
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    private unsafe ReadOnlySpan<byte> TypePtr => MemoryMarshal.CreateReadOnlySpan(ref type[0], sizeof(ushort));
-#else
-    private unsafe ReadOnlySpan<byte> TypePtr => new(Unsafe.AsPointer(ref type[0]), sizeof(ushort));
-#endif
-
-    public unsafe ElfType Type => (ElfType)(data switch
-    {
-        ElfData.ELFDATA2LSB => EndianUtilities.ToUInt16LittleEndian(TypePtr),
-        ElfData.ELFDATA2MSB => EndianUtilities.ToUInt16BigEndian(TypePtr),
-        _ => throw new NotSupportedException(),
-    });
-
-    private unsafe fixed byte machine[2];    // 0x3E=x86-64, 0x28=ARM64
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-    private unsafe ReadOnlySpan<byte> MachinePtr => MemoryMarshal.CreateReadOnlySpan(ref machine[0], sizeof(ushort));
-#else
-    private unsafe ReadOnlySpan<byte> MachinePtr => new(Unsafe.AsPointer(ref machine[0]), sizeof(ushort));
-#endif
-
-    public unsafe ElfMachine Machine => (ElfMachine)(data switch
-    {
-        ElfData.ELFDATA2LSB => EndianUtilities.ToUInt16LittleEndian(MachinePtr),
-        ElfData.ELFDATA2MSB => EndianUtilities.ToUInt16BigEndian(MachinePtr),
-        _ => throw new NotSupportedException(),
-    });
-
-    public readonly uint Version;
-};
+    private readonly byte pad0;
+    private readonly byte pad1;
+    private readonly byte pad2;
+    private readonly byte pad3;
+    private readonly byte pad4;
+    private readonly byte pad5;
+    private readonly byte pad6;
+}
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public readonly struct ElfHeaderEnd
+public readonly struct ElfHeader
 {
-    public readonly uint Flags;
-    public readonly ushort HeaderSize;
-    public readonly ushort ProgramHeaderEntrySize;
-    public readonly ushort ProgramHeaderEntryCount;
-    public readonly ushort SectionHeaderEntrySize;
-    public readonly ushort SectionHeaderEntryCount;
-    public readonly ushort SectionHeaderStringTableIndex;
+    public bool IsValid => Ident.IsValid;
+
+    public bool IsLittleEndian => Ident.Data == ElfData.ELFDATA2LSB;
+
+    public bool Is64 => Ident.Class == ElfClass.ELFCLASS64;
+
+    public readonly ElfHeaderIdent Ident;
+
+    private readonly ElfUInt16 type;       // 2=executable, 3=shared object
+
+    public unsafe ElfFileType Type => (ElfFileType)type.Parse(IsLittleEndian);
+
+    private readonly ElfUInt16 machine;    // 0x3E=x86-64, 0x28=ARM64
+
+    public unsafe ElfMachine Machine => (ElfMachine)machine.Parse(IsLittleEndian);
+
+    private readonly ElfUInt32 version;
+
+    public unsafe ElfVersion Version => (ElfVersion)version.Parse(IsLittleEndian);
 };
+
+public readonly record struct ElfHeaderEnd(
+    ulong EntryPoint,
+    ulong ProgramHeaderOffset,
+    ulong SectionHeaderOffset,
+    ElfMachineFlags Flags,
+    ushort HeaderSize,
+    ushort ProgramHeaderEntrySize,
+    ushort ProgramHeaderEntryCount,
+    ushort SectionHeaderEntrySize,
+    ushort SectionHeaderEntryCount,
+    ushort SectionHeaderStringTableIndex);
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct ElfHeader64
 {
     public readonly ElfHeader Base;
 
-    public readonly ulong EntryPoint;
-    public readonly ulong ProgramHeaderOffset;
-    public readonly ulong SectionHeaderOffset;
+    public readonly ElfUInt64 EntryPoint;
+    public readonly ElfUInt64 ProgramHeaderOffset;
+    public readonly ElfUInt64 SectionHeaderOffset;
+    public readonly ElfUInt32 Flags;
+    public readonly ElfUInt16 HeaderSize;
+    public readonly ElfUInt16 ProgramHeaderEntrySize;
+    public readonly ElfUInt16 ProgramHeaderEntryCount;
+    public readonly ElfUInt16 SectionHeaderEntrySize;
+    public readonly ElfUInt16 SectionHeaderEntryCount;
+    public readonly ElfUInt16 SectionHeaderStringTableIndex;
 
-    public readonly ElfHeaderEnd End;
+    public ElfHeaderEnd End => new(
+        EntryPoint.Parse(Base.IsLittleEndian),
+        ProgramHeaderOffset.Parse(Base.IsLittleEndian),
+        SectionHeaderOffset.Parse(Base.IsLittleEndian),
+        (ElfMachineFlags)Flags.Parse(Base.IsLittleEndian),
+        HeaderSize.Parse(Base.IsLittleEndian),
+        ProgramHeaderEntrySize.Parse(Base.IsLittleEndian),
+        ProgramHeaderEntryCount.Parse(Base.IsLittleEndian),
+        SectionHeaderEntrySize.Parse(Base.IsLittleEndian),
+        SectionHeaderEntryCount.Parse(Base.IsLittleEndian),
+        SectionHeaderStringTableIndex.Parse(Base.IsLittleEndian));
 };
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -645,9 +925,74 @@ public readonly struct ElfHeader32
 {
     public readonly ElfHeader Base;
 
-    public readonly uint EntryPoint;
-    public readonly uint ProgramHeaderOffset;
-    public readonly uint SectionHeaderOffset;
+    public readonly ElfUInt32 EntryPoint;
+    public readonly ElfUInt32 ProgramHeaderOffset;
+    public readonly ElfUInt32 SectionHeaderOffset;
+    public readonly ElfUInt32 Flags;
+    public readonly ElfUInt16 HeaderSize;
+    public readonly ElfUInt16 ProgramHeaderEntrySize;
+    public readonly ElfUInt16 ProgramHeaderEntryCount;
+    public readonly ElfUInt16 SectionHeaderEntrySize;
+    public readonly ElfUInt16 SectionHeaderEntryCount;
+    public readonly ElfUInt16 SectionHeaderStringTableIndex;
 
-    public readonly ElfHeaderEnd End;
+    public ElfHeaderEnd End => new(
+        EntryPoint.Parse(Base.IsLittleEndian),
+        ProgramHeaderOffset.Parse(Base.IsLittleEndian),
+        SectionHeaderOffset.Parse(Base.IsLittleEndian),
+        (ElfMachineFlags)Flags.Parse(Base.IsLittleEndian),
+        HeaderSize.Parse(Base.IsLittleEndian),
+        ProgramHeaderEntrySize.Parse(Base.IsLittleEndian),
+        ProgramHeaderEntryCount.Parse(Base.IsLittleEndian),
+        SectionHeaderEntrySize.Parse(Base.IsLittleEndian),
+        SectionHeaderEntryCount.Parse(Base.IsLittleEndian),
+        SectionHeaderStringTableIndex.Parse(Base.IsLittleEndian));
 };
+
+public readonly record struct ElfProgramHeader(ulong Type, ulong Offset, ulong Vaddr, ulong Filesz, ulong Memsz);
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct ElfProgramHeader64
+{
+    public readonly ElfUInt32 p_type;
+    public readonly ElfUInt32 p_flags;
+    public readonly ElfUInt64 p_offset;
+    public readonly ElfUInt64 p_vaddr;
+    public readonly ElfUInt64 p_paddr;
+    public readonly ElfUInt64 p_size;
+    public readonly ElfUInt64 p_memsz;
+    public readonly ElfUInt64 p_align;
+
+    public ElfProgramHeader Parse(bool isLittleEndian)
+    {
+        return new(
+            p_type.Parse(isLittleEndian),
+            p_offset.Parse(isLittleEndian),
+            p_vaddr.Parse(isLittleEndian),
+            p_size.Parse(isLittleEndian),
+            p_memsz.Parse(isLittleEndian));
+    }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct ElfProgramHeader32
+{
+    public readonly ElfUInt32 p_type;
+    public readonly ElfUInt32 p_offset;
+    public readonly ElfUInt32 p_vaddr;
+    public readonly ElfUInt32 p_paddr;
+    public readonly ElfUInt32 p_size;
+    public readonly ElfUInt32 p_memsz;
+    public readonly ElfUInt32 p_flags;
+    public readonly ElfUInt32 p_align;
+
+    public ElfProgramHeader Parse(bool isLittleEndian)
+    {
+        return new(
+            p_type.Parse(isLittleEndian),
+            p_offset.Parse(isLittleEndian),
+            p_vaddr.Parse(isLittleEndian),
+            p_size.Parse(isLittleEndian),
+            p_memsz.Parse(isLittleEndian));
+    }
+}
