@@ -847,7 +847,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
                 var geometry = Geometry.FromCapacity(diskSize.Value);
 
-                VirtualDisk disk;
+                VirtualDisk? disk;
 
                 switch (image_type)
                 {
@@ -906,6 +906,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                                                       null);
 
                         break;
+                }
+
+                if (disk is null)
+                {
+                    throw new NotSupportedException("Failed to create image file. Unknown image file format?");
                 }
 
                 using (disk)

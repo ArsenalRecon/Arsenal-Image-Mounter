@@ -284,7 +284,8 @@ public static class ProviderSupport
             throw new NotSupportedException("DiscUtils libraries not available");
         }
 
-        using var builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, (int)provider.SectorSize), null);
+        using var builder = VirtualDisk.CreateDisk(type, OutputImageVariant, outputImage, provider.Length, Geometry.FromCapacity(provider.Length, (int)provider.SectorSize), null)
+            ?? throw new NotSupportedException("Failed to create image file. Unknown image file format?");
 
         provider.WriteToSkipEmptyBlocks(builder.Content,
                                         bufferSize ?? ImageConversionIoBufferSize,

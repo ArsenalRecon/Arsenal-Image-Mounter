@@ -238,7 +238,8 @@ public static class DevioServiceFactory
                 }
                 else
                 {
-                    virtualdisk = VirtualDisk.OpenDisk(Imagefile, DiskAccess);
+                    virtualdisk = VirtualDisk.OpenDisk(Imagefile, DiskAccess)
+                        ?? throw new NotSupportedException($"Cannot open '{Imagefile}' with DiscUtils libraries");
                 }
 
                 break;
@@ -676,14 +677,22 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
                         {
                             if (UseExistingDifferencingDisk(ref DifferencingPath))
                             {
-                                Disk = VirtualDisk.OpenDisk(DifferencingPath, System.IO.FileAccess.ReadWrite);
+                                Disk?.Dispose();
+                                Disk = VirtualDisk.OpenDisk(DifferencingPath, System.IO.FileAccess.ReadWrite)
+                                    ?? throw new InvalidDataException($"Failed to open existing diff image '{DifferencingPath}'");
+
                                 break;
                             }
 
                             File.Delete(DifferencingPath);
                         }
 
-                        Disk = Disk.CreateDifferencingDisk(DifferencingPath);
+                        var diffDisk = Disk.CreateDifferencingDisk(DifferencingPath);
+
+                        Disk.Dispose();
+
+                        Disk = diffDisk;
+
                         break;
                     }
                     catch (Exception ex)
