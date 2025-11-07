@@ -79,13 +79,13 @@ public readonly struct UNICODE_STRING
     /// Returns a <see cref="Span{Char}"/> for the length of the buffer
     /// that is currently in use.
     /// </summary>
-    public unsafe Span<char> Span => MemoryMarshal.Cast<byte, char>(new((void*)Buffer, Length));
+    public unsafe Span<char> Span => MemoryMarshal.Cast<byte, char>(new Span<byte>((void*)Buffer, Length));
 
     /// <summary>
     /// Returns a <see cref="Span{Char}"/> for the complete buffer, including
     /// any currently unused part.
     /// </summary>
-    public unsafe Span<char> MaximumSpan => MemoryMarshal.Cast<byte, char>(new((void*)Buffer, MaximumLength));
+    public unsafe Span<char> MaximumSpan => MemoryMarshal.Cast<byte, char>(new Span<byte>((void*)Buffer, MaximumLength));
 
     /// <summary>
     /// Initialize with pointer to existing unmanaged string
