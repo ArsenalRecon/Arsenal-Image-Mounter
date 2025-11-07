@@ -2,13 +2,20 @@
 using LTRData.Extensions.Formatting;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.IO.Native;
+
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable CA1069 // Enums values should not be duplicated
 
 public enum ElfClass : byte
 {
@@ -856,9 +863,9 @@ public readonly struct ElfHeaderIdent
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public readonly struct ElfHeader
+public readonly struct ElfHeaderRaw
 {
-    public bool IsValid => Ident.IsValid;
+    public bool IsValid => Ident.IsValid && Version == ElfVersion.EV_CURRENT;
 
     public bool IsLittleEndian => Ident.Data == ElfData.ELFDATA2LSB;
 
@@ -879,7 +886,11 @@ public readonly struct ElfHeader
     public unsafe ElfVersion Version => (ElfVersion)version.Parse(IsLittleEndian);
 };
 
-public readonly record struct ElfHeaderEnd(
+public record ElfHeader(
+    ElfHeaderIdent Ident,
+    ElfFileType Type,
+    ElfMachine Machine,
+    ElfVersion Version,
     ulong EntryPoint,
     ulong ProgramHeaderOffset,
     ulong SectionHeaderOffset,
@@ -889,12 +900,108 @@ public readonly record struct ElfHeaderEnd(
     ushort ProgramHeaderEntryCount,
     ushort SectionHeaderEntrySize,
     ushort SectionHeaderEntryCount,
-    ushort SectionHeaderStringTableIndex);
+    ushort SectionHeaderStringTableIndex)
+{
+    public bool IsValid => Ident.IsValid && Version == ElfVersion.EV_CURRENT;
+
+    public bool IsLittleEndian => Ident.Data == ElfData.ELFDATA2LSB;
+
+    public bool Is64 => Ident.Class == ElfClass.ELFCLASS64;
+}
+
+public class ElfReader
+{
+    public ReadOnlyMemory<byte> FileContents;
+
+    public ElfHeader Header { get; }
+
+    public ImmutableArray<ElfProgramHeader> ProgramHeaders
+        => field.IsDefault ? field = ParseProgramHeaders() : field;
+
+    public ElfReader(ReadOnlyMemory<byte> fileContents)
+    {
+        FileContents = fileContents;
+
+        var raw = MemoryMarshal.Read<ElfHeaderRaw>(fileContents.Span);
+
+        if (!raw.IsValid)
+        {
+            throw new InvalidDataException("Invalid ELF header");
+        }
+
+        if (raw.Is64)
+        {
+            var elf64 = MemoryMarshal.Read<ElfHeader64>(fileContents.Span);
+            Header = elf64.Parse();
+        }
+        else
+        {
+            var elf32 = MemoryMarshal.Read<ElfHeader32>(fileContents.Span);
+            Header = elf32.Parse();
+        }
+    }
+
+    /// <summary>
+    /// Translates an offset relative to a file loaded in memory for execution
+    /// to a physical offset within the file.
+    /// </summary>
+    /// <param name="va">Address in virtual address space of loaded file</param>
+    /// <returns>Address in physical file</returns>
+    public long VaToFile(ulong va)
+    {
+        foreach (var ph in ProgramHeaders)
+        {
+            var start = ph.Vaddr;
+            var end = ph.Vaddr + ph.Memsz;
+
+            if (va >= start && va < end)
+            {
+                return (long)(ph.Offset + (va - ph.Vaddr));
+            }
+        }
+
+        return 0;
+    }
+
+    const int PT_DYNAMIC = 2;
+
+    public ElfProgramHeader? DynamicHeader => ProgramHeaders
+        .Select(ph => (ElfProgramHeader?)ph)
+        .SingleOrDefault(ph => ph!.Value.Type == ElfProgramHeaderType.PT_DYNAMIC);
+
+    private ImmutableArray<ElfProgramHeader> ParseProgramHeaders()
+    {
+        var programHeaders = ImmutableArray.CreateBuilder<ElfProgramHeader>();
+
+        for (ushort i = 0; i < Header.ProgramHeaderEntryCount; i++)
+        {
+            var entryData = FileContents.Span
+                .Slice((int)Header.ProgramHeaderOffset + i * Header.ProgramHeaderEntrySize, Header.ProgramHeaderEntrySize);
+
+            ElfProgramHeader programHeader;
+
+            if (Header.Is64)
+            {
+                var header = MemoryMarshal.Read<ElfProgramHeader64>(entryData);
+                programHeader = header.Parse(Header.IsLittleEndian);
+            }
+            else
+            {
+                var header = MemoryMarshal.Read<ElfProgramHeader32>(entryData);
+                programHeader = header.Parse(Header.IsLittleEndian);
+            }
+
+            programHeaders.Add(programHeader);
+        }
+
+        return programHeaders.ToImmutable();
+    }
+}
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct ElfHeader64
 {
-    public readonly ElfHeader Base;
+    public readonly ElfHeaderRaw Base;
 
     public readonly ElfUInt64 EntryPoint;
     public readonly ElfUInt64 ProgramHeaderOffset;
@@ -907,7 +1014,11 @@ public readonly struct ElfHeader64
     public readonly ElfUInt16 SectionHeaderEntryCount;
     public readonly ElfUInt16 SectionHeaderStringTableIndex;
 
-    public ElfHeaderEnd End => new(
+    public ElfHeader Parse() => new(
+        Base.Ident,
+        Base.Type,
+        Base.Machine,
+        Base.Version,
         EntryPoint.Parse(Base.IsLittleEndian),
         ProgramHeaderOffset.Parse(Base.IsLittleEndian),
         SectionHeaderOffset.Parse(Base.IsLittleEndian),
@@ -923,7 +1034,7 @@ public readonly struct ElfHeader64
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct ElfHeader32
 {
-    public readonly ElfHeader Base;
+    public readonly ElfHeaderRaw Base;
 
     public readonly ElfUInt32 EntryPoint;
     public readonly ElfUInt32 ProgramHeaderOffset;
@@ -936,7 +1047,11 @@ public readonly struct ElfHeader32
     public readonly ElfUInt16 SectionHeaderEntryCount;
     public readonly ElfUInt16 SectionHeaderStringTableIndex;
 
-    public ElfHeaderEnd End => new(
+    public ElfHeader Parse() => new(
+        Base.Ident,
+        Base.Type,
+        Base.Machine,
+        Base.Version,
         EntryPoint.Parse(Base.IsLittleEndian),
         ProgramHeaderOffset.Parse(Base.IsLittleEndian),
         SectionHeaderOffset.Parse(Base.IsLittleEndian),
@@ -949,7 +1064,79 @@ public readonly struct ElfHeader32
         SectionHeaderStringTableIndex.Parse(Base.IsLittleEndian));
 };
 
-public readonly record struct ElfProgramHeader(ulong Type, ulong Offset, ulong Vaddr, ulong Filesz, ulong Memsz);
+public readonly record struct ElfProgramHeader(ElfProgramHeaderType Type, ulong Offset, ulong Vaddr, ulong Filesz, ulong Memsz);
+
+/// <summary>
+/// Identifies the type of a program segment in an ELF file.
+/// Corresponds to the <c>p_type</c> field in the program header table.
+/// </summary>
+public enum ElfProgramHeaderType : uint
+{
+    /// <summary>
+    /// Unused entry.
+    /// </summary>
+    PT_NULL = 0,
+
+    /// <summary>
+    /// Loadable segment — part of the program image.
+    /// </summary>
+    PT_LOAD = 1,
+
+    /// <summary>
+    /// Dynamic linking information.
+    /// </summary>
+    PT_DYNAMIC = 2,
+
+    /// <summary>
+    /// Interpreter path (usually <c>/lib/ld-linux.so*</c> or similar).
+    /// </summary>
+    PT_INTERP = 3,
+
+    /// <summary>
+    /// Auxiliary information (notes).
+    /// </summary>
+    PT_NOTE = 4,
+
+    /// <summary>
+    /// Reserved but undefined (historically used for shared library).
+    /// </summary>
+    PT_SHLIB = 5,
+
+    /// <summary>
+    /// Program header table itself.
+    /// </summary>
+    PT_PHDR = 6,
+
+    /// <summary>
+    /// Sun-specific: low bound of Sun-specific segment types.
+    /// </summary>
+    PT_LOSUNW = 0x6FFFFFFA,
+
+    /// <summary>
+    /// Sun-specific: uninitialized data segment (BSS).
+    /// </summary>
+    PT_SUNWBSS = 0x6FFFFFFB,
+
+    /// <summary>
+    /// Sun-specific: stack segment (controls stack attributes).
+    /// </summary>
+    PT_SUNWSTACK = 0x6FFFFFFA,
+
+    /// <summary>
+    /// Sun-specific: high bound of Sun-specific segment types.
+    /// </summary>
+    PT_HISUNW = 0x6FFFFFFF,
+
+    /// <summary>
+    /// Processor-specific range start.
+    /// </summary>
+    PT_LOPROC = 0x70000000,
+
+    /// <summary>
+    /// Processor-specific range end.
+    /// </summary>
+    PT_HIPROC = 0x7FFFFFFF
+}
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct ElfProgramHeader64
@@ -966,7 +1153,7 @@ public readonly struct ElfProgramHeader64
     public ElfProgramHeader Parse(bool isLittleEndian)
     {
         return new(
-            p_type.Parse(isLittleEndian),
+            (ElfProgramHeaderType)p_type.Parse(isLittleEndian),
             p_offset.Parse(isLittleEndian),
             p_vaddr.Parse(isLittleEndian),
             p_size.Parse(isLittleEndian),
@@ -989,7 +1176,7 @@ public readonly struct ElfProgramHeader32
     public ElfProgramHeader Parse(bool isLittleEndian)
     {
         return new(
-            p_type.Parse(isLittleEndian),
+            (ElfProgramHeaderType)p_type.Parse(isLittleEndian),
             p_offset.Parse(isLittleEndian),
             p_vaddr.Parse(isLittleEndian),
             p_size.Parse(isLittleEndian),
