@@ -40,12 +40,6 @@ public static class NativePE
 {
     private static ReadOnlySpan<byte> RsrcId => ".rsrc\0\0\0"u8;
 
-    /*
-    private const int ERROR_RESOURCE_DATA_NOT_FOUND = 1812;
-    private const int ERROR_RESOURCE_TYPE_NOT_FOUND = 1813;
-    private const int ERROR_NO_MORE_ITEMS = 259;
-    */
-
     private const ushort RT_VERSION = 16;
 
     internal static ushort LOWORD(this int value) => (ushort)(value & 0xffff);
@@ -129,6 +123,12 @@ public static class NativePE
         return GetFixedFileVerInfo(file);
     }
 
+    /// <summary>
+    /// Gets IMAGE_NT_HEADERS structure from raw PE image
+    /// </summary>
+    /// <param name="exe">Raw exe or dll data</param>
+    /// <returns>IMAGE_NT_HEADERS structure</returns>
+    /// <exception cref="BadImageFormatException">Input data is not a PE image</exception>
     public static ImageNtHeaders GetImageNtHeaders(Stream exe)
     {
         var buffer = ArrayPool<byte>.Shared.Rent((int)Math.Min(exe.Length, 65536));
@@ -144,6 +144,12 @@ public static class NativePE
         }
     }
 
+    /// <summary>
+    /// Gets IMAGE_NT_HEADERS structure from raw PE image
+    /// </summary>
+    /// <param name="exepath">Exe or dll file</param>
+    /// <returns>IMAGE_NT_HEADERS structure</returns>
+    /// <exception cref="BadImageFormatException">Input file is not a PE image</exception>
     public static ImageNtHeaders GetImageNtHeaders(string exepath)
     {
         var size = (int)Math.Min(65536, new FileInfo(exepath).Length);
@@ -172,17 +178,67 @@ public static class NativePE
     /// </summary>
     /// <param name="fileData">Raw exe or dll data</param>
     /// <returns>IMAGE_NT_HEADERS structure</returns>
+    /// <exception cref="BadImageFormatException">Input data is not a PE image</exception>
     public static ref readonly ImageNtHeaders GetImageNtHeaders(ReadOnlySpan<byte> fileData)
     {
-        ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
+        ref readonly var dos_header = ref GetImageDosHeader(fileData);
+
+        if (dos_header.e_lfanew == 0)
+        {
+            throw new BadImageFormatException("DOS images not supported");
+        }
+
         ref readonly var header = ref fileData.Slice(dos_header.e_lfanew).CastRef<ImageNtHeaders>();
 
-        if (header.Signature != 0x4550 || header.FileHeader.SizeOfOptionalHeader == 0)
+        if (header.Signature != ImageNtHeaders.ExpectedSignature || header.FileHeader.SizeOfOptionalHeader == 0)
         {
-            throw new BadImageFormatException();
+            throw new BadImageFormatException("Not valid Portable Exceutable format");
         }
 
         return ref header;
+    }
+
+    /// <summary>
+    /// Gets IMAGE_DOS_HEADER structure from raw MZ image
+    /// </summary>
+    /// <param name="fileData">Raw exe or dll data</param>
+    /// <returns>IMAGE_DOS_HEADER structure</returns>
+    /// <exception cref="BadImageFormatException">Input data is not an MZ image</exception>
+    public static ref readonly ImageDosHeader GetImageDosHeader(ReadOnlySpan<byte> fileData)
+    {
+        ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
+
+        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic)
+        {
+            throw new BadImageFormatException("Not a valid executable file");
+        }
+
+        return ref dos_header;
+    }
+
+    /// <summary>
+    /// Gets e_lfanew pointed area of raw MZ image. This is where PE
+    /// headers are located for PE images. For actual DOS executable
+    /// files, an empty span is returned instead.
+    /// </summary>
+    /// <param name="fileData">Raw exe or dll data</param>
+    /// <returns>Location of second header, or empty span if none exists.</returns>
+    /// <exception cref="BadImageFormatException">Input data is not an MZ image</exception>
+    public static ReadOnlySpan<byte> GetImageSecondHeader(ReadOnlySpan<byte> fileData)
+    {
+        ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
+
+        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic)
+        {
+            throw new BadImageFormatException("Not a valid executable file");
+        }
+
+        if (dos_header.e_lfanew == 0)
+        {
+            return default;
+        }
+
+        return fileData.Slice(dos_header.e_lfanew);
     }
 
     /// <summary>
@@ -559,7 +615,7 @@ public static class NativePE
     /// <returns>Bytes of embedded certificate blob</returns>
     public static unsafe ReadOnlySpan<byte> GetCertificateBlob(ReadOnlySpan<byte> certificateSection)
         => certificateSection
-        .Slice(0, MemoryMarshal.Read<WinCertificateHeader>(certificateSection).Length)
+        .Slice(0, certificateSection.CastRef<WinCertificateHeader>().Length)
         .Slice(sizeof(WinCertificateHeader));
 
     private static ImageSectionHeader FindSection(ReadOnlySpan<ImageSectionHeader> section_table, ReadOnlySpan<byte> sectionId)
@@ -762,10 +818,501 @@ public readonly struct ImageNtHeaders
 {
     public static readonly unsafe int SizeOf = sizeof(ImageNtHeaders);
 
-    public static readonly WORD ExpectedSignature = MemoryMarshal.Read<WORD>("PE\0\0"u8);
+    public const uint ExpectedSignature = 0x00004550;
 
-    public int Signature { get; }
+    public uint Signature { get; }
     public ImageFileHeader FileHeader { get; }
     public ImageOptionalHeader OptionalHeader { get; }
 }
 
+#region N3 Overlay
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct N3OverlayHeader
+{
+    public static readonly unsafe int SizeOf = sizeof(N3OverlayHeader);
+
+    public const WORD ExpectedSignature = 0x336E;
+
+    public readonly ushort Signature;      // "n3"
+    public readonly byte VersionMajor;
+    public readonly byte VersionMinor;
+    public readonly ushort HeaderSize;
+    public readonly ushort NumOverlays;
+    public readonly ushort Reserved;
+    public readonly ushort OverlayTableOffset;
+    public readonly ushort OverlayNameTableOffset;
+    public readonly ushort OverlayNameCount;
+    // followed by overlay descriptors and name strings
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct N3OverlayDescriptor
+{
+    public readonly ushort Segment;
+    public readonly uint FileOffset;
+    public readonly ushort Size;
+    public readonly ushort FileIndex;
+    public readonly ushort Reserved;
+}
+
+#endregion
+
+#region LE LX
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct LE_LX_Header
+{
+    public static readonly unsafe int SizeOf = sizeof(LE_LX_Header);
+
+    public const WORD ExpectedSignatureLE = 0x454C;
+
+    public const WORD ExpectedSignatureLX = 0x584C;
+
+    // 00h: 'L','E' or 'L','X'
+    public readonly WORD Signature;
+
+    // 02h–03h: byte/word endianness (0 = little endian)
+    public readonly byte ByteOrder;    // 0 = little-endian
+    public readonly byte WordOrder;    // 0 = little-endian
+
+    // 04h: executable format level
+    public readonly uint FormatLevel;
+
+    // 08h: CPU type
+    public readonly LeLxCpuType CpuType;
+
+    // 0Ah: target OS
+    public readonly LeLxTargetOS TargetOS;
+
+    // 0Ch: module version
+    public readonly uint ModuleVersion;
+
+    // 10h: module flags
+    public readonly LeLxModuleFlags ModuleFlags;
+
+    // 14h: number of memory pages
+    public readonly uint PageCount;
+
+    // 18h: Initial CS:EIP (object number then offset)
+    public readonly uint EntryEIPObject;
+    public readonly uint EntryEIP;
+
+    // 20h: Initial SS:ESP (object number then offset)
+    public readonly uint EntryESPObject;
+    public readonly uint EntryESP;
+
+    // 28h: memory page size
+    public readonly uint PageSize;
+
+    // 2Ch: LE = bytes on last page; LX = page offset shift count
+    public readonly uint BytesOnLastPage_or_PageOffShift;
+
+    // 30h–3Fh: fixup/loader sizes & checksums
+    public readonly uint FixupSectionSize;
+    public readonly uint FixupSectionChecksum;
+    public readonly uint LoaderSectionSize;
+    public readonly uint LoaderSectionChecksum;
+
+    // 40h–4Fh: object table (offset/count)
+    public readonly uint ObjectTableOffset;
+    public readonly uint ObjectCount;
+
+    // 48h: object page map table offset
+    public readonly uint ObjectPageMapOffset;
+
+    // 4Ch: object iterate data map offset
+    public readonly uint ObjectIterDataMapOffset;
+
+    // 50h–57h: resource table (offset/count)
+    public readonly uint ResourceTableOffset;
+    public readonly uint ResourceCount;
+
+    // 58h: resident names table offset
+    public readonly uint ResidentNameTableOffset;
+
+    // 5Ch: entry table offset
+    public readonly uint EntryTableOffset;
+
+    // 60h–67h: module directives (offset/count)
+    public readonly uint ModuleDirectiveTableOffset;
+    public readonly uint ModuleDirectiveCount;
+
+    // 68h–6Fh: fixup page/record tables
+    public readonly uint FixupPageTableOffset;
+    public readonly uint FixupRecordTableOffset;
+
+    // 70h–77h: import modules (offset/count)
+    public readonly uint ImportModuleTableOffset;
+    public readonly uint ImportModuleCount;
+
+    // 78h: import procedure name table offset
+    public readonly uint ImportProcNameTableOffset;
+
+    // 7Ch: per-page checksum table offset
+    public readonly uint PerPageChecksumTableOffset;
+
+    // 80h: start of paged image (file offset)
+    public readonly uint DataPagesOffset;
+
+    // 84h: preload page count
+    public readonly uint PreloadPageCount;
+
+    // 88h–8Fh: non-resident names (offset/length)
+    public readonly uint NonResidentNameTableOffset;
+    public readonly uint NonResidentNameTableLength;
+
+    // 90h: non-resident names checksum
+    public readonly uint NonResidentNameTableChecksum;
+
+    // 94h: automatic data object (DS provider)
+    public readonly uint AutoDataObject;
+
+    // 98h–9Fh: debug info (offset/length)
+    public readonly uint DebugInfoOffset;
+    public readonly uint DebugInfoLength;
+
+    // A0h–A7h: instance page counts
+    public readonly uint InstancePreloadPages;
+    public readonly uint InstanceDemandPages;
+
+    // A8h: extra heap allocation (bytes)
+    public readonly uint ExtraHeapAllocation;
+
+    // ACh–B7h: reserved
+    public readonly uint Reserved_ACh_AFh;
+    public readonly uint Reserved_B0h_B3h;
+    public readonly uint Reserved_B4h_B7h;
+
+    // VxD-only tail (LE VxD); typically zero for OS/2 LX
+    public readonly uint Vxd_VersionInfoOffset; // B8h
+    public readonly uint Vxd_UnknownPointer;    // BCh
+    public readonly ushort Vxd_DeviceID;        // C0h
+    public readonly ushort Vxd_DDKVersion;      // C2h
+}
+
+/// <summary>
+/// CPU architecture value used in LE/LX headers.
+/// </summary>
+public enum LeLxCpuType : ushort
+{
+    /// <summary>Intel 80286.</summary>
+    Intel80286 = 1,
+
+    /// <summary>Intel 80386.</summary>
+    Intel80386 = 2,
+
+    /// <summary>Intel 80486.</summary>
+    Intel80486 = 3,
+
+    /// <summary>Intel 80586 / Pentium or later.</summary>
+    Intel80586 = 4,
+
+    /// <summary>MIPS R2000 or R3000 family.</summary>
+    MIPS_R2000_R3000 = 0x20,
+
+    /// <summary>MIPS R4000 family.</summary>
+    MIPS_R4000 = 0x21,
+
+    /// <summary>DEC Alpha (AXP).</summary>
+    DEC_Alpha = 0x40,
+
+    /// <summary>PowerPC.</summary>
+    PowerPC = 0x50
+}
+
+/// <summary>
+/// Operating system type for which the executable was built.
+/// </summary>
+public enum LeLxTargetOS : ushort
+{
+    /// <summary>Unknown or unspecified.</summary>
+    Unknown = 0,
+
+    /// <summary>OS/2 operating system.</summary>
+    OS2 = 1,
+
+    /// <summary>Microsoft Windows.</summary>
+    Windows = 2,
+
+    /// <summary>European MS-DOS 4.x (multitasking DOS).</summary>
+    EuroDOS = 3,
+
+    /// <summary>Windows 386 (Windows/386 2.x environment).</summary>
+    Windows386 = 4,
+
+    /// <summary>IBM OS/2 2.x family API (LX format).</summary>
+    OS2FamilyAPI = 5,
+
+    /// <summary>Windows NT (experimental LE variant).</summary>
+    WinNT = 6
+}
+
+/// <summary>
+/// Flags that describe characteristics of the LE/LX module.
+/// </summary>
+[Flags]
+public enum LeLxModuleFlags : uint
+{
+    /// <summary>No flags set.</summary>
+    None = 0x0000_0000,
+
+    /// <summary>Executable is for 16-bit protected mode (286).</summary>
+    ProtectedMode286 = 0x0000_0001,
+
+    /// <summary>Executable is for 32-bit protected mode (386+).</summary>
+    ProtectedMode386 = 0x0000_0002,
+
+    /// <summary>Module is a library (DLL) rather than an application.</summary>
+    LibraryModule = 0x0000_8000,
+
+    /// <summary>Module uses per-process library initialization (OS/2).</summary>
+    PerProcessInit = 0x0001_0000,
+
+    /// <summary>Module is multi-thread aware (OS/2).</summary>
+    MultiThread = 0x0002_0000,
+
+    /// <summary>Executable uses a protected memory model (OS/2 Warp+).</summary>
+    ProtectedMemory = 0x0004_0000,
+
+    /// <summary>Executable uses a single data segment shared among instances.</summary>
+    SingleDataSegment = 0x0008_0000,
+
+    /// <summary>Executable supports demand paging.</summary>
+    DemandPaged = 0x0010_0000,
+
+    /// <summary>Executable is pageable (OS/2 dynamic loader flag).</summary>
+    Pageable = 0x0020_0000,
+
+    /// <summary>Executable is a device driver (VxD or OS/2 driver).</summary>
+    DeviceDriver = 0x0040_0000,
+
+    /// <summary>Executable supports 32-bit addressing (flat model).</summary>
+    FlatAddressing = 0x0080_0000
+}
+
+#endregion
+
+#region NE
+
+/// <summary>
+/// NE header flags (bitfield).  
+/// Add specific bit definitions from your NE specification as needed.
+/// </summary>
+[Flags]
+public enum NeFlagWord : ushort
+{
+    None = 0x0000,
+    // Example bit definitions (uncomment or adjust as needed):
+    // SingleDataSegment = 0x0001,
+    // MultipleData = 0x0002,
+    // GlobalInit = 0x0010,
+    // ProtectedMode = 0x0200,
+    // DLL = 0x8000,
+}
+
+/// <summary>
+/// Target operating system identifier in NE headers.
+/// </summary>
+public enum NeTargetOS : byte
+{
+    /// <summary>Unknown or unspecified.</summary>
+    Unknown = 0,
+
+    /// <summary>OS/2 operating system.</summary>
+    OS2 = 1,
+
+    /// <summary>Microsoft Windows.</summary>
+    Windows = 2,
+
+    /// <summary>European multitasking MS-DOS 4.x.</summary>
+    EuroDOS4x = 3,
+
+    /// <summary>Windows/386 environment.</summary>
+    Windows386 = 4
+}
+
+/// <summary>
+/// Additional OS/2-specific NE flags (rarely used by Windows).  
+/// Add bit definitions as needed from OS/2 NE specs.
+/// </summary>
+[Flags]
+public enum NeOs2ExeFlags : byte
+{
+    None = 0x00
+    // Example OS/2-specific bits could be added here.
+}
+
+/// <summary>
+/// Represents the header of a 16-bit New Executable (NE) file format,  
+/// used by early Microsoft Windows and OS/2 applications.
+/// </summary>
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct ImageNeHeader
+{
+    public static readonly unsafe int SizeOf = sizeof(ImageNeHeader);
+
+    public const WORD ExpectedSignature = 0x454E;
+
+    /// <summary>
+    /// File signature — should contain the ASCII characters 'N', 'E'.
+    /// </summary>
+    public readonly WORD sig;
+
+    /// <summary>
+    /// The major linker version.
+    /// </summary>
+    public readonly byte MajLinkerVersion;
+
+    /// <summary>
+    /// The minor linker version (also known as the linker revision).
+    /// </summary>
+    public readonly byte MinLinkerVersion;
+
+    /// <summary>
+    /// Offset of the entry table from the start of the NE header.
+    /// </summary>
+    public readonly ushort EntryTableOffset;
+
+    /// <summary>
+    /// Length of the entry table in bytes.
+    /// </summary>
+    public readonly ushort EntryTableLength;
+
+    /// <summary>
+    /// 32-bit CRC of the entire contents of the file.
+    /// </summary>
+    public readonly uint FileLoadCRC;
+
+    /// <summary>
+    /// Flag word describing attributes of the executable.  
+    /// See <see cref="NeFlagWord"/>.
+    /// </summary>
+    public readonly NeFlagWord FlagWord;
+
+    /// <summary>
+    /// The automatic data segment index.
+    /// </summary>
+    public readonly ushort AutoDataSegIndex;
+
+    /// <summary>
+    /// The initial local heap size.
+    /// </summary>
+    public readonly ushort InitHeapSize;
+
+    /// <summary>
+    /// The initial stack size.
+    /// </summary>
+    public readonly ushort InitStackSize;
+
+    /// <summary>
+    /// CS:IP entry point — CS is an index into the segment table.
+    /// </summary>
+    public readonly uint EntryPoint;
+
+    /// <summary>
+    /// SS:SP initial stack pointer — SS is an index into the segment table.
+    /// </summary>
+    public readonly uint InitStack;
+
+    /// <summary>
+    /// Number of segments in the segment table.
+    /// </summary>
+    public readonly ushort SegCount;
+
+    /// <summary>
+    /// Number of module references (DLLs) used by this module.
+    /// </summary>
+    public readonly ushort ModRefs;
+
+    /// <summary>
+    /// Size of the non-resident names table, in bytes.
+    /// </summary>
+    public readonly ushort NoResNamesTabSiz;
+
+    /// <summary>
+    /// Offset of the segment table from the start of the NE header.
+    /// </summary>
+    public readonly ushort SegTableOffset;
+
+    /// <summary>
+    /// Offset of the resources table from the start of the NE header.
+    /// </summary>
+    public readonly ushort ResTableOffset;
+
+    /// <summary>
+    /// Offset of the resident names table from the start of the NE header.
+    /// </summary>
+    public readonly ushort ResidNamTable;
+
+    /// <summary>
+    /// Offset of the module reference table from the start of the NE header.
+    /// </summary>
+    public readonly ushort ModRefTable;
+
+    /// <summary>
+    /// Offset of the imported names table from the start of the NE header.
+    /// </summary>
+    public readonly ushort ImportNameTable;
+
+    /// <summary>
+    /// Offset of the non-resident names table from the start of the file (absolute offset).
+    /// </summary>
+    public readonly uint OffStartNonResTab;
+
+    /// <summary>
+    /// Count of moveable entry points listed in the entry table.
+    /// </summary>
+    public readonly ushort MovEntryCount;
+
+    /// <summary>
+    /// File alignment size shift count (0 = 9 → default 512-byte pages).
+    /// </summary>
+    public readonly ushort FileAlnSzShftCnt;
+
+    /// <summary>
+    /// Number of entries in the resource table (often inaccurate).
+    /// </summary>
+    public readonly ushort nResTabEntries;
+
+    /// <summary>
+    /// Target operating system for which this executable was built.  
+    /// See <see cref="NeTargetOS"/>.
+    /// </summary>
+    public readonly NeTargetOS targOS;
+
+    /// <summary>
+    /// Additional OS/2-specific flags.  
+    /// See <see cref="NeOs2ExeFlags"/>.
+    /// </summary>
+    public readonly NeOs2ExeFlags OS2EXEFlags;
+
+    /// <summary>
+    /// Offset to return thunks or the start of the gangload area.
+    /// </summary>
+    public readonly ushort retThunkOffset;
+
+    /// <summary>
+    /// Offset to segment reference thunks or size of gangload area.
+    /// </summary>
+    public readonly ushort segrefthunksoff;
+
+    /// <summary>
+    /// Minimum code swap area size.
+    /// </summary>
+    public readonly ushort mincodeswap;
+
+    /// <summary>
+    /// Expected Windows version (minor version byte first, then major).  
+    /// For example: 0x0A 0x03 → Windows 3.10.
+    /// </summary>
+    public readonly byte expctwinverMinor;
+
+    /// <summary>
+    /// Expected Windows version (minor version byte first, then major).  
+    /// For example: 0x0A 0x03 → Windows 3.10.
+    /// </summary>
+    public readonly byte expctwinverMajor;
+}
+
+#endregion
