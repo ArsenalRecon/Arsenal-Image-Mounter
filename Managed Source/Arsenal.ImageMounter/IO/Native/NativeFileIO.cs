@@ -14,6 +14,7 @@
 using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Devices;
+using Arsenal.ImageMounter.IO.Streams;
 using DiscUtils.Partitions;
 using LTRData.Extensions.Buffers;
 using LTRData.Extensions.Formatting;
@@ -157,7 +158,6 @@ public static partial class NativeFileIO
         public static extern long GetTickCount64();
 #endif
     }
-
 
     public static partial class UnsafeNativeMethods
     {
@@ -637,7 +637,7 @@ public static partial class NativeFileIO
         internal static partial int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
 
         [LibraryImport("ntdll")]
-        internal static unsafe partial int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, void* ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
+        internal static unsafe partial int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, out byte ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
 
         [LibraryImport("ntdll")]
         internal static partial int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
@@ -1077,7 +1077,7 @@ public static partial class NativeFileIO
         internal static extern int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern unsafe int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, void* ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
+        internal static extern unsafe int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, out byte ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
@@ -2253,12 +2253,12 @@ Currently, the following application has files open on this volume:
 
     public static unsafe DeviceType? GetDeviceType(SafeFileHandle handle)
     {
-        FILE_FS_DEVICE_INFORMATION device_information;
+        FILE_FS_DEVICE_INFORMATION device_information = default;
 
         var status = UnsafeNativeMethods.NtQueryVolumeInformationFile(handle,
                                                                       out _,
-                                                                      &device_information,
-                                                                      sizeof(FILE_FS_DEVICE_INFORMATION),
+                                                                      out Unsafe.As<FILE_FS_DEVICE_INFORMATION, byte>(ref device_information),
+                                                                      Unsafe.SizeOf<FILE_FS_DEVICE_INFORMATION>(),
                                                                       FsInformationClass.FileFsDeviceInformation);
 
         return status >= 0 ? device_information.DeviceType : null;
@@ -3836,6 +3836,271 @@ Currently, the following application has files open on this volume:
             ? attribs.Attributes.HasFlag(DiskAttributes.Offline)
             : (bool?)default;
 
+    public class FileExtent
+    {
+        public long StartingVcn { get; }
+        public long NextVcn { get; }
+        public long Lcn { get; }
+
+        public bool IsLastExtent { get; }
+
+        public long Length => NextVcn - StartingVcn;
+
+        public bool IsSparseUnallocated => Lcn == -1L;
+
+        internal FileExtent(in RETRIEVAL_POINTERS_BUFFER buffer, bool is_last)
+        {
+            StartingVcn = buffer.StartingVcn;
+            NextVcn = buffer.NextVcn;
+            Lcn = buffer.Lcn;
+            IsLastExtent = is_last;
+        }
+    }
+
+    internal struct RETRIEVAL_POINTERS_BUFFER
+    {
+        public uint ExtentCount;
+        public long StartingVcn;
+        public long NextVcn;
+        public long Lcn;
+    }
+
+    internal static unsafe FileExtent? GetNextFileExtent(SafeFileHandle file, long start_vcn)
+    {
+        var input = start_vcn;
+        RETRIEVAL_POINTERS_BUFFER output = default;
+
+        var rc = UnsafeNativeMethods.DeviceIoControl(file,
+                                                     589939u,
+                                                     in Unsafe.As<long, byte>(ref input),
+                                                     sizeof(long),
+                                                     ref Unsafe.As<RETRIEVAL_POINTERS_BUFFER, byte>(ref output),
+                                                     Unsafe.SizeOf<RETRIEVAL_POINTERS_BUFFER>(),
+                                                     out var stored_bytes,
+                                                     0);
+
+        var is_last = true;
+
+        if (!rc)
+        {
+            switch (Marshal.GetLastWin32Error())
+            {
+                case 38:
+                    return null;
+                default:
+                    throw new Win32Exception();
+                case 234:
+                    break;
+            }
+
+            is_last = false;
+        }
+
+        if (output.ExtentCount < 1u)
+        {
+            return null;
+        }
+
+        return new FileExtent(output, is_last);
+    }
+
+    public static IEnumerable<FileExtent> EnumerateFileExtents(SafeFileHandle file) => EnumerateFileExtents(file, 0);
+
+    public static IEnumerable<FileExtent> EnumerateFileExtents(SafeFileHandle file, long start)
+    {
+        for (; ; )
+        {
+            var result = GetNextFileExtent(file, start);
+
+            if (result is null)
+            {
+                yield break;
+            }
+
+            start = result.NextVcn;
+
+            yield return result;
+
+            if (result.IsLastExtent)
+            {
+                yield break;
+            }
+        }
+    }
+
+    public readonly struct NativeFsFullSizeInformation
+    {
+        public readonly long TotalAllocationUnits;
+
+        public readonly long CallerAvailableAllocationUnits;
+
+        public readonly long ActualAvailableAllocationUnits;
+
+        public readonly int SectorsPerAllocationUnit;
+
+        public readonly int BytesPerSector;
+
+        public int BytesPerAllocationUnit => SectorsPerAllocationUnit * BytesPerSector;
+    }
+
+    public static unsafe NativeFsFullSizeInformation GetFilesystemSizeInfo(SafeFileHandle volume, bool throwOnFail)
+    {
+        var fs_size_info = default(NativeFsFullSizeInformation);
+        
+        var status = UnsafeNativeMethods.NtQueryVolumeInformationFile(volume,
+                                                                      out _,
+                                                                      out Unsafe.As<NativeFsFullSizeInformation, byte>(ref fs_size_info),
+                                                                      sizeof(NativeFsFullSizeInformation),
+                                                                      FsInformationClass.FileFsFullSizeInformation);
+
+        if (status < 0)
+        {
+            if (throwOnFail)
+            {
+                NtDllTry(status);
+            }
+
+            return default;
+        }
+
+        return fs_size_info;
+    }
+
+    public static Stream? GetRawFileStream(Stream vol_stream, SafeFileHandle file, long fileOffset)
+    {
+        var fs_size_info = GetFilesystemSizeInfo(file, throwOnFail: true);
+        var bytes_per_cluster = fs_size_info.BytesPerAllocationUnit;
+
+        var extents = EnumerateFileExtents(file, fileOffset / bytes_per_cluster).ToArray();
+
+        if (extents.Length == 0)
+        {
+            return null;
+        }
+
+        var offsetFoundExtents = fileOffset - extents[0].StartingVcn * bytes_per_cluster;
+
+        var streams = Array.ConvertAll(
+            extents,
+            extent => (Stream)(extent.IsSparseUnallocated
+                    ? new DiscUtils.Streams.ZeroStream(extent.Length * bytes_per_cluster)
+                    : new SubStream(vol_stream, ownsParent: false, extent.Lcn * bytes_per_cluster, extent.Length * bytes_per_cluster)));
+
+        var stream = new CombinedSeekStream(streams);
+
+        return new AligningStream(new SubStream(stream, ownsParent: true, offsetFoundExtents, stream.Length - offsetFoundExtents), fs_size_info.BytesPerSector, ownsBaseStream: true);
+    }
+
+    public readonly struct AllocationExtent
+    {
+        public long StartPosition { get; }
+        public long Length { get; }
+        public bool Allocated { get; }
+
+        public AllocationExtent(long StartPosition, long Length, bool Allocated)
+        {
+            this.StartPosition = StartPosition;
+            this.Length = Length;
+            this.Allocated = Allocated;
+        }
+    }
+
+    public static VolumeBitmap GetVolumeBitmap(SafeFileHandle file, long starting_lcn)
+    {
+        var bitmap = GetVolumeBitmap(file, starting_lcn, 8);
+        var bytes_needed = (int)((7 + bitmap.NumberOfClusters) >> 3);
+        return GetVolumeBitmap(file, bitmap.StartingLcn, bytes_needed);
+    }
+
+    public static VolumeBitmap GetVolumeBitmap(SafeFileHandle file, long starting_lcn, int max_bytes)
+    {
+        long input;
+        input = starting_lcn;
+        var buffersize = max_bytes + 16;
+        Span<byte> buffer = stackalloc byte[buffersize];
+        ref var output = ref buffer.CastRef<VOLUME_BITMAP_BUFFER>();
+
+        if (!UnsafeNativeMethods.DeviceIoControl(file,
+                                                 589935u,
+                                                 Unsafe.As<long, byte>(ref input),
+                                                 sizeof(long),
+                                                 ref buffer[0],
+                                                 buffersize,
+                                                 out var bytes_returned,
+                                                 0)
+            && Marshal.GetLastWin32Error() != 234)
+        {
+            throw new Win32Exception();
+        }
+
+        return new VolumeBitmap(buffer.Slice(0, bytes_returned));
+    }
+
+    public sealed class VolumeBitmap
+    {
+        public readonly unsafe long StartingLcn;
+
+        public readonly unsafe long NumberOfClusters;
+
+        public readonly byte[] Bitmap;
+
+        public bool this[long lcn]
+        {
+            get
+            {
+                var relative_lcn = lcn - StartingLcn;
+                return (byte)(((uint)Bitmap[(int)(relative_lcn >> 3)] >> ((byte)relative_lcn & 7)) & 1u) != 0;
+            }
+        }
+
+        internal VolumeBitmap(ReadOnlySpan<byte> buffer)
+        {
+            ref readonly var header = ref buffer.CastRef<VOLUME_BITMAP_BUFFER>();
+
+            StartingLcn = header.StartingLcn;
+            NumberOfClusters = header.BitmapSize;
+            Bitmap = buffer.Slice(16).ToArray();
+        }
+    }
+
+    internal struct VOLUME_BITMAP_BUFFER
+    {
+        public long StartingLcn;
+        public long BitmapSize;
+        public byte Buffer;
+    }
+
+    public static IEnumerable<AllocationExtent> EnumerateVolumeAllocationExtents(SafeFileHandle volume, int cluster_size)
+    {
+        var bitmap = GetVolumeBitmap(volume, 0);
+
+        long cluster = 0;
+
+        var allocated = false;
+
+        while (cluster < bitmap.NumberOfClusters)
+        {
+            var start_cluster = cluster;
+
+            for (;
+                cluster < bitmap.NumberOfClusters &&
+                bitmap[cluster] == allocated;
+                cluster++)
+            {
+            }
+
+            if (cluster > start_cluster)
+            {
+                yield return new AllocationExtent(
+                    start_cluster * cluster_size,
+                    (cluster - start_cluster) * cluster_size,
+                    allocated);
+            }
+
+            allocated = !allocated;
+        }
+    }
+
     private static readonly long TryParseFileTimeUtc_MaxFileTime = DateTime.MaxValue.ToFileTimeUtc();
 
     public static DateTime? TryParseFileTimeUtc(long filetime)
@@ -3998,23 +4263,23 @@ Currently, the following application has files open on this volume:
         }
     }
 
-    public static bool TryGetVolumePathName(string path, out string volume)
+    public static bool TryGetVolumePathName(string path, [NotNullWhen(true)] out string? volume)
     {
         const int CchBufferLength = 32768;
 
         var result = ArrayPool<char>.Shared.Rent(CchBufferLength);
         try
         {
-            if (UnsafeNativeMethods.GetVolumePathNameW(path.AsRef(),
-                                                       out result[0],
-                                                       CchBufferLength))
+            if (!UnsafeNativeMethods.GetVolumePathNameW(path.AsRef(),
+                                                          out result[0],
+                                                          CchBufferLength))
             {
-                volume = result.AsSpan().ReadNullTerminatedUnicodeString();
-                return true;
+                volume = null;
+                return false;
             }
 
-            volume = null!;
-            return false;
+            volume = result.AsSpan().ReadNullTerminatedUnicodeString();
+            return true;
         }
         finally
         {
