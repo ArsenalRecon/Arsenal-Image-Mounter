@@ -13,8 +13,8 @@
   <PropertyGroup>
     <PackageId>ArsenalRecon.ImageMounter.Cli</PackageId>
   </PropertyGroup>
-  
-  <ItemGroup>
+
+  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'netcoreapp3.1'))">
     <PackageReference Include="System.Text.Json" Version="*" />
   </ItemGroup>
 

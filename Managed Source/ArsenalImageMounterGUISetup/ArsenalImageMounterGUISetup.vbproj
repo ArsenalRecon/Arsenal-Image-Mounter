@@ -7,11 +7,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Title>Arsenal Image Mounter Setup</Title>
     <StartupObject>Arsenal.ImageMounter.MainForm</StartupObject>
-	<TargetFrameworks>net48;net8.0-windows;net9.0-windows</TargetFrameworks>
+	<TargetFrameworks>net48;net8.0-windows;net9.0-windows;net10.0-windows</TargetFrameworks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &lt; 0">
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net40'))">
     <Reference Include="System.Configuration" />
   </ItemGroup>
 

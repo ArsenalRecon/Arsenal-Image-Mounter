@@ -180,7 +180,7 @@ Public Class MainForm
 
     End Sub
 
-    Protected Overrides Sub OnClosing(e As CancelEventArgs)
+    Protected Overrides Sub OnFormClosing(e As FormClosingEventArgs)
 
         IsClosing = True
 
@@ -217,16 +217,16 @@ Public Class MainForm
             Return
         End If
 
-        MyBase.OnClosing(e)
+        MyBase.OnFormClosing(e)
 
     End Sub
 
-    Protected Overrides Sub OnClosed(e As EventArgs)
+    Protected Overrides Sub OnFormClosed(e As FormClosedEventArgs)
         IsClosing = True
 
         DeviceListRefreshEvent.Set()
 
-        MyBase.OnClosed(e)
+        MyBase.OnFormClosed(e)
     End Sub
 
     Private Async Sub RefreshDeviceList() Handles btnRefresh.Click

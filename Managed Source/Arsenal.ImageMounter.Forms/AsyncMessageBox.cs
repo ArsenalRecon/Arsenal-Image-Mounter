@@ -16,7 +16,9 @@ using System.Windows.Forms;
 
 namespace Arsenal.ImageMounter.Dialogs;
 
-[SuppressMessage("Usage", "CA2213:Disposable fields should be disposed")]
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+
+//[SuppressMessage("Usage", "CA2213:Disposable fields should be disposed")]
 public partial class AsyncMessageBox : Form
 {
     private static readonly Font MaxFont = new("Tahoma", 96f);
@@ -54,9 +56,11 @@ public partial class AsyncMessageBox : Form
     public string? MsgText
     {
         get => text;
+
         set
         {
             text = value;
+
             if (currentFont is not null)
             {
                 currentFont.Dispose();
@@ -290,13 +294,13 @@ public partial class AsyncMessageBox : Form
         base.OnFormClosing(e);
     }
 
-    protected override void OnClosed(EventArgs e)
+    protected override void OnFormClosed(FormClosedEventArgs e)
     {
-        base.OnClosed(e);
-
         currentFont?.Dispose();
         foregroundBrush?.Dispose();
         backgroundBrush?.Dispose();
         imageBuffer?.Dispose();
+
+        base.OnFormClosed(e);
     }
 }

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48;net8.0-windows;net9.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0-windows;net9.0-windows;net10.0-windows</TargetFrameworks>
     <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <Description>Arsenal Image Mounter Windows Forms Library</Description>
     <UseWindowsForms>true</UseWindowsForms>
@@ -11,21 +11,13 @@
     <PackageId>ArsenalRecon.ImageMounter.Forms</PackageId>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net8`))' &gt;= 0 And !$(TargetFramework.StartsWith(`netstandard`))">
-    <PackageReference Include="System.Memory" Version="*" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net8`))' &lt; 0 Or $(TargetFramework.StartsWith(`netstandard`))">
-    <PackageReference Include="System.Memory" Version="*" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework.StartsWith(`net4`))'">
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net40'))">
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.ServiceProcess" />
     <Reference Include="Microsoft.VisualBasic" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework.CompareTo(`net5`))' &gt;= 0">
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'netcoreapp3.1'))">
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="*" />
   </ItemGroup>
 
