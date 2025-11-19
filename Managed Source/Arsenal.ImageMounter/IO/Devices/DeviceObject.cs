@@ -15,7 +15,6 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.IO;
 using System.Linq.Expressions;
-using System.Runtime.Versioning;
 
 namespace Arsenal.ImageMounter.IO.Devices;
 

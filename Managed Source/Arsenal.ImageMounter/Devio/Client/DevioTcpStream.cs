@@ -15,15 +15,11 @@
 // 
 
 using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Native;
-using Arsenal.ImageMounter.IO.Streams;
 using DiscUtils.Streams;
 using DiscUtils.Streams.Compatibility;
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 

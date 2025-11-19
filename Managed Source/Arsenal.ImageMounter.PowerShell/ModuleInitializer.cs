@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Management.Automation;
+﻿using System.Management.Automation;
 using System.Reflection;
 using System.Runtime.InteropServices;
 #if NETCOREAPP
 using System.Runtime.Loader;
 #endif
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.PowerShell;
 

@@ -38,7 +38,6 @@ using System.Runtime.Intrinsics.X86;
 #endif
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 

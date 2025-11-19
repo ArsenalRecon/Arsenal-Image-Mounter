@@ -10,10 +10,7 @@
 
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Extensions;
-using Arsenal.ImageMounter.IO.Devices;
-using Arsenal.ImageMounter.IO.Native;
 using Arsenal.ImageMounter.IO.Streams;
-using DiscUtils.Streams;
 using LTRData.Extensions.Async;
 using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
@@ -21,7 +18,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;

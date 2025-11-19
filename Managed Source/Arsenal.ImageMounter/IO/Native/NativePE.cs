@@ -10,13 +10,10 @@
 
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.Internal;
-using Arsenal.ImageMounter.IO.Streams;
-using DiscUtils.Streams;
 using DiscUtils.Streams.Compatibility;
 using LTRData.Extensions.Buffers;
 using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;

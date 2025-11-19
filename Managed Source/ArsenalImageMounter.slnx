@@ -1,0 +1,54 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="../.editorconfig" />
+    <File Path="../.gitignore" />
+    <File Path="../Directory_structure.md" />
+    <File Path="../How-to-build.md" />
+    <File Path="../LICENSE.md" />
+    <File Path="../News.md" />
+    <File Path="../README.md" />
+    <File Path="../Third-party-dependencies.txt" />
+    <File Path="Command-line-usage-examples.md" />
+    <File Path="Directory.Build.props" />
+  </Folder>
+  <Folder Name="/Solution Items/Third-Party-Licenses/">
+    <File Path="../Third-Party-Licenses/bzip2.txt" />
+    <File Path="../Third-Party-Licenses/DiscUtils.txt" />
+    <File Path="../Third-Party-Licenses/dokan.txt" />
+    <File Path="../Third-Party-Licenses/DotNetZip.txt" />
+    <File Path="../Third-Party-Licenses/gpl-3.0.txt" />
+    <File Path="../Third-Party-Licenses/lgpl-3.0.txt" />
+    <File Path="../Third-Party-Licenses/libaff4.txt" />
+    <File Path="../Third-Party-Licenses/libewf.txt" />
+    <File Path="../Third-Party-Licenses/libqcow.txt" />
+    <File Path="../Third-Party-Licenses/zlib.txt" />
+  </Folder>
+  <Project Path="Arsenal.ImageMounter.Forms/Arsenal.ImageMounter.Forms.csproj" />
+  <Project Path="Arsenal.ImageMounter.PowerShell/Arsenal.ImageMounter.PowerShell.csproj" />
+  <Project Path="Arsenal.ImageMounter/Arsenal.ImageMounter.csproj" />
+  <Project Path="ArsenalImageMounterAnalyze/ArsenalImageMounterAnalyze.csproj">
+    <Platform Solution="*|x86" Project="x86" />
+  </Project>
+  <Project Path="ArsenalImageMounterCLISetup/ArsenalImageMounterCLISetup.csproj">
+    <Platform Solution="*|x86" Project="x86" />
+  </Project>
+  <Project Path="ArsenalImageMounterGUISetup/ArsenalImageMounterGUISetup.vbproj">
+    <Platform Solution="*|x86" Project="x86" />
+  </Project>
+  <Project Path="ArsenalImageMounterHelpBuilder/ArsenalImageMounterHelpBuilder.shfbproj" Type="7cf6df6d-3b04-46f8-a40b-537d21bca0b4">
+    <Platform Project="AnyCPU" />
+    <Build Solution="*|Any CPU" Project="false" />
+  </Project>
+  <Project Path="ArsenalImageMounterMountTool/ArsenalImageMounterMountTool.vbproj">
+    <Platform Solution="*|x86" Project="x86" />
+  </Project>
+  <Project Path="ArsenalImageMounterService/ArsenalImageMounterService.csproj">
+    <Platform Solution="*|x86" Project="x86" />
+  </Project>
+  <Project Path="TestProject/TestProject.csproj" />
+</Solution>

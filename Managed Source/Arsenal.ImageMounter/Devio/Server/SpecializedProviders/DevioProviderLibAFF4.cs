@@ -14,7 +14,6 @@ using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 
