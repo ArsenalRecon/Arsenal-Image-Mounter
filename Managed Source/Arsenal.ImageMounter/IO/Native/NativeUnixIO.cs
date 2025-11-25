@@ -72,6 +72,14 @@ public static partial class NativeUnixIO
         [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
         public static unsafe partial void free(void* mem);
 
+        [LibraryImport("c")]
+        [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+        public static unsafe partial int unmount([MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags);
+
+        [LibraryImport("c")]
+        [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+        public static unsafe partial int mount([MarshalAs(UnmanagedType.LPUTF8Str)] string type, [MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags, void* data);
+
 #else
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
@@ -100,6 +108,12 @@ public static partial class NativeUnixIO
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe void free(void* mem);
+
+        [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe int unmount([MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags);
+
+        [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe int mount([MarshalAs(UnmanagedType.LPUTF8Str)] string type, [MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags, void* data);
 
 #endif
     }
@@ -195,4 +209,6 @@ public static partial class NativeUnixIO
 
         return target;
     }
+
+    public static unsafe bool Unmount(string path) => UnixAPI.unmount(path, 0) == 0;
 }

@@ -130,7 +130,7 @@ public static class ProviderSupport
             {
                 for (var pos = currentFile.Length - 1; pos >= 0; pos--)
                 {
-                    if (currentFile[pos] >= '0' && currentFile[pos] < '9')
+                    if (currentFile[pos] is >= '0' and < '9')
                     {
                         currentFile = $"{currentFile.AsSpan()[..pos]}{(char)(currentFile[pos] + 1)}{currentFile.AsSpan()[(pos + 1)..]}";
                         return currentFile;
@@ -153,13 +153,12 @@ public static class ProviderSupport
                         currentFile = $"{currentFile.AsSpan()[..(pos + 1)]}{new string('a', currentFile.Length - pos - 1)}";
                         return currentFile;
                     }
-                    else if ((currentFile[pos] >= 'A' && currentFile[pos] < 'Z')
-                        || (currentFile[pos] >= 'a' && currentFile[pos] < 'z'))
+                    else if (currentFile[pos] is >= 'A' and < 'Z' or >= 'a' and < 'z')
                     {
                         currentFile = $"{currentFile.AsSpan()[..pos]}{(char)(currentFile[pos] + 1)}{currentFile.AsSpan()[(pos + 1)..]}";
                         return currentFile;
                     }
-                    else if (currentFile[pos] == 'Z' || currentFile[pos] == 'z')
+                    else if (currentFile[pos] is 'Z' or 'z')
                     {
                         currentFile = $"{currentFile.AsSpan()[..pos]}{(char)(currentFile[pos] - ('Z' - 'A'))}{currentFile.AsSpan()[(pos + 1)..]}";
                     }
@@ -202,7 +201,7 @@ public static class ProviderSupport
             {
                 for (var pos = currentFile.Length - 1; pos >= 0; pos--)
                 {
-                    if (currentFile[pos] >= '0' && currentFile[pos] < '9')
+                    if (currentFile[pos] is >= '0' and < '9')
                     {
                         currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] + 1)}{currentFile.Substring(pos + 1)}";
                         return currentFile;
@@ -225,13 +224,12 @@ public static class ProviderSupport
                         currentFile = $"{currentFile.Substring(0, pos + 1)}{new string('a', currentFile.Length - pos - 1)}";
                         return currentFile;
                     }
-                    else if ((currentFile[pos] >= 'A' && currentFile[pos] < 'Z')
-                        || (currentFile[pos] >= 'a' && currentFile[pos] < 'z'))
+                    else if (currentFile[pos] is >= 'A' and < 'Z' or >= 'a' and < 'z')
                     {
                         currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] + 1)}{currentFile.Substring(pos + 1)}";
                         return currentFile;
                     }
-                    else if (currentFile[pos] == 'Z' || currentFile[pos] == 'z')
+                    else if (currentFile[pos] is 'Z' or 'z')
                     {
                         currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] - ('Z' - 'A'))}{currentFile.Substring(pos + 1)}";
                     }
@@ -484,10 +482,7 @@ public static class ProviderSupport
 
             source_position += count;
 
-            if (completionPosition is not null)
-            {
-                completionPosition.LengthComplete = source_position;
-            }
+            completionPosition?.LengthComplete = source_position;
 
             cancellationToken.ThrowIfCancellationRequested();
 

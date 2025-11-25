@@ -12,6 +12,7 @@
 using Arsenal.ImageMounter.Collections;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.IO.Native;
+using LTRData.Extensions.Collections;
 using System;
 using System.Diagnostics;
 using System.IO;

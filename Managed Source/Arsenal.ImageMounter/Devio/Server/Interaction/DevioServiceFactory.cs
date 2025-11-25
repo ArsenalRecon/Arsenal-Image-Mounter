@@ -449,31 +449,14 @@ public static class DevioServiceFactory
         .AsReadOnly();
 #endif
 
-    private static readonly Assembly[] DiscUtilsAssemblies = [
-        typeof(DiscUtils.Vmdk.Disk).Assembly,
-        typeof(DiscUtils.Vhdx.Disk).Assembly,
-        typeof(DiscUtils.Vhd.Disk).Assembly,
-        typeof(DiscUtils.Vdi.Disk).Assembly,
-        typeof(DiscUtils.Dmg.Disk).Assembly,
-        typeof(DiscUtils.Xva.Disk).Assembly,
-        typeof(DiscUtils.OpticalDisk.Disc).Assembly,
-        typeof(DiscUtils.Raw.Disk).Assembly
-    ];
-
     public static bool DiscUtilsInitialized { get; } = InitializeDiscUtils();
 
     private static bool InitializeDiscUtils()
     {
-        var done = false;
+        DiscUtils.Transports.SetupHelper.SetupTransports();
+        DiscUtils.Containers.SetupHelper.SetupContainers();
 
-        foreach (var asm in DiscUtilsAssemblies.Distinct())
-        {
-            Trace.WriteLine($"Registering DiscUtils assembly '{asm.FullName}'...");
-            DiscUtils.Setup.SetupHelper.RegisterAssembly(asm);
-            done = true;
-        }
-
-        return done;
+        return true;
     }
 
     /// <summary>
@@ -1000,6 +983,20 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
 
     public static Stream OpenImageAsStream(string imageFile, FileAccess access)
     {
+        if (imageFile.Contains("://"))
+        {
+            if (!DiscUtilsInitialized)
+            {
+                Trace.WriteLine("DiscUtils not available!");
+            }
+
+            var provider = GetProviderDiscUtils(imageFile, access)
+                ?? throw new NotSupportedException($"Cannot open '{imageFile}' with provider DiscUtils");
+
+            Trace.WriteLine($"Image '{imageFile}' sector size: {provider.SectorSize}");
+            return new DevioDirectStream(provider, ownsProvider: true);
+        }
+
         switch (Path.GetExtension(imageFile).ToLowerInvariant())
         {
             case ".vhd":
@@ -1099,7 +1096,13 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
     }
 
     public static ProviderType GetProviderTypeFromFileName(string imageFile)
-        => Path.GetExtension(imageFile).ToLowerInvariant() switch
+    {
+        if (imageFile.Contains("://"))
+        {
+            return ProviderType.DiscUtils;
+        }
+
+        return Path.GetExtension(imageFile).ToLowerInvariant() switch
         {
             ".vmdk" when imageFile.EndsWith("-flat.vmdk", StringComparison.OrdinalIgnoreCase) => ProviderType.None,
             ".vhd" or ".avhd" or ".vdi" or ".vmdk" or ".vhdx" or ".avhdx" or ".dmg" or ".ova" => ProviderType.DiscUtils,
@@ -1110,4 +1113,5 @@ Formats currently supported: {string.Join(", ", VirtualDiskManager.SupportedDisk
             ".aff4" => ProviderType.LibAFF4,
             _ => ProviderType.None,
         };
+    }
 }

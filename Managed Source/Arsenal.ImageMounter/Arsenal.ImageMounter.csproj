@@ -8,17 +8,10 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Dmg" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.OpticalDisk" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Streams" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Vdi" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Vmdk" Version="1.0.71" />
-    <PackageReference Include="LTRData.DiscUtils.Xva" Version="1.0.71" />
+	<PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.72" />
+	<PackageReference Include="LTRData.DiscUtils.Transports" Version="1.0.72" />
+	<PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.72" />
+    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.72" />
     <PackageReference Include="LTRData.Extensions" Version="*" />
     <PackageReference Include="LTRData.Extensions.Native" Version="*" />
   </ItemGroup>

@@ -421,10 +421,7 @@ public class CombinedSeekStream : CompatibilityStream
 
         current = streams.FirstOrDefault(s => s.Key > offset);
 
-        if (current.Value is not null)
-        {
-            current.Value.Position = current.Value.Length - (current.Key - offset);
-        }
+        current.Value?.Position = current.Value.Length - (current.Key - offset);
 
         position = offset;
 

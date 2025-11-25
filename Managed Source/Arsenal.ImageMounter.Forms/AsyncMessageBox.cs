@@ -59,12 +59,8 @@ public partial class AsyncMessageBox : Form
         set
         {
             text = value;
-
-            if (currentFont is not null)
-            {
-                currentFont.Dispose();
-                currentFont = null;
-            }
+            currentFont?.Dispose();
+            currentFont = null;
 
             OnResize(EventArgs.Empty);
         }
@@ -142,12 +138,8 @@ public partial class AsyncMessageBox : Form
                 g.PageUnit = GraphicsUnit.Pixel;
 
                 g.FillRectangle(backgroundBrush, new(Point.Empty, imageBuffer.Size));
-
-                if (currentFont is not null)
-                {
-                    currentFont.Dispose();
-                    currentFont = null;
-                }
+                currentFont?.Dispose();
+                currentFont = null;
 
                 if (text is null || string.IsNullOrEmpty(text))
                 {
@@ -247,11 +239,8 @@ public partial class AsyncMessageBox : Form
         get => base.ForeColor;
         set
         {
-            if (foregroundBrush is not null)
-            {
-                foregroundBrush.Dispose();
-                foregroundBrush = null;
-            }
+            foregroundBrush?.Dispose();
+            foregroundBrush = null;
 
             base.ForeColor = value;
             foregroundBrush = new SolidBrush(value);
@@ -263,11 +252,8 @@ public partial class AsyncMessageBox : Form
         get => base.BackColor;
         set
         {
-            if (backgroundBrush is not null)
-            {
-                backgroundBrush.Dispose();
-                backgroundBrush = null;
-            }
+            backgroundBrush?.Dispose();
+            backgroundBrush = null;
 
             base.BackColor = value;
             backgroundBrush = new SolidBrush(value);

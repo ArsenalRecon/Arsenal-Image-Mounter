@@ -565,12 +565,8 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
             finally
             {
                 Interlocked.Decrement(ref concurrentRequestsCounter);
-
-                if (initializationDone is not null)
-                {
-                    initializationDone.Set();
-                    initializationDone = null;
-                }
+                initializationDone?.Set();
+                initializationDone = null;
 
                 if (device.IsClosed)
                 {
