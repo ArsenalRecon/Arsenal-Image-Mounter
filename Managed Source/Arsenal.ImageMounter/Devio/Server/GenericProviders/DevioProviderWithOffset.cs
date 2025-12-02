@@ -53,7 +53,7 @@ public class DevioProviderWithOffset : IDevioProvider
         }
 
 #if NET7_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(BaseProvider);
+        ArgumentNullException.ThrowIfNull(baseProvider);
         BaseProvider = baseProvider;
 #else
         BaseProvider = baseProvider
