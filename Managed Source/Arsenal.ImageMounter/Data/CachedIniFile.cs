@@ -25,8 +25,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-
 #pragma warning disable IDE0057 // Use range operator
+#pragma warning disable IDE0056 // Use index operator
 
 namespace Arsenal.ImageMounter.Data;
 
@@ -538,13 +538,12 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
 
             var Line = Linestr.AsSpan().Trim();
 
-            if (Line.Length == 0 || Line.StartsWith(";".AsSpan(), StringComparison.Ordinal))
+            if (Line.Length == 0 || Line[0] == ';')
             {
                 continue;
             }
 
-            if (Line.StartsWith("[".AsSpan(), StringComparison.Ordinal)
-                && Line.EndsWith("]".AsSpan(), StringComparison.Ordinal))
+            if (Line[0] == '[' && Line[Line.Length - 1] == ']')
             {
                 var SectionKey = Line.Slice(1, Line.Length - 2).Trim().ToString();
                 CurrentSection = this[SectionKey];
@@ -588,17 +587,16 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                 break;
             }
 
-            var Line = Linestr.Trim();
+            var Line = Linestr.AsSpan().Trim();
 
-            if (Line.Length == 0 || Line.StartsWith(';'))
+            if (Line.Length == 0 || Line[0] == ';')
             {
                 continue;
             }
 
-            if (Line.StartsWith('[')
-                && Line.EndsWith(']'))
+            if (Line[0] == '[' && Line[Line.Length - 1] == ']')
             {
-                var SectionKey = Line.AsSpan(1, Line.Length - 2).Trim().ToString();
+                var SectionKey = Line.Slice(1, Line.Length - 2).Trim().ToString();
                 CurrentSection = this[SectionKey];
                 continue;
             }
@@ -609,8 +607,8 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                 continue;
             }
 
-            var Key = Line.AsSpan(0, EqualSignPos).Trim().ToString();
-            var Value = Line.AsSpan(EqualSignPos + 1).Trim().ToString();
+            var Key = Line.Slice(0, EqualSignPos).Trim().ToString();
+            var Value = Line.Slice(EqualSignPos + 1).Trim().ToString();
 
             if (CurrentSection is null)
             {
