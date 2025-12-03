@@ -17,6 +17,9 @@ using Arsenal.ImageMounter.IO.Streams;
 using DiscUtils.Streams.Compatibility;
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.Buffers;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,7 +36,7 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 /// </summary>
 public class DevioProviderFromStream : IDevioProvider
 {
-    private bool disposedValue;
+    private int disposedValue;
 
     /// <summary>
     /// Stream object used by this instance.
@@ -66,6 +69,29 @@ public class DevioProviderFromStream : IDevioProvider
     /// Set to true to force single thread operation even if provider supports multithread
     /// </summary>
     public bool ForceSingleThread { get; set; }
+
+    /// <summary>
+    /// Set to true to enable lazy writes. In this mode, write requests are queued and
+    /// flushed to the underlying stream in the background.
+    /// </summary>
+    public bool UseLazyWrites
+    {
+        get;
+        set
+        {
+            if (value && !CanWrite)
+            {
+                throw new InvalidOperationException("Cannot enable lazy writes on a read-only stream.");
+            }
+
+            if (value && SupportsParallel)
+            {
+                throw new InvalidOperationException("Cannot enable lazy writes on a file or disk stream.");
+            }
+
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Creates an object implementing IDevioProvider interface with I/O redirected
@@ -167,6 +193,26 @@ public class DevioProviderFromStream : IDevioProvider
         }
 #endif
 
+        if (PendingWrites.Count > 0)
+        {
+            async ValueTask<int> AwaitWriteThenRead()
+            {
+                while (PendingWrites.Count > 0)
+                {
+                    if (lazyWriter is not null)
+                    {
+                        await lazyWriter.ConfigureAwait(false);
+                    }
+                }
+
+                BaseStream.Position = fileOffset;
+                
+                return await BaseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            }
+            
+            return AwaitWriteThenRead();
+        }
+
         BaseStream.Position = fileOffset;
 
         return BaseStream.ReadAsync(buffer, cancellationToken);
@@ -189,6 +235,11 @@ public class DevioProviderFromStream : IDevioProvider
         }
 #endif
 
+        while (PendingWrites.Count > 0)
+        {
+            lazyWriter?.GetAwaiter().GetResult();
+        }
+
         BaseStream.Position = fileOffset;
 
         return BaseStream.Read(buffer, bufferoffset, count);
@@ -210,12 +261,23 @@ public class DevioProviderFromStream : IDevioProvider
         }
 #endif
 
+        if (UseLazyWrites)
+        {
+            throw new InvalidOperationException("Lazy writes are not supported for synchronous Write calls.");
+        }
+
         BaseStream.Position = fileOffset;
 
         BaseStream.Write(buffer);
 
         return buffer.Length;
     }
+
+    private Queue<LazyWriteItem> PendingWrites => field ??= new();
+
+    private readonly record struct LazyWriteItem(ArraySegment<byte> Buffer, long FileOffset);
+
+    private Task? lazyWriter;
 
     public async ValueTask<int> WriteAsync(ReadOnlyMemory<byte> buffer, long fileOffset, CancellationToken cancellationToken)
     {
@@ -230,9 +292,40 @@ public class DevioProviderFromStream : IDevioProvider
         }
 #endif
 
-        BaseStream.Position = fileOffset;
+        if (!UseLazyWrites)
+        {
+            BaseStream.Position = fileOffset;
+            await BaseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+            return buffer.Length;
+        }
 
-        await BaseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var array = ArrayPool<byte>.Shared.Rent(buffer.Length);
+
+        buffer.CopyTo(array);
+
+        PendingWrites.Enqueue(new(new(array, 0, buffer.Length), fileOffset));
+
+        if (lazyWriter is null || lazyWriter.IsCompleted)
+        {
+            lazyWriter = Task.Run(async () =>
+            {
+                while (PendingWrites.TryDequeue(out var item))
+                {
+                    try
+                    {
+                        BaseStream.Position = item.FileOffset;
+                        
+                        await BaseStream.WriteAsync(item.Buffer, CancellationToken.None).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        ArrayPool<byte>.Shared.Return(item.Buffer.Array!);
+                    }
+                }
+            }, cancellationToken);
+        }
 
         return buffer.Length;
     }
@@ -258,19 +351,23 @@ public class DevioProviderFromStream : IDevioProvider
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!disposedValue &&
+        if (Interlocked.Exchange(ref disposedValue, 1) == 0 &&
             disposing &&
             OwnsBaseStream &&
             BaseStream is not null)
         {
             OnDisposing(EventArgs.Empty);
 
+            if (PendingWrites.Count > 0)
+            {
+                lazyWriter?.GetAwaiter().GetResult();
+                lazyWriter = null;
+            }
+
             BaseStream.Dispose();
 
             OnDisposed(EventArgs.Empty);
         }
-
-        disposedValue = true;
     }
 
     protected virtual void OnDisposing(EventArgs e) => Disposing?.Invoke(this, e);

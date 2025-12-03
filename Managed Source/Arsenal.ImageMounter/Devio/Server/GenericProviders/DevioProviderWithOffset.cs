@@ -35,6 +35,12 @@ public class DevioProviderWithOffset : IDevioProvider
 
     public IDevioProvider BaseProvider { get; }
 
+    public bool UseLazyWrites
+    {
+        get => BaseProvider.UseLazyWrites;
+        set => BaseProvider.UseLazyWrites = value;
+    }
+
     public DevioProviderWithOffset(IDevioProvider baseProvider, long offset)
         : this(baseProvider, offset, Math.Max(baseProvider.Length, baseProvider.GetVBRPartitionLength()) - offset)
     {

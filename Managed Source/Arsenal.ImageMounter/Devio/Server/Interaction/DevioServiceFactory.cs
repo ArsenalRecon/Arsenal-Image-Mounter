@@ -238,7 +238,7 @@ public static class DevioServiceFactory
                 }
                 else
                 {
-                    virtualdisk = VirtualDisk.OpenDisk(Imagefile, DiskAccess)
+                    virtualdisk = VirtualDisk.OpenDisk(Imagefile, DiskAccess, useAsync: true)
                         ?? throw new NotSupportedException($"Cannot open '{Imagefile}' with DiscUtils libraries");
                 }
 
@@ -377,7 +377,7 @@ public static class DevioServiceFactory
             return GetProviderPhysical(Imagefile, DiskAccess);
         }
 
-        var stream = new FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: false);
+        var stream = new FileStream(Imagefile, FileMode.Open, DiskAccess, FileShare.Read | FileShare.Delete, bufferSize: 1, useAsync: true);
 
         return new DevioProviderFromStream(stream, ownsStream: true)
         {

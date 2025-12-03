@@ -78,6 +78,11 @@ public abstract class DevioProviderManagedBase : IDevioProvider
     public abstract uint SectorSize { get; }
 
     /// <summary>
+    /// Indicates whether lazy writes are used.
+    /// </summary>
+    public virtual bool UseLazyWrites { get => false; set => throw new NotSupportedException("This provider does not support lazy writing"); }
+
+    /// <summary>
     /// Reads bytes from virtual disk to a byte array.
     /// </summary>
     /// <param name="buffer">Byte array with enough size where read bytes are stored.</param>

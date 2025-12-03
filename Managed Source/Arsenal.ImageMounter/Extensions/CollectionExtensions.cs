@@ -67,4 +67,18 @@ public static class CollectionExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe ReadOnlySpan<byte> AsReadOnlySpan(this nint ptr, int length) =>
         new((void*)ptr, length);
+
+    public static bool TryDequeue<T>(this Queue<T> queue, out T? value)
+    {
+        if (queue.Count > 0)
+        {
+            value = queue.Dequeue();
+            return true;
+        }
+        else
+        {
+            value = default;
+            return false;
+        }
+    }
 }

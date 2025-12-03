@@ -386,19 +386,12 @@ public static class ProviderSupport
                 break;
         }
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            && provider is DevioProviderFromStream { BaseStream: FileStream { SafeFileHandle: { } physical_disk_handle } }
+            && NativeFileIO.GetStorageStandardProperties(physical_disk_handle) is { } storageproperties)
         {
-            var physical_disk_handle = ((provider as DevioProviderFromStream)?.BaseStream as FileStream)?.SafeFileHandle;
-
-            if (physical_disk_handle is not null)
-            {
-                var storageproperties = NativeFileIO.GetStorageStandardProperties(physical_disk_handle);
-                if (storageproperties.HasValue)
-                {
-                    imaging_parameters.StorageStandardProperties = storageproperties.Value;
-                    Trace.WriteLine($"Source disk vendor '{imaging_parameters.StorageStandardProperties.VendorId}' model '{imaging_parameters.StorageStandardProperties.ProductId}', serial number '{imaging_parameters.StorageStandardProperties.SerialNumber}'");
-                }
-            }
+            imaging_parameters.StorageStandardProperties = storageproperties;
+            Trace.WriteLine($"Source disk vendor '{imaging_parameters.StorageStandardProperties.VendorId}' model '{imaging_parameters.StorageStandardProperties.ProductId}', serial number '{imaging_parameters.StorageStandardProperties.SerialNumber}'");
         }
 
         using var target = new DevioProviderLibEwf([Path.ChangeExtension(outputImage, null)], DevioProviderLibEwf.AccessFlagsWrite);

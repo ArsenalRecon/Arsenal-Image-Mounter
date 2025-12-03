@@ -42,6 +42,12 @@ public class DevioProviderWithFakeMBR : IDevioProvider
 
     public IDevioProvider BaseProvider { get; }
 
+    public bool UseLazyWrites
+    {
+        get => BaseProvider.UseLazyWrites;
+        set => BaseProvider.UseLazyWrites = value;
+    }
+
     internal byte[] PrefixBuffer { get; } = new byte[PrefixLength];
 
     internal byte[] SuffixBuffer { get; }

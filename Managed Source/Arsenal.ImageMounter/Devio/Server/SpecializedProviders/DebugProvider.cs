@@ -28,8 +28,13 @@ namespace Arsenal.ImageMounter.Devio.Server.SpecializedProviders;
 /// </summary>
 public class DebugProvider : DevioProviderUnmanagedBase
 {
-
     public IDevioProvider BaseProvider { get; }
+
+    public override bool UseLazyWrites
+    {
+        get => BaseProvider.UseLazyWrites;
+        set => BaseProvider.UseLazyWrites = value;
+    }
 
     public Stream DebugCompareStream { get; }
 

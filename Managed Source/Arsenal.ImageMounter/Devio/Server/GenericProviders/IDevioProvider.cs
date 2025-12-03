@@ -72,6 +72,14 @@ public partial interface IDevioProvider : IDisposable
     /// and reservations.
     /// </summary>
     bool SupportsShared { get; }
+    
+    /// <summary>
+    /// Gets or sets a value indicating whether write operations are performed lazily to improve performance.
+    /// </summary>
+    /// <remarks>When enabled, write operations may be buffered and deferred, which can increase throughput
+    /// but may result in data not being immediately persisted. This setting is typically used to optimize performance
+    /// in scenarios where immediate consistency is not required.</remarks>
+    bool UseLazyWrites { get; set; }
 
     /// <summary>
     /// Reads bytes from virtual disk to a memory area specified by a pointer to unmanaged memory.

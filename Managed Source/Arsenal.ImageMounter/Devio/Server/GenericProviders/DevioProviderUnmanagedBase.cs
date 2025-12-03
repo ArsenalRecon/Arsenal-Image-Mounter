@@ -72,6 +72,11 @@ public abstract class DevioProviderUnmanagedBase : IDevioProvider
     /// <returns>Sector size of virtual disk.</returns>
     public abstract uint SectorSize { get; }
 
+    /// <summary>
+    /// Indicates whether lazy writes are used.
+    /// </summary>
+    public virtual bool UseLazyWrites { get => false; set => throw new NotSupportedException("This provider does not support lazy writing"); }
+
     unsafe int IDevioProvider.Read(byte[] buffer, int bufferoffset, int count, long fileoffset)
     {
         if (buffer is null)

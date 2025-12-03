@@ -30,6 +30,8 @@ public sealed class DummyProvider(long Length) : IDevioProvider
 
     public uint SectorSize => 512U;
 
+    public bool UseLazyWrites { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
     public bool CanWrite => true;
 
     public bool SupportsParallel => true;

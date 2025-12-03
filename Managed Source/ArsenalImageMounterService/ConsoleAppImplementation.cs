@@ -251,6 +251,7 @@ Please see EULA.txt for license information.";
         var listDevices = false;
         var autoOnline = false;
         var rescanAdapter = false;
+        var lazyWrite = false;
 
         foreach (var cmd in commands)
         {
@@ -361,6 +362,11 @@ Please see EULA.txt for license information.";
                 writeOverlayImageFile = cmd.Value.ElementAtOrDefault(0) ?? @"\\?\awealloc";
                 diskAccess = FileAccess.Read;
                 deviceFlags = deviceFlags | DeviceFlags.ReadOnly | DeviceFlags.WriteOverlay;
+            }
+            else if (arg.Equals("lazywrite", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
+                && !commands.ContainsKey("writeoverlay"))
+            {
+                lazyWrite = true;
             }
             else if (arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
                 && commands.ContainsKey("writeoverlay"))
@@ -903,7 +909,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                                                       fileName,
                                                       diskSize.Value,
                                                       geometry,
-                                                      null);
+                                                      parameters: null,
+                                                      useAsync: true);
 
                         break;
                 }
@@ -942,6 +949,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             if (forceSingleThread)
             {
                 provider.ForceSingleThread = true;
+            }
+
+            if (lazyWrite)
+            {
+                provider.UseLazyWrites = true;
             }
 
             if (!string.IsNullOrWhiteSpace(debugCompare))
