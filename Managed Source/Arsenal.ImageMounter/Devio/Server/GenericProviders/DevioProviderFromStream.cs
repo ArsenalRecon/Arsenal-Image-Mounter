@@ -15,15 +15,16 @@
 using Arsenal.ImageMounter.Extensions;
 using Arsenal.ImageMounter.IO.Streams;
 using DiscUtils.Streams.Compatibility;
+using LTRData.Extensions.Formatting;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;
-using System.Collections;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable IDE0057 // Use range operator
@@ -36,8 +37,6 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 /// </summary>
 public class DevioProviderFromStream : IDevioProvider
 {
-    private int disposedValue;
-
     /// <summary>
     /// Stream object used by this instance.
     /// </summary>
@@ -193,16 +192,15 @@ public class DevioProviderFromStream : IDevioProvider
         }
 #endif
 
-        if (PendingWrites.Count > 0)
+        if (!PendingWrites.IsEmpty)
         {
             async ValueTask<int> AwaitWriteThenRead()
             {
-                while (PendingWrites.Count > 0)
+                while (!PendingWrites.IsEmpty)
                 {
-                    if (lazyWriter is not null)
-                    {
-                        await lazyWriter.ConfigureAwait(false);
-                    }
+                    WriteFlushEvent.Set();
+                    await WriteFlushSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    WriteFlushSemaphore.Release();
                 }
 
                 BaseStream.Position = fileOffset;
@@ -235,9 +233,11 @@ public class DevioProviderFromStream : IDevioProvider
         }
 #endif
 
-        while (PendingWrites.Count > 0)
+        while (!PendingWrites.IsEmpty)
         {
-            lazyWriter?.GetAwaiter().GetResult();
+            WriteFlushEvent.Set();
+            WriteFlushSemaphore.Wait();
+            WriteFlushSemaphore.Release();
         }
 
         BaseStream.Position = fileOffset;
@@ -273,11 +273,17 @@ public class DevioProviderFromStream : IDevioProvider
         return buffer.Length;
     }
 
-    private Queue<LazyWriteItem> PendingWrites => field ??= new();
+    private ConcurrentQueue<LazyWriteItem> PendingWrites => field ??= new();
 
     private readonly record struct LazyWriteItem(ArraySegment<byte> Buffer, long FileOffset);
 
     private Task? lazyWriter;
+
+    private SemaphoreSlim WriteFlushSemaphore => field ??= new(initialCount: 1);
+
+    private AutoResetEvent WriteFlushEvent => field ??= new(initialState: false);
+
+    private bool isShuttingDown;
 
     public async ValueTask<int> WriteAsync(ReadOnlyMemory<byte> buffer, long fileOffset, CancellationToken cancellationToken)
     {
@@ -307,23 +313,66 @@ public class DevioProviderFromStream : IDevioProvider
 
         PendingWrites.Enqueue(new(new(array, 0, buffer.Length), fileOffset));
 
+        WriteFlushEvent.Set();
+
         if (lazyWriter is null || lazyWriter.IsCompleted)
         {
             lazyWriter = Task.Run(async () =>
             {
-                while (PendingWrites.TryDequeue(out var item))
+                while (!isShuttingDown)
                 {
+                    var time = Environment.TickCount;
+
+                    await WriteFlushEvent.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+
+                    await WriteFlushSemaphore.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+
                     try
                     {
-                        BaseStream.Position = item.FileOffset;
+                        while (PendingWrites.TryDequeue(out var item))
+                        {
+                            try
+                            {
+                                if (Environment.TickCount - time > 200)
+                                {
+                                    Console.Write($"DevioProviderFromStream: Lazy write backlog processing {PendingWrites.Count + 1} items of {SizeFormatting.FormatBytes(PendingWrites.Sum(item => (long)item.Buffer.Count))}...  \r");
+
+                                    time = Environment.TickCount;
+                                }
+
+                                BaseStream.Position = item.FileOffset;
+
+                                await BaseStream.WriteAsync(item.Buffer, CancellationToken.None).ConfigureAwait(false);
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log and continue with next write
+                                var msg = $"DevioProviderFromStream: Lazy write failed, data lost: {ex}";
+
+                                Trace.WriteLine(msg);
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.Error.WriteLine(msg);
+                                Console.ResetColor();
+                            }
+                            finally
+                            {
+                                ArrayPool<byte>.Shared.Return(item.Buffer.Array!);
+                            }
+                        }
+
+                        const string donemsg = "DevioProviderFromStream: Lazy write backlog processing done.";
                         
-                        await BaseStream.WriteAsync(item.Buffer, CancellationToken.None).ConfigureAwait(false);
+                        Console.Write(donemsg);
+                        Console.WriteLine(new string(' ', Console.WindowWidth - donemsg.Length - 1));
+
+                        time = Environment.TickCount;
                     }
                     finally
                     {
-                        ArrayPool<byte>.Shared.Return(item.Buffer.Array!);
+                        WriteFlushSemaphore.Release();
                     }
                 }
+
             }, cancellationToken);
         }
 
@@ -349,25 +398,77 @@ public class DevioProviderFromStream : IDevioProvider
         return count;
     }
 
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private int disposedValue; // 0 = false, 1 = true
+
+    [DebuggerHidden]
+    private bool ShouldCleanup() => Interlocked.Exchange(ref disposedValue, 1) == 0;
+
     protected virtual void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref disposedValue, 1) == 0 &&
-            disposing &&
-            OwnsBaseStream &&
-            BaseStream is not null)
+        if (!disposing)
         {
-            OnDisposing(EventArgs.Empty);
+            return;
+        }
 
-            if (PendingWrites.Count > 0)
+        if (OwnsBaseStream
+            && BaseStream is not null)
+        {
+            var wasNotDisposed = ShouldCleanup();
+
+            if (wasNotDisposed)
             {
-                lazyWriter?.GetAwaiter().GetResult();
-                lazyWriter = null;
+                OnDisposing(EventArgs.Empty);
             }
 
-            BaseStream.Dispose();
+            if (!PendingWrites.IsEmpty)
+            {
+                isShuttingDown = true;
+                WriteFlushEvent.Set();
+                lazyWriter?.GetAwaiter().GetResult();
+            }
 
-            OnDisposed(EventArgs.Empty);
+            if (wasNotDisposed)
+            {
+                BaseStream.Dispose();
+
+                OnDisposed(EventArgs.Empty);
+            }
         }
+    }
+
+    public virtual async ValueTask DisposeAsync()
+    {
+        if (OwnsBaseStream
+            && BaseStream is not null)
+        {
+            var wasNotDisposed = ShouldCleanup();
+
+            if (wasNotDisposed)
+            {
+                OnDisposing(EventArgs.Empty);
+            }
+
+            if (!PendingWrites.IsEmpty && lazyWriter is not null)
+            {
+                isShuttingDown = true;
+                WriteFlushEvent.Set();
+                await lazyWriter.ConfigureAwait(false);
+            }
+
+            if (wasNotDisposed)
+            {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+                await BaseStream.DisposeAsync().ConfigureAwait(false);
+#else
+                BaseStream.Dispose();
+#endif
+
+                OnDisposed(EventArgs.Empty);
+            }
+        }
+
+        GC.SuppressFinalize(this);
     }
 
     protected virtual void OnDisposing(EventArgs e) => Disposing?.Invoke(this, e);

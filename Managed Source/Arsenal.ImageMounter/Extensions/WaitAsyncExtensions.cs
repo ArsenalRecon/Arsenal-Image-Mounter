@@ -22,7 +22,6 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 
-
 namespace Arsenal.ImageMounter.Extensions;
 
 public static partial class WaitAsyncExtensions

@@ -29,7 +29,7 @@ namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 /// and writing data from unmanaged memory provided a pointer to unmanaged block of
 /// memory.</para>
 /// </summary>
-public partial interface IDevioProvider : IDisposable
+public partial interface IDevioProvider : IDisposable, IAsyncDisposable
 {
     event EventHandler Disposing;
     event EventHandler Disposed;

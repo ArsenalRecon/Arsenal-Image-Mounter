@@ -187,4 +187,18 @@ public partial class DevioDirectStream : DevioStream
 
         base.Dispose(disposing);
     }
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    public override async ValueTask DisposeAsync()
+    {
+        if (OwnsProvider && Provider is not null)
+        {
+            await Provider.DisposeAsync().ConfigureAwait(false);
+        }
+
+        await base.DisposeAsync().ConfigureAwait(false);
+
+        GC.SuppressFinalize(this);
+    }
+#endif
 }

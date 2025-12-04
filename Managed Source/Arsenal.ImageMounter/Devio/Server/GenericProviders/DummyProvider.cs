@@ -63,5 +63,13 @@ public sealed class DummyProvider(long Length) : IDevioProvider
         Disposing?.Invoke(this, EventArgs.Empty);
         Disposed?.Invoke(this, EventArgs.Empty);
     }
+
+    public ValueTask DisposeAsync()
+    {
+        Disposing?.Invoke(this, EventArgs.Empty);
+        Disposed?.Invoke(this, EventArgs.Empty);
+        
+        return default;
+    }
 }
 

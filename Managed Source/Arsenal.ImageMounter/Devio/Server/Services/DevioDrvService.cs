@@ -680,12 +680,21 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
     protected override void Dispose(bool disposing)
     {
+        base.Dispose(disposing);
+
         if (disposing)
         {
             device?.Dispose();
         }
+    }
 
-        base.Dispose(disposing);
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync().ConfigureAwait(false);
+
+        device?.Dispose();
+
+        GC.SuppressFinalize(this);
     }
 
     public override void RunService()

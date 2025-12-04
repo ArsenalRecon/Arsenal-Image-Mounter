@@ -442,4 +442,24 @@ public class CombinedSeekStream : CompatibilityStream
 
         base.Dispose(disposing);
     }
-}
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    public override async ValueTask DisposeAsync()
+    {
+        if (streams != null)
+        {
+#if NET6_0_OR_GREATER
+            await Parallel.ForEachAsync(streams, (stream, ct) => stream.Value.DisposeAsync()).ConfigureAwait(false);
+#else
+            await Task.WhenAll(streams.AsParallel().Select(stream => stream.Value.DisposeAsync().AsTask())).ConfigureAwait(false);
+#endif
+
+            streams.Clear();
+        }
+
+        await base.DisposeAsync().ConfigureAwait(false);
+
+        GC.SuppressFinalize(this);
+    }
+#endif
+        }

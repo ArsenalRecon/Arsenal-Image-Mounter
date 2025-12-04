@@ -204,7 +204,7 @@ public class DiskStream : AligningStream
         public override int Read(byte[] array, int offset, int count)
             => Read(array.AsSpan(offset, count));
 
-        public unsafe override int Read(Span<byte> buffer)
+        public override unsafe int Read(Span<byte> buffer)
         {
             if (!CanRead)
             {
@@ -237,7 +237,7 @@ public class DiskStream : AligningStream
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             => ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
 
-        public async override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             if (!CanRead)
             {
@@ -337,7 +337,7 @@ public class DiskStream : AligningStream
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             => WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
 
-        public async override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
             if (!CanWrite)
             {

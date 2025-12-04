@@ -1226,13 +1226,14 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 Console.WriteLine("Waiting for incoming connection from Arsenal Image Mounter. Press Ctrl+C to exit.");
             }
 
-            Console.CancelKeyPress += (sender, e) =>
+            Console.CancelKeyPress += async (sender, e) =>
             {
+                e.Cancel = true;
+
                 try
                 {
                     Console.WriteLine("Stopping service...");
-                    service.Dispose();
-                    e.Cancel = true;
+                    await service.DisposeAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {

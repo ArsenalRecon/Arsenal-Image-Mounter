@@ -13,6 +13,7 @@ using LTRData.Extensions.Buffers;
 using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 
 
@@ -105,4 +106,15 @@ public class BufferedBinaryWriter : BinaryWriter
 
         base.Dispose(disposing);
     }
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    public override ValueTask DisposeAsync()
+    {
+        IsDisposed = true;
+
+        GC.SuppressFinalize(this);
+
+        return base.DisposeAsync();
+    }
+#endif
 }

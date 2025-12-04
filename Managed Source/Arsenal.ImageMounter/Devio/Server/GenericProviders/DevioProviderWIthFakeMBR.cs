@@ -499,6 +499,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
             if (disposing)
             {
                 // TODO: dispose managed state (managed objects).
+                BaseProvider.Dispose();
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
@@ -508,6 +509,27 @@ public class DevioProviderWithFakeMBR : IDevioProvider
         IsDisposed = true;
 
         OnDisposed(EventArgs.Empty);
+    }
+
+    // IAsyncDisposable
+    public virtual async ValueTask DisposeAsync()
+    {
+        OnDisposing(EventArgs.Empty);
+
+        if (!IsDisposed)
+        {
+            // TODO: dispose managed state (managed objects).
+            await BaseProvider.DisposeAsync().ConfigureAwait(false);
+
+            // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
+            // TODO: set large fields to null.
+        }
+
+        IsDisposed = true;
+
+        OnDisposed(EventArgs.Empty);
+
+        GC.SuppressFinalize(this);
     }
 
     // TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.

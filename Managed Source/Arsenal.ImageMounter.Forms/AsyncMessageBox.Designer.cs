@@ -10,8 +10,6 @@
 
 using System.Diagnostics;
 
-
-
 namespace Arsenal.ImageMounter.Dialogs;
 
 public partial class AsyncMessageBox

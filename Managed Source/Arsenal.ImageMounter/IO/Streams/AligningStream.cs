@@ -671,6 +671,24 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
         base.Dispose(disposing);
     }
 
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    public override async ValueTask DisposeAsync()
+    {
+        if (ownsBaseStream)
+        {
+            OnDisposing(EventArgs.Empty);
+
+            await BaseStream.DisposeAsync().ConfigureAwait(false);
+
+            OnDisposed(EventArgs.Empty);
+        }
+
+        await base.DisposeAsync().ConfigureAwait(false);
+
+        GC.SuppressFinalize(this);
+    }
+#endif
+
     protected virtual void OnDisposing(EventArgs e) => Disposing?.Invoke(this, e);
 
     protected virtual void OnDisposed(EventArgs e) => Disposed?.Invoke(this, e);

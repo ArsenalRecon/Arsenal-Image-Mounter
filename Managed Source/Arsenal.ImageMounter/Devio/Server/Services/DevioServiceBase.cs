@@ -418,6 +418,18 @@ public abstract class DevioServiceBase(IDevioProvider devioProvider, bool ownsPr
     /// Dismounts an Arsenal Image Mounter Disk Device created by StartServiceThreadAndMount() and waits
     /// for service thread of this instance to exit.
     /// </summary>
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public virtual async ValueTask DismountAndStopServiceThreadAsync()
+    {
+        await RemoveDeviceAndStopServiceThreadAsync(CancellationToken.None).ConfigureAwait(false);
+
+        await WaitForExitAsync(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Dismounts an Arsenal Image Mounter Disk Device created by StartServiceThreadAndMount() and waits
+    /// for service thread of this instance to exit.
+    /// </summary>
     /// <param name="timeout">Timeout value to wait for service thread exit, or Timeout.Infinite to wait infinitely.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public virtual bool DismountAndStopServiceThread(TimeSpan timeout)
@@ -722,6 +734,77 @@ public abstract class DevioServiceBase(IDevioProvider devioProvider, bool ownsPr
         }
 
         IsDisposed = true;
+    }
+
+    public virtual async ValueTask DisposeAsync()
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        try
+        {
+#if NETSTANDARD || NETCOREAPP
+            // On non-Windows systems, we have never a mounted device
+            // but only the server end of devio service.
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                try
+                {
+                    OnStopServiceThread(EventArgs.Empty);
+                }
+                catch
+                {
+                }
+
+                GC.SuppressFinalize(this);
+
+                return;
+            }
+
+#endif
+
+            // TODO: dispose managed state (managed objects).
+            AIMWrFltrDiffFullEvent?.Dispose();
+
+            if (HasDiskDevice)
+            {
+                try
+                {
+                    await DismountAndStopServiceThreadAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                }
+            }
+            else
+            {
+                try
+                {
+                    OnStopServiceThread(EventArgs.Empty);
+                }
+                catch
+                {
+                }
+            }
+
+            if (OwnsProvider && DevioProvider is not null)
+            {
+                await DevioProvider.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            // TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
+
+            // TODO: set large fields to null.
+            DevioProvider = null!;
+
+            IsDisposed = true;
+
+            GC.SuppressFinalize(this);
+        }
     }
 
     // TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.

@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
 
-public interface IVirtualDiskService : IDisposable
+public interface IVirtualDiskService : IDisposable, IAsyncDisposable
 {
     event EventHandler? ServiceShutdown;
 

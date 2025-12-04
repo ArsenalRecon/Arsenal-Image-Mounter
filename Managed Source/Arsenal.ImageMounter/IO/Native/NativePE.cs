@@ -785,7 +785,7 @@ public struct ImageDosHeader
 {      // DOS .EXE header
     public static readonly WORD ExpectedMagic = MemoryMarshal.Read<WORD>("MZ"u8);
 
-    public static unsafe readonly int SizeOf = sizeof(ImageDosHeader);
+    public static readonly unsafe int SizeOf = sizeof(ImageDosHeader);
 
     public readonly WORD e_magic;                     // Magic number
     public readonly WORD e_cblp;                      // Bytes on last page of file
