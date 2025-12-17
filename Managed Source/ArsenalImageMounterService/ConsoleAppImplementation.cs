@@ -8,6 +8,10 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+//#define ENABLE_LAZY_WRITE_OPTION
+// The --lazywrite option is currently disabled pending further testing and review.
+// It may be re-enabled in a future release.
+
 using Arsenal.ImageMounter.Devio.Client;
 using Arsenal.ImageMounter.Devio.Server.GenericProviders;
 using Arsenal.ImageMounter.Devio.Server.Interaction;
@@ -363,11 +367,13 @@ Please see EULA.txt for license information.";
                 diskAccess = FileAccess.Read;
                 deviceFlags = deviceFlags | DeviceFlags.ReadOnly | DeviceFlags.WriteOverlay;
             }
+#if ENABLE_LAZY_WRITE_OPTION
             else if (arg.Equals("lazywrite", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
                 && !commands.ContainsKey("writeoverlay"))
             {
                 lazyWrite = true;
             }
+#endif
             else if (arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
                 && commands.ContainsKey("writeoverlay"))
             {

@@ -335,7 +335,7 @@ public class DevioProviderFromStream : IDevioProvider
                             {
                                 if (Environment.TickCount - time > 200)
                                 {
-                                    Console.Write($"DevioProviderFromStream: Lazy write backlog processing {PendingWrites.Count + 1} items of {SizeFormatting.FormatBytes(PendingWrites.Sum(item => (long)item.Buffer.Count))}...  \r");
+                                    Console.Write($"DevioProviderFromStream: Lazy write backlog processing {PendingWrites.Count + 1} items of {SizeFormatting.FormatBytes(PendingWrites.Sum(item => (long)item.Buffer.Count) + item.Buffer.Count)}...  \r");
 
                                     time = Environment.TickCount;
                                 }
