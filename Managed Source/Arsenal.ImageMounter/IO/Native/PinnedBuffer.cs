@@ -208,7 +208,7 @@ public class PinnedBuffer<T> : PinnedBuffer, IMemoryOwner<T> where T : unmanaged
     /// </summary>
     /// <param name="instance">Existing object to marshal to unmanaged memory.</param>
     public PinnedBuffer(T[] instance)
-        : base(instance, Buffer.ByteLength(instance))
+        : base(instance, Unsafe.SizeOf<T>() * instance.Length)
     {
     }
 
@@ -222,9 +222,9 @@ public class PinnedBuffer<T> : PinnedBuffer, IMemoryOwner<T> where T : unmanaged
     public PinnedBuffer(T[] instance, int arrayOffset, int arrayItems)
         : base(
             instance,
-            totalObjectSize: Buffer.ByteLength(instance),
-            byteOffset: Buffer.ByteLength(instance) / instance.Length * arrayOffset,
-            byteLength: Buffer.ByteLength(instance) / instance.Length * arrayItems)
+            totalObjectSize: Unsafe.SizeOf<T>() * instance.Length,
+            byteOffset: Unsafe.SizeOf<T>() * arrayOffset,
+            byteLength: Unsafe.SizeOf<T>() * arrayItems)
     {
     }
 }
