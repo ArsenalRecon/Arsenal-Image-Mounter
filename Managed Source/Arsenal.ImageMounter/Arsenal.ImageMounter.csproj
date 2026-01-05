@@ -8,10 +8,10 @@
   </PropertyGroup>
   
   <ItemGroup>
-	<PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.72" />
-	<PackageReference Include="LTRData.DiscUtils.Transports" Version="1.0.72" />
-	<PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.72" />
-    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.72" />
+	<PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.73" />
+	<PackageReference Include="LTRData.DiscUtils.Transports" Version="1.0.73" />
+	<PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.73" />
+    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.73" />
     <PackageReference Include="LTRData.Extensions" Version="*" />
     <PackageReference Include="LTRData.Extensions.Native" Version="*" />
   </ItemGroup>
