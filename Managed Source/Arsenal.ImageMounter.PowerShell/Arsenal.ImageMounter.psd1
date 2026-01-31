@@ -3,7 +3,7 @@
 #
 #
 #  
-#  Copyright (c) 2012-2025, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https//#www.ArsenalRecon.com>
+#  Copyright (c) 2012-2026, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <https//#www.ArsenalRecon.com>
 #  This source code and API are available under the terms of the Affero General Public
 #  License v3.
 # 
@@ -31,7 +31,7 @@ Author = 'Arsenal Recon'
 CompanyName = 'https://ArsenalRecon.com'
 
 # Copyright statement for this module
-Copyright = 'Copyright © Arsenal Recon 2024-2025'
+Copyright = 'Copyright © Arsenal Recon 2024-2026'
 
 # Description of the functionality provided by this module
 Description = 'PowerShell module for Arsenal ImageMounter'
