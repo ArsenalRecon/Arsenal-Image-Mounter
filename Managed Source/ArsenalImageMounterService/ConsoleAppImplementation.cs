@@ -252,6 +252,7 @@ Please see EULA.txt for license information.";
         var ramDisk = false;
         var proxyconnect = false;
         var autoDelete = false;
+        var ignoreWriteCacheDeadlockRisks = false;
         var listDevices = false;
         var autoOnline = false;
         var rescanAdapter = false;
@@ -374,6 +375,10 @@ Please see EULA.txt for license information.";
                 lazyWrite = true;
             }
 #endif
+            else if (arg.Equals("ignorerisks", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
+            {
+                ignoreWriteCacheDeadlockRisks = true;
+            }
             else if (arg.Equals("autodelete", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
                 && commands.ContainsKey("writeoverlay"))
             {
@@ -818,6 +823,26 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             if (fileName is null)
             {
                 return 0;
+            }
+
+            if (writeOverlayImageFile is null && mount
+                && (diskAccess.HasFlag(FileAccess.Write) || createImage)
+                && API.IsSingleThreadFileWriteCacheOS)
+            {
+                if (!ignoreWriteCacheDeadlockRisks)
+                {
+                    const string message = "Risk of system-wide file write cache deadlock when mounting in write-original mode on client Windows versions older than Windows 11 22H2. Use --ignorerisks to ignore and mount anyway.";
+
+                    throw new NotSupportedException(message);
+                }
+                else
+                {
+                    const string message = "Warning: Risk of system-wide file write cache deadlock when mounting in write-original mode on client Windows versions older than Windows 11 22H2.";
+
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine(message);
+                    Console.ResetColor();
+                }
             }
 
             if (providerName is null || string.IsNullOrWhiteSpace(providerName))

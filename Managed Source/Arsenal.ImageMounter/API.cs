@@ -222,6 +222,14 @@ public static partial class API
         }
     }
 
+    private static bool? isSingleThreadFileWriteCacheOS;
+
+    /// <summary>
+    /// Returns true for client operating systems prior to Windows 11 22H2
+    /// </summary>
+    public static bool IsSingleThreadFileWriteCacheOS => isSingleThreadFileWriteCacheOS
+        ??= NativeFileIO.GetOSVersionInfo() is { BuildNumber: < 22621, ProductType: ProductType.VER_NT_WORKSTATION };
+
     /// <summary>
     /// Builds a list of setup device ids for active Arsenal Image Mounter
     /// objects. Device ids are used in calls to plug-and-play setup functions.

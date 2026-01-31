@@ -1447,16 +1447,18 @@ public struct OSVERSIONINFOEX
 
     private unsafe fixed char csdVersion[128];
 
-    public unsafe ReadOnlySpan<char> CSDVersion
+    public readonly unsafe ReadOnlySpan<char> CSDVersion
         => BufferExtensions.CreateReadOnlySpan(csdVersion[0], 128).ReadNullTerminatedUnicode();
 
     public ushort ServicePackMajor { get; }
 
     public ushort ServicePackMinor { get; }
 
-    public short SuiteMask { get; }
+    public readonly int ServicePack => (ServicePackMajor << 16) | ServicePackMinor;
 
-    public byte ProductType { get; }
+    public SuiteMask SuiteMask { get; }
+
+    public ProductType ProductType { get; }
 
     public byte Reserved { get; }
 
@@ -1464,12 +1466,46 @@ public struct OSVERSIONINFOEX
     {
         OSVersionInfoSize = sizeof(OSVERSIONINFOEX);
     }
+
+    public readonly OperatingSystem ToOperatingSystem()
+        => new(PlatformId,
+            new Version(MajorVersion,
+                        MinorVersion,
+                        BuildNumber,
+                        ServicePack));
+}
+
+public enum ProductType : byte
+{
+    VER_NT_WORKSTATION = 0x1,
+    VER_NT_DOMAIN_CONTROLLER = 0x2,
+    VER_NT_SERVER = 0x3
+}
+
+[Flags]
+public enum SuiteMask : ushort
+{
+    VER_SUITE_SMALLBUSINESS = 0x1,
+    VER_SUITE_ENTERPRISE = 0x2,
+    VER_SUITE_BACKOFFICE = 0x4,
+    VER_SUITE_COMMUNICATIONS = 0x8,
+    VER_SUITE_TERMINAL = 0x10,
+    VER_SUITE_SMALLBUSINESS_RESTRICTED = 0x20,
+    VER_SUITE_EMBEDDEDNT = 0x40,
+    VER_SUITE_DATACENTER = 0x80,
+    VER_SUITE_SINGLEUSERTS = 0x100,
+    VER_SUITE_PERSONAL = 0x200,
+    VER_SUITE_BLADE = 0x400,
+    VER_SUITE_EMBEDDED_RESTRICTED = 0x800,
+    VER_SUITE_SECURITY_APPLIANCE = 0x1000,
+    VER_SUITE_STORAGE_SERVER = 0x2000,
+    VER_SUITE_COMPUTE_SERVER = 0x4000,
+    VER_SUITE_WH_SERVER = 0x8000
 }
 
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct MOUNTMGR_MOUNT_POINT
 {
-
     public int SymbolicLinkNameOffset { get; }
     public ushort SymbolicLinkNameLength { get; }
     public ushort Reserved1 { get; }

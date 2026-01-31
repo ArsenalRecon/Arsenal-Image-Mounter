@@ -5700,18 +5700,21 @@ Currently, the following application has files open on this volume:
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
     public static OperatingSystem GetOSVersion()
+        => GetOSVersionInfo().ToOperatingSystem();
+
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public static OSVERSIONINFOEX GetOSVersionInfo()
     {
         var os_version = new OSVERSIONINFOEX();
 
         var status = UnsafeNativeMethods.RtlGetVersion(ref os_version);
 
-        return status < 0
-            ? throw new Win32Exception(SafeNativeMethods.RtlNtStatusToDosError(status))
-            : new OperatingSystem(os_version.PlatformId,
-                                  new Version(os_version.MajorVersion,
-                                              os_version.MinorVersion,
-                                              os_version.BuildNumber,
-                                              os_version.ServicePackMajor << 16 | os_version.ServicePackMinor));
+        if (status < 0)
+        {
+            throw new Win32Exception(SafeNativeMethods.RtlNtStatusToDosError(status));
+        }
+
+        return os_version;
     }
 
     /// <summary>
