@@ -346,7 +346,7 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
         set => libqcow_notify_set_verbose(value ? 1 : 0);
     }
 
-    public DevioProviderLibQcow(string filenames, byte Flags)
+    public DevioProviderLibQcow(string filename, byte Flags)
     {
         this.Flags = Flags;
 
@@ -357,22 +357,29 @@ public partial class DevioProviderLibQcow : DevioProviderUnmanagedBase
 
         SafeHandle = safeHandle;
 
-        f_libqcow_file_open func;
-
-        if (IOExtensions.IsWindows)
+        try
         {
-            func = libqcow_file_open_wide;
+            f_libqcow_file_open func;
+
+            if (IOExtensions.IsWindows)
+            {
+                func = libqcow_file_open_wide;
+            }
+            else
+            {
+                func = libqcow_file_open;
+            }
+
+            if (func(SafeHandle, filename, Flags, out errobj) != 1 || errobj != 0)
+            {
+                ThrowError(errobj, "Error opening image file");
+            }
         }
-        else
+        catch
         {
-            func = libqcow_file_open;
-        }
+            Dispose();
 
-        if (func(SafeHandle, filenames, Flags, out errobj) != 1 || errobj != 0)
-        {
-
-            ThrowError(errobj, "Error opening image file(s)");
-
+            throw;
         }
     }
 
