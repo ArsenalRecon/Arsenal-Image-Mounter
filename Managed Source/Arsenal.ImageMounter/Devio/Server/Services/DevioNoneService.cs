@@ -25,7 +25,6 @@ namespace Arsenal.ImageMounter.Devio.Server.Services;
 /// </summary>
 public class DevioNoneService : DevioServiceBase
 {
-
     /// <summary>
     /// Name and path of image file mounted by Arsenal Image Mounter.
     /// </summary>
@@ -57,7 +56,20 @@ public class DevioNoneService : DevioServiceBase
     /// <param name="diskSize">Disk size to initialize dummy provider instance</param>
     /// <param name="diskAccess"></param>
     protected DevioNoneService(string imageFile, long diskSize, FileAccess diskAccess)
-        : base(new DummyProvider(diskSize), ownsProvider: true)
+        : this(imageFile, new DummyProvider(diskSize), diskAccess)
+    {
+    }
+
+    /// <summary>
+    /// Creates a DevioServiceBase compatible object, but without providing a proxy service.
+    /// Instead, it just passes a disk image file name for direct mounting internally in
+    /// SCSI Adapter.
+    /// </summary>
+    /// <param name="imageFile">Name and path of image file mounted by Arsenal Image Mounter.</param>
+    /// <param name="dummyProvider">A <see cref="DummyProvider"/> object providing disk size.</param>
+    /// <param name="diskAccess"></param>
+    public DevioNoneService(string imageFile, DummyProvider dummyProvider, FileAccess diskAccess)
+        : base(dummyProvider, ownsProvider: true)
     {
         Offset = NativeStruct.GetOffsetByFileExt(imageFile);
 
@@ -148,16 +160,16 @@ public class DevioNoneService : DevioServiceBase
     /// Instead, it just requests the SCSI adapter, awealloc and vhdaccess drivers to create
     /// a dynamically expanding RAM disk based on the contents of the supplied VHD image.
     /// </summary>
-    /// <param name="imageFile">Path to VHD image file to use as template for the RAM disk.</param>
+    /// <param name="vhdTemplate">Path to VHD image file to use as template for the RAM disk.</param>
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public DevioNoneService(string imageFile)
-        : base(new DummyProvider(GetVhdSize(imageFile)), ownsProvider: true)
+    public DevioNoneService(string vhdTemplate)
+        : base(new DummyProvider(GetVhdSize(vhdTemplate)), ownsProvider: true)
     {
         DiskAccess = FileAccess.ReadWrite;
 
-        Imagefile = imageFile;
+        Imagefile = vhdTemplate;
 
-        ProxyObjectName = $@"\\?\vhdaccess\??\awealloc{NativeFileIO.GetNtPath(imageFile)}";
+        ProxyObjectName = $@"\\?\vhdaccess\??\awealloc{NativeFileIO.GetNtPath(vhdTemplate)}";
     }
 
     public override string? ProxyObjectName { get; }

@@ -960,17 +960,34 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 diskAccess = FileAccess.ReadWrite;
             }
 
-            if (providerName != "None")
+            if (StringComparer.OrdinalIgnoreCase.Equals(providerName, "None"))
             {
-                Console.WriteLine($"Opening image file '{fileName}' with format provider '{providerName}'...");
+                Console.WriteLine($"Opening '{fileName}'...");
+
+                if (diskSize.HasValue)
+                {
+                    provider = new DummyProvider(diskSize.Value);
+                }
+                else if (mount)
+                {
+                    provider = new DummyProvider(new FileInfo(fileName).Length);
+                }
+                else
+                {
+                    provider = DevioServiceFactory.GetProvider(fileName, diskAccess, providerName);
+                }
             }
             else
             {
-                Console.WriteLine($"Opening '{fileName}'...");
+                Console.WriteLine($"Opening image file '{fileName}' with format provider '{providerName}'...");
+
+                provider = DevioServiceFactory.GetProvider(fileName, diskAccess, providerName);
             }
 
-            provider = DevioServiceFactory.GetProvider(fileName, diskAccess, providerName)
-                ?? throw new NotSupportedException("Unknown image file format. Try with another format provider!");
+            if (provider is null)
+            {
+                throw new NotSupportedException("Unknown image file format. Try with another format provider!");
+            }
 
             if (provider.Length <= 0)
             {
@@ -1030,7 +1047,12 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 }
             }
 
-            if (ioCommunication == IOCommunication.Tcp
+            if (provider is DummyProvider dummyProvider)
+            {
+                // Use None service for dummy provider. Everything handled in the driver.
+                service = new DevioNoneService(fileName, dummyProvider, diskAccess);
+            }
+            else if (ioCommunication == IOCommunication.Tcp
                 && listenPort != 0) // Listen on TCP/IP socket
             {
                 service = new DevioTcpService(listenAddress, listenPort, provider, ownsProvider: true);
@@ -1142,9 +1164,10 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
             try
             {
+                Console.WriteLine($"Device number {service.DiskDeviceNumber:X6}");
+
                 var device_name = $@"\\?\{service.GetDiskDeviceName()}";
 
-                Console.WriteLine($"Device number {service.DiskDeviceNumber:X6}");
                 Console.WriteLine($"Device is {device_name}");
 
                 using (var device = new DiskDevice(device_name, FileAccess.ReadWrite))
@@ -1237,13 +1260,23 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 Console.WriteLine("Ready for incoming connections.");
             }
 
+            if (service.IsDisposed && service.Exception is not null)
+            {
+                throw new Exception("Service failed.", service.Exception);
+            }
+
             CloseConsole(detachEvent);
         }
         else if (ramDisk || service is DevioNoneService)
         {
-            if (mount)
+            if (ramDisk || mount)
             {
                 Console.WriteLine($"Virtual disk mounted. To dismount, type aim_cli --dismount={service.DiskDeviceNumber:X6}");
+            }
+
+            if (service.IsDisposed && service.Exception is not null)
+            {
+                throw new Exception("Service failed.", service.Exception);
             }
         }
         else
@@ -1274,21 +1307,24 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     Console.ResetColor();
                 }
             };
-        }
 
-        using (service)
-        {
             if (service is not DevioNoneService)
             {
-                service.WaitForExit(Timeout.InfiniteTimeSpan);
+                using (service)
+                {
+                    service.WaitForExit(Timeout.InfiniteTimeSpan);
 
-                Console.WriteLine("Service stopped.");
+                    Console.WriteLine("Service stopped.");
+
+                    if (service.Exception is not null)
+                    {
+                        throw new Exception("Service failed.", service.Exception);
+                    }
+                }
             }
-
-            return service.Exception is not null
-                ? throw new Exception("Service failed.", service.Exception)
-                : 0;
         }
+
+        return 0;
     }
 
     public static int StartBackgroundProcess()
