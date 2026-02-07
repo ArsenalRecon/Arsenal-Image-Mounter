@@ -26,9 +26,9 @@
 	<None Include="aim_cli" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="lib\net8.0" />
 	<None Include="aim_cli" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="lib\net9.0" />
 	<None Include="aim_cli" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="lib\net10.0" />
-	<None Include="..\bin\Release\net8.0\aim_cli.deps.json" Pack="true" PackagePath="lib\net8.0" />
-	<None Include="..\bin\Release\net9.0\aim_cli.deps.json" Pack="true" PackagePath="lib\net9.0" />
-	<None Include="..\bin\Release\net10.0\aim_cli.deps.json" Pack="true" PackagePath="lib\net10.0" />
+	<None Include="..\bin\Release\net8.0\aim_cli.deps.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="lib\net8.0" />
+	<None Include="..\bin\Release\net9.0\aim_cli.deps.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="lib\net9.0" />
+	<None Include="..\bin\Release\net10.0\aim_cli.deps.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="lib\net10.0" />
   </ItemGroup>
   
 </Project>
