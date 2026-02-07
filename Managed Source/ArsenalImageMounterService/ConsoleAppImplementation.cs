@@ -44,20 +44,25 @@ namespace Arsenal.ImageMounter;
 
 public static class ConsoleAppImplementation
 {
+    private const string childProcessReadyMessage = "READY:N0srRDEIvHE";
+
     private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
 
     private static readonly string[] DefaultChecksumAlgorithms = ["MD5", "SHA1", "SHA256"];
 
-    public static void CloseConsole(SafeWaitHandle DetachEvent)
+    public static void CloseConsole(object detachObject)
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        using (detachObject as IDisposable)
         {
-            return;
-        }
-
-        using (DetachEvent)
-        {
-            NativeFileIO.SetEvent(DetachEvent);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                && detachObject is SafeWaitHandle detachEvent)
+            {
+                NativeFileIO.SetEvent(detachEvent);
+            }
+            else
+            {
+                Console.Error.WriteLine(childProcessReadyMessage);
+            }
         }
 
         Console.In.Dispose();
@@ -68,14 +73,17 @@ public static class ConsoleAppImplementation
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
 
-        foreach (var std in stackalloc[] { StdHandle.Input, StdHandle.Output, StdHandle.Error })
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            var handle = NativeFileIO.UnsafeNativeMethods.GetStdHandle(std);
-            NativeFileIO.UnsafeNativeMethods.SetStdHandle(std, 0);
-            NativeFileIO.UnsafeNativeMethods.CloseHandle(handle);
-        }
+            foreach (var std in stackalloc[] { StdHandle.Input, StdHandle.Output, StdHandle.Error })
+            {
+                var handle = NativeFileIO.UnsafeNativeMethods.GetStdHandle(std);
+                NativeFileIO.UnsafeNativeMethods.SetStdHandle(std, 0);
+                NativeFileIO.UnsafeNativeMethods.CloseHandle(handle);
+            }
 
-        NativeFileIO.SafeNativeMethods.FreeConsole();
+            NativeFileIO.SafeNativeMethods.FreeConsole();
+        }
     }
 
     /// <summary>
@@ -247,7 +255,7 @@ Please see EULA.txt for license information.";
         var outputImageVariant = "dynamic";
         string? dismount = null;
         var forceDismount = false;
-        SafeWaitHandle? detachEvent = null;
+        object? detachObject = null;
         var fakeMbr = false;
         var ramDisk = false;
         var proxyconnect = false;
@@ -471,12 +479,16 @@ Please see EULA.txt for license information.";
             {
                 forceDismount = true;
             }
+            else if (arg.Equals("detach", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0)
+            {
+                detachObject = new();
+            }
             else if (arg.Equals("detach", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 1)
             {
 #if NET5_0_OR_GREATER
-                detachEvent = new SafeWaitHandle(nint.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
+                detachObject = new SafeWaitHandle(nint.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
 #else
-                detachEvent = new SafeWaitHandle((nint)long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
+                detachObject = new SafeWaitHandle((nint)long.Parse(cmd.Value[0], NumberFormatInfo.InvariantInfo), ownsHandle: true);
 #endif
             }
             else if (arg.Length == 0 || arg == "?" || arg.Equals("help", StringComparison.OrdinalIgnoreCase))
@@ -767,7 +779,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
                 if (outputImage is not null) // Convert to new image file format
                 {
-                    provider.ConvertToImage(fileName, outputImage, outputImageVariant, bufferSize, detachEvent);
+                    provider.ConvertToImage(fileName, outputImage, outputImageVariant, bufferSize, detachObject);
                     provider.Dispose();
 
                     return 0;
@@ -831,13 +843,13 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             {
                 if (!ignoreWriteCacheDeadlockRisks)
                 {
-                    const string message = "Risk of system-wide file write cache deadlock when mounting in write-original mode on client Windows versions older than Windows 11 22H2. Use --ignorerisks to ignore and mount anyway.";
+                    const string message = "A system-wide write-cache deadlock could occur while mounting in write-original mode on Windows 11 prior to 22H2. See the AIM readme for more information. Use --ignorerisks to ignore and mount anyway.";
 
                     throw new NotSupportedException(message);
                 }
                 else
                 {
-                    const string message = "Warning: Risk of system-wide file write cache deadlock when mounting in write-original mode on client Windows versions older than Windows 11 22H2.";
+                    const string message = "Warning: A system-wide write-cache deadlock could occur while mounting in write-original mode on Windows 11 prior to 22H2. See the AIM readme for more information.";
 
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine(message);
@@ -1081,7 +1093,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
             else if (outputImage is not null) // Convert to new image file format
             {
-                provider.ConvertToImage(fileName, outputImage, outputImageVariant, bufferSize, detachEvent);
+                provider.ConvertToImage(fileName, outputImage, outputImageVariant, bufferSize, detachObject);
                 provider.Dispose();
 
                 return 0;
@@ -1113,7 +1125,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
         service.Persistent = persistent;
 
-        if (detachEvent is null)
+        if (detachObject is null)
         {
             service.ClientConnected += (sender, e)
                 => Console.WriteLine($"Client {service.ClientName} connected.");
@@ -1249,7 +1261,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             service.StartServiceThread();
         }
 
-        if (detachEvent is not null)
+        if (detachObject is not null)
         {
             if (mount)
             {
@@ -1265,7 +1277,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                 throw new Exception("Service failed.", service.Exception);
             }
 
-            CloseConsole(detachEvent);
+            CloseConsole(detachObject);
         }
         else if (ramDisk || service is DevioNoneService)
         {
@@ -1327,14 +1339,67 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
         return 0;
     }
 
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+    public static int StartBackgroundProcessUnix()
+    {
+        var cmdLine = Environment.GetCommandLineArgs();
+
+        using var process = new Process();
+
+        process.StartInfo.FileName = "dotnet";
+
+        process.StartInfo.UseShellExecute = false;
+
+        process.StartInfo.RedirectStandardError = true;
+
+        foreach (var arg in cmdLine)
+        {
+            if (arg is "--background" or "/background")
+            {
+                process.StartInfo.ArgumentList.Add("--detach");
+            }
+            else
+            {
+                process.StartInfo.ArgumentList.Add(arg);
+            }
+        }
+
+        process.Start();
+
+        string? line;
+
+        while ((line = process.StandardError.ReadLine()) is not null)
+        {
+            if (line == childProcessReadyMessage)
+            {
+                break;
+            }
+
+            Console.WriteLine(line);
+
+            if (process.HasExited)
+            {
+                return process.ExitCode;
+            }
+        }
+
+        return process.Id;
+    }
+#endif
+
     public static int StartBackgroundProcess()
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+            return StartBackgroundProcessUnix();
+#else
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine("The --background switch is only supported on Windows");
             Console.ResetColor();
+            
             return -1;
+#endif
         }
 
         var cmdLine = NativeFileIO.GetProcessCommandLineAsArgumentArray();

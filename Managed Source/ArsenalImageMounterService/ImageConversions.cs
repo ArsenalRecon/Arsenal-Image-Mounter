@@ -120,7 +120,7 @@ internal static class ImageConversions
                                       string outputImage,
                                       string OutputImageVariant,
                                       int? bufferSize,
-                                      SafeWaitHandle? detachEvent)
+                                      object? detachObject)
     {
         using var _ = provider;
         using var cancel = new CancellationTokenSource();
@@ -185,9 +185,9 @@ internal static class ImageConversions
 
         CompletionPosition? completionPosition = null;
 
-        if (detachEvent is not null)
+        if (detachObject is not null)
         {
-            ConsoleAppImplementation.CloseConsole(detachEvent);
+            ConsoleAppImplementation.CloseConsole(detachObject);
         }
         else
         {
