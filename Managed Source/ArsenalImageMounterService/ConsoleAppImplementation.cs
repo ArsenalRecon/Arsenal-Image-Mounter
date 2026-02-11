@@ -843,16 +843,12 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             {
                 if (!ignoreWriteCacheDeadlockRisks)
                 {
-                    const string message = "A system-wide write-cache deadlock could occur while mounting in write-original mode on Windows 11 prior to 22H2. See the AIM readme for more information. Use --ignorerisks to ignore and mount anyway.";
-
-                    throw new NotSupportedException(message);
+                    throw new NotSupportedException($"{API.WriteCacheDeadlockWarningMessage} Use --ignorerisks to ignore and mount anyway.");
                 }
                 else
                 {
-                    const string message = "Warning: A system-wide write-cache deadlock could occur while mounting in write-original mode on Windows 11 prior to 22H2. See the AIM readme for more information.";
-
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine(message);
+                    Console.WriteLine(API.WriteCacheDeadlockWarningMessage);
                     Console.ResetColor();
                 }
             }

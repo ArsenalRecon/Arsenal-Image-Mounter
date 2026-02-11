@@ -43,6 +43,8 @@ public static partial class API
 
     public static bool HasStorPort { get; private set; }
 
+    public const string WriteCacheDeadlockWarningMessage = "Warning: A system-wide write-cache deadlock could occur while mounting in write-original mode on Windows 11 prior to 22H2. See the AIM readme for more information.";
+
     public static string DllPath { get; } =
         Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(API).Assembly.Location)
             ?? ".", "lib", RuntimeInformation.ProcessArchitecture.ToString()));
