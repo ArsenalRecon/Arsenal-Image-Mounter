@@ -324,7 +324,7 @@ Please see EULA.txt for license information.";
                     ?? throw new InvalidOperationException($"Invalid offset '{cmd.Value[0]}'");
             }
             else if (arg.Equals("persistent", StringComparison.OrdinalIgnoreCase) && cmd.Value.Length == 0
-                && (commands.ContainsKey("name") | commands.ContainsKey("port"))
+                && (commands.ContainsKey("name") || commands.ContainsKey("port"))
                 && !commands.ContainsKey("mount"))
             {
                 persistent = true;
@@ -400,6 +400,7 @@ Please see EULA.txt for license information.";
             else if (arg.Equals("mount", StringComparison.OrdinalIgnoreCase))
             {
                 mount = true;
+
                 foreach (var opt in cmd.Value)
                 {
                     if (opt.Equals("removable", StringComparison.OrdinalIgnoreCase))
@@ -416,21 +417,26 @@ Please see EULA.txt for license information.";
                         return -1;
                     }
                 }
-
             }
             else if (arg.Equals("convert", StringComparison.OrdinalIgnoreCase)
                 || arg.Equals("saveas", StringComparison.OrdinalIgnoreCase))
             {
-                var targetcount = (commands.TryGetValue("convert", out var convert) ? convert.Length : 0)
-                    + (commands.TryGetValue("saveas", out var saveas) ? saveas.Length : 0);
+                if (!commands.TryGetValue("convert", out var convert))
+                {
+                    convert = [];
+                }
+                if (!commands.TryGetValue("saveas", out var saveas))
+                {
+                    saveas = [];
+                }
 
-                if (targetcount != 1)
+                if (convert.Length + saveas.Length != 1)
                 {
                     showHelp = true;
                     break;
                 }
 
-                outputImage = cmd.Value[0];
+                outputImage = convert.Concat(saveas).First();
                 diskAccess = FileAccess.Read;
             }
             else if (arg.Equals("checksum", StringComparison.OrdinalIgnoreCase))
