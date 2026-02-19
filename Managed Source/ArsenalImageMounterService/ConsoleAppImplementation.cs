@@ -584,7 +584,11 @@ Please see EULA.txt for license information.";
 
             var providers = string.Join("|", DevioServiceFactory.InstalledProvidersByNameAndFileAccess.Keys);
 
-            var msg = $@"{asmname}
+            string msg;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                msg = $@"{asmname}
 
 Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to the Arsenal Image Mounter virtual SCSI miniport driver.
 
@@ -637,6 +641,33 @@ Syntax to rescan SCSI adapter:
 Useful when there is a dead mounted disk left behind after it has lost connection to storage backend, such as after issues with underlying image file device or loss of network connection.
 
 ";
+            }
+            else
+            {
+                msg = $@"{asmname}
+
+Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to the Arsenal Image Mounter virtual SCSI miniport driver.
+
+Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
+
+Please note: If you would like to use AIM CLI to interact with EnCase (E01, Ex01, S01 and AFF) or QEMU Qcow images, you must install corresponding libraries. For example, on Ubuntu you can install the ewf-tools and libqcow-utils packages to get the necessary libraries.
+
+Syntax to create a new disk image file:
+{asmname} --create --filename=imagefilename --disksize=size [--variant=fixed|dynamic]
+Size in bytes, can be suffixed with for example M or G for MB or GB.
+
+Syntax to start TCP/IP service mode, for mounting from other computers:
+{asmname} [--ipaddress=listenaddress] --port=tcpport [--readonly|--writable] [--fakembr] --filename=imagefilename [--provider={providers}] [--background]
+
+Syntax to convert a disk image without mounting:
+{asmname} --filename=imagefilename [--fakembr] [--provider={providers}] --convert=outputimagefilename [--variant=fixed|dynamic] [--background]
+{asmname} --filename=imagefilename [--fakembr] [--provider={providers}] --convert=/dev/sdX [--background]
+
+Syntax to save a physical disk as an image file:
+{asmname} --device=/dev/sdX --saveas=outputimagefilename [--variant=fixed|dynamic] [--background]
+
+";
+            }
 
             msg = StringFormatting.LineFormat(msg.AsSpan(), indentWidth: 4);
 
