@@ -20,13 +20,14 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <NeutralLanguage>en</NeutralLanguage>
+	<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
 
     <Title>Arsenal Image Mounter</Title>
     <Company>Arsenal Recon</Company>
     <Product>Arsenal Image Mounter</Product>
-    <Copyright>Copyright © Arsenal Recon, 2015 - 2025</Copyright>
+    <Copyright>Copyright © Arsenal Recon, 2015 - 2026</Copyright>
     <Trademark />
-    <FileVersion>3.12.336.0</FileVersion>
+    <FileVersion>3.12.338.0</FileVersion>
     <ProductVersion>$(FileVersion)</ProductVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <Authors>Arsenal Recon</Authors>
