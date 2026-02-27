@@ -32,7 +32,7 @@ public class CompletionPosition(long totalLength)
 
     public virtual long LengthTotal { get; set; } = totalLength;
 
-    public virtual double PercentComplete => 100d * LengthComplete / LengthTotal;
+    public virtual double PercentComplete => LengthTotal == 0 ? 0 : 100d * LengthComplete / LengthTotal;
 
     public virtual TimeSpan ElapsedTime => stopwatch.Elapsed;
 

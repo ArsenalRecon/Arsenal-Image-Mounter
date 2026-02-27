@@ -425,6 +425,7 @@ Please see EULA.txt for license information.";
                 {
                     convert = [];
                 }
+
                 if (!commands.TryGetValue("saveas", out var saveas))
                 {
                     saveas = [];
