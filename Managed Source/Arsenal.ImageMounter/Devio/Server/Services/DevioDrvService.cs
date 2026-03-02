@@ -36,25 +36,25 @@ using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 namespace Arsenal.ImageMounter.Devio.Server.Services;
 
 /// <summary>
-/// Class that implements server end of Devio shared memory based communication
+/// Class that implements server end of Devio Driver based communication
 /// protocol. It uses an object implementing <see>IDevioProvider</see> interface as
 /// storage backend for I/O requests received from client.
 /// </summary>
 /// <remarks>
 /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
-/// shared memory based communication.
+/// Driver based communication.
 /// </remarks>
-/// <param name="objectName">Object name of shared memory file mapping object created by this instance.</param>
+/// <param name="objectName">Object name of Devio Driver communication object created by this instance.</param>
 /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
 /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
 /// instance is disposed.</param>
-/// <param name="initialBufferSize">Initial buffer size to use for shared memory I/O communication between driver and this service.
+/// <param name="initialBufferSize">Initial buffer size to use for I/O communication between driver and this service.
 /// This will be automatically increased later if needed.</param>
 [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 public partial class DevioDrvService(string objectName, IDevioProvider devioProvider, bool ownsProvider, long initialBufferSize) : DevioServiceBase(devioProvider, ownsProvider)
 {
     /// <summary>
-    /// Object name of shared memory file mapping object created by this instance.
+    /// Object name of Devio Driver communication object created by this instance.
     /// </summary>
     public string ObjectName { get; } = objectName;
 
@@ -87,9 +87,9 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
-    /// shared memory based communication. A default buffer size will be used.
+    /// Driver based communication. A default buffer size will be used.
     /// </summary>
-    /// <param name="objectName">Object name of shared memory file mapping object created by this instance.</param>
+    /// <param name="objectName">Object name of Devio Driver communication object created by this instance.</param>
     /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
     /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
@@ -100,7 +100,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
-    /// shared memory based communication. A default buffer size and a random object name will be used.
+    /// Driver based communication. A default buffer size and a random object name will be used.
     /// </summary>
     /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
     /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
@@ -112,12 +112,12 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
     /// <summary>
     /// Creates a new service instance with enough data to later run a service that acts as server end in Devio
-    /// shared memory based communication. A random object name will be used.
+    /// Driver based communication. A random object name will be used.
     /// </summary>
     /// <param name="devioProvider">IDevioProvider object to that serves as storage backend for this service.</param>
     /// <param name="ownsProvider">Indicates whether DevioProvider object will be automatically closed when this
     /// instance is disposed.</param>
-    /// <param name="initialBufferSize">Initial buffer size to use for shared memory I/O communication between driver and this service.
+    /// <param name="initialBufferSize">Initial buffer size to use for I/O communication between driver and this service.
     /// This will be automatically increased later if needed.</param>
     public DevioDrvService(IDevioProvider devioProvider, bool ownsProvider, long initialBufferSize)
         : this(GetNextRandomValue().ToString(), devioProvider, ownsProvider, initialBufferSize)
@@ -624,14 +624,14 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
     private readonly ManualResetEvent closedEvent = new(initialState: true);
 
     /// <summary>
-    /// Runs service that acts as server end in Devio shared memory based communication. It will first wait for
+    /// Runs service that acts as server end in Devio Driver based communication. It will first wait for
     /// a client to connect, then serve client I/O requests and when client finally requests service to terminate, this
     /// method returns to caller. To run service in a worker thread that automatically disposes this object after client
     /// disconnection, call StartServiceThread() instead.
     /// </summary>
     public override bool StartServiceThread()
     {
-        Trace.WriteLine($"Creating objects for shared memory communication '{ObjectName}'.");
+        Trace.WriteLine($"Creating Devio Driver communication object '{ObjectName}'.");
 
         try
         {
