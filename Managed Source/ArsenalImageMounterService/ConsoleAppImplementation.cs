@@ -545,6 +545,14 @@ Please see EULA.txt for license information.";
             }
         }
 
+#if DEBUG
+        Console.WriteLine("AppContext.NATIVE_DLL_SEARCH_DIRECTORIES: " + (AppContext.GetData("NATIVE_DLL_SEARCH_DIRECTORIES") as string ?? "<null>"));
+        Console.WriteLine("AppContext.BaseDirectory: " + AppContext.BaseDirectory);
+#if NET5_0_OR_GREATER
+        Console.WriteLine("RuntimeInformation.RuntimeIdentifier: " + RuntimeInformation.RuntimeIdentifier);
+#endif
+#endif
+
         if (rescanAdapter)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -651,7 +659,7 @@ Arsenal Image Mounter CLI (AIM CLI) - an integrated command line interface to th
 
 Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User License Agreement.txt"" for detailed usage and license information.
 
-Please note: If you would like to use AIM CLI to interact with EnCase (E01, Ex01, S01 and AFF) or QEMU Qcow images, you must install corresponding libraries. For example, on Ubuntu you can install the ewf-tools and libqcow-utils packages to get the necessary libraries.
+Please note: If you would like to use AIM CLI to interact with EnCase (E01, Ex01, S01 and AFF) or QEMU Qcow images, you must install corresponding libraries. For example, on Ubuntu you can install the libewf-dev and libqcow-dev packages to get the necessary libraries.
 
 Syntax to create a new disk image file:
 {asmname} --create --filename=imagefilename --disksize=size [--variant=fixed|dynamic]
