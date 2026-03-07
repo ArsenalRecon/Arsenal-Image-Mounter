@@ -357,7 +357,13 @@ public class CombinedSeekStream : CompatibilityStream
         }
     }
 
-    public override void Flush() => current.Value?.Flush();
+    public override void Flush()
+    {
+        if (CanWrite)
+        {
+            current.Value?.Flush();
+        }
+    }
 
     public override Task FlushAsync(CancellationToken cancellationToken)
         => current.Value?.FlushAsync(cancellationToken) ?? Task.CompletedTask;
@@ -399,7 +405,7 @@ public class CombinedSeekStream : CompatibilityStream
 
     public override bool CanSeek => true;
 
-    public override bool CanWrite { get; }
+    public override bool CanWrite => field && current.Value is not null && current.Value.CanWrite;
 
     public override long Seek(long offset, SeekOrigin origin)
     {

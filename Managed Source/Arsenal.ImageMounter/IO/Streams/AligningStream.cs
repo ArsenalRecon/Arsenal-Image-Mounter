@@ -54,7 +54,13 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
 
     public override long Position { get; set; }
 
-    public override void Flush() => BaseStream.Flush();
+    public override void Flush()
+    {
+        if (CanWrite)
+        {
+            BaseStream.Flush();
+        }
+    }
 
     public override long? GetPositionInBaseStream(Stream baseStream, long virtualPosition)
     {
@@ -480,7 +486,16 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
     }
 
     public override Task FlushAsync(CancellationToken cancellationToken)
-        => BaseStream.FlushAsync(cancellationToken);
+    {
+        if (CanWrite)
+        {
+            return BaseStream.FlushAsync(cancellationToken);
+        }
+        else
+        {
+            return Task.CompletedTask;
+        }
+    }
 
     private async ValueTask InternalWriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
@@ -667,6 +682,10 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
 
             OnDisposed(EventArgs.Empty);
         }
+        else if (disposing && CanWrite)
+        {
+            BaseStream.Flush();
+        }
 
         base.Dispose(disposing);
     }
@@ -681,6 +700,10 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             await BaseStream.DisposeAsync().ConfigureAwait(false);
 
             OnDisposed(EventArgs.Empty);
+        }
+        else if (CanWrite)
+        {
+            await BaseStream.FlushAsync().ConfigureAwait(false);
         }
 
         await base.DisposeAsync().ConfigureAwait(false);

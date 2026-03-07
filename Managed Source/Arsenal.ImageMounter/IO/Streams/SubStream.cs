@@ -242,6 +242,10 @@ public class SubStream : CompatibilityStream
                 {
                     Parent.Dispose();
                 }
+                else if (CanWrite)
+                {
+                    Parent.Flush();
+                }
             }
         }
         finally
@@ -249,4 +253,20 @@ public class SubStream : CompatibilityStream
             base.Dispose(disposing);
         }
     }
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
+    public override async ValueTask DisposeAsync()
+    {
+        if (OwnsParent)
+        {
+            await Parent.DisposeAsync().ConfigureAwait(false);
+        }
+        else if (CanWrite)
+        {
+            await Parent.FlushAsync().ConfigureAwait(false);
+        }
+
+        GC.SuppressFinalize(this);
+    }
+#endif
 }
