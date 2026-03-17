@@ -211,7 +211,7 @@ internal static class ImageConversions
         }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP
-            var image_type = Path.GetExtension(outputImage.AsSpan()).TrimStart('.').ToString().ToUpperInvariant();
+        var image_type = Path.GetExtension(outputImage.AsSpan()).TrimStart('.').ToString().ToUpperInvariant();
 #else
         var image_type = Path.GetExtension(outputImage).TrimStart('.').ToUpperInvariant();
 #endif
@@ -222,10 +222,12 @@ internal static class ImageConversions
 
         var t = Task.Run(() =>
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                string.IsNullOrWhiteSpace(image_type) &&
+            if (string.IsNullOrWhiteSpace(image_type) &&
+                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                 (outputImage.StartsWith(@"\\?\", StringComparison.Ordinal) ||
-                outputImage.StartsWith(@"\\.\", StringComparison.Ordinal)))
+                outputImage.StartsWith(@"\\.\", StringComparison.Ordinal))) ||
+                (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                outputImage.StartsWith("/dev/", StringComparison.Ordinal)))
             {
                 provider.WriteToPhysicalDisk(outputImage, bufferSize, completionPosition, cancellationToken);
 
@@ -238,7 +240,7 @@ internal static class ImageConversions
             metafile.WriteLine($"Created by Arsenal Image Mounter version {ConsoleApp.AssemblyFileVersion}");
             metafile.WriteLine($"Running on machine '{Environment.MachineName}' with {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture} and {RuntimeInformation.FrameworkDescription} {RuntimeInformation.ProcessArchitecture}");
             metafile.WriteLine($"Saved from '{sourcePath}'");
-            metafile.WriteLine($"Disk size: {provider.Length} bytes");
+            metafile.WriteLine($"Disk size: {provider.Length} bytes ({SizeFormatting.FormatBytes(provider.Length)})");
             metafile.WriteLine($"Bytes per sector: {provider.SectorSize}");
             metafile.WriteLine();
             metafile.WriteLine($"Start time: {DateTime.Now}");
@@ -274,6 +276,24 @@ internal static class ImageConversions
                     provider.ConvertToDiscUtilsImage(outputImage, image_type, OutputImageVariant, bufferSize, hashResults, completionPosition, cancellationToken);
                     break;
             }
+
+            metafile.WriteLine($"Finish time: {DateTime.Now}");
+            metafile.WriteLine();
+
+            if (hashResults is not null)
+            {
+                metafile.WriteLine($"Calculated checksums:");
+
+                foreach (var hash in hashResults)
+                {
+                    metafile.WriteLine($"{hash.Key}: {hash.Value?.ToHexString()}");
+                }
+
+                metafile.WriteLine();
+            }
+
+            metafile.Flush();
+
         }, cancellationToken);
 
         using (metafile)
@@ -284,7 +304,7 @@ internal static class ImageConversions
             }
             else
             {
-                var update_time = TimeSpan.FromMilliseconds(400d);
+                var update_time = TimeSpan.FromMilliseconds(400);
 
                 try
                 {
@@ -296,26 +316,6 @@ internal static class ImageConversions
                     Console.Write($"Conversion finished.");
 
                     Console.WriteLine(new string(' ', Console.WindowWidth - Console.CursorLeft - 1));
-
-                    if (metafile is not null)
-                    {
-                        metafile.WriteLine($"Finish time: {DateTime.Now}");
-                        metafile.WriteLine();
-
-                        if (hashResults is not null)
-                        {
-                            metafile.WriteLine($"Calculated checksums:");
-
-                            foreach (var hash in hashResults)
-                            {
-                                metafile.WriteLine($"{hash.Key}: {hash.Value?.ToHexString()}");
-                            }
-
-                            metafile.WriteLine();
-                        }
-
-                        metafile.Flush();
-                    }
                 }
                 finally
                 {

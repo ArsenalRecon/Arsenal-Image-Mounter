@@ -1408,9 +1408,7 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
 
         process.Start();
 
-        string? line;
-
-        while ((line = process.StandardError.ReadLine()) is not null)
+        while (process.StandardError.ReadLine() is { } line)
         {
             if (line == childProcessReadyMessage)
             {
@@ -1418,11 +1416,11 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
             }
 
             Console.WriteLine(line);
+        }
 
-            if (process.HasExited)
-            {
-                return process.ExitCode;
-            }
+        if (process.HasExited)
+        {
+            return 0;
         }
 
         return process.Id;

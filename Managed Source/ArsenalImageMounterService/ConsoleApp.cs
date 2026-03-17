@@ -60,7 +60,11 @@ public static class ConsoleApp
 
             if (commands.ContainsKey("background"))
             {
-                return ConsoleAppImplementation.StartBackgroundProcess();
+                var pid = ConsoleAppImplementation.StartBackgroundProcess();
+
+                Trace.WriteLine($"Started background process with PID {pid}.");
+
+                return pid;
             }
 
             return ConsoleAppImplementation.UnsafeMain(commands);
