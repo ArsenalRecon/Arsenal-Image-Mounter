@@ -107,7 +107,7 @@ Useful for automated driver setup, for example for use from a script.
 Application files in this archive do not require any .NET components.
 
 
-DriverSetup.zip
+DriverFiles.zip
 ---------------
 Driver setup files only (sys, cat and inf files). For use when integrating
 driver setup with, for example, other driver setup packages.
