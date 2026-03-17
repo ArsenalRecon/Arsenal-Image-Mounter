@@ -21,9 +21,9 @@ formats through integrated DiscUtils library. Also supports certain forensics
 image formats if libewf.dll, libaff4.dll and libqcow.dll are also installed.
 Automatically installs necessary driver components if not already installed.
 
-ArsenalImageMounter.exe requires .NET 6.0, which can be installed on Windows 7
+ArsenalImageMounter.exe requires .NET 9.0, which can be installed on Windows 8
 and later.
-https://dotnet.microsoft.com/en-us/download/dotnet/6.0
+https://dotnet.microsoft.com/en-us/download/dotnet/9.0
 
 Tested on Windows 10 and 11, but should also work on Windows 7, 8 and 8.1.
 
@@ -53,7 +53,7 @@ Windows 7, Server 2008 R2 and later.
 https://dotnet.microsoft.com/en-us/download/dotnet-framework/net48
 
 The version of aim_cli.exe included with graphical application linked above is
-a different version that runs on .NET 6.0. It has generally better performance
+a different version that runs on .NET 9.0. It has generally better performance
 and is recommended for most use cases.
 
 Tested on Windows 7, 8.1, 10, 11 and Linux. When running on other platforms
@@ -121,7 +121,7 @@ Arsenal.ImageMounter.dll
 ------------------------
 .NET API library. This package has been moved to NuGet:
 
-Requires either of .NET Framework 4.8 or .NET 6.0.
+Requires either of .NET Framework 4.8 or .NET 9.0.
 
 API reference is available online:
 http://static.ltr-data.se/library/ArsenalImageMounter
