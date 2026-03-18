@@ -605,8 +605,11 @@ Before using AIM CLI, please see readme_cli.txt and ""Arsenal Recon - End User L
 
 Please note: AIM CLI should be run with administrative privileges. If you would like to use AIM CLI to interact with EnCase (E01, Ex01, S01 and AFF), AFF4 forensic disk images or QEMU Qcow images, you must make the Libewf (libewf.dll), LibAFF4 (libaff4.dll) and Libqcow (libqcow.dll) libraries available in the expected (/lib/x64) or same folder as aim_cli.exe. AIM CLI now mounts disk images in read-only mode by default.
 
-Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk:
-{asmname} --mount[=removable|cdrom] [--buffersize=bytes] [--readonly|--writable] [--fakesig] [--fakembr] [--online] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile [--autodelete]] [--background]
+Syntax to mount a raw/forensic/virtual machine disk image as a ""real"" disk
+{asmname} --mount[=removable|cdrom] [--buffersize=size] [--readonly|--writable] [--fakesig] [--fakembr] [--online] --filename=imagefilename [--provider={providers}] [--writeoverlay=differencingimagefile] [--autodelete]] [--background]
+
+Syntax to calculate MD5, SHA1, or SHA256 checksum over disk image contents without mounting (all three calculated if a specific checksum is not specified)
+{asmname} --filename=imagefilename [--provider={providers}] --checksum[=MD5|SHA1|SHA256]
 
 Syntax to mount a RAM disk:
 {asmname} --ramdisk --disksize=size
@@ -628,16 +631,18 @@ Syntax to start TCP/IP service mode, for mounting from other computers:
 
 Syntax to convert a disk image without mounting:
 {asmname} --filename=imagefilename [--fakembr] [--provider={providers}] --convert=outputimagefilename [--variant=fixed|dynamic] [--background]
+
+Syntax to restore a disk image to an actual physical disk:
 {asmname} --filename=imagefilename [--fakembr] [--provider={providers}] --convert=\\?\PhysicalDriveN [--background]
 
 Syntax to save as a new disk image after mounting:
-{asmname} --device=devicenumber --saveas=outputimagefilename [--variant=fixed|dynamic] [--background]
+{asmname} --device=sixdigitdevicenumber --saveas=outputimagefilename [--variant=fixed|dynamic] [--background]
 
 Syntax to save a physical disk as an image file:
 {asmname} --device=\\?\PhysicalDriveN --convert=outputimagefilename [--variant=fixed|dynamic] [--background]
 
 Syntax to dismount a mounted device:
-{asmname} --dismount[=devicenumber] [--force]
+{asmname} --dismount[=sixdigitdevicenumber|\\?\PhysicalDriveN] [--force]
 
 Syntax to mount a disk at remote machine:
 {asmname} --mount [--buffersize=bytes] [--readonly|--writable] [--fakesig] [--fakembr] [--online] --connnect=ipaddress[:port] [--writeoverlay=differencingimagefile [--autodelete]]
