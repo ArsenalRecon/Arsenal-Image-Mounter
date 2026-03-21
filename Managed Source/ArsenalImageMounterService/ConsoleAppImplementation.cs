@@ -1366,19 +1366,19 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     Console.ResetColor();
                 }
             };
+        }
 
-            if (service is not DevioNoneService)
+        if (service is not DevioNoneService)
+        {
+            using (service)
             {
-                using (service)
+                service.WaitForExit(Timeout.InfiniteTimeSpan);
+
+                Console.WriteLine("Service stopped.");
+
+                if (service.Exception is not null)
                 {
-                    service.WaitForExit(Timeout.InfiniteTimeSpan);
-
-                    Console.WriteLine("Service stopped.");
-
-                    if (service.Exception is not null)
-                    {
-                        throw new Exception("Service failed.", service.Exception);
-                    }
+                    throw new Exception("Service failed.", service.Exception);
                 }
             }
         }
