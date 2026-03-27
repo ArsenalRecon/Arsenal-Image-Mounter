@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Arsenal.ImageMounter.PowerShell</RootNamespace>
   </PropertyGroup>
@@ -9,7 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="*" Condition="'$(TargetFramework)' == 'net48'" />
     <PackageReference Include="System.Management.Automation" Version="7.4.*" Condition="'$(TargetFramework)' == 'net8.0'" />
-    <PackageReference Include="System.Management.Automation" Version="7.5.*" Condition="'$(TargetFramework)' == 'net9.0'" />
+	<PackageReference Include="System.Management.Automation" Version="7.5.*" Condition="'$(TargetFramework)' == 'net9.0'" />
+	<PackageReference Include="System.Management.Automation" Version="7.6.*" Condition="'$(TargetFramework)' == 'net10.0'" />
   </ItemGroup>
 
   <ItemGroup>
