@@ -244,8 +244,20 @@ PVOID Context)
     __analysis_assume(Context != NULL);
 
     pMP_WorkRtnParms pWkRtnParms = (pMP_WorkRtnParms)Context;
+    PCDB pCdb = (PCDB)pWkRtnParms->pSrb->Cdb;
+    LARGE_INTEGER startingSector;
     PKTHREAD thread = NULL;
     KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
+
+    if ((pCdb->AsByte[0] == SCSIOP_READ16) ||
+        (pCdb->AsByte[0] == SCSIOP_WRITE16))
+    {
+        REVERSE_BYTES_QUAD(&startingSector, pCdb->CDB16.LogicalBlock);
+    }
+    else
+    {
+        REVERSE_BYTES(&startingSector, &pCdb->CDB10.LogicalBlockByte0);
+    }
 
     UNREFERENCED_PARAMETER(DeviceObject);
 
@@ -330,6 +342,49 @@ PVOID Context)
                 pWkRtnParms->AllocatedBuffer,
                 Irp->IoStatus.Information);
         }
+
+        if (pWkRtnParms->pLUExt->FakeDiskSignature != 0 &&
+            startingSector.QuadPart == 0 &&
+            Irp->IoStatus.Information >= 512)
+        {
+            if ((pCdb->AsByte[0] == SCSIOP_READ16) ||
+                (pCdb->AsByte[0] == SCSIOP_READ))
+            {
+                if (pWkRtnParms->CopyBack)
+                {
+                    PULONG fake_signature_location = (PULONG)((PUCHAR)pWkRtnParms->MappedSystemBuffer + 0x01B8);
+                    *fake_signature_location = pWkRtnParms->pLUExt->FakeDiskSignature;
+
+                    fake_signature_location = (PULONG)((PUCHAR)pWkRtnParms->AllocatedBuffer + 0x01B8);
+                    *fake_signature_location = pWkRtnParms->pLUExt->FakeDiskSignature;
+                }
+                else
+                {
+					if (pWkRtnParms->MappedSystemBuffer == NULL)
+                    {
+                        ULONG storage_status =
+                            StoragePortGetSystemAddress(pWkRtnParms->pHBAExt,
+                                pWkRtnParms->pSrb, &pWkRtnParms->MappedSystemBuffer);
+
+                        if (storage_status != STORAGE_STATUS_SUCCESS)
+                        {
+                            pWkRtnParms->MappedSystemBuffer = NULL;
+                        }
+                    }
+
+                    if (pWkRtnParms->MappedSystemBuffer != NULL)
+                    {
+                        PULONG fake_signature_location = (PULONG)((PUCHAR)pWkRtnParms->MappedSystemBuffer + 0x01B8);
+                        *fake_signature_location = pWkRtnParms->pLUExt->FakeDiskSignature;
+                    }
+                }
+            }
+            else if ((pCdb->AsByte[0] == SCSIOP_WRITE) ||
+                (pCdb->AsByte[0] == SCSIOP_WRITE16))
+            {
+                pWkRtnParms->pLUExt->FakeDiskSignature = 0;
+            }
+        }
     }
 
     if (Irp->MdlAddress != pWkRtnParms->pOriginalMdl)
@@ -343,19 +398,7 @@ PVOID Context)
 
     if (pWkRtnParms->AllocatedBuffer != NULL)
     {
-        PCDB pCdb = (PCDB)pWkRtnParms->pSrb->Cdb;
-        LARGE_INTEGER startingSector;
         KLOCK_QUEUE_HANDLE LockHandle;
-
-        if ((pCdb->AsByte[0] == SCSIOP_READ16) ||
-            (pCdb->AsByte[0] == SCSIOP_WRITE16))
-        {
-            REVERSE_BYTES_QUAD(&startingSector, pCdb->CDB16.LogicalBlock);
-        }
-        else
-        {
-            REVERSE_BYTES(&startingSector, &pCdb->CDB10.LogicalBlockByte0);
-        }
 
         if (thread == NULL)
         {
