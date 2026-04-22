@@ -245,7 +245,7 @@ PVOID Context)
 
     pMP_WorkRtnParms pWkRtnParms = (pMP_WorkRtnParms)Context;
     PCDB pCdb = (PCDB)pWkRtnParms->pSrb->Cdb;
-    LARGE_INTEGER startingSector;
+    LARGE_INTEGER startingSector = { 0 };
     PKTHREAD thread = NULL;
     KIRQL lowest_assumed_irql = PASSIVE_LEVEL;
 
@@ -377,6 +377,12 @@ PVOID Context)
                         PULONG fake_signature_location = (PULONG)((PUCHAR)pWkRtnParms->MappedSystemBuffer + 0x01B8);
                         *fake_signature_location = pWkRtnParms->pLUExt->FakeDiskSignature;
                     }
+#ifdef DBG
+                    else if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
+                    {
+                        DbgBreakPoint();
+                    }
+#endif
                 }
             }
             else if ((pCdb->AsByte[0] == SCSIOP_WRITE) ||
@@ -792,7 +798,7 @@ __in PULONG           Length
 {
     IO_STATUS_BLOCK io_status = { 0 };
     NTSTATUS status = STATUS_NOT_IMPLEMENTED;
-    LARGE_INTEGER byteoffset;
+    LARGE_INTEGER byteoffset = { 0 };
 
     byteoffset.QuadPart = Offset->QuadPart + pLUExt->ImageOffset.QuadPart;
 
@@ -891,7 +897,7 @@ ImScsiZeroDevice(
     }
     else if (pLUExt->UseProxy)
     {
-        DEVICE_DATA_SET_RANGE range;
+        DEVICE_DATA_SET_RANGE range = { 0 };
         range.StartingOffset = Offset->QuadPart;
         range.LengthInBytes = Length;
 
@@ -938,7 +944,7 @@ __in PULONG           Length
 {
     IO_STATUS_BLOCK io_status = { 0 };
     NTSTATUS status = STATUS_NOT_IMPLEMENTED;
-    LARGE_INTEGER byteoffset;
+    LARGE_INTEGER byteoffset = { 0 };
 
     if (pLUExt->SupportsZero &&
         ImScsiIsBufferZero(Buffer, *Length))
@@ -1088,7 +1094,7 @@ ImScsiGenerateUniqueId(pHW_LU_EXTENSION pLUExt)
         KdPrint((__FUNCTION__ ": Error generating GUID: 0x%X\n",
             status));
 
-        LARGE_INTEGER interval;
+        LARGE_INTEGER interval = { 0 };
         interval.QuadPart = -10000LL * 20;    // 20 ms
         
         KeDelayExecutionThread(KernelMode, FALSE, &interval);
@@ -1226,7 +1232,7 @@ __in __deref PETHREAD ClientThread)
     {
         IO_STATUS_BLOCK io_status;
         OBJECT_ATTRIBUTES object_attributes;
-        UNICODE_STRING real_file_name;
+        UNICODE_STRING real_file_name = { 0 };
         ACCESS_MASK desired_access = 0;
         ULONG share_access = 0;
         ULONG create_options = 0;
@@ -1910,7 +1916,7 @@ __in __deref PETHREAD ClientThread)
                     CreateData->Fields.ImageOffset.QuadPart) &&
                     (!IMSCSI_READONLY(CreateData->Fields.Flags)))
                 {
-                    LARGE_INTEGER new_image_size;
+                    LARGE_INTEGER new_image_size = { 0 };
                     new_image_size.QuadPart =
                         CreateData->Fields.DiskSize.QuadPart +
                         CreateData->Fields.ImageOffset.QuadPart;
@@ -2319,7 +2325,7 @@ __in __deref PETHREAD ClientThread)
         overlay_file_name.MaximumLength = overlay_file_name.Length =
             CreateData->Fields.WriteOverlayFileNameLength;
 
-        OBJECT_ATTRIBUTES object_attributes;
+        OBJECT_ATTRIBUTES object_attributes = { 0 };
         InitializeObjectAttributes(&object_attributes,
             &overlay_file_name,
             OBJ_CASE_INSENSITIVE |
@@ -2461,7 +2467,7 @@ ImScsiFillMemoryDisk(pHW_LU_EXTENSION pLUExt)
     SIZE_T image_load_size = pLUExt->DiskSize.LowPart;
 #endif
 
-    FILE_STANDARD_INFORMATION standardInfo;
+    FILE_STANDARD_INFORMATION standardInfo = { 0 };
 
     status = ZwQueryInformationFile(
         pLUExt->ImageFile,

@@ -276,18 +276,13 @@ ImScsiDispatchReadWrite(
 
     NTSTATUS status = STATUS_NOT_IMPLEMENTED;
 
-    /// For write operations, prepare temporary buffer
-    if ((pSrb->Cdb[0] == SCSIOP_WRITE) || (pSrb->Cdb[0] == SCSIOP_WRITE16))
-    {
-        RtlMoveMemory(buffer, sysaddress, pSrb->DataTransferLength);
-    }
-
     if ((pSrb->Cdb[0] == SCSIOP_READ) || (pSrb->Cdb[0] == SCSIOP_READ16))
     {
         status = ImScsiReadDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
     }
     else if ((pSrb->Cdb[0] == SCSIOP_WRITE) || (pSrb->Cdb[0] == SCSIOP_WRITE16))
     {
+        RtlMoveMemory(buffer, sysaddress, pSrb->DataTransferLength);
         status = ImScsiWriteDevice(pLUExt, buffer, &startingOffset, &pSrb->DataTransferLength);
     }
 
@@ -398,7 +393,7 @@ ImScsiDispatchReadWrite(
         pLUExt->FakeDiskSignature = 0;
     }
 
-    /// For write operations, temporary buffer holds read data.
+    /// For read operations, temporary buffer holds read data.
     /// Copy that to system buffer.
     if ((pSrb->Cdb[0] == SCSIOP_READ) || (pSrb->Cdb[0] == SCSIOP_READ16))
     {
