@@ -416,6 +416,18 @@ IN PUNICODE_STRING RegistryPath)
 
 #pragma code_seg()
 
+#if _WIN32_WINNT >= 0x0600
+
+#define AWEAllocAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes, TotalBytes) \
+    MmAllocatePagesForMdlEx((LowAddress), (HighAddress), (SkipBytes), (TotalBytes), MmCached, 0)
+
+#else
+
+#define AWEAllocAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes, TotalBytes) \
+    MmAllocatePagesForMdl((LowAddress), (HighAddress), (SkipBytes), (TotalBytes))
+
+#endif
+
 NTSTATUS
 AWEAllocTryAcquireProtection(IN POBJECT_CONTEXT Context,
 IN BOOLEAN ForWriteOperation,
@@ -1312,7 +1324,7 @@ IN PLARGE_INTEGER EndOfFile)
         // On 32-bit, first try to allocate as high as possible
         KdPrint((__FUNCTION__ ": Allocating above 8 GB.\n"));
 
-        block->Mdl = MmAllocatePagesForMdl(physical_address_8GB,
+        block->Mdl = AWEAllocAllocatePagesForMdl(physical_address_8GB,
             physical_address_max64,
             physical_address_zero,
             bytes_to_allocate);
@@ -1337,7 +1349,7 @@ IN PLARGE_INTEGER EndOfFile)
             NULL,
             L"Error allocating above 8 GB.");
 
-        block->Mdl = MmAllocatePagesForMdl(physical_address_6GB,
+        block->Mdl = AWEAllocAllocatePagesForMdl(physical_address_6GB,
             physical_address_max64,
             physical_address_zero,
             bytes_to_allocate);
@@ -1362,7 +1374,7 @@ IN PLARGE_INTEGER EndOfFile)
             NULL,
             L"Error allocating above 6 GB.");
 
-        block->Mdl = MmAllocatePagesForMdl(physical_address_5GB,
+        block->Mdl = AWEAllocAllocatePagesForMdl(physical_address_5GB,
             physical_address_max64,
             physical_address_zero,
             bytes_to_allocate);
@@ -1387,7 +1399,7 @@ IN PLARGE_INTEGER EndOfFile)
             NULL,
             L"Error allocating above 5 GB.");
 
-        block->Mdl = MmAllocatePagesForMdl(physical_address_4GB,
+        block->Mdl = AWEAllocAllocatePagesForMdl(physical_address_4GB,
             physical_address_max64,
             physical_address_zero,
             bytes_to_allocate);
@@ -1414,7 +1426,7 @@ IN PLARGE_INTEGER EndOfFile)
 
 #endif // !_WIN64
 
-        block->Mdl = MmAllocatePagesForMdl(physical_address_zero,
+        block->Mdl = AWEAllocAllocatePagesForMdl(physical_address_zero,
             physical_address_max64,
             physical_address_zero,
             bytes_to_allocate);
