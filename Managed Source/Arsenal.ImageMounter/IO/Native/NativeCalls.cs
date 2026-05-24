@@ -11,6 +11,7 @@
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
@@ -135,16 +136,16 @@ public static partial class NativeCalls
 
     private readonly struct TrimDiskRegionInData
     {
-        public unsafe TrimDiskRegionInData(DEVICE_DATA_SET_RANGE range,
-                                           DEVICE_DATA_MANAGEMENT_SET_ACTION action,
-                                           int flags)
+        public TrimDiskRegionInData(DEVICE_DATA_SET_RANGE range,
+                                    DEVICE_DATA_MANAGEMENT_SET_ACTION action,
+                                    int flags)
         {
             Attributes = new(action,
                              flags,
                              0,
                              0,
-                             sizeof(TrimDiskRegionInData) - sizeof(DEVICE_DATA_SET_RANGE),
-                             sizeof(DEVICE_DATA_SET_RANGE));
+                             Unsafe.SizeOf<TrimDiskRegionInData>() - Unsafe.SizeOf<DEVICE_DATA_SET_RANGE>(),
+                             Unsafe.SizeOf<DEVICE_DATA_SET_RANGE>());
 
             Range = range;
         }

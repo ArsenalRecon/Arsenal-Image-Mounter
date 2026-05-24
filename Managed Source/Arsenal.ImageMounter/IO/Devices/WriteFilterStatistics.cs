@@ -11,6 +11,7 @@
 //  Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
 // 
 
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 
@@ -20,9 +21,9 @@ namespace Arsenal.ImageMounter.IO.Devices;
 [StructLayout(LayoutKind.Sequential)]
 public struct WriteFilterStatistics
 {
-    public unsafe WriteFilterStatistics()
+    public WriteFilterStatistics()
     {
-        Version = sizeof(WriteFilterStatistics);
+        Version = Unsafe.SizeOf<WriteFilterStatistics>();
     }
 
     //

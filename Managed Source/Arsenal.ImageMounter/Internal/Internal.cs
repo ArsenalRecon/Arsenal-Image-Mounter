@@ -20,7 +20,7 @@ using WORD = System.UInt16;
 
 namespace Arsenal.ImageMounter.Internal;
 
-public readonly unsafe struct ImageOptionalHeader32
+public readonly struct ImageOptionalHeader32
 {
     //
     // Standard fields.
@@ -65,7 +65,7 @@ public readonly unsafe struct ImageOptionalHeader32
     // Here follows 16 IMAGE_DATA_DIRECTORY entries
 }
 
-public readonly unsafe struct ImageOptionalHeader64
+public readonly struct ImageOptionalHeader64
 {
     public readonly ImageOptionalHeaderMagic Magic;
     public readonly BYTE MajorLinkerVersion;

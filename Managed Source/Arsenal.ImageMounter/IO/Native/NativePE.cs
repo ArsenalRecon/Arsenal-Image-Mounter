@@ -251,7 +251,7 @@ public static class NativePE
     /// </summary>
     /// <param name="fileData">Pointer to raw or mapped exe or dll</param>
     /// <returns>Reference to located version resource</returns>
-    public static unsafe ReadOnlySpan<byte> GetRawFileVersionResource(ReadOnlySpan<byte> fileData)
+    public static ReadOnlySpan<byte> GetRawFileVersionResource(ReadOnlySpan<byte> fileData)
     {
         var section_header = FindSection(fileData, RsrcId);
 
@@ -272,7 +272,7 @@ public static class NativePE
         var resource_section = raw.Slice((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress));
         ref readonly var resource_dir = ref resource_section.CastRef<ImageResourceDirectory>();
         var resource_dir_entry = MemoryMarshal.Cast<byte, ImageResourceDirectoryEntry>(
-            raw.Slice((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress) + sizeof(ImageResourceDirectory)));
+            raw.Slice((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress) + Unsafe.SizeOf<ImageResourceDirectory>()));
 
         for (var i = 0; i < resource_dir.NumberOfNamedEntries + resource_dir.NumberOfIdEntries; i++)
         {
@@ -293,7 +293,7 @@ public static class NativePE
                 continue;
             }
 
-            var found_dir_entry = MemoryMarshal.Cast<byte, ImageResourceDirectoryEntry>(found_dir.Slice(sizeof(ImageResourceDirectory)));
+            var found_dir_entry = MemoryMarshal.Cast<byte, ImageResourceDirectoryEntry>(found_dir.Slice(Unsafe.SizeOf<ImageResourceDirectory>()));
 
             for (var j = 0; j < found_dir_header.NumberOfNamedEntries + found_dir_header.NumberOfIdEntries; j++)
             {
@@ -310,7 +310,7 @@ public static class NativePE
                     continue;
                 }
 
-                var found_subdir_entry = found_subdir.Slice(sizeof(ImageResourceDirectory));
+                var found_subdir_entry = found_subdir.Slice(Unsafe.SizeOf<ImageResourceDirectory>());
                 ref readonly var found_subdir_entry_header = ref found_subdir_entry.CastRef<ImageResourceDirectoryEntry>();
 
                 if (found_subdir_entry_header.DataIsDirectory)
@@ -352,11 +352,12 @@ public static class NativePE
     /// <param name="sectionId">The identifier of the section to find, represented as a read-only span of eight bytes.</param>
     /// <returns>The <see cref="ImageSectionHeader"/> that matches the specified section identifier. Returns the default value of
     /// <see cref="ImageSectionHeader"/> if the section is not found or if the file data is invalid.</returns>
-    public static unsafe ImageSectionHeader FindSection(ReadOnlySpan<byte> fileData, ReadOnlySpan<byte> sectionId)
+    public static ImageSectionHeader FindSection(ReadOnlySpan<byte> fileData, ReadOnlySpan<byte> sectionId)
     {
         ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
 
-        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic)
+        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic
+            || dos_header.e_lfanew <= Unsafe.SizeOf<ImageDosHeader>())
         {
             return default;
         }
@@ -371,7 +372,7 @@ public static class NativePE
             return default;
         }
 
-        var section_table_ptr = fileData.Slice(dos_header.e_lfanew + sizeof(ImageNtHeaders) - sizeof(ImageOptionalHeader) + header.FileHeader.SizeOfOptionalHeader);
+        var section_table_ptr = fileData.Slice(dos_header.e_lfanew + Unsafe.SizeOf<ImageNtHeaders>() - Unsafe.SizeOf<ImageOptionalHeader>() + header.FileHeader.SizeOfOptionalHeader);
 
         var section_table = MemoryMarshal.Cast<byte, ImageSectionHeader>(section_table_ptr)
             .Slice(0, header.FileHeader.NumberOfSections);
@@ -387,7 +388,7 @@ public static class NativePE
     /// <param name="fileData">Pointer to raw or mapped exe or dll</param>
     /// <param name="imageDirectoryEntry"></param>
     /// <returns>Reference to located certificate</returns>
-    public static unsafe ref readonly ImageDataDirectory GetRawFileDirectoryEntry(ReadOnlySpan<byte> fileData, ImageDirectoryEntry imageDirectoryEntry)
+    public static ref readonly ImageDataDirectory GetRawFileDirectoryEntry(ReadOnlySpan<byte> fileData, ImageDirectoryEntry imageDirectoryEntry)
     {
         ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
 
@@ -408,7 +409,7 @@ public static class NativePE
             throw new BadImageFormatException();
         }
 
-        var optional_header_ptr = header_ptr.Slice(sizeof(ImageNtHeaders) - sizeof(ImageOptionalHeader), sizeOfOptionalHeader);
+        var optional_header_ptr = header_ptr.Slice(Unsafe.SizeOf<ImageNtHeaders>() - Unsafe.SizeOf<ImageOptionalHeader>(), sizeOfOptionalHeader);
 
         ReadOnlySpan<ImageDataDirectory> data_directory;
 
@@ -416,7 +417,7 @@ public static class NativePE
         {
             case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR32_MAGIC:
                 {
-                    var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader32));
+                    var data_directory_ptr = optional_header_ptr.Slice(Unsafe.SizeOf<ImageOptionalHeader32>());
 
                     data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
 
@@ -429,7 +430,7 @@ public static class NativePE
 
             case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR64_MAGIC:
                 {
-                    var data_directory_ptr = optional_header_ptr.Slice(sizeof(ImageOptionalHeader64));
+                    var data_directory_ptr = optional_header_ptr.Slice(Unsafe.SizeOf<ImageOptionalHeader64>());
 
                     data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
 
@@ -457,7 +458,7 @@ public static class NativePE
         return ref data_directory[index];
     }
 
-    public static unsafe ref readonly uint GetRawFileChecksumField(ReadOnlySpan<byte> fileData)
+    public static ref readonly uint GetRawFileChecksumField(ReadOnlySpan<byte> fileData)
     {
         ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
 
@@ -478,7 +479,7 @@ public static class NativePE
             throw new BadImageFormatException();
         }
 
-        var optional_header_ptr = header_ptr.Slice(sizeof(ImageNtHeaders) - sizeof(ImageOptionalHeader), sizeOfOptionalHeader);
+        var optional_header_ptr = header_ptr.Slice(Unsafe.SizeOf<ImageNtHeaders>() - Unsafe.SizeOf<ImageOptionalHeader>(), sizeOfOptionalHeader);
 
         switch (headers.OptionalHeader.Magic)
         {
@@ -511,7 +512,7 @@ public static class NativePE
     /// <param name="fileData">Pointer to raw exe or dll</param>
     /// <param name="fileLength"></param>
     /// <returns>Hash value</returns>
-    public static unsafe byte[] GetRawFileAuthenticodeHash(Func<HashAlgorithm> hashAlgorithmFactory, byte[] fileData, int fileLength)
+    public static byte[] GetRawFileAuthenticodeHash(Func<HashAlgorithm> hashAlgorithmFactory, byte[] fileData, int fileLength)
     {
         using var hash = hashAlgorithmFactory();
         return GetRawFileAuthenticodeHash(hash, fileData, fileLength);
@@ -524,7 +525,7 @@ public static class NativePE
     /// <param name="fileData">Raw exe or dll</param>
     /// <param name="fileLength"></param>
     /// <returns>Hash value</returns>
-    public static unsafe byte[] GetRawFileAuthenticodeHash(HashAlgorithm hashAlgorithm, byte[] fileData, int fileLength)
+    public static byte[] GetRawFileAuthenticodeHash(HashAlgorithm hashAlgorithm, byte[] fileData, int fileLength)
     {
         var fileSpan = fileData.AsSpan(0, fileLength);
 
@@ -563,7 +564,7 @@ public static class NativePE
 
         hashAlgorithm.TransformBlock(fileData, afterChecksumFieldOffset, dataTableEntryOffset - afterChecksumFieldOffset, null, 0);
 
-        var afterDataTableEntryOffset = dataTableEntryOffset + sizeof(ImageDataDirectory);
+        var afterDataTableEntryOffset = dataTableEntryOffset + Unsafe.SizeOf<ImageDataDirectory>();
 
         if (security_header.Size == 0)
         {
@@ -610,10 +611,10 @@ public static class NativePE
     /// </summary>
     /// <param name="certificateSection">Certificate data section in a PE image</param>
     /// <returns>Bytes of embedded certificate blob</returns>
-    public static unsafe ReadOnlySpan<byte> GetCertificateBlob(ReadOnlySpan<byte> certificateSection)
+    public static ReadOnlySpan<byte> GetCertificateBlob(ReadOnlySpan<byte> certificateSection)
         => certificateSection
         .Slice(0, certificateSection.CastRef<WinCertificateHeader>().Length)
-        .Slice(sizeof(WinCertificateHeader));
+        .Slice(Unsafe.SizeOf<WinCertificateHeader>());
 
     private static ImageSectionHeader FindSection(ReadOnlySpan<ImageSectionHeader> section_table, ReadOnlySpan<byte> sectionId)
     {
@@ -720,7 +721,7 @@ public enum ImageFileMachine : WORD
 /// </summary>
 public readonly struct ImageFileHeader
 {
-    public static readonly unsafe int SizeOf = sizeof(ImageFileHeader);
+    public static readonly int SizeOf = Unsafe.SizeOf<ImageFileHeader>();
 
     public ImageFileMachine Machine { get; }
     public WORD NumberOfSections { get; }
@@ -763,7 +764,7 @@ public enum ImageOptionalHeaderMagic : ushort
 /// </summary>
 public readonly struct ImageOptionalHeader
 {
-    public static readonly unsafe int SizeOf = sizeof(ImageOptionalHeader);
+    public static readonly int SizeOf = Unsafe.SizeOf<ImageOptionalHeader>();
 
     //
     // Standard fields.
@@ -785,7 +786,7 @@ public struct ImageDosHeader
 {      // DOS .EXE header
     public static readonly WORD ExpectedMagic = MemoryMarshal.Read<WORD>("MZ"u8);
 
-    public static readonly unsafe int SizeOf = sizeof(ImageDosHeader);
+    public static readonly int SizeOf = Unsafe.SizeOf<ImageDosHeader>();
 
     public readonly WORD e_magic;                     // Magic number
     public readonly WORD e_cblp;                      // Bytes on last page of file
@@ -813,7 +814,7 @@ public struct ImageDosHeader
 /// </summary>
 public readonly struct ImageNtHeaders
 {
-    public static readonly unsafe int SizeOf = sizeof(ImageNtHeaders);
+    public static readonly int SizeOf = Unsafe.SizeOf<ImageNtHeaders>();
 
     public const uint ExpectedSignature = 0x00004550;
 
@@ -827,7 +828,7 @@ public readonly struct ImageNtHeaders
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct N3OverlayHeader
 {
-    public static readonly unsafe int SizeOf = sizeof(N3OverlayHeader);
+    public static readonly int SizeOf = Unsafe.SizeOf<N3OverlayHeader>();
 
     public const WORD ExpectedSignature = 0x336E;
 
@@ -860,7 +861,7 @@ public readonly struct N3OverlayDescriptor
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct LE_LX_Header
 {
-    public static readonly unsafe int SizeOf = sizeof(LE_LX_Header);
+    public static readonly int SizeOf = Unsafe.SizeOf<LE_LX_Header>();
 
     public const WORD ExpectedSignatureLE = 0x454C;
 
@@ -1147,7 +1148,7 @@ public enum NeOs2ExeFlags : byte
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct ImageNeHeader
 {
-    public static readonly unsafe int SizeOf = sizeof(ImageNeHeader);
+    public static readonly int SizeOf = Unsafe.SizeOf<ImageNeHeader>();
 
     public const WORD ExpectedSignature = 0x454E;
 

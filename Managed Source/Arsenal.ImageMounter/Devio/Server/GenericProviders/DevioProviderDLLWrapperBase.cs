@@ -59,7 +59,7 @@ public abstract class DevioProviderDLLWrapperBase : DevioProviderUnmanagedBase
     {
     }
 
-    protected unsafe DevioProviderDLLWrapperBase(DLLOpenMethodNIntRet open, string filename, bool readOnly, Func<Exception>? get_last_error)
+    protected DevioProviderDLLWrapperBase(DLLOpenMethodNIntRet open, string filename, bool readOnly, Func<Exception>? get_last_error)
         : this(GetDLLOpenWrapper(open), filename, readOnly, get_last_error)
     {
     }

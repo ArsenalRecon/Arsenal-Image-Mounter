@@ -10,6 +10,7 @@
 
 using LTRData.Extensions.Buffers;
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Arsenal.ImageMounter.Devio;
@@ -216,6 +217,6 @@ public struct IMDPROXY_DEVIODRV_BUFFER_HEADER
     public ulong io_tag { get; set; }           // Tag to forward to response header.
     public ulong flags { get; set; }            // Reserved. Currently not used.
 
-    public static unsafe int SizeOf { get; } = sizeof(IMDPROXY_DEVIODRV_BUFFER_HEADER);
+    public static int SizeOf { get; } = Unsafe.SizeOf<IMDPROXY_DEVIODRV_BUFFER_HEADER>();
 }
 

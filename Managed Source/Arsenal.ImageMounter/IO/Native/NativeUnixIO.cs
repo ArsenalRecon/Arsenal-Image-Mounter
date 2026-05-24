@@ -50,7 +50,7 @@ public static partial class NativeUnixIO
 
         [LibraryImport("c", SetLastError = true)]
         [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-        public static unsafe partial int sysctlbyname([MarshalAs(UnmanagedType.LPUTF8Str)] string name, ref byte oldp, ref nint oldtenp, in byte newp, nint newten);
+        public static partial int sysctlbyname([MarshalAs(UnmanagedType.LPUTF8Str)] string name, ref byte oldp, ref nint oldtenp, in byte newp, nint newten);
 
         [LibraryImport("c", SetLastError = true)]
         [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -74,7 +74,7 @@ public static partial class NativeUnixIO
 
         [LibraryImport("c")]
         [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-        public static unsafe partial int unmount([MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags);
+        public static partial int unmount([MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags);
 
         [LibraryImport("c")]
         [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -92,7 +92,7 @@ public static partial class NativeUnixIO
         public static extern int ioctl(SafeFileHandle handle, uint request, ref byte parameter);
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-        public static extern unsafe int sysctlbyname([MarshalAs(UnmanagedType.LPUTF8Str)] string name, ref byte oldp, ref nint oldtenp, in byte newp, nint newten);
+        public static extern int sysctlbyname([MarshalAs(UnmanagedType.LPUTF8Str)] string name, ref byte oldp, ref nint oldtenp, in byte newp, nint newten);
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
         public static extern unsafe int getmntinfo(freebsd_statfs** mntbufp, int mode);
@@ -110,7 +110,7 @@ public static partial class NativeUnixIO
         public static extern unsafe void free(void* mem);
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe int unmount([MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags);
+        public static extern int unmount([MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags);
 
         [DllImport("c", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int mount([MarshalAs(UnmanagedType.LPUTF8Str)] string type, [MarshalAs(UnmanagedType.LPUTF8Str)] string dir, int flags, void* data);
@@ -210,5 +210,5 @@ public static partial class NativeUnixIO
         return target;
     }
 
-    public static unsafe bool Unmount(string path) => UnixAPI.unmount(path, 0) == 0;
+    public static bool Unmount(string path) => UnixAPI.unmount(path, 0) == 0;
 }

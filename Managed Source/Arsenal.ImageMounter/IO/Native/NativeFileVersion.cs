@@ -13,6 +13,8 @@ using LTRData.Extensions.Buffers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
 
 
 
@@ -43,7 +45,7 @@ public readonly struct VersionRecordHeader
     public ushort ValueLength { get; }
     public VersionResourceType Type { get; }
 
-    public static readonly unsafe int SizeOf = sizeof(VersionRecordHeader);
+    public static readonly int SizeOf = Unsafe.SizeOf<VersionRecordHeader>();
 }
 
 /// <summary>
@@ -62,8 +64,8 @@ public struct VS_VERSIONINFO
     public unsafe ReadOnlySpan<char> Key
         => BufferExtensions.CreateReadOnlySpan(szKey[0], 16);
 
-    public readonly unsafe int SizeOf
-        => sizeof(VS_VERSIONINFO) - sizeof(FixedFileVerInfo) + Header.ValueLength;
+    public readonly int SizeOf
+        => Unsafe.SizeOf<VS_VERSIONINFO>() - Unsafe.SizeOf<FixedFileVerInfo>() + Header.ValueLength;
 }
 
 /// <summary>
@@ -145,9 +147,9 @@ public class NativeFileVersion
     /// <param name="blockName">Name of sub block</param>
     /// <param name="valueName">Name of value in sub block</param>
     /// <returns>Located uint value, or null if not found</returns>
-    internal static unsafe uint? QueryValueInt(ReadOnlySpan<byte> versionResource,
-                                               string blockName = "VarFileInfo",
-                                               string valueName = "Translation")
+    internal static uint? QueryValueInt(ReadOnlySpan<byte> versionResource,
+                                        string blockName = "VarFileInfo",
+                                        string valueName = "Translation")
     {
         blockName ??= "VarFileInfo";
         valueName ??= "Translation";
@@ -208,10 +210,10 @@ public class NativeFileVersion
     /// <param name="language">Language translation id, default 040904E4</param>
     /// <param name="valueName">Name of value in sub block</param>
     /// <returns>Pointer to located string, or null if not found</returns>
-    internal static unsafe ReadOnlySpan<char> QueryValueString(ReadOnlySpan<byte> versionResource,
-                                                               string blockName = "StringFileInfo",
-                                                               string language = "040904E4",
-                                                               string valueName = "FileDescription")
+    internal static ReadOnlySpan<char> QueryValueString(ReadOnlySpan<byte> versionResource,
+                                                        string blockName = "StringFileInfo",
+                                                        string language = "040904E4",
+                                                        string valueName = "FileDescription")
     {
         blockName ??= "StringFileInfo";
         language ??= "040904E4";
@@ -302,9 +304,9 @@ public class NativeFileVersion
     /// <param name="blockName">Name of sub block</param>
     /// <param name="dwTranslationCode">Language translation id, default 0x040904E4</param>
     /// <returns>A dictionary with all strings read from string block.</returns>
-    internal static unsafe Dictionary<string, string> QueryValueStrings(ReadOnlySpan<byte> versionResource,
-                                                                        string blockName = "StringFileInfo",
-                                                                        uint dwTranslationCode = 0x040904E4)
+    internal static Dictionary<string, string> QueryValueStrings(ReadOnlySpan<byte> versionResource,
+                                                                 string blockName = "StringFileInfo",
+                                                                 uint dwTranslationCode = 0x040904E4)
     {
         blockName ??= "StringFileInfo";
 

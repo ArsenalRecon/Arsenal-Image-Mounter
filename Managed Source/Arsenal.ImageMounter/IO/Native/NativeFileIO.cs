@@ -637,7 +637,7 @@ public static partial class NativeFileIO
         internal static partial int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
 
         [LibraryImport("ntdll")]
-        internal static unsafe partial int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, out byte ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
+        internal static partial int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, out byte ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
 
         [LibraryImport("ntdll")]
         internal static partial int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
@@ -1077,7 +1077,7 @@ public static partial class NativeFileIO
         internal static extern int NtQuerySystemInformation(SystemInformationClass SystemInformationClass, out byte pSystemInformation, int uSystemInformationLength, out int puReturnLength);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
-        internal static extern unsafe int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, out byte ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
+        internal static extern int NtQueryVolumeInformationFile(SafeFileHandle Handle, out IoStatusBlock ioStatus, out byte ObjectInformation, int ObjectInformationLength, FsInformationClass FsInformationClass);
 
         [DllImport("ntdll", CharSet = CharSet.Unicode)]
         internal static extern int NtQueryObject(SafeFileHandle ObjectHandle, ObjectInformationClass ObjectInformationClass, SafeBuffer ObjectInformation, int ObjectInformationLength, out int puReturnLength);
@@ -1160,7 +1160,7 @@ public static partial class NativeFileIO
         /// <param name="returncode">ReturnCode value from SRB_IO_CONTROL header upon return.</param>
         /// <returns>This method returns number of bytes in the response saved in buffer specified in <paramref name="databytes"/> parameter.</returns>
         [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-        public static unsafe int SendSrbIoControl(SafeFileHandle adapter, uint ctrlcode, uint timeout, Span<byte> databytes, out int returncode)
+        public static int SendSrbIoControl(SafeFileHandle adapter, uint ctrlcode, uint timeout, Span<byte> databytes, out int returncode)
         {
             var header = new SRB_IO_CONTROL(SrbIoCtlSignature, timeout, ctrlcode, databytes.Length);
 
@@ -2254,7 +2254,7 @@ Currently, the following application has files open on this volume:
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static unsafe DeviceType? GetDeviceType(SafeFileHandle handle)
+    public static DeviceType? GetDeviceType(SafeFileHandle handle)
     {
         FILE_FS_DEVICE_INFORMATION device_information = default;
 
@@ -2320,12 +2320,12 @@ Currently, the following application has files open on this volume:
                                                  out totalNumberOfClusters);
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static unsafe bool GetAllocationBitmap(SafeFileHandle rootDirectory,
-                                                  ref long startingCluster,
-                                                  long totalNumberOfClusters,
-                                                  out Memory<byte> bitmap)
+    public static bool GetAllocationBitmap(SafeFileHandle rootDirectory,
+                                           ref long startingCluster,
+                                           long totalNumberOfClusters,
+                                           out Memory<byte> bitmap)
     {
-        var buffer = new byte[(int)Math.Ceiling((double)totalNumberOfClusters / 8) + sizeof(VOLUME_BITMAP_BUFFER)];
+        var buffer = new byte[(int)Math.Ceiling((double)totalNumberOfClusters / 8) + Unsafe.SizeOf<VOLUME_BITMAP_BUFFER>()];
 
         if (!UnsafeNativeMethods.DeviceIoControl(rootDirectory,
                                                  NativeConstants.FSCTL_GET_VOLUME_BITMAP,
@@ -2345,10 +2345,10 @@ Currently, the following application has files open on this volume:
 
         startingCluster = header.StartingLcn;
 
-        var length = Math.Min((int)bytesReturned - sizeof(VOLUME_BITMAP_BUFFER),
+        var length = Math.Min((int)bytesReturned - Unsafe.SizeOf<VOLUME_BITMAP_BUFFER>(),
             (int)Math.Ceiling((double)header.BitmapSize / 8));
 
-        bitmap = new(buffer, sizeof(VOLUME_BITMAP_BUFFER), length);
+        bitmap = new(buffer, Unsafe.SizeOf<VOLUME_BITMAP_BUFFER>(), length);
 
         return true;
     }
@@ -3629,13 +3629,13 @@ Currently, the following application has files open on this volume:
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static unsafe PARTITION_INFORMATION? GetPartitionInformation(SafeFileHandle disk)
+    public static PARTITION_INFORMATION? GetPartitionInformation(SafeFileHandle disk)
         => UnsafeNativeMethods.DeviceIoControl(disk,
                                                NativeConstants.IOCTL_DISK_GET_PARTITION_INFO,
                                                0,
                                                0U,
                                                out PARTITION_INFORMATION partition_info,
-                                               (uint)sizeof(PARTITION_INFORMATION),
+                                               (uint)Unsafe.SizeOf<PARTITION_INFORMATION>(),
                                                out _,
                                                0)
             ? partition_info
@@ -3650,13 +3650,13 @@ Currently, the following application has files open on this volume:
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static unsafe PARTITION_INFORMATION_EX? GetPartitionInformationEx(SafeFileHandle disk)
+    public static PARTITION_INFORMATION_EX? GetPartitionInformationEx(SafeFileHandle disk)
         => UnsafeNativeMethods.DeviceIoControl(disk,
                                                NativeConstants.IOCTL_DISK_GET_PARTITION_INFO_EX,
                                                0,
                                                0U,
                                                out PARTITION_INFORMATION_EX partition_info,
-                                               (uint)sizeof(PARTITION_INFORMATION_EX),
+                                               (uint)Unsafe.SizeOf<PARTITION_INFORMATION_EX>(),
                                                out _,
                                                0)
             ? partition_info
@@ -3907,7 +3907,7 @@ Currently, the following application has files open on this volume:
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    internal static unsafe FileExtent? GetNextFileExtent(SafeFileHandle file, long start_vcn)
+    internal static FileExtent? GetNextFileExtent(SafeFileHandle file, long start_vcn)
     {
         var input = start_vcn;
         RETRIEVAL_POINTERS_BUFFER output = default;
@@ -3988,14 +3988,14 @@ Currently, the following application has files open on this volume:
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
-    public static unsafe NativeFsFullSizeInformation GetFilesystemSizeInfo(SafeFileHandle volume, bool throwOnFail)
+    public static NativeFsFullSizeInformation GetFilesystemSizeInfo(SafeFileHandle volume, bool throwOnFail)
     {
         var fs_size_info = default(NativeFsFullSizeInformation);
         
         var status = UnsafeNativeMethods.NtQueryVolumeInformationFile(volume,
                                                                       out _,
                                                                       out Unsafe.As<NativeFsFullSizeInformation, byte>(ref fs_size_info),
-                                                                      sizeof(NativeFsFullSizeInformation),
+                                                                      Unsafe.SizeOf<NativeFsFullSizeInformation>(),
                                                                       FsInformationClass.FileFsFullSizeInformation);
 
         if (status < 0)
@@ -4086,9 +4086,9 @@ Currently, the following application has files open on this volume:
 
     public sealed class VolumeBitmap
     {
-        public readonly unsafe long StartingLcn;
+        public readonly long StartingLcn;
 
-        public readonly unsafe long NumberOfClusters;
+        public readonly long NumberOfClusters;
 
         public readonly byte[] Bitmap;
 

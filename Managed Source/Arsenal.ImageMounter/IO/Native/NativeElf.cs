@@ -831,7 +831,7 @@ public readonly struct ElfHeaderIdent
     private readonly byte magic2;
     private readonly byte magic3;
 
-    public unsafe bool IsValid =>
+    public bool IsValid =>
         magic0 == 0x7F
         && magic1 == 'E'
         && magic2 == 'L'
@@ -871,15 +871,15 @@ public readonly struct ElfHeaderRaw
 
     private readonly ElfUInt16 type;       // 2=executable, 3=shared object
 
-    public unsafe ElfFileType Type => (ElfFileType)type.Parse(IsLittleEndian);
+    public ElfFileType Type => (ElfFileType)type.Parse(IsLittleEndian);
 
     private readonly ElfUInt16 machine;    // 0x3E=x86-64, 0x28=ARM64
 
-    public unsafe ElfMachine Machine => (ElfMachine)machine.Parse(IsLittleEndian);
+    public ElfMachine Machine => (ElfMachine)machine.Parse(IsLittleEndian);
 
     private readonly ElfUInt32 version;
 
-    public unsafe ElfVersion Version => (ElfVersion)version.Parse(IsLittleEndian);
+    public ElfVersion Version => (ElfVersion)version.Parse(IsLittleEndian);
 };
 
 public record ElfHeader(

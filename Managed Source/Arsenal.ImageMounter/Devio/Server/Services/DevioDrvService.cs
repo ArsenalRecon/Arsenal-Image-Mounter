@@ -22,6 +22,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
@@ -124,9 +125,9 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
     {
     }
 
-    internal static unsafe partial class DevioDrvServiceInterop
+    internal static partial class DevioDrvServiceInterop
     {
-        public static readonly int SizeOfNativeOverlapped = sizeof(NativeOverlapped);
+        public static readonly int SizeOfNativeOverlapped = Unsafe.SizeOf<NativeOverlapped>();
 
 #if NET7_0_OR_GREATER
         [LibraryImport("kernel32", SetLastError = true)]

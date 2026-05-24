@@ -134,7 +134,7 @@ public partial class DevioDirectStream : DevioStream
         }
     }
 
-    public override unsafe void Write(ReadOnlySpan<byte> buffer)
+    public override void Write(ReadOnlySpan<byte> buffer)
     {
         var byteswritten = Provider.Write(buffer, Position);
 

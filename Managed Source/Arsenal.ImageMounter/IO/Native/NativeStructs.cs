@@ -620,7 +620,7 @@ public enum GptAttributes : ulong
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public unsafe struct PARTITION_INFORMATION_GPT
+public struct PARTITION_INFORMATION_GPT
 {
     public Guid PartitionType { get; }
 
@@ -628,7 +628,7 @@ public unsafe struct PARTITION_INFORMATION_GPT
 
     public GptAttributes Attributes { get; }
 
-    private fixed char _name[36];
+    private unsafe fixed char _name[36];
 
     public unsafe ReadOnlySpan<char> Name => BufferExtensions.CreateReadOnlySpan(_name[0], 36).ReadNullTerminatedUnicode();
 }
@@ -636,11 +636,11 @@ public unsafe struct PARTITION_INFORMATION_GPT
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 public readonly struct SP_DEVINFO_DATA
 {
-    public unsafe SP_DEVINFO_DATA()
+    public SP_DEVINFO_DATA()
     {
         this = default;
         // as per DDK docs on SetupDiEnumDeviceInfo
-        Size = sizeof(SP_DEVINFO_DATA);
+        Size = Unsafe.SizeOf<SP_DEVINFO_DATA>();
     }
 
     public int Size { get; }
@@ -1177,14 +1177,14 @@ public enum DEVICE_DATA_MANAGEMENT_SET_ACTION : uint
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct DEVICE_MANAGE_DATA_SET_ATTRIBUTES
 {
-    public unsafe DEVICE_MANAGE_DATA_SET_ATTRIBUTES(DEVICE_DATA_MANAGEMENT_SET_ACTION action,
-                                                    int flags,
-                                                    int parameterBlockOffset,
-                                                    int parameterBlockLength,
-                                                    int dataSetRangesOffset,
-                                                    int dataSetRangesLength)
+    public DEVICE_MANAGE_DATA_SET_ATTRIBUTES(DEVICE_DATA_MANAGEMENT_SET_ACTION action,
+                                             int flags,
+                                             int parameterBlockOffset,
+                                             int parameterBlockLength,
+                                             int dataSetRangesOffset,
+                                             int dataSetRangesLength)
     {
-        Size = sizeof(DEVICE_MANAGE_DATA_SET_ATTRIBUTES);
+        Size = Unsafe.SizeOf<DEVICE_MANAGE_DATA_SET_ATTRIBUTES>();
         Action = action;
         Flags = flags;
         ParameterBlockOffset = parameterBlockOffset;
@@ -1323,18 +1323,18 @@ public readonly struct SCSI_ADDRESS : IEquatable<SCSI_ADDRESS>
     public byte TargetId { get; }
     public byte Lun { get; }
 
-    public unsafe SCSI_ADDRESS(byte portNumber, uint dWordDeviceNumber)
+    public SCSI_ADDRESS(byte portNumber, uint dWordDeviceNumber)
     {
-        Length = sizeof(SCSI_ADDRESS);
+        Length = Unsafe.SizeOf<SCSI_ADDRESS>();
         PortNumber = portNumber;
         PathId = (byte)(dWordDeviceNumber & 0xFFL);
         TargetId = (byte)(dWordDeviceNumber >> 8 & 0xFFL);
         Lun = (byte)(dWordDeviceNumber >> 16 & 0xFFL);
     }
 
-    public unsafe SCSI_ADDRESS(uint dWordDeviceNumber)
+    public SCSI_ADDRESS(uint dWordDeviceNumber)
     {
-        Length = sizeof(SCSI_ADDRESS);
+        Length = Unsafe.SizeOf<SCSI_ADDRESS>();
         PortNumber = byte.MaxValue;
         PathId = (byte)(dWordDeviceNumber & 0xFFL);
         TargetId = (byte)(dWordDeviceNumber >> 8 & 0xFFL);
@@ -1430,9 +1430,9 @@ public struct OSVERSIONINFO
     public unsafe ReadOnlySpan<char> CSDVersion
         => BufferExtensions.CreateReadOnlySpan(csdVersion[0], 128).ReadNullTerminatedUnicode();
 
-    public unsafe OSVERSIONINFO()
+    public OSVERSIONINFO()
     {
-        OSVersionInfoSize = sizeof(OSVERSIONINFO);
+        OSVersionInfoSize = Unsafe.SizeOf<OSVERSIONINFO>();
     }
 }
 
@@ -1462,9 +1462,9 @@ public struct OSVERSIONINFOEX
 
     public byte Reserved { get; }
 
-    public unsafe OSVERSIONINFOEX()
+    public OSVERSIONINFOEX()
     {
-        OSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+        OSVersionInfoSize = Unsafe.SizeOf<OSVERSIONINFOEX>();
     }
 
     public readonly OperatingSystem ToOperatingSystem()
@@ -1516,10 +1516,10 @@ public readonly struct MOUNTMGR_MOUNT_POINT
     public ushort DeviceNameLength { get; }
     public ushort Reserved3 { get; }
 
-    public unsafe MOUNTMGR_MOUNT_POINT(string device_name)
+    public MOUNTMGR_MOUNT_POINT(string device_name)
         : this()
     {
-        DeviceNameOffset = sizeof(MOUNTMGR_MOUNT_POINT);
+        DeviceNameOffset = Unsafe.SizeOf<MOUNTMGR_MOUNT_POINT>();
         DeviceNameLength = (ushort)(device_name.Length << 1);
     }
 }
@@ -1700,9 +1700,9 @@ public readonly struct SP_CLASSINSTALL_HEADER
 
     public uint InstallFunction { get; }
 
-    public unsafe SP_CLASSINSTALL_HEADER(uint installFunction)
+    public SP_CLASSINSTALL_HEADER(uint installFunction)
     {
-        _size = sizeof(SP_CLASSINSTALL_HEADER);
+        _size = Unsafe.SizeOf<SP_CLASSINSTALL_HEADER>();
         InstallFunction = installFunction;
     }
 }
@@ -1765,10 +1765,10 @@ public readonly struct ScsiAddressAndLength : IEquatable<ScsiAddressAndLength>
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct SP_DEVICE_INTERFACE_DATA
 {
-    public unsafe SP_DEVICE_INTERFACE_DATA()
+    public SP_DEVICE_INTERFACE_DATA()
     {
         this = default;
-        Size = sizeof(SP_DEVICE_INTERFACE_DATA);
+        Size = Unsafe.SizeOf<SP_DEVICE_INTERFACE_DATA>();
     }
 
     public int Size { get; }
@@ -1786,9 +1786,9 @@ public struct SP_DEVICE_INTERFACE_DETAIL_DATA
 
     public unsafe ReadOnlySpan<char> DevicePath => BufferExtensions.CreateReadOnlySpan(devicePath[0], 32768).ReadNullTerminatedUnicode();
 
-    public unsafe SP_DEVICE_INTERFACE_DETAIL_DATA()
+    public SP_DEVICE_INTERFACE_DETAIL_DATA()
     {
-        Size = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
+        Size = Unsafe.SizeOf<SP_DEVICE_INTERFACE_DETAIL_DATA>();
     }
 }
 
@@ -1805,9 +1805,9 @@ public struct SP_DEVINFO_LIST_DETAIL_DATA
 
     private unsafe fixed char remoteMachineName[SP_MAX_MACHINENAME_LENGTH];
 
-    public unsafe SP_DEVINFO_LIST_DETAIL_DATA()
+    public SP_DEVINFO_LIST_DETAIL_DATA()
     {
-        Size = sizeof(SP_DEVINFO_LIST_DETAIL_DATA);
+        Size = Unsafe.SizeOf<SP_DEVINFO_LIST_DETAIL_DATA>();
     }
 }
 
@@ -1818,8 +1818,8 @@ public struct SP_DEVINFO_LIST_DETAIL_DATA
 [ComVisible(false)]
 public readonly struct SRB_IO_CONTROL
 {
-    public unsafe SRB_IO_CONTROL(ulong signature, uint timeout, uint controlCode, int dataLength)
-        : this(sizeof(SRB_IO_CONTROL), signature, timeout, controlCode, 0, dataLength)
+    public SRB_IO_CONTROL(ulong signature, uint timeout, uint controlCode, int dataLength)
+        : this(Unsafe.SizeOf<SRB_IO_CONTROL>(), signature, timeout, controlCode, 0, dataLength)
     {
     }
 
