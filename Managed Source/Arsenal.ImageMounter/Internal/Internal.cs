@@ -20,6 +20,24 @@ using WORD = System.UInt16;
 
 namespace Arsenal.ImageMounter.Internal;
 
+public readonly struct ImageOptionalHeaderPart2
+{
+    public readonly DWORD SectionAlignment;
+    public readonly DWORD FileAlignment;
+    public readonly WORD MajorOperatingSystemVersion;
+    public readonly WORD MinorOperatingSystemVersion;
+    public readonly WORD MajorImageVersion;
+    public readonly WORD MinorImageVersion;
+    public readonly WORD MajorSubsystemVersion;
+    public readonly WORD MinorSubsystemVersion;
+    public readonly DWORD Win32VersionValue;
+    public readonly DWORD SizeOfImage;
+    public readonly DWORD SizeOfHeaders;
+    public readonly DWORD CheckSum;
+    public readonly WORD Subsystem;
+    public readonly WORD DllCharacteristics;
+}
+
 public readonly struct ImageOptionalHeader32
 {
     //
@@ -41,20 +59,9 @@ public readonly struct ImageOptionalHeader32
     //
 
     public readonly DWORD ImageBase;
-    public readonly DWORD SectionAlignment;
-    public readonly DWORD FileAlignment;
-    public readonly WORD MajorOperatingSystemVersion;
-    public readonly WORD MinorOperatingSystemVersion;
-    public readonly WORD MajorImageVersion;
-    public readonly WORD MinorImageVersion;
-    public readonly WORD MajorSubsystemVersion;
-    public readonly WORD MinorSubsystemVersion;
-    public readonly DWORD Win32VersionValue;
-    public readonly DWORD SizeOfImage;
-    public readonly DWORD SizeOfHeaders;
-    public readonly DWORD CheckSum;
-    public readonly WORD Subsystem;
-    public readonly WORD DllCharacteristics;
+
+    public readonly ImageOptionalHeaderPart2 Part2;
+
     public readonly DWORD SizeOfStackReserve;
     public readonly DWORD SizeOfStackCommit;
     public readonly DWORD SizeOfHeapReserve;
@@ -76,20 +83,9 @@ public readonly struct ImageOptionalHeader64
     public readonly DWORD AddressOfEntryPoint;
     public readonly DWORD BaseOfCode;
     public readonly ULONGLONG ImageBase;
-    public readonly DWORD SectionAlignment;
-    public readonly DWORD FileAlignment;
-    public readonly WORD MajorOperatingSystemVersion;
-    public readonly WORD MinorOperatingSystemVersion;
-    public readonly WORD MajorImageVersion;
-    public readonly WORD MinorImageVersion;
-    public readonly WORD MajorSubsystemVersion;
-    public readonly WORD MinorSubsystemVersion;
-    public readonly DWORD Win32VersionValue;
-    public readonly DWORD SizeOfImage;
-    public readonly DWORD SizeOfHeaders;
-    public readonly DWORD CheckSum;
-    public readonly WORD Subsystem;
-    public readonly WORD DllCharacteristics;
+
+    public readonly ImageOptionalHeaderPart2 Part2;
+
     public readonly ULONGLONG SizeOfStackReserve;
     public readonly ULONGLONG SizeOfStackCommit;
     public readonly ULONGLONG SizeOfHeapReserve;
@@ -123,7 +119,7 @@ public readonly struct ImageRomOptionalHeader
 public struct ImageSectionHeader
 {
     private unsafe fixed byte name[8];
-    public unsafe ReadOnlySpan<byte> Name => BufferExtensions.CreateReadOnlySpan(name[0], 8);
+    public unsafe ReadOnlySpan<byte> Name => BufferExtensions.CreateReadOnlySpan(name[0], BufferExtensions.CreateReadOnlySpan(name[0], 8).IndexOf((byte)0) is var p && p >= 0 ? p : 8);
     public readonly DWORD VirtualSize;
     public readonly DWORD VirtualAddress;
     public readonly int SizeOfRawData;

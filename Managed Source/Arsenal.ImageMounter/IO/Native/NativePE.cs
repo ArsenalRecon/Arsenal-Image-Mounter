@@ -35,7 +35,7 @@ using WORD = System.UInt16;
 
 public static class NativePE
 {
-    private static ReadOnlySpan<byte> RsrcId => ".rsrc\0\0\0"u8;
+    private static ReadOnlySpan<byte> RsrcId => ".rsrc"u8;
 
     private const ushort RT_VERSION = 16;
 
@@ -383,6 +383,41 @@ public static class NativePE
     }
 
     /// <summary>
+    /// Finds and returns the image section table.
+    /// </summary>
+    /// <remarks>This method checks the validity of the file data by verifying the DOS header magic number and
+    /// the NT headers signature. If these checks fail, the method returns an empty span.</remarks>
+    /// <param name="fileData">The binary data of the file to search, represented as a read-only span of bytes.</param>
+    /// <returns>A <see cref="Span{ImageSectionHeader}"/>. Returns the default value of an empty span if the section table is not found or if the file data is invalid.</returns>
+    public static ReadOnlySpan<ImageSectionHeader> GetSectionTable(ReadOnlySpan<byte> fileData)
+    {
+        ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
+
+        if (dos_header.e_magic != ImageDosHeader.ExpectedMagic
+            || dos_header.e_lfanew <= Unsafe.SizeOf<ImageDosHeader>())
+        {
+            return default;
+        }
+
+        var header_ptr = fileData.Slice(dos_header.e_lfanew);
+
+        ref readonly var header = ref header_ptr.CastRef<ImageNtHeaders>();
+
+        if (header.Signature != ImageNtHeaders.ExpectedSignature
+            || header.FileHeader.SizeOfOptionalHeader == 0)
+        {
+            return default;
+        }
+
+        var section_table_ptr = fileData.Slice(dos_header.e_lfanew + Unsafe.SizeOf<ImageNtHeaders>() - Unsafe.SizeOf<ImageOptionalHeader>() + header.FileHeader.SizeOfOptionalHeader);
+
+        var section_table = MemoryMarshal.Cast<byte, ImageSectionHeader>(section_table_ptr)
+            .Slice(0, header.FileHeader.NumberOfSections);
+
+        return section_table;
+    }
+
+    /// <summary>
     /// Locates directory entry in a PE image
     /// </summary>
     /// <param name="fileData">Pointer to raw or mapped exe or dll</param>
@@ -459,6 +494,9 @@ public static class NativePE
     }
 
     public static ref readonly uint GetRawFileChecksumField(ReadOnlySpan<byte> fileData)
+        => ref GetImageOptionalHeaderPart2(fileData).CheckSum;
+
+    public static ref readonly ImageOptionalHeaderPart2 GetImageOptionalHeaderPart2(ReadOnlySpan<byte> fileData)
     {
         ref readonly var dos_header = ref fileData.CastRef<ImageDosHeader>();
 
@@ -487,14 +525,14 @@ public static class NativePE
                 {
                     ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader32>();
 
-                    return ref optional_header.CheckSum;
+                    return ref optional_header.Part2;
                 }
 
             case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR64_MAGIC:
                 {
                     ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader64>();
 
-                    return ref optional_header.CheckSum;
+                    return ref optional_header.Part2;
                 }
 
             case ImageOptionalHeaderMagic.IMAGE_ROM_OPTIONAL_HDR_MAGIC:
