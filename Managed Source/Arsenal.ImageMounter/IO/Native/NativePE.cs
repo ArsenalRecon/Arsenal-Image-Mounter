@@ -45,7 +45,7 @@ public static class NativePE
     internal static ushort HIWORD(this uint value) => (ushort)(value >> 16 & 0xffff);
     internal static long LARGE_INTEGER(uint LowPart, int HighPart) => LowPart | (long)HighPart << 32;
 
-    public static FixedFileVerInfo GetFixedFileVerInfo(Stream exe)
+    public static FixedFileVerInfo? GetFixedFileVerInfo(Stream exe)
     {
         if (exe.CanSeek)
         {
@@ -73,7 +73,7 @@ public static class NativePE
         }
     }
 
-    public static async Task<FixedFileVerInfo> GetFixedFileVerInfoAsync(Stream exe, CancellationToken cancellationToken)
+    public static async Task<FixedFileVerInfo?> GetFixedFileVerInfoAsync(Stream exe, CancellationToken cancellationToken)
     {
         if (exe.CanSeek)
         {
@@ -101,7 +101,7 @@ public static class NativePE
         }
     }
 
-    public static FixedFileVerInfo GetFixedFileVerInfo(string exepath)
+    public static FixedFileVerInfo? GetFixedFileVerInfo(string exepath)
     {
         try
         {
@@ -243,8 +243,17 @@ public static class NativePE
     /// </summary>
     /// <param name="fileData">Pointer to raw or mapped exe or dll</param>
     /// <returns>Copy of data from located version resource</returns>
-    public static FixedFileVerInfo GetFixedFileVerInfo(ReadOnlySpan<byte> fileData) =>
-        GetRawFileVersionResource(fileData).CastRef<VS_VERSIONINFO>().FixedFileInfo;
+    public static FixedFileVerInfo? GetFixedFileVerInfo(ReadOnlySpan<byte> fileData)
+    {
+        var ver = GetRawFileVersionResource(fileData);
+
+        if (ver.Length < Unsafe.SizeOf<VS_VERSIONINFO>())
+        {
+            return null;
+        }
+
+        return ver.CastRef<VS_VERSIONINFO>().FixedFileInfo;
+    }
 
     /// <summary>
     /// Locates version resource in a PE image

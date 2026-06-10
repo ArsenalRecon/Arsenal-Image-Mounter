@@ -52,7 +52,9 @@ public static class DriverSetup
             ?? throw new KeyNotFoundException($"Driver file phdskmnt.sys for {API.Kernel} missing in zip archive.");
 
         using var versionFile = entry.Open();
-        return NativePE.GetFixedFileVerInfo(versionFile).FileVersion;
+
+        return NativePE.GetFixedFileVerInfo(versionFile)?.FileVersion
+            ?? throw new InvalidOperationException($"Corrupt or invalid driver file phdskmnt.sys for {API.Kernel} in zip archive.");
     }
 
     /// <summary>

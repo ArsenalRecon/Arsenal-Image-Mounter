@@ -37,7 +37,7 @@ public static class ConsoleApp
     public static readonly Version? AssemblyFileVersion =
         string.IsNullOrWhiteSpace(AssemblyLocation)
         ? null
-        : NativePE.GetFixedFileVerInfo(AssemblyLocation).FileVersion;
+        : NativePE.GetFixedFileVerInfo(AssemblyLocation)?.FileVersion;
 
     static ConsoleApp()
     {
