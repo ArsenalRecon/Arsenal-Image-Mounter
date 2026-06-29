@@ -671,6 +671,25 @@ public enum CmDevNodeRegistryProperty : uint
     CM_DRP_LOWERFILTERS = 0x13U
 }
 
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+public readonly struct MEMORYSTATUSEX
+{
+    public readonly int dwLength;
+    public readonly uint dwMemoryLoad;
+    public readonly ulong ullTotalPhys;
+    public readonly ulong ullAvailPhys;
+    public readonly ulong ullTotalPageFile;
+    public readonly ulong ullAvailPageFile;
+    public readonly ulong ullTotalVirtual;
+    public readonly ulong ullAvailVirtual;
+    public readonly ulong ullAvailExtendedVirtual;
+
+    public MEMORYSTATUSEX()
+    {
+        dwLength = Unsafe.SizeOf<MEMORYSTATUSEX>();
+    }
+}
+
 [Flags]
 public enum ShutdownFlags : uint
 {

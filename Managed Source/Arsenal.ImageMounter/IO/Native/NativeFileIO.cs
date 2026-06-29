@@ -68,6 +68,10 @@ public static partial class NativeFileIO
         [LibraryImport("ntdll")]
         public static partial int RtlNtStatusToDosError(uint NtStatus);
 
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
         [LibraryImport("user32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
@@ -116,6 +120,10 @@ public static partial class NativeFileIO
 
         [DllImport("ntdll")]
         public static extern int RtlNtStatusToDosError(uint NtStatus);
+
+        [DllImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
 
         [DllImport("user32", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern bool ExitWindowsEx(ShutdownFlags flags, ShutdownReasons reason);
@@ -3570,6 +3578,17 @@ Currently, the following application has files open on this volume:
             UnsafeNativeMethods.RtlFreeUnicodeString(ref unicode_string);
         }
     }
+
+    [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
+    public static ulong GetAvailablePhysicalMemory()
+    {
+        var status = new MEMORYSTATUSEX();
+
+        Win32Try(SafeNativeMethods.GlobalMemoryStatusEx(ref status));
+
+        return status.ullAvailPhys;
+    }
+
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
 
     public static void DeleteVolumeMountPoint(string VolumeMountPoint)
