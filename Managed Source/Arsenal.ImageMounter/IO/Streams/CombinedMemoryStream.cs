@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
@@ -119,7 +119,7 @@ public class CombinedMemoryStream : CompatibilityStream
 
         while (!current.Value.IsEmpty && count > 0)
         {
-            var pos = current.Value.Span.Slice((int)(current.Value.Length - (current.Key - position)));
+            var pos = current.Value.Span[(int)(current.Value.Length - (current.Key - position))..];
 
             var r = Math.Min(pos.Length, count);
 
@@ -128,7 +128,7 @@ public class CombinedMemoryStream : CompatibilityStream
                 break;
             }
 
-            pos.Slice(0, r).CopyTo(buffer.Slice(num, count));
+            pos[..r].CopyTo(buffer.Slice(num, count));
 
             Seek(r, SeekOrigin.Current);
 

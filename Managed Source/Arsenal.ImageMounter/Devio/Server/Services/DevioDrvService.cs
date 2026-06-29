@@ -31,7 +31,7 @@ using System.Threading.Tasks;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 #pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
 
 namespace Arsenal.ImageMounter.Devio.Server.Services;
@@ -469,7 +469,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
                             OnClientConnected(EventArgs.Empty);
                         }
 
-                        var requestCode = MemoryMarshal.Read<IMDPROXY_REQ>(mapMemory.Span.Slice(headerOffset));
+                        var requestCode = MemoryMarshal.Read<IMDPROXY_REQ>(mapMemory.Span[headerOffset..]);
 
                         // Trace.WriteLine("Got client request: " & RequestCode.ToString())
 
@@ -500,7 +500,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
                             default:
                                 Trace.WriteLine($"Service number {serviceNumber}: Unsupported request code: {requestCode}");
                                 err = NativeConstants.ERROR_INVALID_FUNCTION;
-                                MemoryMarshal.Write(mapMemory.Span.Slice(headerOffset), ref err);
+                                MemoryMarshal.Write(mapMemory.Span[headerOffset..], ref err);
                                 break;
                         }
                     }
@@ -716,14 +716,14 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
                 | (Persistent ? IMDPROXY_FLAGS.IMDPROXY_FLAG_KEEP_OPEN : 0)
         };
 
-        MemoryMarshal.Write(mapView.Slice(headerOffset), ref info);
+        MemoryMarshal.Write(mapView[headerOffset..], ref info);
     }
 
     private int readData_largest_request = default;
 
     private async ValueTask ReadDataAsync(Memory<byte> mapView, CancellationToken cancellationToken)
     {
-        ref readonly var request = ref mapView.Span.Slice(headerOffset).CastRef<IMDPROXY_READ_REQ>();
+        ref readonly var request = ref mapView.Span[headerOffset..].CastRef<IMDPROXY_READ_REQ>();
 
         var offset = (long)request.offset;
         var readLength = (int)request.length;
@@ -749,7 +749,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
             var length = await DevioProvider.ReadAsync(mapView.Slice(IMDPROXY_HEADER_SIZE, readLength), offset, cancellationToken).ConfigureAwait(false);
 
-            ref var response = ref mapView.Span.Slice(headerOffset).CastRef<IMDPROXY_READ_RESP>();
+            ref var response = ref mapView.Span[headerOffset..].CastRef<IMDPROXY_READ_RESP>();
 
             response.length = (ulong)length;
             response.errorno = 0UL;
@@ -759,7 +759,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
             Trace.WriteLine(ex.ToString());
             Trace.WriteLine($"Read request at 0x{offset:X8} for {readLength} bytes.");
 
-            ref var response = ref mapView.Span.Slice(headerOffset).CastRef<IMDPROXY_READ_RESP>();
+            ref var response = ref mapView.Span[headerOffset..].CastRef<IMDPROXY_READ_RESP>();
 
             response.errorno = 1UL;
             response.length = 0UL;
@@ -770,7 +770,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
     private async ValueTask WriteDataAsync(Memory<byte> mapView, CancellationToken cancellationToken)
     {
-        ref readonly var request = ref mapView.Span.Slice(headerOffset).CastRef<IMDPROXY_WRITE_REQ>();
+        ref readonly var request = ref mapView.Span[headerOffset..].CastRef<IMDPROXY_WRITE_REQ>();
 
         var offset = (long)request.offset;
         var writeLength = (int)request.length;
@@ -791,7 +791,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
             var writtenLength = await DevioProvider.WriteAsync(mapView.Slice(IMDPROXY_HEADER_SIZE, writeLength), offset, cancellationToken).ConfigureAwait(false);
 
-            ref var response = ref mapView.Span.Slice(headerOffset).CastRef<IMDPROXY_WRITE_RESP>();
+            ref var response = ref mapView.Span[headerOffset..].CastRef<IMDPROXY_WRITE_RESP>();
 
             if (writtenLength < 0)
             {
@@ -811,7 +811,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
             Trace.WriteLine(ex.ToString());
             Trace.WriteLine($"Write request at 0x{offset:X8} for {writeLength} bytes.");
 
-            ref var response = ref mapView.Span.Slice(headerOffset).CastRef<IMDPROXY_WRITE_RESP>();
+            ref var response = ref mapView.Span[headerOffset..].CastRef<IMDPROXY_WRITE_RESP>();
 
             response.errorno = 1UL;
             response.length = 0UL;
@@ -820,9 +820,9 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
 
     private void SharedKeys(Span<byte> mapView)
     {
-        ref readonly var request = ref mapView.Slice(headerOffset).CastRef<IMDPROXY_SHARED_REQ>();
+        ref readonly var request = ref mapView[headerOffset..].CastRef<IMDPROXY_SHARED_REQ>();
 
-        ref var response = ref mapView.Slice(headerOffset).CastRef<IMDPROXY_SHARED_RESP>();
+        ref var response = ref mapView[headerOffset..].CastRef<IMDPROXY_SHARED_RESP>();
 
         try
         {
@@ -835,7 +835,7 @@ public partial class DevioDrvService(string objectName, IDevioProvider devioProv
             else
             {
                 response.length = (ulong)(keys.Length * sizeof(ulong));
-                MemoryMarshal.AsBytes(keys.AsSpan()).CopyTo(mapView.Slice(IMDPROXY_HEADER_SIZE));
+                MemoryMarshal.AsBytes(keys.AsSpan()).CopyTo(mapView[IMDPROXY_HEADER_SIZE..]);
             }
         }
         catch (Exception ex)

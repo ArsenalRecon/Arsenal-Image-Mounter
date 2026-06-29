@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Extensions;
 
@@ -109,9 +109,9 @@ public static class ExtensionMethods
 
         return stream.Read(bootsect) >= 512
             && bootsect[0] != 0 &&
-            !bootsect.Slice(0, NativeConstants.DefaultBootCode.Length)
+            !bootsect[..NativeConstants.DefaultBootCode.Length]
                 .SequenceEqual(NativeConstants.DefaultBootCode.Span)
-            && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
+            && MemoryMarshal.Read<ushort>(bootsect[0x1FE..]) == 0xAA55
             && (bootsect[0x1BE] & 0x7F) == 0
             && (bootsect[0x1CE] & 0x7F) == 0
             && (bootsect[0x1DE] & 0x7F) == 0

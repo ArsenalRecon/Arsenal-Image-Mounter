@@ -25,7 +25,7 @@ using System.Threading;
 using static Arsenal.ImageMounter.Devio.IMDPROXY_CONSTANTS;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Client;
 
@@ -163,7 +163,7 @@ public partial class DevioShmStream : DevioStream
 
         var Length = (int)Response.length;
 
-        mapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer.Slice(0, Length));
+        mapView.ReadSpan(IMDPROXY_HEADER_SIZE, buffer[..Length]);
 
         Position += Length;
         return Length;

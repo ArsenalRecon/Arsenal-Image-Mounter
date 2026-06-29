@@ -42,7 +42,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 #pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
 #pragma warning disable IDE0290 // Use primary constructor
 
@@ -1183,7 +1183,7 @@ public static partial class NativeFileIO
             try
             {
                 MemoryMarshal.Write(indata, ref header);
-                databytes.CopyTo(indata.Slice(header.HeaderLength));
+                databytes.CopyTo(indata[header.HeaderLength..]);
 
                 var Response = DeviceIoControl(adapter, NativeConstants.IOCTL_SCSI_MINIPORT, indata, 0);
 
@@ -1195,7 +1195,7 @@ public static partial class NativeFileIO
                 {
                     var ResponseLength = Math.Min(Math.Min(header.DataLength, Response.Length - header.HeaderLength), databytes.Length);
                     Response.Slice(header.HeaderLength, ResponseLength).CopyTo(databytes);
-                    databytes = databytes.Slice(0, ResponseLength);
+                    databytes = databytes[..ResponseLength];
                 }
 
                 return databytes.Length;
@@ -1876,7 +1876,7 @@ Currently, the following application has files open on this volume:
             for (int i = 0, loopTo = luid_and_attribs_list.Count - 1; i <= loopTo; i++)
             {
                 var argvalue1 = luid_and_attribs_list.Values.ElementAtOrDefault(i);
-                MemoryMarshal.Write(buffer.Slice(sizeof(int) + i * structsize), ref argvalue1);
+                MemoryMarshal.Write(buffer[(sizeof(int) + i * structsize)..], ref argvalue1);
             }
 
             var rc = UnsafeNativeMethods.AdjustTokenPrivileges(token, false, buffer[0], bufferSize, ref buffer[0], out _);
@@ -1892,7 +1892,7 @@ Currently, the following application has files open on this volume:
             {
                 var count = MemoryMarshal.Read<int>(buffer);
                 var enabled_luids = new LUID_AND_ATTRIBUTES[count];
-                MemoryMarshal.Cast<byte, LUID_AND_ATTRIBUTES>(buffer.Slice(sizeof(int))).Slice(0, count).CopyTo(enabled_luids);
+                MemoryMarshal.Cast<byte, LUID_AND_ATTRIBUTES>(buffer[sizeof(int)..])[..count].CopyTo(enabled_luids);
 
                 var enabled_privileges = (from enabled_luid in enabled_luids
                                           join privilege_name in luid_and_attribs_list on enabled_luid.LUID equals privilege_name.Value.LUID
@@ -1992,7 +1992,7 @@ Currently, the following application has files open on this volume:
 
             var handlecount = MemoryMarshal.Read<int>(buffer);
             var arrayBytes = buffer.AsSpan(IntPtr.Size);
-            var array = MemoryMarshal.Cast<byte, SystemHandleTableEntryInformation>(arrayBytes).Slice(0, handlecount);
+            var array = MemoryMarshal.Cast<byte, SystemHandleTableEntryInformation>(arrayBytes)[..handlecount];
 
             return array.ToArray();
         }
@@ -2441,7 +2441,7 @@ Currently, the following application has files open on this volume:
             throw new Win32Exception();
         }
 
-        return data.Slice(0, outdatasize);
+        return data[..outdatasize];
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
@@ -3636,7 +3636,7 @@ Currently, the following application has files open on this volume:
 
         var buffer = DeviceIoControl(volume, NativeConstants.IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, default, outdatasize);
 
-        return MemoryMarshal.Cast<byte, DiskExtent>(buffer.Slice(8)).ToArray();
+        return MemoryMarshal.Cast<byte, DiskExtent>(buffer[8..]).ToArray();
     }
 
     [SupportedOSPlatform(NativeConstants.SUPPORTED_WINDOWS_PLATFORM)]
@@ -3785,7 +3785,7 @@ Currently, the following application has files open on this volume:
 
                 var partitions = MemoryMarshal
                     .Cast<byte, PARTITION_INFORMATION_EX>(buffer.AsSpan(Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_EX>() + Unsafe.SizeOf<DRIVE_LAYOUT_INFORMATION_GPT>()))
-                    .Slice(0, layout.PartitionCount);
+[..layout.PartitionCount];
 
                 if (layout.PartitionStyle == PARTITION_STYLE.MBR)
                 {
@@ -4100,7 +4100,7 @@ Currently, the following application has files open on this volume:
             throw new Win32Exception();
         }
 
-        return new VolumeBitmap(buffer.Slice(0, bytes_returned));
+        return new VolumeBitmap(buffer[..bytes_returned]);
     }
 
     public sealed class VolumeBitmap
@@ -4126,7 +4126,7 @@ Currently, the following application has files open on this volume:
 
             StartingLcn = header.StartingLcn;
             NumberOfClusters = header.BitmapSize;
-            Bitmap = buffer.Slice(16).ToArray();
+            Bitmap = buffer[16..].ToArray();
         }
     }
 
@@ -4304,7 +4304,7 @@ Currently, the following application has files open on this volume:
 
         if (ptr.Span.StartsWith(@"\\?\".AsSpan(), StringComparison.Ordinal))
         {
-            ptr = ptr.Slice(4);
+            ptr = ptr[4..];
         }
 
         ptr = ptr.TrimEnd('\\');
@@ -4443,7 +4443,7 @@ Currently, the following application has files open on this volume:
 
         if (path.Length > volume_path_prefix.Length && path.StartsWith(@"\\?\Volume{", StringComparison.OrdinalIgnoreCase))
         {
-            var vol = path.Substring(0, volume_path_prefix.Length);
+            var vol = path[..volume_path_prefix.Length];
             var mountpoint = EnumerateVolumeMountPoints(vol)?.FirstOrDefault();
 
             if (mountpoint is not null)
@@ -4490,7 +4490,7 @@ Currently, the following application has files open on this volume:
         }
         else if (volumeNamePtr.Span.StartsWith("Volume{".AsSpan(), StringComparison.OrdinalIgnoreCase))
         {
-            volumeNamePtr = volumeNamePtr.Slice(0, 44);
+            volumeNamePtr = volumeNamePtr[..44];
         }
         else
         {
@@ -4538,7 +4538,7 @@ Currently, the following application has files open on this volume:
         else if (DevicePath.StartsWith(@"\\?\", StringComparison.Ordinal)
             || DevicePath.StartsWith(@"\\.\", StringComparison.Ordinal))
         {
-            return EnumerateVolumeNamesForDeviceObject(QueryDosDevice(DevicePath.Substring(@"\\?\".Length)).First());     // \\?\C: or similar paths to mounted volumes
+            return EnumerateVolumeNamesForDeviceObject(QueryDosDevice(DevicePath[@"\\?\".Length..]).First());     // \\?\C: or similar paths to mounted volumes
         }
         else
         {
@@ -4576,7 +4576,7 @@ Currently, the following application has files open on this volume:
             {
                 if (volumeGuid.Span.StartsWith(@"\\?\".AsSpan(), StringComparison.Ordinal))
                 {
-                    volumeGuid = volumeGuid.Slice(4);
+                    volumeGuid = volumeGuid[4..];
                 }
 
                 volumeGuid = volumeGuid.TrimEnd('\\');
@@ -4595,7 +4595,7 @@ Currently, the following application has files open on this volume:
     public static IEnumerable<string> EnumerateVolumeNamesForDeviceObject(string DeviceObject)
         => DeviceObject.EndsWith('}')
         && DeviceObject.StartsWith(@"\Device\Volume{", StringComparison.Ordinal)
-        ? SingleValueEnumerable.Get($@"\\?\{DeviceObject.Substring(@"\Device\".Length)}\")
+        ? SingleValueEnumerable.Get($@"\\?\{DeviceObject[@"\Device\".Length..]}\")
         : VolumeEnumerator.Volumes.Where(volumeGuidStr =>
         {
             var volumeGuid = volumeGuidStr.AsMemory();
@@ -4604,7 +4604,7 @@ Currently, the following application has files open on this volume:
             {
                 if (volumeGuid.Span.StartsWith(@"\\?\".AsSpan(), StringComparison.Ordinal))
                 {
-                    volumeGuid = volumeGuid.Slice(4);
+                    volumeGuid = volumeGuid[4..];
                 }
 
                 volumeGuid = volumeGuid.TrimEnd('\\');
@@ -5005,7 +5005,7 @@ Currently, the following application has files open on this volume:
             return null;
         }
 
-        var name = MemoryMarshal.Cast<byte, char>(buffer.Slice(0, buffersize - 2)).ToString();
+        var name = MemoryMarshal.Cast<byte, char>(buffer[..(buffersize - 2)]).ToString();
 
 #if DEBUG
         Trace.WriteLine($"Found physical device object name: '{name}'");
@@ -5034,7 +5034,7 @@ Currently, the following application has files open on this volume:
         }
 
         var name = buffer
-            .Slice(0, buffersize)
+[..buffersize]
             .ToArray()
             .AsMemory()
             .ParseDoubleTerminatedString();

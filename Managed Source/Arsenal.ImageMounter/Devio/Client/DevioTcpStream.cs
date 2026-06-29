@@ -24,7 +24,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Client;
 
@@ -175,7 +175,7 @@ public partial class DevioTcpStream : DevioStream
 
         var length = (int)response.length;
 
-        stream.ReadExactly(buffer.Slice(0, length));
+        stream.ReadExactly(buffer[..length]);
 
         base.Position += length;
         return length;

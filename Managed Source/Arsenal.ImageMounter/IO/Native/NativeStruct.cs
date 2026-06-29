@@ -41,7 +41,7 @@ using System.Runtime.Versioning;
 #endif
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0056 // Use index operator
+// #pragma warning disable IDE0056 // Use index operator
 
 
 namespace Arsenal.ImageMounter.IO.Native;

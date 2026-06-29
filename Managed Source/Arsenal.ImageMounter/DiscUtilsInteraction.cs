@@ -25,7 +25,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 #pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
 
 namespace Arsenal.ImageMounter;
@@ -55,7 +55,7 @@ public static class DiscUtilsInteraction
         disk.GetMasterBootRecord(mbr);
         NativeConstants.DefaultBootCode.Span.CopyTo(mbr);
         var signature = NativeCalls.GenerateDiskSignature();
-        MemoryMarshal.Write(mbr.Slice(0x1B8), ref signature);
+        MemoryMarshal.Write(mbr[0x1B8..], ref signature);
         disk.SetMasterBootRecord(mbr);
 
         Stream volume;
@@ -145,7 +145,7 @@ public static class DiscUtilsInteraction
             NativeConstants.DefaultBootCode.Span.CopyTo(vbr);
 
             var argvalue = (uint)first_sector;
-            MemoryMarshal.Write(vbr.Slice(0x1C), ref argvalue);
+            MemoryMarshal.Write(vbr[0x1C..], ref argvalue);
 
             vbr[0x1fe] = 0x55;
             vbr[0x1ff] = 0xaa;
@@ -171,11 +171,11 @@ public static class DiscUtilsInteraction
                                                         CancellationToken cancellationToken)
     {
         using var mbrMem = MemoryPool<byte>.Shared.Rent(512);
-        var mbr = mbrMem.Memory.Slice(0, 512);
+        var mbr = mbrMem.Memory[..512];
         await disk.GetMasterBootRecordAsync(mbr, cancellationToken).ConfigureAwait(false);
         NativeConstants.DefaultBootCode.CopyTo(mbr);
         var signature = NativeCalls.GenerateDiskSignature();
-        MemoryMarshal.Write(mbr.Span.Slice(0x1B8), ref signature);
+        MemoryMarshal.Write(mbr.Span[0x1B8..], ref signature);
         await disk.SetMasterBootRecordAsync(mbr, cancellationToken).ConfigureAwait(false);
 
         Stream volume;
@@ -244,7 +244,7 @@ public static class DiscUtilsInteraction
 
         using var allocated = MemoryPool<byte>.Shared.Rent(sector_size);
 
-        var vbr = allocated.Memory.Slice(0, sector_size);
+        var vbr = allocated.Memory[..sector_size];
 
         volume.Position = 0;
 
@@ -253,7 +253,7 @@ public static class DiscUtilsInteraction
         NativeConstants.DefaultBootCode.CopyTo(vbr);
 
         var argvalue = (uint)first_sector;
-        MemoryMarshal.Write(vbr.Span.Slice(0x1C), ref argvalue);
+        MemoryMarshal.Write(vbr.Span[0x1C..], ref argvalue);
 
         vbr.Span[0x1fe] = 0x55;
         vbr.Span[0x1ff] = 0xaa;

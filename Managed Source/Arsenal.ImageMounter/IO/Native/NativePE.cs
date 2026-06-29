@@ -24,7 +24,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.Native;
 
@@ -185,7 +185,7 @@ public static class NativePE
             throw new BadImageFormatException("DOS images not supported");
         }
 
-        ref readonly var header = ref fileData.Slice(dos_header.e_lfanew).CastRef<ImageNtHeaders>();
+        ref readonly var header = ref fileData[dos_header.e_lfanew..].CastRef<ImageNtHeaders>();
 
         if (header.Signature != ImageNtHeaders.ExpectedSignature || header.FileHeader.SizeOfOptionalHeader == 0)
         {
@@ -235,7 +235,7 @@ public static class NativePE
             return default;
         }
 
-        return fileData.Slice(dos_header.e_lfanew);
+        return fileData[dos_header.e_lfanew..];
     }
 
     /// <summary>
@@ -278,10 +278,10 @@ public static class NativePE
             return null;
         }
 
-        var resource_section = raw.Slice((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress));
+        var resource_section = raw[(int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress)..];
         ref readonly var resource_dir = ref resource_section.CastRef<ImageResourceDirectory>();
         var resource_dir_entry = MemoryMarshal.Cast<byte, ImageResourceDirectoryEntry>(
-            raw.Slice((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress) + Unsafe.SizeOf<ImageResourceDirectory>()));
+            raw[((int)(resource_header.RelativeVirtualAddress - section_header.VirtualAddress) + Unsafe.SizeOf<ImageResourceDirectory>())..]);
 
         for (var i = 0; i < resource_dir.NumberOfNamedEntries + resource_dir.NumberOfIdEntries; i++)
         {
@@ -294,7 +294,7 @@ public static class NativePE
 
             ref readonly var found_entry = ref resource_dir_entry[i];
 
-            var found_dir = resource_section.Slice((int)found_entry.OffsetToDirectory);
+            var found_dir = resource_section[(int)found_entry.OffsetToDirectory..];
             ref readonly var found_dir_header = ref found_dir.CastRef<ImageResourceDirectory>();
 
             if (found_dir_header.NumberOfIdEntries + found_dir_header.NumberOfNamedEntries == 0)
@@ -302,7 +302,7 @@ public static class NativePE
                 continue;
             }
 
-            var found_dir_entry = MemoryMarshal.Cast<byte, ImageResourceDirectoryEntry>(found_dir.Slice(Unsafe.SizeOf<ImageResourceDirectory>()));
+            var found_dir_entry = MemoryMarshal.Cast<byte, ImageResourceDirectoryEntry>(found_dir[Unsafe.SizeOf<ImageResourceDirectory>()..]);
 
             for (var j = 0; j < found_dir_header.NumberOfNamedEntries + found_dir_header.NumberOfIdEntries; j++)
             {
@@ -311,7 +311,7 @@ public static class NativePE
                     continue;
                 }
 
-                var found_subdir = resource_section.Slice((int)found_dir_entry[j].OffsetToDirectory);
+                var found_subdir = resource_section[(int)found_dir_entry[j].OffsetToDirectory..];
                 ref readonly var found_subdir_header = ref found_subdir.CastRef<ImageResourceDirectory>();
 
                 if (found_subdir_header.NumberOfIdEntries + found_subdir_header.NumberOfNamedEntries == 0)
@@ -319,7 +319,7 @@ public static class NativePE
                     continue;
                 }
 
-                var found_subdir_entry = found_subdir.Slice(Unsafe.SizeOf<ImageResourceDirectory>());
+                var found_subdir_entry = found_subdir[Unsafe.SizeOf<ImageResourceDirectory>()..];
                 ref readonly var found_subdir_entry_header = ref found_subdir_entry.CastRef<ImageResourceDirectoryEntry>();
 
                 if (found_subdir_entry_header.DataIsDirectory)
@@ -327,7 +327,7 @@ public static class NativePE
                     continue;
                 }
 
-                var found_data_entry = resource_section.Slice((int)found_subdir_entry_header.OffsetToData);
+                var found_data_entry = resource_section[(int)found_subdir_entry_header.OffsetToData..];
                 ref readonly var found_data_entry_header = ref found_data_entry.CastRef<ImageResourceDataEntry>();
 
                 var found_res = raw.Slice(
@@ -371,7 +371,7 @@ public static class NativePE
             return default;
         }
 
-        var header_ptr = fileData.Slice(dos_header.e_lfanew);
+        var header_ptr = fileData[dos_header.e_lfanew..];
 
         ref readonly var header = ref header_ptr.CastRef<ImageNtHeaders>();
 
@@ -381,10 +381,10 @@ public static class NativePE
             return default;
         }
 
-        var section_table_ptr = fileData.Slice(dos_header.e_lfanew + Unsafe.SizeOf<ImageNtHeaders>() - Unsafe.SizeOf<ImageOptionalHeader>() + header.FileHeader.SizeOfOptionalHeader);
+        var section_table_ptr = fileData[(dos_header.e_lfanew + Unsafe.SizeOf<ImageNtHeaders>() - Unsafe.SizeOf<ImageOptionalHeader>() + header.FileHeader.SizeOfOptionalHeader)..];
 
         var section_table = MemoryMarshal.Cast<byte, ImageSectionHeader>(section_table_ptr)
-            .Slice(0, header.FileHeader.NumberOfSections);
+[..header.FileHeader.NumberOfSections];
 
         var section_header = FindSection(section_table, sectionId);
 
@@ -408,7 +408,7 @@ public static class NativePE
             return default;
         }
 
-        var header_ptr = fileData.Slice(dos_header.e_lfanew);
+        var header_ptr = fileData[dos_header.e_lfanew..];
 
         ref readonly var header = ref header_ptr.CastRef<ImageNtHeaders>();
 
@@ -418,10 +418,10 @@ public static class NativePE
             return default;
         }
 
-        var section_table_ptr = fileData.Slice(dos_header.e_lfanew + Unsafe.SizeOf<ImageNtHeaders>() - Unsafe.SizeOf<ImageOptionalHeader>() + header.FileHeader.SizeOfOptionalHeader);
+        var section_table_ptr = fileData[(dos_header.e_lfanew + Unsafe.SizeOf<ImageNtHeaders>() - Unsafe.SizeOf<ImageOptionalHeader>() + header.FileHeader.SizeOfOptionalHeader)..];
 
         var section_table = MemoryMarshal.Cast<byte, ImageSectionHeader>(section_table_ptr)
-            .Slice(0, header.FileHeader.NumberOfSections);
+[..header.FileHeader.NumberOfSections];
 
         return section_table;
     }
@@ -441,7 +441,7 @@ public static class NativePE
             throw new BadImageFormatException();
         }
 
-        var header_ptr = fileData.Slice(dos_header.e_lfanew);
+        var header_ptr = fileData[dos_header.e_lfanew..];
 
         ref readonly var headers = ref header_ptr.CastRef<ImageNtHeaders>();
 
@@ -461,26 +461,26 @@ public static class NativePE
         {
             case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR32_MAGIC:
                 {
-                    var data_directory_ptr = optional_header_ptr.Slice(Unsafe.SizeOf<ImageOptionalHeader32>());
+                    var data_directory_ptr = optional_header_ptr[Unsafe.SizeOf<ImageOptionalHeader32>()..];
 
                     data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
 
                     ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader32>();
 
-                    data_directory = data_directory.Slice(0, optional_header.NumberOfRvaAndSizes);
+                    data_directory = data_directory[..optional_header.NumberOfRvaAndSizes];
 
                     break;
                 }
 
             case ImageOptionalHeaderMagic.IMAGE_NT_OPTIONAL_HDR64_MAGIC:
                 {
-                    var data_directory_ptr = optional_header_ptr.Slice(Unsafe.SizeOf<ImageOptionalHeader64>());
+                    var data_directory_ptr = optional_header_ptr[Unsafe.SizeOf<ImageOptionalHeader64>()..];
 
                     data_directory = MemoryMarshal.Cast<byte, ImageDataDirectory>(data_directory_ptr);
 
                     ref readonly var optional_header = ref optional_header_ptr.CastRef<ImageOptionalHeader64>();
 
-                    data_directory = data_directory.Slice(0, optional_header.NumberOfRvaAndSizes);
+                    data_directory = data_directory[..optional_header.NumberOfRvaAndSizes];
 
                     break;
                 }
@@ -514,7 +514,7 @@ public static class NativePE
             throw new BadImageFormatException();
         }
 
-        var header_ptr = fileData.Slice(dos_header.e_lfanew);
+        var header_ptr = fileData[dos_header.e_lfanew..];
 
         ref readonly var headers = ref header_ptr.CastRef<ImageNtHeaders>();
 
@@ -583,7 +583,7 @@ public static class NativePE
             throw new BadImageFormatException();
         }
 
-        var header_ptr = fileSpan.Slice(dos_header.e_lfanew);
+        var header_ptr = fileSpan[dos_header.e_lfanew..];
 
         ref readonly var header = ref header_ptr.CastRef<ImageNtHeaders>();
 
@@ -660,8 +660,8 @@ public static class NativePE
     /// <returns>Bytes of embedded certificate blob</returns>
     public static ReadOnlySpan<byte> GetCertificateBlob(ReadOnlySpan<byte> certificateSection)
         => certificateSection
-        .Slice(0, certificateSection.CastRef<WinCertificateHeader>().Length)
-        .Slice(Unsafe.SizeOf<WinCertificateHeader>());
+[..certificateSection.CastRef<WinCertificateHeader>().Length]
+[Unsafe.SizeOf<WinCertificateHeader>()..];
 
     private static ImageSectionHeader FindSection(ReadOnlySpan<ImageSectionHeader> section_table, ReadOnlySpan<byte> sectionId)
     {

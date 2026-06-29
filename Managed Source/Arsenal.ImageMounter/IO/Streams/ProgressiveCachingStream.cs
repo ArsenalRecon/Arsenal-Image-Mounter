@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 namespace Arsenal.ImageMounter.IO.Streams;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
-#pragma warning disable IDE0056 // Use index operator
+// #pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0056 // Use index operator
 
 /// <summary>
 /// A read-only <see cref="Stream"/> wrapper that progressively buffers data from a source stream
@@ -207,7 +207,7 @@ public sealed class ProgressiveCachingStream : CompatibilityStream
         EnsureBuffered(maxWanted);
 
         int toCopy = (int)(maxWanted - _position);
-        CopyFromCache(_position, destination.Slice(0, toCopy));
+        CopyFromCache(_position, destination[..toCopy]);
         _position += toCopy;
         return toCopy;
     }
@@ -231,7 +231,7 @@ public sealed class ProgressiveCachingStream : CompatibilityStream
         await EnsureBufferedAsync(maxWanted, cancellationToken).ConfigureAwait(false);
 
         int toCopy = (int)(maxWanted - _position);
-        CopyFromCache(_position, destination.Span.Slice(0, toCopy));
+        CopyFromCache(_position, destination.Span[..toCopy]);
         _position += toCopy;
         return toCopy;
     }
@@ -314,7 +314,7 @@ public sealed class ProgressiveCachingStream : CompatibilityStream
                 _chunks.Add(_pool.Rent(_chunkSize));
             }
 
-            var chunk = _chunks[_chunks.Count - 1];
+            var chunk = _chunks[^1];
             int space = _chunkSize - withinChunk;
             int toRead = (int)Math.Min(space, _length - Buffered);
 
@@ -377,7 +377,7 @@ public sealed class ProgressiveCachingStream : CompatibilityStream
                 _chunks.Add(_pool.Rent(_chunkSize));
             }
 
-            var chunk = _chunks[_chunks.Count - 1];
+            var chunk = _chunks[^1];
             int space = _chunkSize - withinChunk;
             int toRead = (int)Math.Min(space, _length - Buffered);
 

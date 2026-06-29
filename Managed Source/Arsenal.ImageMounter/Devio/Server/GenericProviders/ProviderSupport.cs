@@ -32,7 +32,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
@@ -66,7 +66,7 @@ public static class ProviderSupport
                 return 0;
             }
 
-            var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
+            var vbr_sector_size = MemoryMarshal.Read<short>(vbr[0xB..]);
 
             if (vbr_sector_size <= 0)
             {
@@ -89,16 +89,16 @@ public static class ProviderSupport
 
             long total_sectors;
 
-            total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
+            total_sectors = MemoryMarshal.Read<ushort>(vbr[0x13..]);
 
             if (total_sectors == 0)
             {
-                total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
+                total_sectors = MemoryMarshal.Read<uint>(vbr[0x20..]);
             }
 
             if (total_sectors == 0)
             {
-                total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
+                total_sectors = MemoryMarshal.Read<long>(vbr[0x28..]);
             }
 
             return total_sectors < 0 ? 0 : (total_sectors << sector_bits);
@@ -203,35 +203,35 @@ public static class ProviderSupport
                 {
                     if (currentFile[pos] is >= '0' and < '9')
                     {
-                        currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] + 1)}{currentFile.Substring(pos + 1)}";
+                        currentFile = $"{currentFile[..pos]}{(char)(currentFile[pos] + 1)}{currentFile[(pos + 1)..]}";
                         return currentFile;
                     }
                     else if (currentFile[pos] == '9')
                     {
-                        currentFile = $"{currentFile.Substring(0, pos)}0{currentFile.Substring(pos + 1)}";
+                        currentFile = $"{currentFile[..pos]}0{currentFile[(pos + 1)..]}";
                     }
                     else if (currentFile[pos] >= 'A' && currentFile[pos] <= 'Z'
                         && pos < (currentFile.Length - 1)
                         && currentFile.Skip(pos + 1).All('0'.Equals))
                     {
-                        currentFile = $"{currentFile.Substring(0, pos + 1)}{new string('A', currentFile.Length - pos - 1)}";
+                        currentFile = $"{currentFile[..(pos + 1)]}{new string('A', currentFile.Length - pos - 1)}";
                         return currentFile;
                     }
                     else if (currentFile[pos] >= 'a' && currentFile[pos] <= 'z'
                         && pos < (currentFile.Length - 1)
                         && currentFile.Skip(pos + 1).All('0'.Equals))
                     {
-                        currentFile = $"{currentFile.Substring(0, pos + 1)}{new string('a', currentFile.Length - pos - 1)}";
+                        currentFile = $"{currentFile[..(pos + 1)]}{new string('a', currentFile.Length - pos - 1)}";
                         return currentFile;
                     }
                     else if (currentFile[pos] is >= 'A' and < 'Z' or >= 'a' and < 'z')
                     {
-                        currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] + 1)}{currentFile.Substring(pos + 1)}";
+                        currentFile = $"{currentFile[..pos]}{(char)(currentFile[pos] + 1)}{currentFile[(pos + 1)..]}";
                         return currentFile;
                     }
                     else if (currentFile[pos] is 'Z' or 'z')
                     {
-                        currentFile = $"{currentFile.Substring(0, pos)}{(char)(currentFile[pos] - ('Z' - 'A'))}{currentFile.Substring(pos + 1)}";
+                        currentFile = $"{currentFile[..pos]}{(char)(currentFile[pos] - ('Z' - 'A'))}{currentFile[(pos + 1)..]}";
                     }
                     else
                     {

@@ -28,7 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 #pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
 
 namespace Arsenal.ImageMounter.IO.Devices;
@@ -224,13 +224,13 @@ public class DiskDevice : DeviceObject
             {
                 Read(rawsig, 0);
 
-                return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
+                return MemoryMarshal.Read<ushort>(rawsig[0x1FE..]) == 0xAA55
                     && rawsig[0x1C2] != 0xEE
                     && (rawsig[0x1BE] & 0x7F) == 0
                     && (rawsig[0x1CE] & 0x7F) == 0
                     && (rawsig[0x1DE] & 0x7F) == 0
                     && (rawsig[0x1EE] & 0x7F) == 0
-                    ? MemoryMarshal.Read<uint>(rawsig.Slice(0x1B8))
+                    ? MemoryMarshal.Read<uint>(rawsig[0x1B8..])
                     : (uint?)default;
             }
             finally
@@ -260,7 +260,7 @@ public class DiskDevice : DeviceObject
             {
                 Read(rawsig, 0);
                 var argvalue = value.Value;
-                MemoryMarshal.Write(rawsig.Slice(0x1B8), ref argvalue);
+                MemoryMarshal.Write(rawsig[0x1B8..], ref argvalue);
                 Write(rawsig, 0);
             }
             finally
@@ -292,8 +292,8 @@ public class DiskDevice : DeviceObject
             {
                 Read(rawsig, 0);
 
-                return MemoryMarshal.Read<ushort>(rawsig.Slice(0x1FE)) == 0xAA55
-                    ? MemoryMarshal.Read<uint>(rawsig.Slice(0x1C))
+                return MemoryMarshal.Read<ushort>(rawsig[0x1FE..]) == 0xAA55
+                    ? MemoryMarshal.Read<uint>(rawsig[0x1C..])
                     : (uint?)default;
             }
             finally
@@ -323,7 +323,7 @@ public class DiskDevice : DeviceObject
             {
                 Read(rawsig, 0);
                 var argvalue = value.Value;
-                MemoryMarshal.Write(rawsig.Slice(0x1C), ref argvalue);
+                MemoryMarshal.Write(rawsig[0x1C..], ref argvalue);
                 Write(rawsig, 0);
             }
             finally
@@ -477,7 +477,7 @@ public class DiskDevice : DeviceObject
             try
             {
                 return ReadBootSector(bootsect) >= 512
-                && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
+                && MemoryMarshal.Read<ushort>(bootsect[0x1FE..]) == 0xAA55
                 && (bootsect[0x1BE] & 0x7F) == 0
                 && (bootsect[0x1CE] & 0x7F) == 0
                 && (bootsect[0x1DE] & 0x7F) == 0
@@ -513,9 +513,9 @@ public class DiskDevice : DeviceObject
             {
                 return ReadBootSector(bootsect) >= 512
                     && bootsect[0] != 0 &&
-                    !bootsect.Slice(0, NativeConstants.DefaultBootCode.Length)
+                    !bootsect[..NativeConstants.DefaultBootCode.Length]
                         .SequenceEqual(NativeConstants.DefaultBootCode.Span)
-                    && MemoryMarshal.Read<ushort>(bootsect.Slice(0x1FE)) == 0xAA55
+                    && MemoryMarshal.Read<ushort>(bootsect[0x1FE..]) == 0xAA55
                     && (bootsect[0x1BE] & 0x7F) == 0
                     && (bootsect[0x1CE] & 0x7F) == 0
                     && (bootsect[0x1DE] & 0x7F) == 0

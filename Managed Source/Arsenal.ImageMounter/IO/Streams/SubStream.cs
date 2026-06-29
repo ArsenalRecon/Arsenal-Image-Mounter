@@ -28,7 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.Streams;
 
@@ -131,12 +131,12 @@ public class SubStream : CompatibilityStream
     public override int Read(Span<byte> buffer)
         => Position >= length
         ? 0
-        : Parent.Read(buffer.Slice(0, (int)Math.Min(buffer.Length, checked(length - Position))));
+        : Parent.Read(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))]);
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         => Position >= length
         ? new ValueTask<int>(0)
-        : Parent.ReadAsync(buffer.Slice(0, (int)Math.Min(buffer.Length, checked(length - Position))), cancellationToken);
+        : Parent.ReadAsync(buffer[..(int)Math.Min(buffer.Length, checked(length - Position))], cancellationToken);
 
     public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
     {

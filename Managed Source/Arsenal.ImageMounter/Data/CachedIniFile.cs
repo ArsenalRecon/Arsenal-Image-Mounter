@@ -25,8 +25,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
-#pragma warning disable IDE0056 // Use index operator
+// #pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0056 // Use index operator
 
 namespace Arsenal.ImageMounter.Data;
 
@@ -97,8 +97,8 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                     continue;
                 }
 
-                var key = valuepair.Slice(0, pos).ToString();
-                var value = valuepair.Slice(pos + 1).ToString();
+                var key = valuepair[..pos].ToString();
+                var value = valuepair[(pos + 1)..].ToString();
 
                 yield return new(key, value);
             }
@@ -543,9 +543,9 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                 continue;
             }
 
-            if (Line[0] == '[' && Line[Line.Length - 1] == ']')
+            if (Line[0] == '[' && Line[^1] == ']')
             {
-                var SectionKey = Line.Slice(1, Line.Length - 2).Trim().ToString();
+                var SectionKey = Line[1..^1].Trim().ToString();
                 CurrentSection = this[SectionKey];
                 continue;
             }
@@ -556,8 +556,8 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                 continue;
             }
 
-            var Key = Line.Slice(0, EqualSignPos).Trim().ToString();
-            var Value = Line.Slice(EqualSignPos + 1).Trim().ToString();
+            var Key = Line[..EqualSignPos].Trim().ToString();
+            var Value = Line[(EqualSignPos + 1)..].Trim().ToString();
 
             if (CurrentSection is null)
             {
@@ -594,9 +594,9 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                 continue;
             }
 
-            if (Line[0] == '[' && Line[Line.Length - 1] == ']')
+            if (Line[0] == '[' && Line[^1] == ']')
             {
-                var SectionKey = Line.Slice(1, Line.Length - 2).Trim().ToString();
+                var SectionKey = Line[1..^1].Trim().ToString();
                 CurrentSection = this[SectionKey];
                 continue;
             }
@@ -607,8 +607,8 @@ public class CachedIniFile : NullSafeDictionary<string, NullSafeDictionary<strin
                 continue;
             }
 
-            var Key = Line.Slice(0, EqualSignPos).Trim().ToString();
-            var Value = Line.Slice(EqualSignPos + 1).Trim().ToString();
+            var Key = Line[..EqualSignPos].Trim().ToString();
+            var Value = Line[(EqualSignPos + 1)..].Trim().ToString();
 
             if (CurrentSection is null)
             {

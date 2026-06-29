@@ -18,7 +18,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 #pragma warning disable IDE0270 // Use coalesce expression
 
 namespace Arsenal.ImageMounter.IO.Native;
@@ -184,7 +184,7 @@ public static partial class NativeUnixIO
             throw new Win32Exception();
         }
 
-        return Encoding.UTF8.GetString(buf.Slice(0, (int)size));
+        return Encoding.UTF8.GetString(buf[..(int)size]);
     }
 
     public static unsafe string RealPath(string path)

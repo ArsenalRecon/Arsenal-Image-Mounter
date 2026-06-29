@@ -21,7 +21,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 
 namespace Arsenal.ImageMounter.IO.Streams;
@@ -106,7 +106,7 @@ public class DiskStream : AligningStream
                 return default;
             }
 
-            var vbr_sector_size = MemoryMarshal.Read<short>(vbr.Slice(0xB));
+            var vbr_sector_size = MemoryMarshal.Read<short>(vbr[0xB..]);
 
             if (vbr_sector_size <= 0)
             {
@@ -115,16 +115,16 @@ public class DiskStream : AligningStream
 
             long total_sectors;
 
-            total_sectors = MemoryMarshal.Read<ushort>(vbr.Slice(0x13));
+            total_sectors = MemoryMarshal.Read<ushort>(vbr[0x13..]);
 
             if (total_sectors == 0)
             {
-                total_sectors = MemoryMarshal.Read<uint>(vbr.Slice(0x20));
+                total_sectors = MemoryMarshal.Read<uint>(vbr[0x20..]);
             }
 
             if (total_sectors == 0)
             {
-                total_sectors = MemoryMarshal.Read<long>(vbr.Slice(0x28));
+                total_sectors = MemoryMarshal.Read<long>(vbr[0x28..]);
             }
 
             if (total_sectors < 0)

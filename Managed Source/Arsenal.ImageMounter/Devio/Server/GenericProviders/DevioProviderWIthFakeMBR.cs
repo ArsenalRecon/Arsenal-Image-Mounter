@@ -22,7 +22,7 @@ using Buffer = System.Buffer;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CS9191 // The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
@@ -215,7 +215,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
         {
             prefix_count = Math.Min((int)(PrefixLength - fileoffset), count);
 
-            PrefixBuffer.AsSpan((int)fileoffset, prefix_count).CopyTo(data.Slice(bufferoffset));
+            PrefixBuffer.AsSpan((int)fileoffset, prefix_count).CopyTo(data[bufferoffset..]);
 
             fileoffset += prefix_count;
             bufferoffset += prefix_count;
@@ -246,7 +246,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
         {
             suffix_count = (int)Math.Min(PrefixLength + BaseProvider.Length + SuffixBuffer.Length - fileoffset, count);
 
-            SuffixBuffer.AsSpan((int)(fileoffset - BaseProvider.Length - PrefixLength), suffix_count).CopyTo(data.Slice(bufferoffset));
+            SuffixBuffer.AsSpan((int)(fileoffset - BaseProvider.Length - PrefixLength), suffix_count).CopyTo(data[bufferoffset..]);
         }
 
         return prefix_count + base_count + suffix_count;
@@ -264,7 +264,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
         {
             prefix_count = Math.Min((int)(PrefixLength - fileoffset), count);
 
-            PrefixBuffer.AsSpan((int)fileoffset, prefix_count).CopyTo(data.Span.Slice(bufferoffset));
+            PrefixBuffer.AsSpan((int)fileoffset, prefix_count).CopyTo(data.Span[bufferoffset..]);
 
             fileoffset += prefix_count;
             bufferoffset += prefix_count;
@@ -295,7 +295,7 @@ public class DevioProviderWithFakeMBR : IDevioProvider
         {
             suffix_count = (int)Math.Min(PrefixLength + BaseProvider.Length + SuffixBuffer.Length - fileoffset, count);
 
-            SuffixBuffer.AsSpan((int)(fileoffset - BaseProvider.Length - PrefixLength), suffix_count).CopyTo(data.Span.Slice(bufferoffset));
+            SuffixBuffer.AsSpan((int)(fileoffset - BaseProvider.Length - PrefixLength), suffix_count).CopyTo(data.Span[bufferoffset..]);
         }
 
         return prefix_count + base_count + suffix_count;

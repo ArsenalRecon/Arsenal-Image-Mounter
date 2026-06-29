@@ -29,7 +29,7 @@ using System.Threading;
 using System.Windows.Forms;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter;
 
@@ -275,7 +275,7 @@ public static class DriverSetup
             {
                 array = [.. from p in array
                          where p != null && p.Length > 4
-                         select p.Substring(4) into p
+                         select p[4..] into p
                          where File.Exists(p)
                          select FileVersionInfo.GetVersionInfo(p)?.OriginalFilename ?? Path.GetFileName(p)];
 

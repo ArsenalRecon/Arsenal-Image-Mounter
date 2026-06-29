@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.Devio.Server.GenericProviders;
 
@@ -156,7 +156,7 @@ public class DevioProviderFromStream : IDevioProvider
         if (fileOffset <= BaseStream.Length
             && buffer.Length > BaseStream.Length - fileOffset)
         {
-            buffer = buffer.Slice(0, (int)(BaseStream.Length - fileOffset));
+            buffer = buffer[..(int)(BaseStream.Length - fileOffset)];
         }
 
 #if NET6_0_OR_GREATER
@@ -180,7 +180,7 @@ public class DevioProviderFromStream : IDevioProvider
         if (fileOffset <= BaseStream.Length
             && buffer.Length > BaseStream.Length - fileOffset)
         {
-            buffer = buffer.Slice(0, (int)(BaseStream.Length - fileOffset));
+            buffer = buffer[..(int)(BaseStream.Length - fileOffset)];
         }
 
 #if NET6_0_OR_GREATER

@@ -26,7 +26,7 @@ using System.Runtime.InteropServices;
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable 0649
 #pragma warning disable 1591
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 namespace Arsenal.ImageMounter.IO.Native;
 
@@ -160,18 +160,18 @@ public class NativeFileVersion
         var idx = header.SizeOf;
         idx += -idx & 3;
 
-        versionResource = idx < versionResource.Length ? versionResource.Slice(idx) : default;
+        versionResource = idx < versionResource.Length ? versionResource[idx..] : default;
 
         while (versionResource.Length > VersionRecordHeader.SizeOf)
         {
             ref readonly var fileInfoBlockHeader = ref versionResource.CastRef<VersionRecordHeader>();
-            var fileInfoBlock = versionResource.Slice(0, fileInfoBlockHeader.Length);
+            var fileInfoBlock = versionResource[..fileInfoBlockHeader.Length];
 
             idx = fileInfoBlock.Length;
             idx += -idx & 3;
-            versionResource = idx < versionResource.Length ? versionResource.Slice(idx) : default;
+            versionResource = idx < versionResource.Length ? versionResource[idx..] : default;
 
-            var blockNamePtr = fileInfoBlock.Slice(VersionRecordHeader.SizeOf).ReadNullTerminatedUnicode();
+            var blockNamePtr = fileInfoBlock[VersionRecordHeader.SizeOf..].ReadNullTerminatedUnicode();
 
             if (!blockNamePtr.Equals(blockName.AsSpan(), StringComparison.OrdinalIgnoreCase))
             {
@@ -181,10 +181,10 @@ public class NativeFileVersion
             idx = VersionRecordHeader.SizeOf + (blockNamePtr.Length + 1) * 2;
             idx += -idx & 3;
 
-            var valueBlock = fileInfoBlock.Slice(idx);
+            var valueBlock = fileInfoBlock[idx..];
             ref readonly var valueBlockHeader = ref valueBlock.CastRef<VersionRecordHeader>();
 
-            var valueBlockNamePtr = valueBlock.Slice(VersionRecordHeader.SizeOf).ReadNullTerminatedUnicode();
+            var valueBlockNamePtr = valueBlock[VersionRecordHeader.SizeOf..].ReadNullTerminatedUnicode();
 
             if (!valueBlockNamePtr.Equals(valueName.AsSpan(), StringComparison.OrdinalIgnoreCase))
             {
@@ -194,7 +194,7 @@ public class NativeFileVersion
             idx = VersionRecordHeader.SizeOf + (valueBlockNamePtr.Length + 1) * 2;
             idx += -idx & 3;
 
-            var value = valueBlock.Slice(idx);
+            var value = valueBlock[idx..];
 
             return MemoryMarshal.Read<uint>(value);
         }
@@ -225,7 +225,7 @@ public class NativeFileVersion
         var idx = header.SizeOf;
         idx += -idx & 3;
 
-        versionResource = idx < versionResource.Length ? versionResource.Slice(idx) : default;
+        versionResource = idx < versionResource.Length ? versionResource[idx..] : default;
 
         while (versionResource.Length > VersionRecordHeader.SizeOf)
         {
@@ -237,13 +237,13 @@ public class NativeFileVersion
                 break;
             }
 
-            var fileInfoBlock = versionResource.Slice(0, fileInfoBlockHeader.Length);
+            var fileInfoBlock = versionResource[..fileInfoBlockHeader.Length];
 
             idx = fileInfoBlockHeader.Length;
             idx += -idx & 3;
-            versionResource = idx < versionResource.Length ? versionResource.Slice(idx) : default;
+            versionResource = idx < versionResource.Length ? versionResource[idx..] : default;
 
-            var blockNamePtr = fileInfoBlock.Slice(VersionRecordHeader.SizeOf).ReadNullTerminatedUnicode();
+            var blockNamePtr = fileInfoBlock[VersionRecordHeader.SizeOf..].ReadNullTerminatedUnicode();
 
             if (!blockNamePtr.Equals(blockName.AsSpan(), StringComparison.OrdinalIgnoreCase))
             {
@@ -253,10 +253,10 @@ public class NativeFileVersion
             idx = VersionRecordHeader.SizeOf + (blockNamePtr.Length + 1) * 2;
             idx += -idx & 3;
 
-            var tableBlock = fileInfoBlock.Slice(idx);
+            var tableBlock = fileInfoBlock[idx..];
             ref readonly var tableBlockHeader = ref tableBlock.CastRef<VersionRecordHeader>();
 
-            var tableBlockNamePtr = tableBlock.Slice(VersionRecordHeader.SizeOf).ReadNullTerminatedUnicode();
+            var tableBlockNamePtr = tableBlock[VersionRecordHeader.SizeOf..].ReadNullTerminatedUnicode();
 
             if (!tableBlockNamePtr.Equals(language.AsSpan(), StringComparison.OrdinalIgnoreCase))
             {
@@ -266,19 +266,19 @@ public class NativeFileVersion
             idx = VersionRecordHeader.SizeOf + (tableBlockNamePtr.Length + 1) * 2;
             idx += -idx & 3;
 
-            var value = tableBlock.Slice(idx);
+            var value = tableBlock[idx..];
 
             while (value.Length > VersionRecordHeader.SizeOf)
             {
                 ref readonly var blockHeader = ref value.CastRef<VersionRecordHeader>();
-                var block = value.Slice(0, blockHeader.Length);
+                var block = value[..blockHeader.Length];
 
-                var valueNamePtr = block.Slice(VersionRecordHeader.SizeOf).ReadNullTerminatedUnicode();
+                var valueNamePtr = block[VersionRecordHeader.SizeOf..].ReadNullTerminatedUnicode();
 
                 idx = blockHeader.Length;
                 idx += -idx & 3;
 
-                value = idx < value.Length ? value.Slice(idx) : default;
+                value = idx < value.Length ? value[idx..] : default;
 
                 if (!valueNamePtr.Equals(valueName.AsSpan(), StringComparison.OrdinalIgnoreCase))
                 {
@@ -288,7 +288,7 @@ public class NativeFileVersion
                 idx = VersionRecordHeader.SizeOf + (valueNamePtr.Length + 1) * 2;
                 idx += -idx & 3;
 
-                var valueData = block.Slice(idx).ReadNullTerminatedUnicode();
+                var valueData = block[idx..].ReadNullTerminatedUnicode();
 
                 return valueData;
             }
@@ -320,7 +320,7 @@ public class NativeFileVersion
         var idx = header.SizeOf;
         idx += -idx & 3;
 
-        versionResource = idx < versionResource.Length ? versionResource.Slice(idx) : default;
+        versionResource = idx < versionResource.Length ? versionResource[idx..] : default;
 
         while (versionResource.Length > VersionRecordHeader.SizeOf)
         {
@@ -332,13 +332,13 @@ public class NativeFileVersion
                 break;
             }
 
-            var fileInfoBlock = versionResource.Slice(0, fileInfoBlockHeader.Length);
+            var fileInfoBlock = versionResource[..fileInfoBlockHeader.Length];
 
             idx = fileInfoBlockHeader.Length;
             idx += -idx & 3;
-            versionResource = idx < versionResource.Length ? versionResource.Slice(idx) : default;
+            versionResource = idx < versionResource.Length ? versionResource[idx..] : default;
 
-            var blockNamePtr = fileInfoBlock.Slice(VersionRecordHeader.SizeOf).ReadNullTerminatedUnicode();
+            var blockNamePtr = fileInfoBlock[VersionRecordHeader.SizeOf..].ReadNullTerminatedUnicode();
 
             if (!blockNamePtr.Equals(blockName.AsSpan(), StringComparison.OrdinalIgnoreCase))
             {
@@ -348,10 +348,10 @@ public class NativeFileVersion
             idx = VersionRecordHeader.SizeOf + (blockNamePtr.Length + 1) * 2;
             idx += -idx & 3;
 
-            var tableBlock = fileInfoBlock.Slice(idx);
+            var tableBlock = fileInfoBlock[idx..];
             ref readonly var tableBlockHeader = ref tableBlock.CastRef<VersionRecordHeader>();
 
-            var tableBlockNamePtr = tableBlock.Slice(VersionRecordHeader.SizeOf).ReadNullTerminatedUnicode();
+            var tableBlockNamePtr = tableBlock[VersionRecordHeader.SizeOf..].ReadNullTerminatedUnicode();
 
             if (!tableBlockNamePtr.Equals(language.AsSpan(), StringComparison.OrdinalIgnoreCase))
             {
@@ -361,24 +361,24 @@ public class NativeFileVersion
             idx = VersionRecordHeader.SizeOf + (tableBlockNamePtr.Length + 1) * 2;
             idx += -idx & 3;
 
-            var value = tableBlock.Slice(idx);
+            var value = tableBlock[idx..];
 
             while (value.Length > VersionRecordHeader.SizeOf)
             {
                 ref readonly var blockHeader = ref value.CastRef<VersionRecordHeader>();
-                var block = value.Slice(0, blockHeader.Length);
+                var block = value[..blockHeader.Length];
 
-                var valueNamePtr = block.Slice(VersionRecordHeader.SizeOf).ReadNullTerminatedUnicode();
+                var valueNamePtr = block[VersionRecordHeader.SizeOf..].ReadNullTerminatedUnicode();
 
                 idx = blockHeader.Length;
                 idx += -idx & 3;
 
-                value = idx < value.Length ? value.Slice(idx) : default;
+                value = idx < value.Length ? value[idx..] : default;
 
                 idx = VersionRecordHeader.SizeOf + (valueNamePtr.Length + 1) * 2;
                 idx += -idx & 3;
 
-                var valueData = block.Slice(idx).ReadNullTerminatedUnicode();
+                var valueData = block[idx..].ReadNullTerminatedUnicode();
 
                 dict[valueNamePtr.ToString()] = valueData.ToString();
             }

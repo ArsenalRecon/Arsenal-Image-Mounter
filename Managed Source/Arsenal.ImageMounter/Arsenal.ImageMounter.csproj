@@ -8,18 +8,19 @@
   </PropertyGroup>
   
   <ItemGroup>
-	<PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.82" />
-	<PackageReference Include="LTRData.DiscUtils.Transports" Version="1.0.83" />
-	<PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.83" />
-    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.83" />
+	<PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.85" />
+	<PackageReference Include="LTRData.DiscUtils.Transports" Version="1.0.85" />
+	<PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.85" />
+    <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.85" />
     <PackageReference Include="LTRData.Extensions" Version="*" />
     <PackageReference Include="LTRData.Extensions.Native" Version="*" />
   </ItemGroup>
   
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <PackageReference Include="System.Collections.Immutable" Version="*" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="*" />
-    <Reference Include="System.ServiceProcess" />
+	<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="*" />
+	<PackageReference Include="Microsoft.Bcl.Memory" Version="*" />
+	<Reference Include="System.ServiceProcess" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">

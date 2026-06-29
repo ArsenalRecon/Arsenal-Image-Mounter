@@ -20,7 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 
 namespace Arsenal.ImageMounter.IO.Streams;
@@ -143,7 +143,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
 #if DEBUG
             Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
 #endif
-            buffer = buffer.Slice(0, (int)(Length - Position));
+            buffer = buffer[..(int)(Length - Position)];
         }
 
         if (Position == lastReadPos && buffer.Length <= Alignment)
@@ -174,7 +174,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
                 break;
             }
 
-            slice = slice.Slice(blockSize);
+            slice = slice[blockSize..];
             totalSize += blockSize;
         }
         
@@ -204,7 +204,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
 #if DEBUG
             Trace.WriteLine($"Attempt to read {buffer.Length} bytes from 0x{Position:X} which is beyond end of physical media, base stream length is 0x{Length:X}");
 #endif
-            buffer = buffer.Slice(0, (int)(Length - Position));
+            buffer = buffer[..(int)(Length - Position)];
         }
 
         if (Position == lastReadPos && buffer.Length <= Alignment)
@@ -235,7 +235,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
                 break;
             }
 
-            slice = slice.Slice(blockSize);
+            slice = slice[blockSize..];
             totalSize += blockSize;
         }
 
@@ -269,7 +269,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
         }
 
         using var newBufferHandle = MemoryPool<byte>.Shared.Rent(newsize);
-        var newBuffer = newBufferHandle.Memory.Span.Slice(0, newsize);
+        var newBuffer = newBufferHandle.Memory.Span[..newsize];
         Position -= prefix;
         var result = SafeBaseRead(newBuffer);
         if (result < prefix)
@@ -305,7 +305,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
         }
 
         using var newBufferHandle = MemoryPool<byte>.Shared.Rent(newsize);
-        var newBuffer = newBufferHandle.Memory.Slice(0, newsize);
+        var newBuffer = newBufferHandle.Memory[..newsize];
         Position -= prefix;
         var result = await SafeBaseReadAsync(newBuffer, cancellationToken).ConfigureAwait(false);
         if (result < prefix)
@@ -321,7 +321,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
             result = count;
         }
 
-        newBuffer.Slice(prefix, result).CopyTo(buffer.Slice(offset));
+        newBuffer.Slice(prefix, result).CopyTo(buffer[offset..]);
 
         return result;
     }
@@ -535,23 +535,23 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
 #endif
             }
 
-            var new_buffer = memory_owner.Memory.Slice(0, new_array_size);
+            var new_buffer = memory_owner.Memory[..new_array_size];
 
             if (prefix != 0)
             {
                 Position = checked(original_position - prefix);
 
-                await this.ReadAsync(new_buffer.Slice(0, Alignment), cancellationToken).ConfigureAwait(false);
+                await this.ReadAsync(new_buffer[..Alignment], cancellationToken).ConfigureAwait(false);
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                await this.ReadAsync(new_buffer.Slice(new_buffer.Length - Alignment), cancellationToken).ConfigureAwait(false);
+                await this.ReadAsync(new_buffer[^Alignment..], cancellationToken).ConfigureAwait(false);
             }
 
-            buffer.CopyTo(new_buffer.Slice(prefix));
+            buffer.CopyTo(new_buffer[prefix..]);
 
             Position = original_position - prefix;
 
@@ -569,7 +569,7 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
         }
 
         BaseStream.Position = Position;
-        await BaseStream.WriteAsync(buffer.Slice(0, count), cancellationToken).ConfigureAwait(false);
+        await BaseStream.WriteAsync(buffer[..count], cancellationToken).ConfigureAwait(false);
         Position = BaseStream.Position;
 
         buffer.Span.Slice(count - Alignment, Alignment).CopyTo(lastReadBuffer);
@@ -623,23 +623,23 @@ public class AligningStream(Stream baseStream, int alignment, bool forceReadOnly
 #endif
             }
 
-            var new_buffer = memory_owner.Memory.Span.Slice(0, new_array_size);
+            var new_buffer = memory_owner.Memory.Span[..new_array_size];
 
             if (prefix != 0)
             {
                 Position = checked(original_position - prefix);
 
-                this.ReadMaximum(new_buffer.Slice(0, Alignment));
+                this.ReadMaximum(new_buffer[..Alignment]);
             }
 
             if (suffix != 0)
             {
                 Position = checked(original_position + count + suffix - Alignment);
 
-                this.ReadMaximum(new_buffer.Slice(new_buffer.Length - Alignment));
+                this.ReadMaximum(new_buffer[^Alignment..]);
             }
 
-            buffer.CopyTo(new_buffer.Slice(prefix));
+            buffer.CopyTo(new_buffer[prefix..]);
 
             Position = original_position - prefix;
 

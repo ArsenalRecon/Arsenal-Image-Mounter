@@ -21,7 +21,7 @@ using System.Text;
 using IByteCollection = System.Collections.Generic.IReadOnlyCollection<byte>;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator (.NET Framework 4.x compatibility)
+// #pragma warning disable IDE0057 // Use range operator (.NET Framework 4.x compatibility)
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable CA1069 // Enums values should not be duplicated
 #pragma warning disable IDE0032 // Use auto property
@@ -1305,22 +1305,22 @@ public readonly struct StorageStandardProperties
 
         if (DeviceDescriptor.ProductIdOffset != 0)
         {
-            ProductId = BufferExtensions.ReadNullTerminatedAsciiString(buffer.Slice(DeviceDescriptor.ProductIdOffset));
+            ProductId = BufferExtensions.ReadNullTerminatedAsciiString(buffer[DeviceDescriptor.ProductIdOffset..]);
         }
 
         if (DeviceDescriptor.VendorIdOffset != 0)
         {
-            VendorId = BufferExtensions.ReadNullTerminatedAsciiString(buffer.Slice(DeviceDescriptor.VendorIdOffset));
+            VendorId = BufferExtensions.ReadNullTerminatedAsciiString(buffer[DeviceDescriptor.VendorIdOffset..]);
         }
 
         if (DeviceDescriptor.SerialNumberOffset != 0)
         {
-            SerialNumber = BufferExtensions.ReadNullTerminatedAsciiString(buffer.Slice(DeviceDescriptor.SerialNumberOffset));
+            SerialNumber = BufferExtensions.ReadNullTerminatedAsciiString(buffer[DeviceDescriptor.SerialNumberOffset..]);
         }
 
         if (DeviceDescriptor.ProductRevisionOffset != 0)
         {
-            ProductRevision = BufferExtensions.ReadNullTerminatedAsciiString(buffer.Slice(DeviceDescriptor.ProductRevisionOffset));
+            ProductRevision = BufferExtensions.ReadNullTerminatedAsciiString(buffer[DeviceDescriptor.ProductRevisionOffset..]);
         }
 
         if (DeviceDescriptor.RawPropertiesLength != 0)

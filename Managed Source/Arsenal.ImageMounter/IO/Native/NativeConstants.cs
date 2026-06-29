@@ -14,7 +14,7 @@ using System.Runtime.Versioning;
 using System.Security.AccessControl;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning disable IDE0057 // Use range operator
+// #pragma warning disable IDE0057 // Use range operator
 
 #pragma warning disable CA1069 // Enums values should not be duplicated
 #pragma warning disable IDE0032 // Use auto property
