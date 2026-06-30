@@ -14,6 +14,7 @@
     <PackageReference Include="LTRData.DiscUtils.Ntfs" Version="1.0.85" />
     <PackageReference Include="LTRData.Extensions" Version="*" />
     <PackageReference Include="LTRData.Extensions.Native" Version="*" />
+	<PackageReference Include="ArsenalRecon.ImageMounter.Native" Version="*" />
   </ItemGroup>
   
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">

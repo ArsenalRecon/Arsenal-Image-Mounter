@@ -821,8 +821,8 @@ Expected hexadecimal SCSI address in the form PPTTLL, for example: 000100");
                     port = short.Parse(fileName.AsSpan(portIndex + 1));
                     host = fileName[..portIndex];
 #else
-                    port = short.Parse(fileName.Substring(portIndex + 1));
-                    host = fileName.Remove(portIndex);
+                    port = short.Parse(fileName[(portIndex + 1)..]);
+                    host = fileName[..portIndex];
 #endif
                 }
 

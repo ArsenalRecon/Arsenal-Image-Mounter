@@ -45,9 +45,15 @@ public static partial class API
 
     public const string WriteCacheDeadlockWarningMessage = "Warning: A system-wide write-cache deadlock could occur while mounting in write-original mode on Windows 11 prior to 22H2. See the AIM readme for more information.";
 
+#if NET5_0_OR_GREATER
+    public static string DllPath { get; } =
+        Path.GetFullPath(Path.Join(Path.GetDirectoryName(typeof(API).Assembly.Location)
+            ?? ".", "runtimes", RuntimeInformation.RuntimeIdentifier, "native"));
+#else
     public static string DllPath { get; } =
         Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(API).Assembly.Location)
-            ?? ".", "lib", RuntimeInformation.ProcessArchitecture.ToString()));
+            ?? ".", "runtimes", $"win-{RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant()}", "native"));
+#endif
 
     public static void AddNativeLibDirectory()
     {

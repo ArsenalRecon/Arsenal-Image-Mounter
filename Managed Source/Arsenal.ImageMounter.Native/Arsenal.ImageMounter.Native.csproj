@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<TargetFramework>net10.0</TargetFramework>
+	<Description>Arsenal Image Mounter Native Library dependencies</Description>
+	<PackageId>ArsenalRecon.ImageMounter.Native</PackageId>
+	<IncludeBuildOutput>false</IncludeBuildOutput>
+	<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<None Include="runtimes\**\native\*" Pack="true" PackagePath="%(Identity)" />
+  </ItemGroup>
+  
+</Project>

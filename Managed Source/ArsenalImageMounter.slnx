@@ -29,6 +29,7 @@
     <File Path="../Third-Party-Licenses/zlib.txt" />
   </Folder>
   <Project Path="Arsenal.ImageMounter.Forms/Arsenal.ImageMounter.Forms.csproj" />
+  <Project Path="Arsenal.ImageMounter.Native/Arsenal.ImageMounter.Native.csproj" Id="b1693ad5-36a8-4582-a182-b74b66034379" />
   <Project Path="Arsenal.ImageMounter.PowerShell/Arsenal.ImageMounter.PowerShell.csproj" />
   <Project Path="Arsenal.ImageMounter/Arsenal.ImageMounter.csproj" />
   <Project Path="ArsenalImageMounterAnalyze/ArsenalImageMounterAnalyze.csproj">

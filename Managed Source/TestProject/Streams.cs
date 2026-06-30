@@ -79,7 +79,7 @@ public static class Streams
 #if NETCOREAPP
         Assert.Equal(buffer, verifyBytes[4..]);
 #else
-        Assert.Equal(buffer.ToArray(), verifyBytes.Slice(4).ToArray());
+        Assert.Equal(buffer.ToArray(), verifyBytes[4..].ToArray());
 #endif
 
         aligningStream.Position = 0;
@@ -97,7 +97,7 @@ public static class Streams
 #if NETCOREAPP
         Assert.Equal(buffer, verifyBytes[4..]);
 #else
-        Assert.Equal(buffer.ToArray(), verifyBytes.Slice(4).ToArray());
+        Assert.Equal(buffer.ToArray(), verifyBytes[4..].ToArray());
 #endif
     }
 

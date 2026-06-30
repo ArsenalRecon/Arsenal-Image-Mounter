@@ -4532,7 +4532,7 @@ Currently, the following application has files open on this volume:
 #if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
             return EnumerateDiskVolumes(uint.Parse(DevicePath.AsSpan(@"\\?\PhysicalDrive".Length)));
 #else
-            return EnumerateDiskVolumes(uint.Parse(DevicePath.Substring(@"\\?\PhysicalDrive".Length)));
+            return EnumerateDiskVolumes(uint.Parse(DevicePath[@"\\?\PhysicalDrive".Length..]));
 #endif
         }
         else if (DevicePath.StartsWith(@"\\?\", StringComparison.Ordinal)
