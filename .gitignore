@@ -228,3 +228,4 @@ publish.cmd
 Unmanaged Source/signltr.props
 Unmanaged Source/GlobalSign Root CA.crt
 /Unmanaged Source/dist
+*.wrn
