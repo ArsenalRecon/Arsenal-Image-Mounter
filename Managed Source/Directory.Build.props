@@ -20,7 +20,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <NeutralLanguage>en</NeutralLanguage>
-	<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
     <Title>Arsenal Image Mounter</Title>
     <Company>Arsenal Recon</Company>
