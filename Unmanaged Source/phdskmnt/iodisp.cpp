@@ -138,6 +138,10 @@ __inout __deref PKIRQL         LowestAssumedIrql
 
     ImScsiReleaseLock(&LockHandle, LowestAssumedIrql);
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+    AimUnmapUnbind(pLUExt);
+#endif
+
     /// Cleanup all file handles, object name buffers,
     /// proxy refs etc.
     if (pLUExt->UseProxy)
@@ -2376,6 +2380,12 @@ __in __deref PETHREAD ClientThread)
         pLUExt->WriteOverlayFileName.MaximumLength = overlay_file_name.Length;
         RtlCopyUnicodeString(&pLUExt->WriteOverlayFileName, &overlay_file_name);
     }
+
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+    AimUnmapBind(pLUExt,
+        IMSCSI_TYPE(CreateData->Fields.Flags) == IMSCSI_TYPE_FILE &&
+        IMSCSI_FILE_TYPE(CreateData->Fields.Flags) == IMSCSI_FILE_TYPE_QUEUED_IO);
+#endif
 
     KeSetEvent(&pLUExt->Initialized, (KPRIORITY)0, FALSE);
 

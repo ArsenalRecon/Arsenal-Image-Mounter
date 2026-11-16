@@ -290,6 +290,10 @@ __in PUNICODE_STRING pRegistryPath
 
     hwInitData.AdapterInterfaceType = STORAGE_INTERFACE_TYPE;
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+    AimUnmapRegister();
+#endif
+
     status = StoragePortInitialize(                     // Tell port driver we're here.
         pDrvObj,
         pRegistryPath,
@@ -312,6 +316,9 @@ __in PUNICODE_STRING pRegistryPath
     else
     {
         ImScsiFreeGlobalResources();
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        AimUnmapUnregister();
+#endif
     }
 
     KdPrint2(("PhDskMnt::DriverEntry: End. status=0x%X\n", status));
@@ -414,6 +421,9 @@ ImScsiUnload(PDRIVER_OBJECT pDrvObj)
 
     // Free our own resources
     ImScsiFreeGlobalResources();
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+    AimUnmapUnregister();
+#endif
 
     DbgPrint(__FUNCTION__ ": Done.\n");
 }

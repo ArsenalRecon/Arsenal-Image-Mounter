@@ -195,6 +195,10 @@ ImScsiWorkerThread(__in PVOID Context)
 
         KdPrint2((__FUNCTION__ ": Sending 'RequestComplete' to StorPort for work: 0x%p.\n", pWkRtnParms));
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        AimUnmapFinish(pWkRtnParms->UnmapDiagnostic, pWkRtnParms->pSrb);
+#endif
+
         StorPortNotification(RequestComplete, pWkRtnParms->pHBAExt, pWkRtnParms->pSrb);
 
         ExFreePoolWithTag(pWkRtnParms, MP_TAG_GENERAL);
@@ -483,7 +487,11 @@ __in pMP_WorkRtnParms        pWkRtnParms
 
         case SCSIOP_UNMAP:
             // UNMAP/TRIM
-            ImScsiDispatchUnmapDevice(pHBAExt, pLUExt, pSrb);
+            ImScsiDispatchUnmapDevice(pHBAExt, pLUExt, pSrb
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+                , pWkRtnParms->UnmapDiagnostic
+#endif
+            );
             break;
 
         default:
@@ -506,7 +514,11 @@ VOID
 ImScsiDispatchUnmapDevice(
     __in pHW_HBA_EXT pHBAExt,
     __in pHW_LU_EXTENSION pLUExt,
-    __in PSCSI_REQUEST_BLOCK pSrb)
+    __in PSCSI_REQUEST_BLOCK pSrb
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+    , AimUnmapRequest& unmapDiagnostic
+#endif
+)
 {
     PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
     USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
@@ -527,6 +539,10 @@ ImScsiDispatchUnmapDevice(
     }
 
     USHORT items = descrlength / sizeof(*list->Descriptors);
+
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+    AimUnmapDispatch(unmapDiagnostic, pLUExt, items);
+#endif
 
     NTSTATUS status = STATUS_SUCCESS;
 
@@ -590,6 +606,11 @@ ImScsiDispatchUnmapDevice(
             KdPrint((__FUNCTION__ ": Zero data request from 0x%I64X to 0x%I64X\n",
                 zerodata.FileOffset.QuadPart, zerodata.BeyondFinalZero.QuadPart));
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+            AimUnmapZeroBegin(unmapDiagnostic, pLUExt, i, startingSector, numBlocks,
+                FSCTL_SET_ZERO_DATA, &zerodata, sizeof(zerodata));
+#endif
+
             status = ZwFsControlFile(
                 pLUExt->ImageFile,
                 NULL,
@@ -601,6 +622,10 @@ ImScsiDispatchUnmapDevice(
                 sizeof(zerodata),
                 NULL,
                 0);
+
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+            AimUnmapZeroResult(unmapDiagnostic, i, status);
+#endif
 
             KdPrint((__FUNCTION__ ": FSCTL_SET_ZERO_DATA result: 0x%#X\n", status));
 
