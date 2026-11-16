@@ -1,9 +1,9 @@
 # Experimental AIM UNMAP diagnostics for a VhdAccess test unit
 
-**Design proposal.** This documents the smallest diagnostic change proposed
-for the mounted NTFS discard investigation tracked in
+This documents the experimental diagnostic provider for the mounted NTFS
+discard investigation tracked in
 [VhdAccess Rewrite PR #60](https://github.com/LTRData/VhdAccess-Rewrite/pull/60).
-This proposal is pinned to AIM source
+The original UNMAP control flow is pinned to AIM source
 [`5e0605978b5cefd1dde341046577af446a9b2b86`](https://github.com/ArsenalRecon/Arsenal-Image-Mounter/tree/5e0605978b5cefd1dde341046577af446a9b2b86).
 
 ## Evidence gap
@@ -13,7 +13,7 @@ Kernel-File can pair generic FSCTL events with their completion. The selected
 normal Storport schemas omit the UNMAP data-out buffer, and the generic file
 events omit the 16-byte ZERO input. The preparation trace in the VhdAccess
 workload never reached controlled deletion or retrim. Its only UNMAP opcode
-was on another SCSI address. The AIM trace proposed here would capture the
+was on another SCSI address. The AIM provider captures the
 actual command and worker inputs on the selected test unit. [VhdAccess trace
 findings](https://github.com/LTRData/VhdAccess-Rewrite/blob/cb73b9e20a724cf90b6c5d68f4979c4f81dde656/docs/windows-filesystem-discard.md#native-trace-feasibility)
 
@@ -25,16 +25,23 @@ findings](https://github.com/LTRData/VhdAccess-Rewrite/blob/cb73b9e20a724cf90b6c
   an untracked build header with the run GUID, exact AIM unit number and
   exact canonical VhdAccess test backing name. The diagnostic profile
   requires all three values. The normal build omits the provider, private
-  state and hooks.
-- In successful direct-file LU initialization, before the LU is published as
-  initialized, compare the unit and existing `ObjectName` against the build
+  state and hooks. The separate unsigned builder is
+  [tools/build-storport-diagnostics.py](tools/build-storport-diagnostics.py).
+  It uses the VhdAccess WDK pins and leaves the existing AIM project,
+  packaging and signing configuration intact.
+- In direct-file LU initialization, before the existing initialized signal,
+  compare the unit and existing `ObjectName` against the build
   header. Bind at most one matching synchronous, writable VhdAccess
   `ImageFile` per driver load. Allocate driver-local LU-generation and
   writer-generation IDs for this open and keep the already opened handle
   value private for comparison at dispatch. The bind record identifies
   the selected unit, the existing disk UniqueId, the pinned test route,
   image offset and logical block size. The owner independently binds
-  this attach to its actual disk number, adapter and SCSI address.
+  this attach to its actual disk number, adapter, SCSI address and fixture
+  file identity under the protected backing directory. The compiled name and
+  runtime generation bind the existing open. A different file at that name
+  before the initial open must be excluded by owner-side identity checks.
+  If worker creation fails after the bind, a new attachment cannot reuse it.
 - Preserve writer identity across the queue with the existing LU lifetime.
   A changed handle or reopened attachment cannot inherit the writer
   generation. Record the mismatch as incomplete diagnostic evidence and
@@ -53,6 +60,11 @@ findings](https://github.com/LTRData/VhdAccess-Rewrite/blob/cb73b9e20a724cf90b6c
   snapshot stays explicit. Keep bound/unbound and diagnostic counters in
   the same capture. Require intact begin/end markers, no missing request
   stages and no ETW loss before making a completeness claim.
+- Enable the provider before the selected attach and keep it enabled through
+  LU cleanup. The driver emits a provider enable/disable epoch, record
+  sequence, omissions and incomplete-request counts. ETW finalization and
+  loss counts come from the collector. `RunEnd` delimits diagnostic requests.
+  Detach and exclusive backing release require separate positive evidence.
 
 The existing file handle is assigned during LU initialization. AIM can derive
 its disk UniqueId from file metadata, so that ID alone cannot distinguish two
@@ -92,8 +104,7 @@ outside this diagnostic change. [UNMAP admission](https://github.com/ArsenalReco
 
 ## Upper provenance and qualification
 
-Optionally record `StorPortGetActivityIdSrb`'s status and returned activity ID
-when present. This supplies an SRB-side identifier. A complete attribution
+The provider's request identifier starts at AIM admission. A complete attribution
 from NTFS requires a proven parent DSM to child SRB relation from the exact
 Windows build. The registered ClassPnP WPP provider requires matching decode
 metadata and an observed relation. Microsoft's ClassPnP sample leaves the
@@ -106,16 +117,19 @@ boundary on the target. [Storport activity lookup](https://learn.microsoft.com/e
 [ClassPnP WPP sample](https://github.com/microsoft/Windows-driver-samples/blob/d49bb7d72f3651952b2b6e4ad28d14fe2247eb69/storage/class/classpnp/src/utils.c#L3099-L3217) ·
 [Child-IRP creation](https://github.com/microsoft/Windows-driver-samples/blob/d49bb7d72f3651952b2b6e4ad28d14fe2247eb69/storage/class/classpnp/src/class.c#L4139-L4246)
 
-A separate outcome-based experiment can test whether controlled NTFS deletion
+A separate outcome-based verdict can establish whether controlled NTFS deletion
 or one separately marked optional retrim retires a previously mapped full
 VHD block. Verify preserved neighboring data, terminal writer completion,
 BAT/bitmap state, read-only reopen, backing release and restoration of the
-PR #41 baseline. Report the filesystem outcome and the strength of request
-attribution independently. Run only after verifying capture size and an
-independent stop deadline on the target, and with separate owner approval.
+PR #41 baseline. Report that result independently of AIM UNMAP-to-ZERO
+provenance and any stronger NTFS-to-DSM-to-SRB join. Reuse the verified native
+128 MiB sequential ETW collector and its independent stop mechanism. The
+logging-only calibration enabled zero providers and did not exercise the file
+cap under load. Verify the first finalized trace's native payload projection
+and loss counts before relying on the decoder for a provenance verdict.
 [Owner-runtime plan](https://github.com/LTRData/VhdAccess-Rewrite/blob/cb73b9e20a724cf90b6c5d68f4979c4f81dde656/docs/windows-filesystem-discard.md#focused-owner-runtime-plan)
 
-## Offline acceptance cases for implementation
+## Offline validation
 
 1. Confirm the ordinary driver builds with the diagnostic definition absent
    and the diagnostic profile requires an explicit unit/backing/run binding.
@@ -136,5 +150,7 @@ independent stop deadline on the target, and with separate owner approval.
    another I/O. Use an offline decoder corpus for the exact published schema
    before attempting an owner-runtime trace.
 
-This draft contains the design and source anchors. Implementation and
-diagnostic-binary qualification require separate review.
+The [decoder and host tests](tools/c3a/README.md) cover the published schema
+and the actual AIM UNMAP and emitter functions with modeled OS calls. These
+tests and the pinned WDK build do not exercise real Storport callbacks or
+kernel-to-ETL delivery.
