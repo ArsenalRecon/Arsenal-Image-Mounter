@@ -1952,6 +1952,37 @@ __inout __deref PKIRQL              LowestAssumedIrql
     KdPrint2((__FUNCTION__ ": End: status=0x%X\n", (int)pSrb->SrbStatus));
 }                                                     // End ScsiOpReportLuns.
 
+UCHAR
+ScsiGetUnmapDescriptorCount(PSCSI_REQUEST_BLOCK pSrb, PUSHORT count)
+{
+    *count = 0;
+    if (pSrb->CdbLength < sizeof(UNMAP))
+        return SRB_STATUS_INVALID_REQUEST;
+
+    PUNMAP pCdb = (PUNMAP)pSrb->Cdb;
+    USHORT length = RtlUshortByteSwap(*(PUSHORT)pCdb->AllocationLength);
+    if (length == 0)
+        return SRB_STATUS_SUCCESS;
+
+    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
+    const ULONG headerLength = FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors);
+    if (list == NULL || length < headerLength || length > pSrb->DataTransferLength)
+        return SRB_STATUS_DATA_OVERRUN;
+
+    USHORT dataLength = RtlUshortByteSwap(*(PUSHORT)list->DataLength);
+    USHORT descriptorLength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
+    if (headerLength + descriptorLength > dataLength + sizeof(list->DataLength))
+        return SRB_STATUS_DATA_OVERRUN;
+
+    // The CDB can limit the transmitted list. Process only complete descriptors
+    // within that limit, including when the SRB has additional buffer capacity.
+    ULONG available = length - headerLength;
+    if (available > descriptorLength)
+        available = descriptorLength;
+    *count = (USHORT)(available / sizeof(*list->Descriptors));
+    return SRB_STATUS_SUCCESS;
+}
+
 VOID
 ScsiOpUnmap(
     __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
@@ -1961,12 +1992,6 @@ ScsiOpUnmap(
     __in PKIRQL               LowestAssumedIrql
 )
 {
-    PCDB pCdb = (PCDB)pSrb->Cdb;
-
-    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
-
-    USHORT length = RtlUshortByteSwap(*(PUSHORT)((PUNMAP)pCdb)->AllocationLength);
-
     KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     if (!KeReadStateEvent(&pLUExt->Initialized))
@@ -2009,62 +2034,31 @@ ScsiOpUnmap(
         return;
     }
 
-    if (length > pSrb->DataTransferLength)
+    USHORT items;
+    UCHAR status = ScsiGetUnmapDescriptorCount(pSrb, &items);
+    if (status != SRB_STATUS_SUCCESS)
     {
-#if DBG
-        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
-            DbgBreakPoint();
-#endif
-
-        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+        ScsiSetError(pSrb, status);
         return;
     }
 
-    USHORT datalength = RtlUshortByteSwap(*(PUSHORT)list->DataLength);
-
-    if ((ULONG)datalength + sizeof(list->DataLength) >
-        pSrb->DataTransferLength)
+    if (items == 0)
     {
-#if DBG
-        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
-            DbgBreakPoint();
-#endif
-
-        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+        ScsiSetSuccess(pSrb, 0);
         return;
     }
 
-    USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
-
-    if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) >
-        pSrb->DataTransferLength)
-    {
-#if DBG
-        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
-            DbgBreakPoint();
-#endif
-
-        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-        return;
-    }
-
-    USHORT items = descrlength / sizeof(*list->Descriptors);
-
+    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
+    ULONGLONG diskBlocks = pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower;
     for (USHORT i = 0; i < items; i++)
     {
-        LONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
+        ULONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
         ULONG numBlocks = RtlUlongByteSwap(*(PULONG)list->Descriptors[i].LbaCount);
 
-        if (startingSector & ~(MAXLONGLONG >> pLUExt->BlockPower))
-        {      // Check if startingSector << blockPower fits within a LONGLONG.
-            KdPrint((__FUNCTION__ ": Too large sector number: %I64X\n", startingSector));
-            return;
-        }
-
-        // Check disk bounds
-        if ((startingSector + numBlocks) > (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower))
-        {      // Starting sector beyond the bounds?
-            KdPrint((__FUNCTION__ ": Out of bounds: sector: %I64X, blocks: %d\n", startingSector, numBlocks));
+        if (startingSector > diskBlocks || numBlocks > diskBlocks - startingSector)
+        {
+            KdPrint((__FUNCTION__ ": Out of bounds: sector: %I64X, blocks: %u\n", startingSector, numBlocks));
+            ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_ILLEGAL_BLOCK, 0);
             return;
         }
     }
