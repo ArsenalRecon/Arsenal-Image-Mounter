@@ -734,6 +734,8 @@ extern "C" {
             __in PSCSI_REQUEST_BLOCK  pSrb
             );
 
+    UCHAR ScsiGetUnmapDescriptorCount(PSCSI_REQUEST_BLOCK pSrb, PUSHORT count);
+
     VOID
         ScsiOpUnmap(
             __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.

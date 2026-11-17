@@ -1952,6 +1952,37 @@ __inout __deref PKIRQL              LowestAssumedIrql
     KdPrint2((__FUNCTION__ ": End: status=0x%X\n", (int)pSrb->SrbStatus));
 }                                                     // End ScsiOpReportLuns.
 
+UCHAR
+ScsiGetUnmapDescriptorCount(PSCSI_REQUEST_BLOCK pSrb, PUSHORT count)
+{
+    *count = 0;
+    if (pSrb->CdbLength < sizeof(UNMAP))
+        return SRB_STATUS_INVALID_REQUEST;
+
+    PUNMAP pCdb = (PUNMAP)pSrb->Cdb;
+    USHORT length = RtlUshortByteSwap(*(PUSHORT)pCdb->AllocationLength);
+    if (length == 0)
+        return SRB_STATUS_SUCCESS;
+
+    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
+    const ULONG headerLength = FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors);
+    if (list == NULL || length < headerLength || length > pSrb->DataTransferLength)
+        return SRB_STATUS_DATA_OVERRUN;
+
+    USHORT dataLength = RtlUshortByteSwap(*(PUSHORT)list->DataLength);
+    USHORT descriptorLength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
+    if (headerLength + descriptorLength > dataLength + sizeof(list->DataLength))
+        return SRB_STATUS_DATA_OVERRUN;
+
+    // The CDB can limit the transmitted list. Process only complete descriptors
+    // within that limit, including when the SRB has additional buffer capacity.
+    ULONG available = length - headerLength;
+    if (available > descriptorLength)
+        available = descriptorLength;
+    *count = (USHORT)(available / sizeof(*list->Descriptors));
+    return SRB_STATUS_SUCCESS;
+}
+
 VOID
 ScsiOpUnmap(
     __in pHW_HBA_EXT          pHBAExt, // Adapter device-object extension from port driver.
@@ -2003,46 +2034,21 @@ ScsiOpUnmap(
         return;
     }
 
-    if (pSrb->CdbLength < sizeof(UNMAP))
+    USHORT items;
+    UCHAR status = ScsiGetUnmapDescriptorCount(pSrb, &items);
+    if (status != SRB_STATUS_SUCCESS)
     {
-        ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+        ScsiSetError(pSrb, status);
         return;
     }
 
-    PUNMAP pCdb = (PUNMAP)pSrb->Cdb;
-    USHORT length = RtlUshortByteSwap(*(PUSHORT)pCdb->AllocationLength);
-    if (length == 0)
-    {
-        ScsiSetSuccess(pSrb, 0);
-        return;
-    }
-
-    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
-    if (list == NULL || length < FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) ||
-        length > pSrb->DataTransferLength)
-    {
-        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-        return;
-    }
-
-    USHORT datalength = RtlUshortByteSwap(*(PUSHORT)list->DataLength);
-    USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
-    ULONG declaredLength = datalength + (ULONG)sizeof(list->DataLength);
-    if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) > declaredLength ||
-        declaredLength > length)
-    {
-        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-        return;
-    }
-
-    // SBC permits an empty list and ignores an incomplete trailing descriptor.
-    USHORT items = descrlength / sizeof(*list->Descriptors);
     if (items == 0)
     {
         ScsiSetSuccess(pSrb, 0);
         return;
     }
 
+    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
     ULONGLONG diskBlocks = pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower;
     for (USHORT i = 0; i < items; i++)
     {

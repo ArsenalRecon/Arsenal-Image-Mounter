@@ -529,6 +529,19 @@ int main()
         execute("incomplete trailing descriptor allowed by SBC", scenario, true);
         verifySuccess(scenario, 2, 2);
     }
+    for (bool exactTransfer : {false, true})
+    {
+        Scenario scenario;
+        auto cdb = reinterpret_cast<PUNMAP>(scenario.srb.Cdb);
+        // One complete descriptor and eight bytes of the second. The header
+        // still describes all three and the buffer may have trailing capacity.
+        cdb->AllocationLength[1] = 32;
+        if (exactTransfer)
+            scenario.srb.DataTransferLength = 32;
+        execute("CDB bounds the complete descriptor prefix", scenario, true);
+        verifySuccess(scenario, 1, 1);
+        REQUIRE(scenario.applied.front() == 9 * 512);
+    }
     {
         Scenario scenario;
         scenario.list.DataLength[1] = 6;
@@ -588,5 +601,5 @@ int main()
         verifySuccess(scenario, 0, 0);
         REQUIRE(scenario.proxyCalls == 1);
     }
-    std::puts("PASS: 24 modeled UNMAP cases through actual admission, worker, sense and Storport completion");
+    std::puts("PASS: 26 modeled UNMAP cases through actual admission, worker, sense and Storport completion");
 }

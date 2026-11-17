@@ -557,31 +557,17 @@ ImScsiDispatchUnmapDevice(
     __in pHW_LU_EXTENSION pLUExt,
     __in PSCSI_REQUEST_BLOCK pSrb)
 {
-    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
-
     UNREFERENCED_PARAMETER(pHBAExt);
 
-    if (list == NULL || pSrb->DataTransferLength < FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors))
+    USHORT items;
+    UCHAR parseStatus = ScsiGetUnmapDescriptorCount(pSrb, &items);
+    if (parseStatus != SRB_STATUS_SUCCESS || items == 0)
     {
-        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+        ScsiSetError(pSrb, parseStatus != SRB_STATUS_SUCCESS ? parseStatus : SRB_STATUS_INVALID_REQUEST);
         return;
     }
 
-    USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
-    if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) >
-        pSrb->DataTransferLength)
-    {
-#if DBG
-        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
-            DbgBreakPoint();
-#endif
-
-        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-        return;
-    }
-
-    USHORT items = descrlength / sizeof(*list->Descriptors);
-
+    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
     NTSTATUS status = STATUS_SUCCESS;
 
     IO_STATUS_BLOCK io_status;

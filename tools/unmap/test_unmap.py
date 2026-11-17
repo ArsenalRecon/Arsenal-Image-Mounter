@@ -22,7 +22,7 @@ def source_under_test():
     return "\n".join((
         extract(header, "#define ScsiSetSuccess(", "#ifdef USE_SCSIPORT"),
         extract(scsi, "VOID\nScsiSetCheckCondition(", "UCHAR\nScsiResetLun("),
-        extract(scsi, "VOID\nScsiOpUnmap(", "VOID\nScsiOpPersistentReserveInOut("),
+        extract(scsi, "UCHAR\nScsiGetUnmapDescriptorCount(", "VOID\nScsiOpPersistentReserveInOut("),
         extract(worker, "VOID\nImScsiDispatchWork(", "VOID\nImScsiCreateLU("),
         extract(worker, "VOID\nImScsiWorkerThread(", "VOID\nImScsiDispatchReadWrite("),
     ))
