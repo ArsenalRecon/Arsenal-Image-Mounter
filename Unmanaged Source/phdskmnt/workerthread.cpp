@@ -502,6 +502,55 @@ __in pMP_WorkRtnParms        pWkRtnParms
 
 }                                                     // End ImScsiDispatchWork().
 
+static VOID
+ImScsiSetUnmapFailure(PSCSI_REQUEST_BLOCK pSrb, NTSTATUS status)
+{
+    UCHAR srbStatus = SRB_STATUS_ERROR;
+    UCHAR senseKey = SCSI_SENSE_HARDWARE_ERROR;
+    UCHAR senseCode = SCSI_ADSENSE_INTERNAL_TARGET_FAILURE;
+
+    switch (status)
+    {
+    case STATUS_CANCELLED:
+        srbStatus = SRB_STATUS_ABORTED;
+        senseKey = SCSI_SENSE_ABORTED_COMMAND;
+        senseCode = SCSI_ADSENSE_NO_SENSE;
+        break;
+
+    case STATUS_MEDIA_WRITE_PROTECTED:
+        senseKey = SCSI_SENSE_DATA_PROTECT;
+        senseCode = SCSI_ADSENSE_WRITE_PROTECT;
+        break;
+
+    case STATUS_DEVICE_NOT_READY:
+        senseKey = SCSI_SENSE_NOT_READY;
+        senseCode = SCSI_ADSENSE_LUN_NOT_READY;
+        break;
+
+    case STATUS_INVALID_DEVICE_REQUEST:
+    case STATUS_NOT_SUPPORTED:
+        senseKey = SCSI_SENSE_ILLEGAL_REQUEST;
+        senseCode = SCSI_ADSENSE_ILLEGAL_COMMAND;
+        break;
+    }
+
+    PSENSE_DATA sense = (PSENSE_DATA)pSrb->SenseInfoBuffer;
+    UCHAR senseLength = pSrb->SenseInfoBufferLength;
+    ScsiSetErrorScsiStatus(pSrb, srbStatus, SCSISTAT_CHECK_CONDITION);
+    if ((pSrb->SrbFlags & SRB_FLAGS_DISABLE_AUTOSENSE) == 0 &&
+        sense != NULL && senseLength >= sizeof(*sense))
+    {
+        RtlZeroMemory(sense, sizeof(*sense));
+        sense->ErrorCode = SCSI_SENSE_ERRORCODE_FIXED_CURRENT;
+        sense->SenseKey = senseKey;
+        sense->AdditionalSenseLength =
+            sizeof(*sense) - FIELD_OFFSET(SENSE_DATA, CommandSpecificInformation);
+        sense->AdditionalSenseCode = senseCode;
+        pSrb->SenseInfoBufferLength = sizeof(*sense);
+        pSrb->SrbStatus |= SRB_STATUS_AUTOSENSE_VALID;
+    }
+}
+
 VOID
 ImScsiDispatchUnmapDevice(
     __in pHW_HBA_EXT pHBAExt,
@@ -509,11 +558,16 @@ ImScsiDispatchUnmapDevice(
     __in PSCSI_REQUEST_BLOCK pSrb)
 {
     PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
-    USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
 
     UNREFERENCED_PARAMETER(pHBAExt);
-    UNREFERENCED_PARAMETER(pLUExt);
 
+    if (list == NULL || pSrb->DataTransferLength < FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors))
+    {
+        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+        return;
+    }
+
+    USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
     if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) >
         pSrb->DataTransferLength)
     {
@@ -577,6 +631,11 @@ ImScsiDispatchUnmapDevice(
             LONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
             ULONG numBlocks = RtlUlongByteSwap(*(PULONG)list->Descriptors[i].LbaCount);
 
+            if (numBlocks == 0)
+            {
+                continue;
+            }
+
             zerodata.FileOffset.QuadPart = (startingSector << pLUExt->BlockPower) + pLUExt->ImageOffset.QuadPart;
             zerodata.BeyondFinalZero.QuadPart = ((LONGLONG)numBlocks << pLUExt->BlockPower) +
                 zerodata.FileOffset.QuadPart;
@@ -590,6 +649,7 @@ ImScsiDispatchUnmapDevice(
             KdPrint((__FUNCTION__ ": Zero data request from 0x%I64X to 0x%I64X\n",
                 zerodata.FileOffset.QuadPart, zerodata.BeyondFinalZero.QuadPart));
 
+            io_status.Status = STATUS_PENDING;
             status = ZwFsControlFile(
                 pLUExt->ImageFile,
                 NULL,
@@ -602,11 +662,22 @@ ImScsiDispatchUnmapDevice(
                 NULL,
                 0);
 
+            if (status == STATUS_PENDING)
+            {
+                // The worker owns the synchronous image handle and its rundown.
+                // Keep the input and status block live until the file is signaled.
+                status = ZwWaitForSingleObject(pLUExt->ImageFile, FALSE, NULL);
+                status = status == STATUS_SUCCESS ? io_status.Status : STATUS_UNSUCCESSFUL;
+            }
+
             KdPrint((__FUNCTION__ ": FSCTL_SET_ZERO_DATA result: 0x%#X\n", status));
 
-            if (!NT_SUCCESS(status))
+            if (status == STATUS_PENDING || !NT_SUCCESS(status))
             {
-                goto done;
+                // A prefix may already have been applied. Leave it in place and
+                // complete the SRB as failed without submitting later ranges.
+                ImScsiSetUnmapFailure(pSrb, status);
+                return;
             }
         }
     }
@@ -614,8 +685,6 @@ ImScsiDispatchUnmapDevice(
     {
         status = STATUS_NOT_SUPPORTED;
     }
-
-done:
 
     KdPrint((__FUNCTION__ ": Result: %#x\n", status));
 

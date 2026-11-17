@@ -1961,12 +1961,6 @@ ScsiOpUnmap(
     __in PKIRQL               LowestAssumedIrql
 )
 {
-    PCDB pCdb = (PCDB)pSrb->Cdb;
-
-    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
-
-    USHORT length = RtlUshortByteSwap(*(PUSHORT)((PUNMAP)pCdb)->AllocationLength);
-
     KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     if (!KeReadStateEvent(&pLUExt->Initialized))
@@ -2009,62 +2003,56 @@ ScsiOpUnmap(
         return;
     }
 
-    if (length > pSrb->DataTransferLength)
+    if (pSrb->CdbLength < sizeof(UNMAP))
     {
-#if DBG
-        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
-            DbgBreakPoint();
-#endif
+        ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+        return;
+    }
 
+    PUNMAP pCdb = (PUNMAP)pSrb->Cdb;
+    USHORT length = RtlUshortByteSwap(*(PUSHORT)pCdb->AllocationLength);
+    if (length == 0)
+    {
+        ScsiSetSuccess(pSrb, 0);
+        return;
+    }
+
+    PUNMAP_LIST_HEADER list = (PUNMAP_LIST_HEADER)pSrb->DataBuffer;
+    if (list == NULL || length < FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) ||
+        length > pSrb->DataTransferLength)
+    {
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
     }
 
     USHORT datalength = RtlUshortByteSwap(*(PUSHORT)list->DataLength);
-
-    if ((ULONG)datalength + sizeof(list->DataLength) >
-        pSrb->DataTransferLength)
-    {
-#if DBG
-        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
-            DbgBreakPoint();
-#endif
-
-        ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
-        return;
-    }
-
     USHORT descrlength = RtlUshortByteSwap(*(PUSHORT)list->BlockDescrDataLength);
-
-    if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) >
-        pSrb->DataTransferLength)
+    ULONG declaredLength = datalength + (ULONG)sizeof(list->DataLength);
+    if ((ULONG)descrlength + FIELD_OFFSET(UNMAP_LIST_HEADER, Descriptors) > declaredLength ||
+        declaredLength > length)
     {
-#if DBG
-        if (!KD_REFRESH_DEBUGGER_NOT_PRESENT)
-            DbgBreakPoint();
-#endif
-
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
         return;
     }
 
+    // SBC permits an empty list and ignores an incomplete trailing descriptor.
     USHORT items = descrlength / sizeof(*list->Descriptors);
+    if (items == 0)
+    {
+        ScsiSetSuccess(pSrb, 0);
+        return;
+    }
 
+    ULONGLONG diskBlocks = pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower;
     for (USHORT i = 0; i < items; i++)
     {
-        LONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
+        ULONGLONG startingSector = RtlUlonglongByteSwap(*(PULONGLONG)list->Descriptors[i].StartingLba);
         ULONG numBlocks = RtlUlongByteSwap(*(PULONG)list->Descriptors[i].LbaCount);
 
-        if (startingSector & ~(MAXLONGLONG >> pLUExt->BlockPower))
-        {      // Check if startingSector << blockPower fits within a LONGLONG.
-            KdPrint((__FUNCTION__ ": Too large sector number: %I64X\n", startingSector));
-            return;
-        }
-
-        // Check disk bounds
-        if ((startingSector + numBlocks) > (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower))
-        {      // Starting sector beyond the bounds?
-            KdPrint((__FUNCTION__ ": Out of bounds: sector: %I64X, blocks: %d\n", startingSector, numBlocks));
+        if (startingSector > diskBlocks || numBlocks > diskBlocks - startingSector)
+        {
+            KdPrint((__FUNCTION__ ": Out of bounds: sector: %I64X, blocks: %u\n", startingSector, numBlocks));
+            ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_ILLEGAL_REQUEST, SCSI_ADSENSE_ILLEGAL_BLOCK, 0);
             return;
         }
     }
