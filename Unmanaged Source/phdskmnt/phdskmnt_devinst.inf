@@ -1,0 +1,212 @@
+
+; PHDSKMNT.INF
+; Installs pnp version of Arsenal Image Mounter miniport driver
+; Intended for use on 32 or 64 bit editions of Windows Server 2003 or newer,
+; or Windows Vista or newer.
+; 
+; Copyright (c) 2012-2023, Arsenal Consulting, Inc. (d/b/a Arsenal Recon) <http://www.ArsenalRecon.com>
+; This source code and API are available under the terms of the Affero General Public
+; License v3.
+;
+; Please see LICENSE.txt for full license terms, including the availability of
+; proprietary exceptions.
+; Questions, comments, or requests for clarification: http://ArsenalRecon.com/contact/
+
+[Version]
+Signature = "$WINDOWS NT$"
+Class = SCSIAdapter
+ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
+Provider = %ARSENALRECON%
+DriverVer = 11/23/2026,0.20.39.586
+CatalogFile = phdskmnt.cat
+PnpLockdown=1
+
+[SourceDisksFiles.x86]
+phdskmnt.sys = 1, x86
+aimwrfltr.sys = 1, x86
+; vhdaccess.sys = 1, x86
+awealloc.sys = 1, x86
+deviodrv.sys = 1, x86
+deviosvc.exe = 1, x86
+
+[SourceDisksFiles.amd64]
+phdskmnt.sys = 1, x64
+aimwrfltr.sys = 1, x64
+vhdaccess.sys = 1, x64
+awealloc.sys = 1, x64
+deviodrv.sys = 1, x64
+deviosvc.exe = 1, x64
+
+[SourceDisksFiles.arm]
+phdskmnt.sys = 1, arm
+aimwrfltr.sys = 1, arm
+; vhdaccess.sys = 1, arm
+awealloc.sys = 1, arm
+deviodrv.sys = 1, arm
+deviosvc.exe = 1, arm
+
+[SourceDisksFiles.arm64]
+phdskmnt.sys = 1, arm64
+aimwrfltr.sys = 1, arm64
+; vhdaccess.sys = 1, arm64
+awealloc.sys = 1, arm64
+deviodrv.sys = 1, arm64
+deviosvc.exe = 1, arm64
+
+[DestinationDirs]
+PhysicalDiskMounterSysFiles = 12
+VhdAccessSysFiles = 12
+SvcFiles = 11
+
+[Manufacturer]
+%ARSENALRECON%=ARSENALRECON, NTx86, NTamd64, NTARM, NTARM64
+
+[DeviceInstall32]
+AddDevice = ROOT\PhDskMnt,,PhDskMnt_RootEnumInstall
+
+[PhDskMnt_RootEnumInstall]
+HardwareIds = ROOT\PhDskMnt
+
+[ARSENALRECON.NTx86]
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+
+[ARSENALRECON.NTamd64]
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDeviceAmd64, ROOT\PhDskMnt
+
+[ARSENALRECON.NTARM]
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+
+[ARSENALRECON.NTARM64]
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+
+[PhysicalDiskMounterDevice]
+CopyFiles = PhysicalDiskMounterSysFiles, SvcFiles
+
+[PhysicalDiskMounterDeviceAmd64]
+CopyFiles = PhysicalDiskMounterSysFiles, SvcFiles, VhdAccessSysFiles
+
+[PhysicalDiskMounterSysFiles]
+phdskmnt.sys
+aimwrfltr.sys
+awealloc.sys
+deviodrv.sys
+
+[SvcFiles]
+deviosvc.exe
+
+[VhdAccessSysFiles]
+vhdaccess.sys
+
+[PhysicalDiskMounterDevice.HW]
+AddReg = PhDskMnt_ScsiPort_AddReg
+
+[PhysicalDiskMounterDeviceAmd64.HW]
+AddReg = PhDskMnt_ScsiPort_AddReg
+
+[PhysicalDiskMounterDevice.Services]
+AddService = phdskmnt, %SPSVCINST_ASSOCSERVICE%, PhDskMnt_PnP_Service_Inst
+AddService = aimwrfltr, , AIMWrFltr_Service_Inst
+AddService = awealloc, , AWEAlloc_Service_Inst
+AddService = deviodrv, , DevIoDrv_Service_Inst
+AddService = deviosvc, , DevIoSvc_Service_Inst
+
+[PhysicalDiskMounterDeviceAmd64.Services]
+AddService = phdskmnt, %SPSVCINST_ASSOCSERVICE%, PhDskMnt_PnP_Service_Inst
+AddService = aimwrfltr, , AIMWrFltr_Service_Inst
+AddService = vhdaccess, , VhdAccess_Service_Inst
+AddService = awealloc, , AWEAlloc_Service_Inst
+AddService = deviodrv, , DevIoDrv_Service_Inst
+AddService = deviosvc, , DevIoSvc_Service_Inst
+
+[PhDskMnt_ScsiPort_AddReg]
+HKR, "ScsiPort", "NeedsSystemShutdownNotification", 0x00010001, 1
+
+[SourceDisksNames]
+1 = %DiskId1%,,,
+
+[PhDskMnt_PnP_Service_Inst]
+DisplayName    = "Arsenal Image Mounter SCSI Miniport"
+Description    = "SCSI emulation miniport"
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_DEMAND_START%
+ErrorControl   = %SERVICE_ERROR_IGNORE%
+ServiceBinary  = %12%\phdskmnt.sys
+LoadOrderGroup = SCSI Miniport
+AddReg         = PhDskMnt_PnP_Service_AddReg
+
+[PhDskMnt_PnP_Service_AddReg]
+HKR, "Parameters\PnpInterface", "0",    %REG_DWORD%,  0x00000001
+HKR, "Parameters\PnpInterface", "1",    %REG_DWORD%,  0x00000001
+HKR, "Parameters\PnpInterface", "5",    %REG_DWORD%,  0x00000001
+HKR, "Parameters\PnpInterface", "14",   %REG_DWORD%,  0x00000001
+HKR, "Parameters\PnpInterface", "15",   %REG_DWORD%,  0x00000001
+HKR, "Parameters", "BreakOnEntry",      %REG_DWORD%,  0x00000000
+HKR, "Parameters", "DebugLevel",        %REG_DWORD%,  0x000000ff
+HKR, "Parameters", "NumberOfBuses",     %REG_DWORD%,  0x00000001
+
+[AIMWrFltr_Service_Inst]
+DisplayName    = "Arsenal Image Mounter Write Filter"
+Description    = "Storage Write Filter"
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_BOOT_START%
+ErrorControl   = %SERVICE_ERROR_IGNORE%
+ServiceBinary  = %12%\aimwrfltr.sys
+LoadOrderGroup = SCSI Miniport
+
+[VhdAccess_Service_Inst]
+DisplayName    = "VHD Access driver"
+Description    = "VHD image file access driver"
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_AUTO_START%
+ErrorControl   = %SERVICE_ERROR_IGNORE%
+ServiceBinary  = %12%\vhdaccess.sys
+
+[AWEAlloc_Service_Inst]
+DisplayName    = "AWE Allocation driver"
+Description    = "AWE memory allocation driver"
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_AUTO_START%
+ErrorControl   = %SERVICE_ERROR_IGNORE%
+ServiceBinary  = %12%\awealloc.sys
+
+[DevIoDrv_Service_Inst]
+DisplayName    = "DevIO client driver"
+Description    = "DevIO protocol client-side driver"
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_AUTO_START%
+ErrorControl   = %SERVICE_ERROR_IGNORE%
+ServiceBinary  = %12%\deviodrv.sys
+
+[DevIoSvc_Service_Inst]
+DisplayName    = "DevIO server service"
+Description    = "DevIO protocol server-side service"
+ServiceType    = %SERVICE_WIN32_OWN%
+StartType      = %SERVICE_AUTO_START%
+ErrorControl   = %SERVICE_ERROR_IGNORE%
+ServiceBinary  = %11%\deviosvc.exe
+
+[Strings]
+ARSENALRECON     = "Arsenal Recon"
+SCSIClassName    = "SCSI and RAID controllers"
+PhysicalDiskMounterDeviceDescription = "Arsenal Image Mounter"
+DiskId1          = "Arsenal Image Mounter Setup Disk #1"
+
+;*******************************************
+;Handy macro substitutions (non-localizable)
+SPSVCINST_ASSOCSERVICE = 0x00000002
+
+SERVICE_KERNEL_DRIVER  = 1
+SERVICE_FILESYS_DRIVER = 2
+SERVICE_WIN32_OWN      = 16
+
+SERVICE_BOOT_START     = 0
+SERVICE_SYSTEM_START   = 1
+SERVICE_AUTO_START     = 2
+SERVICE_DEMAND_START   = 3
+
+SERVICE_ERROR_IGNORE   = 0
+SERVICE_ERROR_NORMAL   = 1
+
+REG_DWORD              = 0x00010001
+REG_BINARY             = 0x00000001
+REG_SZ                 = 0x00000000

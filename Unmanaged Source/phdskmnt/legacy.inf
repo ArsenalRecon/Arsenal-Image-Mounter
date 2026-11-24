@@ -25,7 +25,7 @@ DriverVer = 04/25/2018,1.10.0027.00027
 
 [SourceDisksFiles.x86]
 phdskmnt.sys = 1, x86
-vhdaccess.sys = 1, x86
+; vhdaccess.sys = 1, x86
 awealloc.sys = 1, x86
 deviodrv.sys = 1, x86
 
@@ -44,21 +44,21 @@ DelFiles = PhDskMntSysFiles
 
 [PhDskMntSysFiles]
 phdskmnt.sys
-vhdaccess.sys
+; vhdaccess.sys
 awealloc.sys
 deviodrv.sys
 
 
 [DefaultInstall.ntx86.Services]
 AddService = PhDskMnt, , PhDskMntDrv
-AddService = VhdAccess, , VhdAccessDrv
+; AddService = VhdAccess, , VhdAccessDrv
 AddService = AWEAlloc, , AWEAllocDrv
 AddService = DevIoDrv, , DevIoDrvDrv
 
 
 [DefaultUninstall.ntx86.Services]
 DelService = PhDskMnt
-DelService = VhdAccess
+; DelService = VhdAccess
 DelService = AWEAlloc
 
 
@@ -72,13 +72,13 @@ ServiceBinary = %12%\phdskmnt.sys
 LoadOrderGroup = SCSI Miniport
 AddReg         = legacy_addreg
 
-[VhdAccessDrv]
-DisplayName = "VHD Access driver"
-Description = "VHD image file access driver"
-ServiceType = 1
-StartType = 2
-ErrorControl = 0
-ServiceBinary = %12%\vhdaccess.sys
+; [VhdAccessDrv]
+; DisplayName = "VHD Access driver"
+; Description = "VHD image file access driver"
+; ServiceType = 1
+; StartType = 2
+; ErrorControl = 0
+; ServiceBinary = %12%\vhdaccess.sys
 
 [AWEAllocDrv]
 DisplayName = "AWE Allocation driver"

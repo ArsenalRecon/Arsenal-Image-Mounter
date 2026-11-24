@@ -1,7 +1,7 @@
 How to build everything for distribution
 ----------------------------------------
 
-0. Update version numbers in phdskmntver.h and batch build all in VS solution, or run msbld in solution dir
+0. Update version numbers in inc\phdskmntver.h and batch build all in VS solution, or run msbld in solution dir
 
 1. In aimwrfltr, awealloc, deviodrv, deviosvc and phdskmnt, run bldchk and bldfre in "neutral" command line window, to build and sign driver for each architecture
 

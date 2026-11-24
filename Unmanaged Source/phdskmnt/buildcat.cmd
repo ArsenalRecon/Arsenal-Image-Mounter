@@ -52,7 +52,7 @@ for %%d in (Win7) do if exist "..\dist\%1\%%d" (
 )
 
 for %%d in (Win8) do if exist "..\dist\%1\%%d" (
-  copy /y phdskmnt.inf "..\dist\%1\%%d\phdskmnt.inf"
+  copy /y phdskmntWin8.inf "..\dist\%1\%%d\phdskmnt.inf"
   %STAMPINF% -f "..\dist\%1\%%d\phdskmnt.inf" -a NTx86,NTamd64,NTARM
   %INF2CAT% /driver:"..\dist\%1\%%d" /os:8_X86,8_X64,8_ARM,Server8_X64 || goto :eof
   %SIGNTOOL% "..\dist\%1\%%d\phdskmnt.cat" || goto :eof
@@ -60,6 +60,7 @@ for %%d in (Win8) do if exist "..\dist\%1\%%d" (
 
 for %%d in (Win8.1) do if exist "..\dist\%1\%%d" (
   copy /y phdskmnt.inf "..\dist\%1\%%d\phdskmnt.inf"
+  copy /y phdskmnt_devinst.inf "..\dist\%1\%%d_devinst\phdskmnt.inf"
   %STAMPINF% -f "..\dist\%1\%%d\phdskmnt.inf" -a NTx86,NTamd64,NTARM,NTARM64
   %INF2CAT% /driver:"..\dist\%1\%%d" /os:6_3_X86,6_3_X64,6_3_ARM,Server6_3_X64,10_VB_X86,10_VB_X64,10_VB_ARM64,10_NI_X64,10_NI_ARM64,ServerFE_X64,ServerFE_ARM64 || goto :eof
   %SIGNTOOL% "..\dist\%1\%%d\phdskmnt.cat" || goto :eof

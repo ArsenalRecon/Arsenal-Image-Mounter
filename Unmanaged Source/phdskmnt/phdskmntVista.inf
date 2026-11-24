@@ -23,21 +23,21 @@ CatalogFile = phdskmnt.cat
 [SourceDisksFiles.x86]
 phdskmnt.sys = 1, x86
 aimwrfltr.sys = 1, x86
-vhdaccess.sys = 1, x86
+; vhdaccess.sys = 1, x86
 awealloc.sys = 1, x86
 deviodrv.sys = 1, x86
 
 [SourceDisksFiles.ia64]
 phdskmnt.sys = 1, 64
 aimwrfltr.sys = 1, 64
-vhdaccess.sys = 1, 64
+; vhdaccess.sys = 1, 64
 awealloc.sys = 1, 64
 deviodrv.sys = 1, 64
 
 [SourceDisksFiles.amd64]
 phdskmnt.sys = 1, x64
 aimwrfltr.sys = 1, x64
-vhdaccess.sys = 1, x64
+; vhdaccess.sys = 1, x64
 awealloc.sys = 1, x64
 deviodrv.sys = 1, x64
 
@@ -68,7 +68,7 @@ CopyFiles = PhysicalDiskMounterSysFiles
 [PhysicalDiskMounterSysFiles]
 phdskmnt.sys
 aimwrfltr.sys
-vhdaccess.sys
+; vhdaccess.sys
 awealloc.sys
 deviodrv.sys
 
@@ -78,7 +78,7 @@ AddReg = PhDskMnt_ScsiPort_AddReg
 [PhysicalDiskMounterDevice.Services]
 AddService = phdskmnt, %SPSVCINST_ASSOCSERVICE%, PhDskMnt_PnP_Service_Inst
 AddService = aimwrfltr, , AIMWrFltr_Service_Inst
-AddService = vhdaccess, , VhdAccess_Service_Inst
+; AddService = vhdaccess, , VhdAccess_Service_Inst
 AddService = awealloc, , AWEAlloc_Service_Inst
 AddService = deviodrv, , DevIoDrv_Service_Inst
 
@@ -117,13 +117,13 @@ ErrorControl   = %SERVICE_ERROR_IGNORE%
 ServiceBinary  = %12%\aimwrfltr.sys
 LoadOrderGroup = SCSI Miniport
 
-[VhdAccess_Service_Inst]
-DisplayName    = "VHD Access driver"
-Description    = "VHD image file access driver"
-ServiceType    = %SERVICE_KERNEL_DRIVER%
-StartType      = %SERVICE_AUTO_START%
-ErrorControl   = %SERVICE_ERROR_IGNORE%
-ServiceBinary  = %12%\vhdaccess.sys
+; [VhdAccess_Service_Inst]
+; DisplayName    = "VHD Access driver"
+; Description    = "VHD image file access driver"
+; ServiceType    = %SERVICE_KERNEL_DRIVER%
+; StartType      = %SERVICE_AUTO_START%
+; ErrorControl   = %SERVICE_ERROR_IGNORE%
+; ServiceBinary  = %12%\vhdaccess.sys
 
 [AWEAlloc_Service_Inst]
 DisplayName    = "AWE Allocation driver"

@@ -17,14 +17,14 @@ Signature = "$WINDOWS NT$"
 Class = SCSIAdapter
 ClassGUID = {4D36E97B-E325-11CE-BFC1-08002BE10318}
 Provider = %ARSENALRECON%
-DriverVer = 03/21/2020,1.22.0049.00049
+DriverVer = 11/23/2026,0.20.20.352
 CatalogFile = phdskmnt.cat
 PnpLockdown=1
 
 [SourceDisksFiles.x86]
 phdskmnt.sys = 1, x86
 aimwrfltr.sys = 1, x86
-vhdaccess.sys = 1, x86
+; vhdaccess.sys = 1, x86
 awealloc.sys = 1, x86
 deviodrv.sys = 1, x86
 deviosvc.exe = 1, x86
@@ -40,7 +40,7 @@ deviosvc.exe = 1, x64
 [SourceDisksFiles.arm]
 phdskmnt.sys = 1, arm
 aimwrfltr.sys = 1, arm
-vhdaccess.sys = 1, arm
+; vhdaccess.sys = 1, arm
 awealloc.sys = 1, arm
 deviodrv.sys = 1, arm
 deviosvc.exe = 1, arm
@@ -48,13 +48,14 @@ deviosvc.exe = 1, arm
 [SourceDisksFiles.arm64]
 phdskmnt.sys = 1, arm64
 aimwrfltr.sys = 1, arm64
-vhdaccess.sys = 1, arm64
+; vhdaccess.sys = 1, arm64
 awealloc.sys = 1, arm64
 deviodrv.sys = 1, arm64
 deviosvc.exe = 1, arm64
 
 [DestinationDirs]
 PhysicalDiskMounterSysFiles = 12
+VhdAccessSysFiles = 12
 SvcFiles = 11
 
 [Manufacturer]
@@ -70,7 +71,7 @@ SvcFiles = 11
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [ARSENALRECON.NTamd64]
-%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDeviceAmd64, ROOT\PhDskMnt
 
 [ARSENALRECON.NTARM]
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
@@ -79,23 +80,37 @@ SvcFiles = 11
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [PhysicalDiskMounterDevice]
-CopyFiles = PhysicalDiskMounterSysFiles
-CopyFiles = SvcFiles
+CopyFiles = PhysicalDiskMounterSysFiles, SvcFiles
+
+[PhysicalDiskMounterDeviceAmd64]
+CopyFiles = PhysicalDiskMounterSysFiles, SvcFiles, VhdAccessSysFiles
 
 [PhysicalDiskMounterSysFiles]
 phdskmnt.sys
 aimwrfltr.sys
-vhdaccess.sys
 awealloc.sys
 deviodrv.sys
 
 [SvcFiles]
 deviosvc.exe
 
+[VhdAccessSysFiles]
+vhdaccess.sys
+
 [PhysicalDiskMounterDevice.HW]
 AddReg = PhDskMnt_ScsiPort_AddReg
 
+[PhysicalDiskMounterDeviceAmd64.HW]
+AddReg = PhDskMnt_ScsiPort_AddReg
+
 [PhysicalDiskMounterDevice.Services]
+AddService = phdskmnt, %SPSVCINST_ASSOCSERVICE%, PhDskMnt_PnP_Service_Inst
+AddService = aimwrfltr, , AIMWrFltr_Service_Inst
+AddService = awealloc, , AWEAlloc_Service_Inst
+AddService = deviodrv, , DevIoDrv_Service_Inst
+AddService = deviosvc, , DevIoSvc_Service_Inst
+
+[PhysicalDiskMounterDeviceAmd64.Services]
 AddService = phdskmnt, %SPSVCINST_ASSOCSERVICE%, PhDskMnt_PnP_Service_Inst
 AddService = aimwrfltr, , AIMWrFltr_Service_Inst
 AddService = vhdaccess, , VhdAccess_Service_Inst
@@ -195,3 +210,4 @@ SERVICE_ERROR_NORMAL   = 1
 REG_DWORD              = 0x00010001
 REG_BINARY             = 0x00000001
 REG_SZ                 = 0x00000000
+
