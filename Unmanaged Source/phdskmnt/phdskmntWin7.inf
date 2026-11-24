@@ -38,28 +38,12 @@ awealloc.sys = 1, 64
 [SourceDisksFiles.amd64]
 phdskmnt.sys = 1, x64
 aimwrfltr.sys = 1, x64
-; vhdaccess.sys = 1, x64
+vhdaccess.sys = 1, x64
 awealloc.sys = 1, x64
 deviodrv.sys = 1, x64
 deviosvc.exe = 1, x64
 
 [SourceDisksFiles.arm]
-phdskmnt.sys = 1, arm
-aimwrfltr.sys = 1, arm
-; vhdaccess.sys = 1, arm
-awealloc.sys = 1, arm
-deviodrv.sys = 1, arm
-deviosvc.exe = 1, arm
-
-[SourceDisksFiles.arm64]
-phdskmnt.sys = 1, arm64
-aimwrfltr.sys = 1, arm64
-; vhdaccess.sys = 1, arm64
-awealloc.sys = 1, arm64
-deviodrv.sys = 1, arm64
-deviosvc.exe = 1, arm64
-
-[DestinationDirs]
 PhysicalDiskMounterSysFiles = 12
 SvcFiles = 11
 
@@ -79,17 +63,13 @@ SvcFiles = 11
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [ARSENALRECON.NTamd64]
-%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
-
-[ARSENALRECON.NTARM]
-%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
-
-[ARSENALRECON.NTARM64]
-%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDeviceAmd64, ROOT\PhDskMnt
 
 [PhysicalDiskMounterDevice]
-CopyFiles = PhysicalDiskMounterSysFiles
-CopyFiles = SvcFiles
+CopyFiles = PhysicalDiskMounterSysFiles, SvcFiles
+
+[PhysicalDiskMounterDeviceAmd64]
+CopyFiles = PhysicalDiskMounterSysFiles, SvcFiles, VhdAccessSysFiles
 
 [PhysicalDiskMounterDevice.NTia64]
 CopyFiles = PhysicalDiskMounterSysFiles
@@ -97,20 +77,32 @@ CopyFiles = PhysicalDiskMounterSysFiles
 [PhysicalDiskMounterSysFiles]
 phdskmnt.sys
 aimwrfltr.sys
-; vhdaccess.sys
 awealloc.sys
 deviodrv.sys
 
 [SvcFiles]
 deviosvc.exe
 
+[VhdAccessSysFiles]
+vhdaccess.sys
+
 [PhysicalDiskMounterDevice.HW]
+AddReg = PhDskMnt_ScsiPort_AddReg
+
+[PhysicalDiskMounterDeviceAmd64.HW]
 AddReg = PhDskMnt_ScsiPort_AddReg
 
 [PhysicalDiskMounterDevice.Services]
 AddService = phdskmnt, %SPSVCINST_ASSOCSERVICE%, PhDskMnt_PnP_Service_Inst
 AddService = aimwrfltr, , AIMWrFltr_Service_Inst
-; AddService = vhdaccess, , VhdAccess_Service_Inst
+AddService = awealloc, , AWEAlloc_Service_Inst
+AddService = deviodrv, , DevIoDrv_Service_Inst
+AddService = deviosvc, , DevIoSvc_Service_Inst
+
+[PhysicalDiskMounterDeviceAmd64.Services]
+AddService = phdskmnt, %SPSVCINST_ASSOCSERVICE%, PhDskMnt_PnP_Service_Inst
+AddService = aimwrfltr, , AIMWrFltr_Service_Inst
+AddService = vhdaccess, , VhdAccess_Service_Inst
 AddService = awealloc, , AWEAlloc_Service_Inst
 AddService = deviodrv, , DevIoDrv_Service_Inst
 AddService = deviosvc, , DevIoSvc_Service_Inst
@@ -150,13 +142,13 @@ ErrorControl   = %SERVICE_ERROR_IGNORE%
 ServiceBinary  = %12%\aimwrfltr.sys
 LoadOrderGroup = SCSI Miniport
 
-; [VhdAccess_Service_Inst]
-; DisplayName    = "VHD Access driver"
-; Description    = "VHD image file access driver"
-; ServiceType    = %SERVICE_KERNEL_DRIVER%
-; StartType      = %SERVICE_AUTO_START%
-; ErrorControl   = %SERVICE_ERROR_IGNORE%
-; ServiceBinary  = %12%\vhdaccess.sys
+[VhdAccess_Service_Inst]
+DisplayName    = "VHD Access driver"
+Description    = "VHD image file access driver"
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_AUTO_START%
+ErrorControl   = %SERVICE_ERROR_IGNORE%
+ServiceBinary  = %12%\vhdaccess.sys
 
 [AWEAlloc_Service_Inst]
 DisplayName    = "AWE Allocation driver"

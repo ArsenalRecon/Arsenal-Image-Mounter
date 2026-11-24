@@ -48,7 +48,7 @@ deviosvc.exe = 1, arm
 [SourceDisksFiles.arm64]
 phdskmnt.sys = 1, arm64
 aimwrfltr.sys = 1, arm64
-; vhdaccess.sys = 1, arm64
+vhdaccess.sys = 1, arm64
 awealloc.sys = 1, arm64
 deviodrv.sys = 1, arm64
 deviosvc.exe = 1, arm64
@@ -77,7 +77,7 @@ SvcFiles = 11
 %PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
 
 [ARSENALRECON.NTARM64]
-%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDevice, ROOT\PhDskMnt
+%PhysicalDiskMounterDeviceDescription% = PhysicalDiskMounterDeviceAmd64, ROOT\PhDskMnt
 
 [PhysicalDiskMounterDevice]
 CopyFiles = PhysicalDiskMounterSysFiles, SvcFiles
