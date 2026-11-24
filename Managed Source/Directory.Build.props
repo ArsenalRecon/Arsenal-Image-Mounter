@@ -7,7 +7,8 @@
     <OutputPath Condition="'$(MSBuildProjectExtension)' != '.shfbproj'">..\bin\$(Configuration)\</OutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>1591</NoWarn>
-    <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
+	<Features Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">$(Features);runtime-async=on</Features>
+	<DisableWinExeOutputInference>true</DisableWinExeOutputInference>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <LangVersion>Latest</LangVersion>
