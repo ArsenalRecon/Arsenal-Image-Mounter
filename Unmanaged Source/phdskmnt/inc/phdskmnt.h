@@ -74,6 +74,12 @@ extern "C" {
 #include <ntddscsi.h>
 #include <scsiwmi.h>
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+extern "C++" {
+#include "unmapdiagnostics.h"
+}
+#endif
+
 #include <ntkmapi.h>
 
 #endif
@@ -319,6 +325,9 @@ extern "C" {
         CHAR                  GuidString[39];
         UNICODE_STRING        WriteOverlayFileName;
         HANDLE                WriteOverlay;
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        AimUnmapLu            UnmapDiagnostic;
+#endif
     } HW_LU_EXTENSION, *pHW_LU_EXTENSION;
 
     typedef struct _HW_SRB_EXTENSION {
@@ -340,6 +349,9 @@ extern "C" {
         PVOID                AllocatedBuffer;
         BOOLEAN              CopyBack;
         PKEVENT              CallerWaitEvent;
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        AimUnmapRequest      UnmapDiagnostic;
+#endif
     } MP_WorkRtnParms, *pMP_WorkRtnParms;
 
     typedef enum ResultType {
@@ -945,7 +957,11 @@ extern "C" {
         ImScsiDispatchUnmapDevice(
             __in pHW_HBA_EXT pHBAExt,
             __in pHW_LU_EXTENSION pLUExt,
-            __in PSCSI_REQUEST_BLOCK pSrb);
+            __in PSCSI_REQUEST_BLOCK pSrb
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+            , AimUnmapRequest& unmapDiagnostic
+#endif
+        );
 
     NTSTATUS
         ImScsiSafeIOStream(__in PFILE_OBJECT FileObject,

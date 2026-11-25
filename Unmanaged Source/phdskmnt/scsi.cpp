@@ -1967,6 +1967,15 @@ ScsiOpUnmap(
 
     USHORT length = RtlUshortByteSwap(*(PUSHORT)((PUNMAP)pCdb)->AllocationLength);
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+    auto unmapDiagnostic = AimUnmapBegin(pLUExt, pSrb);
+    const auto recordUnmapRejection = [&](AimUnmapDisposition disposition, ULONG descriptors = 0)
+    {
+        AimUnmapAdmission(unmapDiagnostic, pSrb, disposition, descriptors);
+        AimUnmapFinish(unmapDiagnostic, pSrb);
+    };
+#endif
+
     KdPrint((__FUNCTION__ ": pHBAExt = 0x%p, pSrb=0x%p\n", pHBAExt, pSrb));
 
     if (!KeReadStateEvent(&pLUExt->Initialized))
@@ -1980,6 +1989,9 @@ ScsiOpUnmap(
             SCSI_ADSENSE_LUN_NOT_READY,
             SCSI_SENSEQ_BECOMING_READY);
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        recordUnmapRejection(AimUnmapDisposition::Uninitialized);
+#endif
         return;
     }
 
@@ -1990,6 +2002,9 @@ ScsiOpUnmap(
 
         ScsiSetError(pSrb, SRB_STATUS_NO_DEVICE);
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        recordUnmapRejection(AimUnmapDisposition::ShuttingDown);
+#endif
         return;
     }
 
@@ -2000,12 +2015,18 @@ ScsiOpUnmap(
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_DATA_PROTECT, SCSI_ADSENSE_WRITE_PROTECT, 0);
 
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        recordUnmapRejection(AimUnmapDisposition::ReadOnly);
+#endif
         return;
     }
 
     if (!pLUExt->SupportsUnmap)
     {
         ScsiSetError(pSrb, SRB_STATUS_INVALID_REQUEST);
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        recordUnmapRejection(AimUnmapDisposition::Unsupported);
+#endif
         return;
     }
 
@@ -2017,6 +2038,9 @@ ScsiOpUnmap(
 #endif
 
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        recordUnmapRejection(AimUnmapDisposition::TransferLength);
+#endif
         return;
     }
 
@@ -2031,6 +2055,9 @@ ScsiOpUnmap(
 #endif
 
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        recordUnmapRejection(AimUnmapDisposition::DataLength);
+#endif
         return;
     }
 
@@ -2045,6 +2072,9 @@ ScsiOpUnmap(
 #endif
 
         ScsiSetError(pSrb, SRB_STATUS_DATA_OVERRUN);
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        recordUnmapRejection(AimUnmapDisposition::DescriptorLength);
+#endif
         return;
     }
 
@@ -2058,6 +2088,9 @@ ScsiOpUnmap(
         if (startingSector & ~(MAXLONGLONG >> pLUExt->BlockPower))
         {      // Check if startingSector << blockPower fits within a LONGLONG.
             KdPrint((__FUNCTION__ ": Too large sector number: %I64X\n", startingSector));
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+            recordUnmapRejection(AimUnmapDisposition::LbaOverflow);
+#endif
             return;
         }
 
@@ -2065,6 +2098,9 @@ ScsiOpUnmap(
         if ((startingSector + numBlocks) > (pLUExt->DiskSize.QuadPart >> pLUExt->BlockPower))
         {      // Starting sector beyond the bounds?
             KdPrint((__FUNCTION__ ": Out of bounds: sector: %I64X, blocks: %d\n", startingSector, numBlocks));
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+            recordUnmapRejection(AimUnmapDisposition::DiskBounds);
+#endif
             return;
         }
     }
@@ -2076,10 +2112,18 @@ ScsiOpUnmap(
         DbgPrint("PhDskMnt::ScsiOpUnmap Failed to allocate work parm structure\n");
 
         ScsiSetCheckCondition(pSrb, SRB_STATUS_ERROR, SCSI_SENSE_HARDWARE_ERROR, SCSI_ADSENSE_NO_SENSE, 0);
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+        recordUnmapRejection(AimUnmapDisposition::NoWorkItem, items);
+#endif
         return;
     }
 
     // Queue work item, which will run in the System process.
+
+#ifdef AIM_C3A_UNMAP_DIAGNOSTICS
+    AimUnmapAdmission(unmapDiagnostic, pSrb, AimUnmapDisposition::Queued, items);
+    pWkRtnParms->UnmapDiagnostic = unmapDiagnostic;
+#endif
 
     ImScsiScheduleWorkItem(pWkRtnParms, LowestAssumedIrql);
 
